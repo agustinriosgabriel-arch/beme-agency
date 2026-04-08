@@ -1,0 +1,1887 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beme — Campañas</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Tokens ─────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f7fa;--surface:#ffffff;--surface2:#f0f0f5;--surface3:#e4e4ec;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);
+  --text:#111;--text-muted:#666;--text-dim:#aaa;
+  --primary:#b2005d;--primary-light:#ed568f;--purple:#9414E0;
+  --gradient:linear-gradient(135deg,#b2005d 0%,#9414E0 100%);
+  --gradient-h:linear-gradient(135deg,#c8006a 0%,#a718f5 100%);
+  --shadow:0 4px 16px rgba(0,0,0,0.08);--radius:12px;--radius-sm:8px;--radius-lg:16px;
+  --estado-sin-iniciar:#888;--estado-en-curso:#0ea5e9;
+  --estado-finanzas:#f59e0b;--estado-finalizada:#22c55e;--estado-cancelada:#ef4444;
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body.dark{--bg:#0f0f0f;--surface:#181818;--surface2:#202020;--surface3:#2a2a2a;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--text:#f0f0f0;--text-muted:#888;--text-dim:#555;--shadow:0 4px 24px rgba(0,0,0,0.4)}
+
+/* ── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:99px}
+
+/* ── Layout ─────────────────────────────────────────────── */
+.app{display:flex;flex-direction:column;min-height:100vh}
+
+/* ── Topbar ─────────────────────────────────────────────── */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(244,242,248,0.92);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:0 28px;height:56px;
+  display:flex;align-items:center;gap:16px;
+}
+body.dark .topbar{background:rgba(15,15,15,0.9)}
+.logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px;text-decoration:none;color:var(--text)}
+.logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nav-tabs{display:flex;gap:2px;margin-left:24px}
+.nav-tab{
+  padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;
+  color:var(--text-muted);text-decoration:none;transition:all 0.15s;border:none;background:none;cursor:pointer;
+}
+.nav-tab:hover{color:var(--text);background:var(--surface2)}
+.nav-tab.active{color:var(--text);background:var(--surface3)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.user-chip{
+  display:flex;align-items:center;gap:8px;padding:5px 10px;
+  border-radius:20px;background:var(--surface2);border:1px solid var(--border);
+  font-size:12px;font-weight:600;color:var(--text-muted);cursor:pointer;
+}
+.user-chip .avatar{width:22px;height:22px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0}
+.role-badge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700;letter-spacing:0.3px}
+.role-badge.admin{background:rgba(178,0,93,0.15);color:#ed568f}
+.role-badge.manager{background:rgba(14,165,233,0.15);color:#38bdf8}
+.role-badge.handler{background:rgba(245,158,11,0.15);color:#fbbf24}
+.role-badge.talent{background:rgba(34,197,94,0.15);color:#4ade80}
+.icon-btn{width:32px;height:32px;border-radius:8px;border:none;background:var(--surface2);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.icon-btn:hover{background:var(--surface3);color:var(--text)}
+
+/* ── Bell / Alertas ─────────────────────────────────────── */
+.bell-wrap{position:relative}
+.bell-dot{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--primary);border:2px solid var(--bg);display:none}
+.bell-dot.visible{display:block}
+
+/* ── Main ───────────────────────────────────────────────── */
+.main{flex:1;padding:28px;max-width:1400px;width:100%;margin:0 auto}
+
+/* ── Page header ────────────────────────────────────────── */
+.page-header{display:flex;align-items:flex-start;gap:16px;margin-bottom:28px}
+.page-header-text h1{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;letter-spacing:-0.5px}
+.page-header-text p{font-size:13px;color:var(--text-muted);margin-top:3px}
+.page-header-actions{margin-left:auto;display:flex;gap:10px;align-items:center}
+
+/* ── Buttons ────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;border:none;transition:all 0.15s;text-decoration:none}
+.btn-primary{background:var(--gradient);color:#fff}
+.btn-primary:hover{background:var(--gradient-h);transform:translateY(-1px);box-shadow:0 6px 20px rgba(178,0,93,0.3)}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border2)}
+.btn-outline:hover{border-color:var(--primary);color:var(--primary)}
+.btn-ghost{background:transparent;color:var(--text-muted);border:none}
+.btn-ghost:hover{color:var(--text);background:var(--surface2)}
+.btn-sm{padding:6px 12px;font-size:12px;gap:5px}
+.btn-danger{background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.2)}
+.btn-danger:hover{background:rgba(239,68,68,0.2)}
+
+/* ── Stats strip ────────────────────────────────────────── */
+.stats-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+.stat-card .label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim)}
+.stat-card .value{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;margin-top:4px;line-height:1}
+.stat-card .sub{font-size:11px;color:var(--text-muted);margin-top:4px}
+.stat-card.highlight{background:linear-gradient(135deg,rgba(178,0,93,0.06),rgba(148,20,224,0.06));border-color:rgba(178,0,93,0.15)}
+
+/* ── Toolbar ─────────────────────────────────────────────── */
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px;max-width:360px}
+.search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-dim);pointer-events:none}
+.search-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px 8px 34px;font-size:13px;font-family:inherit;color:var(--text);outline:none;transition:border 0.2s}
+.search-input:focus{border-color:var(--border2)}
+.filter-select{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-family:inherit;color:var(--text);outline:none;cursor:pointer;appearance:none}
+.filter-select:focus{border-color:var(--border2)}
+.view-toggle{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px}
+.view-btn{width:30px;height:30px;border:none;background:none;border-radius:6px;color:var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.view-btn.active{background:var(--surface3);color:var(--text)}
+
+/* ── Campañas Grid ───────────────────────────────────────── */
+.campanas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.campana-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:20px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,0.04);
+}
+.campana-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gradient);opacity:0;transition:opacity 0.2s}
+.campana-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.campana-card:hover::before{opacity:1}
+.campana-card-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.marca-logo{width:40px;height:40px;border-radius:10px;background:var(--surface3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--text-muted);flex-shrink:0;overflow:hidden}
+.marca-logo img{width:100%;height:100%;object-fit:cover}
+.campana-card-meta{flex:1;min-width:0}
+.campana-nombre{font-size:15px;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.campana-cliente{font-size:12px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.estado-badge{
+  flex-shrink:0;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;
+  letter-spacing:0.3px;white-space:nowrap;
+}
+.estado-sin_iniciar{background:rgba(85,85,85,0.15);color:#888}
+.estado-en_curso{background:rgba(14,165,233,0.12);color:#38bdf8}
+.estado-etapa_finanzas{background:rgba(245,158,11,0.12);color:#fbbf24}
+.estado-finalizada{background:rgba(34,197,94,0.12);color:#4ade80}
+.estado-cancelada{background:rgba(239,68,68,0.12);color:#ef4444}
+
+.campana-card-body{display:flex;flex-direction:column;gap:10px}
+.campana-talentos-row{display:flex;align-items:center;gap:6px}
+.talent-avatar-stack{display:flex}
+.talent-avatar{
+  width:26px;height:26px;border-radius:50%;background:var(--surface3);
+  border:2px solid var(--surface);margin-left:-6px;display:flex;align-items:center;
+  justify-content:center;font-size:9px;font-weight:700;color:var(--text-muted);
+  overflow:hidden;flex-shrink:0;
+}
+.talent-avatar:first-child{margin-left:0}
+.talent-avatar img{width:100%;height:100%;object-fit:cover}
+.talent-count{font-size:12px;color:var(--text-muted);margin-left:4px}
+
+.campana-progress{margin-top:4px}
+.progress-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);margin-bottom:5px}
+.progress-bar{height:4px;background:var(--surface3);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;border-radius:99px;background:var(--gradient);transition:width 0.4s ease}
+
+.campana-footer{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.campana-fecha{font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:4px}
+.campana-managers{margin-left:auto;display:flex;gap:-4px}
+.manager-chip{width:22px;height:22px;border-radius:50%;background:var(--gradient);border:2px solid var(--surface);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;margin-left:-4px}
+.manager-chip:first-child{margin-left:0}
+.campana-contenidos-count{font-size:11px;color:var(--text-dim);margin-left:6px}
+
+/* ── Campañas List ───────────────────────────────────────── */
+.campanas-list{display:flex;flex-direction:column;gap:8px}
+.campana-row{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 18px;display:grid;
+  grid-template-columns:40px 1fr 180px 120px 100px 120px auto;
+  gap:14px;align-items:center;cursor:pointer;transition:all 0.15s;
+}
+.campana-row:hover{border-color:var(--border2);background:var(--surface2)}
+.campana-row .marca-logo{width:36px;height:36px;font-size:12px}
+.campana-row .campana-nombre{font-size:14px;font-weight:600}
+.campana-row .campana-cliente{font-size:12px;color:var(--text-muted)}
+.col-center{display:flex;align-items:center;justify-content:center}
+.col-right{display:flex;align-items:center;justify-content:flex-end;gap:6px}
+
+/* ── Empty state ────────────────────────────────────────── */
+.empty-state{
+  grid-column:1/-1;text-align:center;padding:60px 20px;
+  color:var(--text-muted);
+}
+.empty-state svg{opacity:0.2;margin-bottom:16px}
+.empty-state h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
+.empty-state p{font-size:13px}
+
+/* ── Modal Overlay ───────────────────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity 0.2s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{
+  background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);
+  width:100%;max-width:680px;max-height:90vh;overflow-y:auto;
+  transform:scale(0.96) translateY(12px);transition:transform 0.2s;
+}
+.modal-overlay.open .modal{transform:scale(1) translateY(0)}
+.modal-lg{max-width:880px}
+.modal-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 24px;border-bottom:1px solid var(--border);
+  position:sticky;top:0;background:var(--surface);z-index:1;
+}
+.modal-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800}
+.modal-close{width:30px;height:30px;border:none;background:var(--surface2);border-radius:6px;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.modal-close:hover{background:var(--surface3);color:var(--text)}
+.modal-body{padding:24px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:16px 24px;border-top:1px solid var(--border)}
+
+/* ── Form ────────────────────────────────────────────────── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-grid.cols-1{grid-template-columns:1fr}
+.form-grid.cols-3{grid-template-columns:1fr 1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px}
+.form-input{
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:10px 12px;font-size:13px;font-family:inherit;color:var(--text);outline:none;transition:border 0.2s;
+}
+.form-input:focus{border-color:var(--primary)}
+.form-input::placeholder{color:var(--text-dim)}
+textarea.form-input{resize:vertical;min-height:80px}
+select.form-input{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23666' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:30px}
+.form-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:4px;grid-column:1/-1}
+.form-hint{font-size:11px;color:var(--text-dim);margin-top:2px}
+
+/* ── Multi-select chips ──────────────────────────────────── */
+.chips-input-wrap{
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:6px 8px;display:flex;flex-wrap:wrap;gap:5px;cursor:text;
+  transition:border 0.2s;
+}
+.chips-input-wrap:focus-within{border-color:var(--primary)}
+.chip{
+  display:inline-flex;align-items:center;gap:5px;padding:3px 8px;
+  background:var(--surface3);border-radius:20px;font-size:12px;font-weight:600;
+}
+.chip-remove{cursor:pointer;color:var(--text-dim);display:flex;align-items:center;line-height:1}
+.chip-remove:hover{color:var(--text)}
+.chips-input{background:none;border:none;outline:none;font-size:12px;font-family:inherit;color:var(--text);min-width:100px;padding:2px 4px}
+
+/* ── Dropdown option list ────────────────────────────────── */
+.option-list{
+  position:absolute;top:100%;left:0;right:0;z-index:50;
+  background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);
+  box-shadow:var(--shadow);max-height:200px;overflow-y:auto;margin-top:4px;
+}
+.option-item{padding:9px 12px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.1s}
+.option-item:hover{background:var(--surface2)}
+.option-item.selected{background:rgba(178,0,93,0.08);color:var(--primary)}
+.option-avatar{width:24px;height:24px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;flex-shrink:0}
+
+/* ── Toast ───────────────────────────────────────────────── */
+.toast-container{position:fixed;top:70px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{
+  padding:11px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+  box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;
+  animation:toastIn 0.25s ease;max-width:320px;
+}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+.toast.success{background:#1a3a2a;border:1px solid #22c55e33;color:#4ade80}
+.toast.error{background:#3a1a1a;border:1px solid #ef444433;color:#f87171}
+.toast.info{background:#1a2a3a;border:1px solid #3b82f633;color:#60a5fa}
+
+/* ── Loading overlay ────────────────────────────────────── */
+#load-overlay{
+  position:fixed;inset:0;z-index:9999;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  transition:opacity 0.2s;
+}
+.loader-logo{font-family:'Syne',sans-serif;font-size:28px;font-weight:800}
+.loader-logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.loader-bar{width:200px;height:3px;background:var(--surface3);border-radius:99px;overflow:hidden}
+.loader-fill{height:100%;width:0;background:var(--gradient);border-radius:99px;animation:loaderAnim 1.4s ease-in-out infinite}
+@keyframes loaderAnim{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
+
+/* ── Login overlay ───────────────────────────────────────── */
+#login-overlay{position:fixed;inset:0;background:rgba(247,247,250,0.97);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:9999}
+.login-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:40px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.12)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo h1{font-family:'Syne',sans-serif;font-size:28px;font-weight:800}
+.login-logo h1 span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.login-logo p{font-size:13px;color:var(--text-muted);margin-top:4px}
+.login-error{display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#f87171;margin-bottom:14px}
+.login-fields{display:flex;flex-direction:column;gap:10px}
+
+/* ── Alertas panel ───────────────────────────────────────── */
+.alertas-panel{
+  position:fixed;top:56px;right:0;width:360px;height:calc(100vh - 56px);
+  background:var(--surface);border-left:1px solid var(--border);
+  transform:translateX(100%);transition:transform 0.25s ease;
+  z-index:150;display:flex;flex-direction:column;overflow:hidden;
+  pointer-events:none;
+}
+.alertas-panel.open{pointer-events:all}
+.alertas-panel.open{transform:translateX(0)}
+.alertas-header{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.alertas-list{flex:1;overflow-y:auto;padding:8px}
+.alerta-item{padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;cursor:pointer;transition:background 0.15s}
+.alerta-item:hover{background:var(--surface2)}
+.alerta-item.no-leida{border-left:3px solid var(--primary)}
+.alerta-tipo{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:3px}
+.alerta-titulo{font-size:13px;font-weight:600}
+.alerta-desc{font-size:12px;color:var(--text-muted);margin-top:2px}
+.alerta-fecha{font-size:11px;color:var(--text-dim);margin-top:4px}
+
+/* ── Kanban view ─────────────────────────────────────────── */
+.kanban-wrap{display:grid;grid-template-columns:repeat(5,280px);gap:14px;overflow-x:auto;padding-bottom:8px}
+.kanban-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.kanban-col-header{padding:12px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+.kanban-col-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+.kanban-count{font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--surface3)}
+.kanban-items{padding:10px;display:flex;flex-direction:column;gap:8px;min-height:120px}
+.kanban-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;cursor:pointer;transition:all 0.15s;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
+.kanban-card:hover{border-color:var(--border2);background:var(--surface3)}
+.kanban-card-nombre{font-size:13px;font-weight:600;margin-bottom:6px}
+.kanban-card-meta{font-size:11px;color:var(--text-muted)}
+
+/* ── Responsive ─────────────────────────────────────────── */
+@media(max-width:900px){
+  .stats-strip{grid-template-columns:repeat(3,1fr)}
+  .campanas-grid{grid-template-columns:1fr}
+  .campana-row{grid-template-columns:36px 1fr auto}
+}
+@media(max-width:600px){
+  .main{padding:16px}
+  .topbar{padding:0 16px}
+  .nav-tabs{display:none}
+  .stats-strip{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div id="load-overlay">
+  <div class="loader-logo">Be<span>me</span></div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+  <p style="font-size:12px;color:var(--text-dim);margin-top:8px" id="load-msg">Conectando...</p>
+</div>
+
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay" style="display:none">
+  <div class="login-card">
+    <div class="login-logo">
+      <h1>Be<span>me</span></h1>
+      <p>Módulo de Campañas</p>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <div class="login-fields">
+      <input type="email" id="login-email" class="form-input" placeholder="Email" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="password" id="login-pass" class="form-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="btn btn-primary" onclick="doLogin()" id="login-btn" style="width:100%;justify-content:center;margin-top:4px">
+        Ingresar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ALERTAS PANEL -->
+<div class="alertas-panel" id="alertas-panel">
+  <div class="alertas-header">
+    <span style="font-weight:700;font-size:14px">Alertas</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-ghost btn-sm" onclick="marcarTodasLeidas()">Marcar todas leídas</button>
+      <button class="icon-btn" onclick="toggleAlertas()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="alertas-list" id="alertas-list">
+    <div style="padding:30px;text-align:center;color:var(--text-dim);font-size:13px">Sin alertas pendientes</div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- APP -->
+<div class="app" id="app" style="display:none">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <a href="index.html" class="logo">Be<span>me</span></a>
+    <nav class="nav-tabs">
+      <a href="index.html" class="nav-tab">Talentos</a>
+      <a href="campanas.html" class="nav-tab active">Campañas</a>
+    </nav>
+    <div class="topbar-right">
+      <div class="bell-wrap">
+        <button class="icon-btn" onclick="toggleAlertas()" title="Alertas">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </button>
+        <div class="bell-dot" id="bell-dot"></div>
+      </div>
+      <button class="icon-btn" onclick="toggleTheme()" title="Cambiar tema">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" id="theme-icon"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+      </button>
+      <div class="user-chip" id="user-chip">
+        <div class="avatar" id="user-avatar">?</div>
+        <span id="user-name">Cargando...</span>
+        <span class="role-badge" id="user-role-badge"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1>Campañas</h1>
+        <p id="subtitle-count">Cargando...</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline btn-sm" onclick="openClientesModal()" id="btn-clientes" style="display:none">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          Clientes
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="openUsuariosModal()" id="btn-usuarios" style="display:none">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Usuarios
+        </button>
+        <button class="btn btn-primary" onclick="openNuevaCampana()" id="btn-nueva" style="display:none">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nueva Campaña
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="stats-strip" id="stats-strip">
+      <div class="stat-card highlight">
+        <div class="label">Total</div>
+        <div class="value" id="stat-total">0</div>
+        <div class="sub">campañas</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">En Curso</div>
+        <div class="value" id="stat-en-curso" style="color:#38bdf8">0</div>
+        <div class="sub">activas</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Finanzas</div>
+        <div class="value" id="stat-finanzas" style="color:#fbbf24">0</div>
+        <div class="sub">pendientes</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Finalizadas</div>
+        <div class="value" id="stat-finalizadas" style="color:#4ade80">0</div>
+        <div class="sub">este año</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Talentos</div>
+        <div class="value" id="stat-talentos">0</div>
+        <div class="sub">en campañas activas</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" class="search-input" id="search-input" placeholder="Buscar campaña, marca, cliente..." oninput="renderCampanas()">
+      </div>
+      <select class="filter-select" id="filter-estado" onchange="renderCampanas()">
+        <option value="">Todos los estados</option>
+        <option value="sin_iniciar">Sin iniciar</option>
+        <option value="en_curso">En curso</option>
+        <option value="etapa_finanzas">Etapa Finanzas</option>
+        <option value="finalizada">Finalizada</option>
+        <option value="cancelada">Cancelada</option>
+      </select>
+      <select class="filter-select" id="filter-marca" onchange="renderCampanas()">
+        <option value="">Todas las marcas</option>
+      </select>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <div class="view-toggle">
+          <button class="view-btn active" id="vbtn-grid" onclick="setView('grid')" title="Grid">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          </button>
+          <button class="view-btn" id="vbtn-list" onclick="setView('list')" title="Lista">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </button>
+          <button class="view-btn" id="vbtn-kanban" onclick="setView('kanban')" title="Kanban">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="5" height="15" rx="1"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Campañas container -->
+    <div id="campanas-container"></div>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Nueva / Editar Campaña
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-campana">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-campana-title">Nueva Campaña</div>
+      <button class="modal-close" onclick="closeModal('modal-campana')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-section-title">Información General</div>
+
+        <div class="form-group full">
+          <label class="form-label">Nombre de la Campaña *</label>
+          <input type="text" id="c-nombre" class="form-input" placeholder="Ej: Lanzamiento Verano 2025">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cliente *</label>
+          <select id="c-cliente" class="form-input" onchange="onClienteChange()">
+            <option value="">Seleccionar cliente...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Marca *</label>
+          <select id="c-marca" class="form-input" onchange="onMarcaChange()">
+            <option value="">Primero seleccioná un cliente</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha de Inicio</label>
+          <input type="date" id="c-fecha-inicio" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha de Fin</label>
+          <input type="date" id="c-fecha-fin" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estado</label>
+          <select id="c-estado" class="form-input">
+            <option value="sin_iniciar">Sin iniciar</option>
+            <option value="en_curso">En curso</option>
+            <option value="etapa_finanzas">Etapa Finanzas</option>
+            <option value="finalizada">Finalizada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Descripción / Brief (texto)</label>
+          <textarea id="c-descripcion" class="form-input" placeholder="Descripción general de la campaña..."></textarea>
+        </div>
+
+        <div class="form-section-title">Asignaciones</div>
+
+        <div class="form-group full">
+          <label class="form-label">Admins de Campaña (internos)</label>
+          <div class="chips-input-wrap" id="managers-wrap" onclick="focusChipInput('managers-input')">
+            <input type="text" id="managers-input" class="chips-input" placeholder="Buscar usuario..." oninput="searchUsers('managers-input','managers-dropdown','manager')" onfocus="searchUsers('managers-input','managers-dropdown','manager')">
+          </div>
+          <div style="position:relative">
+            <div class="option-list" id="managers-dropdown" style="display:none"></div>
+          </div>
+          <input type="hidden" id="c-managers" value="[]">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Handler(s) de Marca</label>
+          <div class="chips-input-wrap" id="handlers-wrap" onclick="focusChipInput('handlers-input')">
+            <input type="text" id="handlers-input" class="chips-input" placeholder="Buscar handler..." oninput="searchUsers('handlers-input','handlers-dropdown','handler')" onfocus="searchUsers('handlers-input','handlers-dropdown','handler')">
+          </div>
+          <div style="position:relative">
+            <div class="option-list" id="handlers-dropdown" style="display:none"></div>
+          </div>
+          <input type="hidden" id="c-handlers" value="[]">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Talentos</label>
+          <div class="chips-input-wrap" id="talentos-wrap" onclick="focusChipInput('talentos-input')">
+            <input type="text" id="talentos-input" class="chips-input" placeholder="Escribí el nombre..." oninput="searchTalentos('talentos-input','talentos-dropdown')">
+          </div>
+          <div style="position:relative">
+            <div class="option-list" id="talentos-dropdown" style="display:none"></div>
+          </div>
+          <input type="hidden" id="c-talentos" value="[]">
+        </div>
+
+        <!-- Sección financiera — solo admin -->
+        <div id="seccion-finanzas" style="display:none;grid-column:1/-1">
+          <div class="form-grid" style="margin-top:0">
+            <div class="form-section-title">Datos Financieros <span style="font-size:10px;color:var(--primary);font-weight:600;text-transform:none;letter-spacing:0">(solo visible para administradores)</span></div>
+            <div class="form-group" style="grid-column:1/-1">
+              <div style="background:rgba(178,0,93,0.06);border:1px solid rgba(178,0,93,0.15);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text-muted)">
+                💡 Los fees por talento (Fee Marca y Fee Talento) se configuran dentro del detalle de la campaña. La ganancia de la agencia se calcula automáticamente.
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Método de Pago (Marca)</label>
+              <input type="text" id="c-metodo-pago" class="form-input" placeholder="Ej: Transferencia, PayPal...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">País de Facturación</label>
+              <select id="c-pais-facturacion" class="form-input">
+                <option value="">Sin especificar</option>
+                <option value="USA">USA</option>
+                <option value="Mexico">México</option>
+                <option value="Argentina">Argentina</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Requiere Factura</label>
+              <select id="c-requiere-factura" class="form-input">
+                <option value="no">No</option>
+                <option value="si">Sí</option>
+                <option value="solo_invoice">Solo Invoice</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label class="form-label">Notas Financieras</label>
+              <textarea id="c-notas-finanzas" class="form-input" style="min-height:60px" placeholder="Notas internas de facturación..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-campana')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCampana()" id="btn-save-campana">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Guardar Campaña
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Gestión de Clientes/Marcas
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-clientes">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">Clientes y Marcas</div>
+      <button class="modal-close" onclick="closeModal('modal-clientes')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:12px;margin-bottom:18px">
+        <button class="btn btn-primary btn-sm" onclick="openNuevoCliente()">+ Nuevo Cliente</button>
+        <button class="btn btn-outline btn-sm" onclick="openNuevaMarca()">+ Nueva Marca</button>
+      </div>
+      <div id="clientes-lista"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Gestión de Usuarios
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-usuarios">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Gestión de Usuarios</div>
+      <button class="modal-close" onclick="closeModal('modal-usuarios')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:14px">
+        <button class="btn btn-primary btn-sm" onclick="openNuevoUsuario()">+ Nuevo Usuario</button>
+      </div>
+      <div id="usuarios-lista"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Nuevo Cliente
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-nuevo-cliente">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-cliente-title">Nuevo Cliente</div>
+      <button class="modal-close" onclick="closeModal('modal-nuevo-cliente')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid cols-1" style="gap:12px">
+        <div class="form-group">
+          <label class="form-label">Nombre *</label>
+          <input type="text" id="cl-nombre" class="form-input" placeholder="Nombre del cliente o agencia">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo</label>
+          <select id="cl-tipo" class="form-input">
+            <option value="marca">Marca directa</option>
+            <option value="agencia">Agencia</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">País</label>
+          <input type="text" id="cl-pais" class="form-input" placeholder="Ej: Argentina">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notas</label>
+          <textarea id="cl-notas" class="form-input" style="min-height:60px"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-nuevo-cliente')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCliente()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Nueva Marca
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-nueva-marca">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-marca-title">Nueva Marca</div>
+      <button class="modal-close" onclick="closeModal('modal-nueva-marca')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid cols-1" style="gap:12px">
+        <div class="form-group">
+          <label class="form-label">Cliente *</label>
+          <select id="m-cliente" class="form-input"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nombre de la Marca *</label>
+          <input type="text" id="m-nombre" class="form-input" placeholder="Ej: Coca-Cola">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notas</label>
+          <textarea id="m-notas" class="form-input" style="min-height:60px"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-nueva-marca')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveMarca()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Nuevo Usuario
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-nuevo-usuario">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-user-title">Nuevo Usuario</div>
+      <button class="modal-close" onclick="closeModal('modal-nuevo-usuario')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="gap:12px">
+        <div class="form-group">
+          <label class="form-label">Nombre *</label>
+          <input type="text" id="u-nombre" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email *</label>
+          <input type="email" id="u-email" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contraseña temporal *</label>
+          <input type="text" id="u-password" class="form-input" placeholder="Mín 6 caracteres">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Rol *</label>
+          <select id="u-rol" class="form-input" onchange="onRolChange()">
+            <option value="campaign_manager">Admin de Campaña</option>
+            <option value="brand_handler">Handler de Marca</option>
+            <option value="talent">Talento</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Teléfono</label>
+          <input type="text" id="u-telefono" class="form-input">
+        </div>
+        <div class="form-group" id="u-talent-group" style="display:none">
+          <label class="form-label">Talento vinculado</label>
+          <select id="u-talent-id" class="form-input">
+            <option value="">Seleccionar talento...</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-nuevo-usuario')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveUsuario()">Crear Usuario</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://ngstqwbzvnpggpklifat.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── State ──────────────────────────────────────────────
+let currentUser = null;
+let currentProfile = null;
+let campanas = [];
+let clientes = [];
+let marcas = [];
+let usuarios = [];
+let talentosList = [];
+let alertas = [];
+let currentView = 'grid';
+let editingCampanaId = null;
+let editingClienteId = null;
+let editingMarcaId = null;
+
+// Chips state
+let selectedManagers = [];
+let selectedHandlers = [];
+let selectedTalentos = [];
+
+// ══════════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════════
+async function doLogin() {
+  const email = (document.getElementById('login-email').value||'').trim();
+  const pass  = document.getElementById('login-pass').value||'';
+  const btn   = document.getElementById('login-btn');
+  const errDiv= document.getElementById('login-error');
+  if (!email||!pass) { showLoginErr('Completá el email y la contraseña.'); return; }
+  btn.textContent = 'Ingresando...'; btn.disabled = true;
+  errDiv.style.display = 'none';
+  try {
+    const {data, error} = await sb.auth.signInWithPassword({email, password:pass});
+    if (error) { showLoginErr(error.message); }
+    else { currentUser = data.user; await initApp(); }
+  } catch(e) { showLoginErr('Error inesperado: '+e.message); }
+  btn.textContent = 'Ingresar'; btn.disabled = false;
+}
+function showLoginErr(msg) {
+  const d = document.getElementById('login-error');
+  d.textContent = msg; d.style.display = 'block';
+}
+
+async function checkAuth() {
+  const {data:{session}} = await sb.auth.getSession();
+  if (session) { currentUser = session.user; await initApp(); }
+  else { showLogin(); }
+}
+function showLogin() {
+  const _lo=document.getElementById('load-overlay'); _lo.style.display='none';
+  document.getElementById('login-overlay').style.display = 'flex';
+}
+async function doLogout() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+async function initApp() {
+  document.getElementById('load-msg').textContent = 'Cargando datos...';
+  try {
+    // Cargar perfil del usuario
+    const {data: profile} = await sb.from('user_profiles').select('*').eq('id', currentUser.id).single();
+    currentProfile = profile;
+
+    if (!currentProfile) {
+      // Usuario sin perfil — puede ser el primer admin
+      showLogin();
+      showLoginErr('Tu usuario no tiene perfil configurado. Contactá al administrador.');
+      return;
+    }
+
+    // Mostrar UI de usuario
+    setupUserUI();
+
+    // Cargar datos según rol
+    await Promise.all([
+      loadClientes(),
+      loadUsuarios(),
+      loadTalentosBD(),
+    ]);
+    await loadCampanas();
+    await loadAlertas();
+
+    // Mostrar app
+    document.getElementById('login-overlay').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    const _lo=document.getElementById('load-overlay'); _lo.style.display='none';
+
+    // Mostrar botones según rol
+    if (isAdmin()) {
+      document.getElementById('btn-nueva').style.display = 'inline-flex';
+      document.getElementById('btn-clientes').style.display = 'inline-flex';
+      document.getElementById('btn-usuarios').style.display = 'inline-flex';
+    } else if (isInternal()) {
+      document.getElementById('btn-nueva').style.display = 'inline-flex';
+    }
+
+    renderCampanas();
+    renderStats();
+    populateFiltroMarcas();
+    
+    // Handle ?edit=ID param from campana-detalle.html
+    const editId = parseInt(new URLSearchParams(location.search).get('edit'))||0;
+    if (editId) {
+      const c = campanas.find(x=>x.id===editId);
+      if (c) { setTimeout(()=>editCampana(editId), 300); }
+    }
+
+  } catch(e) {
+    console.error('initApp error:', e);
+    showToast('Error al cargar: '+e.message, 'error');
+    const _lo=document.getElementById('load-overlay'); _lo.style.display='none';
+  }
+}
+
+function setupUserUI() {
+  if (!currentProfile) return;
+  const names = (currentProfile.nombre||'').split(' ');
+  const initials = names.map(n=>n[0]||'').join('').substring(0,2).toUpperCase() || '?';
+  document.getElementById('user-avatar').textContent = initials;
+  document.getElementById('user-name').textContent = currentProfile.nombre || currentUser.email;
+  const badge = document.getElementById('user-role-badge');
+  const roleLabels = {admin:'Admin',campaign_manager:'Manager',brand_handler:'Handler',talent:'Talento'};
+  badge.textContent = roleLabels[currentProfile.role]||currentProfile.role;
+  badge.className = 'role-badge '+({admin:'admin',campaign_manager:'manager',brand_handler:'handler',talent:'talent'}[currentProfile.role]||'');
+}
+
+function isAdmin() { return currentProfile?.role === 'admin'; }
+function isInternal() { return ['admin','campaign_manager'].includes(currentProfile?.role); }
+
+// ══════════════════════════════════════════════════════════
+// LOAD DATA
+// ══════════════════════════════════════════════════════════
+async function loadClientes() {
+  const {data} = await sb.from('clientes').select('*, marcas(*)').order('nombre');
+  clientes = data || [];
+  // Flatten marcas
+  marcas = clientes.flatMap(c => (c.marcas||[]).map(m=>({...m, cliente_nombre:c.nombre})));
+}
+
+async function loadUsuarios() {
+  if (!isInternal()) return;
+  const {data} = await sb.from('user_profiles').select('*').eq('activo', true).order('nombre');
+  usuarios = data || [];
+}
+
+async function loadTalentosBD() {
+  const {data} = await sb.from('talentos').select('id, nombre, foto').order('nombre');
+  talentosList = data || [];
+}
+
+async function loadCampanas() {
+  let query = sb.from('campanas').select(`
+    *,
+    marcas(id, nombre, logo_url, clientes(nombre)),
+    campana_managers(user_id),
+    campana_handlers(user_id),
+    campana_talentos(
+      id, talent_id, fee_marca, fee_talento, moneda, pago_estado,
+      talentos(id, nombre, foto),
+      contenidos(id, paso_actual, tipo)
+    )
+  `).order('created_at', {ascending:false});
+
+  const {data, error} = await query;
+  if (error) throw error;
+  campanas = data || [];
+}
+
+async function loadAlertas() {
+  const {data} = await sb.from('alertas')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .eq('leida', false)
+    .order('created_at', {ascending:false})
+    .limit(50);
+  alertas = data || [];
+  const dot = document.getElementById('bell-dot');
+  if (dot) dot.classList.toggle('visible', alertas.length > 0);
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDER CAMPAÑAS
+// ══════════════════════════════════════════════════════════
+function getFilteredCampanas() {
+  const q = (document.getElementById('search-input')?.value||'').toLowerCase().trim();
+  const estado = document.getElementById('filter-estado')?.value||'';
+  const marcaId = parseInt(document.getElementById('filter-marca')?.value)||0;
+
+  return campanas.filter(c => {
+    if (estado && c.estado !== estado) return false;
+    if (marcaId && c.marca_id !== marcaId) return false;
+    if (q) {
+      const nombre = (c.nombre||'').toLowerCase();
+      const marca  = (c.marcas?.nombre||'').toLowerCase();
+      const cliente= (c.marcas?.clientes?.nombre||'').toLowerCase();
+      if (!nombre.includes(q) && !marca.includes(q) && !cliente.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderCampanas() {
+  const filtered = getFilteredCampanas();
+  const container = document.getElementById('campanas-container');
+
+  if (currentView === 'grid') {
+    renderGrid(container, filtered);
+  } else if (currentView === 'list') {
+    renderList(container, filtered);
+  } else {
+    renderKanban(container, filtered);
+  }
+
+  document.getElementById('subtitle-count').textContent =
+    `${filtered.length} campaña${filtered.length!==1?'s':''} ${campanas.length !== filtered.length ? '(filtradas de '+campanas.length+')' : ''}`;
+}
+
+function estadoBadgeHTML(estado) {
+  const labels = {sin_iniciar:'Sin iniciar',en_curso:'En curso',etapa_finanzas:'Finanzas',finalizada:'Finalizada',cancelada:'Cancelada'};
+  return `<span class="estado-badge estado-${estado}">${labels[estado]||estado}</span>`;
+}
+
+function calcProgress(campana) {
+  const contenidos = campana.campana_talentos?.flatMap(ct=>ct.contenidos||[])||[];
+  if (!contenidos.length) return 0;
+  // Pasos 1-7, completado = paso >= 7
+  const done = contenidos.filter(c=>c.paso_actual>=7).length;
+  return Math.round((done/contenidos.length)*100);
+}
+
+function getMarcaInitials(campana) {
+  return (campana.marcas?.nombre||'?').substring(0,2).toUpperCase();
+}
+
+function renderGrid(container, filtered) {
+  container.className = 'campanas-grid';
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty-state">
+      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      <h3>No hay campañas</h3>
+      <p>${document.getElementById('search-input')?.value ? 'Probá con otra búsqueda' : 'Creá tu primera campaña'}</p>
+    </div>`;
+    return;
+  }
+  container.innerHTML = filtered.map(c => {
+    const progress = calcProgress(c);
+    const managers = c.campana_managers||[];
+    const talentos = c.campana_talentos||[];
+    const totalContenidos = talentos.flatMap(ct=>ct.contenidos||[]).length;
+    return `<div class="campana-card" onclick="openCampana(${c.id})">
+      <div class="campana-card-header">
+        <div class="marca-logo">${getMarcaInitials(c)}</div>
+        <div class="campana-card-meta">
+          <div class="campana-nombre">${escHtml(c.nombre)}</div>
+          <div class="campana-cliente">${escHtml(c.marcas?.clientes?.nombre||'')} ${c.marcas?.nombre?'· '+escHtml(c.marcas.nombre):''}</div>
+        </div>
+        ${estadoBadgeHTML(c.estado)}
+      </div>
+      <div class="campana-card-body">
+        <div class="campana-talentos-row">
+          <div class="talent-avatar-stack">
+            ${talentos.slice(0,4).map(ct=>`<div class="talent-avatar">${ct.talentos?.foto?`<img src="${ct.talentos.foto}" loading="lazy">`:(ct.talentos?.nombre||'?').substring(0,1).toUpperCase()}</div>`).join('')}
+            ${talentos.length>4?`<div class="talent-avatar">+${talentos.length-4}</div>`:''}
+          </div>
+          <span class="talent-count">${talentos.length} talento${talentos.length!==1?'s':''}</span>
+          ${totalContenidos?`<span class="campana-contenidos-count">· ${totalContenidos} contenido${totalContenidos!==1?'s':''}</span>`:''}
+        </div>
+        ${totalContenidos>0?`
+        <div class="campana-progress">
+          <div class="progress-label">
+            <span>Progreso</span><span>${progress}%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div>
+        </div>`:''}
+      </div>
+      <div class="campana-footer">
+        ${c.fecha_fin?`<span class="campana-fecha">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          ${formatDate(c.fecha_fin)}
+        </span>`:'<span></span>'}
+        <div class="campana-managers">
+          ${managers.slice(0,3).map(m=>{
+            const u = usuarios.find(x=>x.id===m.user_id);
+            const name = u?.nombre || '?';
+            const ini = name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
+            return `<div class="manager-chip" title="${escHtml(name)}">${ini}</div>`;
+          }).join('')}
+        </div>
+        ${isInternal()?`<button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px;margin-left:4px" onclick="event.stopPropagation();editCampana(${c.id})">✎</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderList(container, filtered) {
+  container.className = '';
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty-state">
+      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      <h3>No hay campañas</h3>
+      <p>Creá tu primera campaña o ajustá los filtros</p>
+    </div>`;
+    return;
+  }
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="display:grid;grid-template-columns:40px 1fr 180px 120px 100px 120px auto;gap:14px;padding:6px 18px;font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">
+        <div></div><div>Campaña</div><div>Marca / Cliente</div>
+        <div class="col-center">Estado</div><div class="col-center">Talentos</div>
+        <div class="col-center">Progreso</div><div></div>
+      </div>
+      ${filtered.map(c => {
+        const talentos = c.campana_talentos||[];
+        const progress = calcProgress(c);
+        return `<div class="campana-row" onclick="openCampana(${c.id})">
+          <div class="marca-logo">${getMarcaInitials(c)}</div>
+          <div>
+            <div class="campana-nombre">${escHtml(c.nombre)}</div>
+            ${c.fecha_fin?`<div class="campana-cliente">${formatDate(c.fecha_fin)}</div>`:''}
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:600">${escHtml(c.marcas?.nombre||'-')}</div>
+            <div class="campana-cliente">${escHtml(c.marcas?.clientes?.nombre||'-')}</div>
+          </div>
+          <div class="col-center">${estadoBadgeHTML(c.estado)}</div>
+          <div class="col-center" style="font-size:13px;font-weight:600">${talentos.length}</div>
+          <div class="col-center">
+            <div style="display:flex;align-items:center;gap:6px;width:80px">
+              <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${progress}%"></div></div>
+              <span style="font-size:11px;color:var(--text-dim);width:28px">${progress}%</span>
+            </div>
+          </div>
+          <div class="col-right">
+            ${isInternal()?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editCampana(${c.id})">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function renderKanban(container, filtered) {
+  container.className = '';
+  const cols = [
+    {key:'sin_iniciar', label:'Sin iniciar', color:'#555'},
+    {key:'en_curso',    label:'En curso',    color:'#38bdf8'},
+    {key:'etapa_finanzas', label:'Finanzas', color:'#fbbf24'},
+    {key:'finalizada',  label:'Finalizada',  color:'#4ade80'},
+    {key:'cancelada',   label:'Cancelada',   color:'#ef4444'},
+  ];
+  container.innerHTML = `<div class="kanban-wrap">
+    ${cols.map(col => {
+      const items = filtered.filter(c=>c.estado===col.key);
+      return `<div class="kanban-col">
+        <div class="kanban-col-header">
+          <div style="width:8px;height:8px;border-radius:50%;background:${col.color};flex-shrink:0"></div>
+          <div class="kanban-col-title" style="color:${col.color}">${col.label}</div>
+          <div class="kanban-count">${items.length}</div>
+        </div>
+        <div class="kanban-items">
+          ${items.length ? items.map(c=>`
+            <div class="kanban-card" onclick="openCampana(${c.id})">
+              <div class="kanban-card-nombre">${escHtml(c.nombre)}</div>
+              <div class="kanban-card-meta">${escHtml(c.marcas?.nombre||'')}${c.campana_talentos?.length?' · '+c.campana_talentos.length+' talento'+(c.campana_talentos.length!==1?'s':''):''}</div>
+              ${c.fecha_fin?`<div class="kanban-card-meta" style="margin-top:4px">${formatDate(c.fecha_fin)}</div>`:''}
+            </div>`).join('') :
+          `<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:20px">Sin campañas</div>`}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderStats() {
+  document.getElementById('stat-total').textContent = campanas.length;
+  document.getElementById('stat-en-curso').textContent = campanas.filter(c=>c.estado==='en_curso').length;
+  document.getElementById('stat-finanzas').textContent = campanas.filter(c=>c.estado==='etapa_finanzas').length;
+  document.getElementById('stat-finalizadas').textContent = campanas.filter(c=>c.estado==='finalizada').length;
+  const talentosActivos = new Set(
+    campanas.filter(c=>c.estado==='en_curso')
+      .flatMap(c=>c.campana_talentos||[])
+      .map(ct=>ct.talent_id)
+  ).size;
+  document.getElementById('stat-talentos').textContent = talentosActivos;
+}
+
+function populateFiltroMarcas() {
+  const sel = document.getElementById('filter-marca');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Todas las marcas</option>' +
+    marcas.map(m=>`<option value="${m.id}">${escHtml(m.nombre)}</option>`).join('');
+  sel.value = prev;
+}
+
+// ══════════════════════════════════════════════════════════
+// VIEWS
+// ══════════════════════════════════════════════════════════
+function setView(v) {
+  currentView = v;
+  ['grid','list','kanban'].forEach(x=>{
+    document.getElementById('vbtn-'+x)?.classList.toggle('active',x===v);
+  });
+  renderCampanas();
+}
+
+// ══════════════════════════════════════════════════════════
+// OPEN CAMPAÑA (navigate to detail)
+// ══════════════════════════════════════════════════════════
+function openCampana(id) {
+  window.location.href = 'campana-detalle.html?id='+id;
+}
+
+// ══════════════════════════════════════════════════════════
+// MODAL: NUEVA / EDITAR CAMPAÑA
+// ══════════════════════════════════════════════════════════
+function openNuevaCampana() {
+  editingCampanaId = null;
+  document.getElementById('modal-campana-title').textContent = 'Nueva Campaña';
+  clearCampanaForm();
+  if (isAdmin()) document.getElementById('seccion-finanzas').style.display = 'block';
+  populateClienteSelect();
+  // Reset cliente/marca selects
+  document.getElementById('c-cliente').value = '';
+  document.getElementById('c-marca').innerHTML = '<option value="">Primero seleccioná un cliente</option>';
+  openModal('modal-campana');
+}
+
+function editCampana(id) {
+  const c = campanas.find(x=>x.id===id);
+  if (!c) return;
+  editingCampanaId = id;
+  document.getElementById('modal-campana-title').textContent = 'Editar Campaña';
+  clearCampanaForm();
+  populateClienteSelect();
+
+  // Llenar form
+  document.getElementById('c-nombre').value = c.nombre||'';
+  document.getElementById('c-estado').value = c.estado||'sin_iniciar';
+  document.getElementById('c-fecha-inicio').value = c.fecha_inicio||'';
+  document.getElementById('c-fecha-fin').value = c.fecha_fin||'';
+  document.getElementById('c-descripcion').value = c.descripcion||'';
+
+  // Cliente / Marca
+  if (c.marca_id) {
+    const marca = marcas.find(m=>m.id===c.marca_id);
+    if (marca) {
+      document.getElementById('c-cliente').value = marca.cliente_id||'';
+      onClienteChange();
+      setTimeout(()=>{ document.getElementById('c-marca').value = c.marca_id; }, 50);
+    }
+  }
+
+  // Managers — resolve names from loaded usuarios array
+  selectedManagers = (c.campana_managers||[]).map(m=>{
+    const user = usuarios.find(u=>u.id===m.user_id);
+    return { id: m.user_id, nombre: user?.nombre || m.user_id?.substring(0,8)+'…' || '?' };
+  });
+  renderChips('managers-wrap','managers-input', selectedManagers, removeManager);
+
+  // Handlers
+  selectedHandlers = (c.campana_handlers||[]).map(h=>{
+    const user = usuarios.find(u=>u.id===h.user_id);
+    return { id: h.user_id, nombre: user?.nombre || h.user_id?.substring(0,8)+'…' || '?' };
+  });
+  renderChips('handlers-wrap','handlers-input', selectedHandlers, removeHandler);
+
+  // Talentos
+  selectedTalentos = (c.campana_talentos||[]).map(ct=>({
+    id: ct.talent_id,
+    nombre: ct.talentos?.nombre||'',
+  }));
+  renderChips('talentos-wrap','talentos-input', selectedTalentos, removeTalento);
+
+  // Finanzas (solo admin)
+  if (isAdmin()) {
+    document.getElementById('seccion-finanzas').style.display = 'block';
+    const mp = document.getElementById('c-metodo-pago'); if(mp) mp.value = c.metodo_pago_marca||'';
+    const pf = document.getElementById('c-pais-facturacion'); if(pf) pf.value = c.pais_facturacion||'';
+    const rf = document.getElementById('c-requiere-factura'); if(rf) rf.value = c.requiere_factura||'no';
+    const nf = document.getElementById('c-notas-finanzas'); if(nf) nf.value = c.notas_finanzas||'';
+  }
+
+  openModal('modal-campana');
+}
+
+function clearCampanaForm() {
+  ['c-nombre','c-fecha-inicio','c-fecha-fin','c-descripcion',
+   'c-metodo-pago','c-notas-finanzas'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('c-estado').value = 'sin_iniciar';
+  const paisFact = document.getElementById('c-pais-facturacion'); if(paisFact) paisFact.value = '';
+  const reqFact = document.getElementById('c-requiere-factura'); if(reqFact) reqFact.value = 'no';
+  selectedManagers=[]; selectedHandlers=[]; selectedTalentos=[];
+  renderChips('managers-wrap','managers-input',selectedManagers,removeManager);
+  renderChips('handlers-wrap','handlers-input',selectedHandlers,removeHandler);
+  renderChips('talentos-wrap','talentos-input',selectedTalentos,removeTalento);
+  if (!isAdmin()) document.getElementById('seccion-finanzas').style.display = 'none';
+}
+
+async function saveCampana() {
+  const nombre = document.getElementById('c-nombre').value.trim();
+  if (!nombre) { showToast('El nombre es obligatorio','error'); return; }
+
+  const marcaId = parseInt(document.getElementById('c-marca').value)||null;
+  const clienteId = parseInt(document.getElementById('c-cliente').value)||null;
+
+  const payload = {
+    nombre,
+    marca_id: marcaId,
+    cliente_id: clienteId,
+    estado: document.getElementById('c-estado').value,
+    fecha_inicio: document.getElementById('c-fecha-inicio').value||null,
+    fecha_fin: document.getElementById('c-fecha-fin').value||null,
+    descripcion: document.getElementById('c-descripcion').value.trim(),
+  };
+
+  if (isAdmin()) {
+    Object.assign(payload, {
+      metodo_pago_marca: document.getElementById('c-metodo-pago')?.value.trim()||'',
+      pais_facturacion: document.getElementById('c-pais-facturacion')?.value||'',
+      requiere_factura: document.getElementById('c-requiere-factura')?.value||'no',
+      notas_finanzas: document.getElementById('c-notas-finanzas')?.value.trim()||'',
+    });
+  }
+
+  const btn = document.getElementById('btn-save-campana');
+  btn.textContent = 'Guardando...'; btn.disabled = true;
+
+  try {
+    let campanaId = editingCampanaId;
+
+    if (editingCampanaId) {
+      await sb.from('campanas').update(payload).eq('id', editingCampanaId);
+    } else {
+      payload.created_by = currentUser.id;
+      const {data, error} = await sb.from('campanas').insert(payload).select('id').single();
+      if (error) throw error;
+      campanaId = data.id;
+    }
+
+    // Sync managers
+    await sb.from('campana_managers').delete().eq('campana_id', campanaId);
+    if (selectedManagers.length) {
+      await sb.from('campana_managers').insert(
+        selectedManagers.map(m=>({campana_id: campanaId, user_id: m.id}))
+      );
+    }
+
+    // Sync handlers
+    await sb.from('campana_handlers').delete().eq('campana_id', campanaId);
+    if (selectedHandlers.length) {
+      await sb.from('campana_handlers').insert(
+        selectedHandlers.map(h=>({campana_id: campanaId, user_id: h.id}))
+      );
+    }
+
+    // Sync talentos (solo agregar nuevos, no borrar los existentes para no perder datos)
+    const existing = await sb.from('campana_talentos').select('talent_id').eq('campana_id', campanaId);
+    const existingIds = new Set((existing.data||[]).map(ct=>ct.talent_id));
+    const nuevos = selectedTalentos.filter(t=>!existingIds.has(t.id));
+    if (nuevos.length) {
+      await sb.from('campana_talentos').insert(
+        nuevos.map(t=>({campana_id: campanaId, talent_id: t.id}))
+      );
+    }
+
+    closeModal('modal-campana');
+    await loadCampanas();
+    renderCampanas();
+    renderStats();
+    showToast(editingCampanaId ? 'Campaña actualizada ✓' : 'Campaña creada ✓', 'success');
+
+    // Si es nueva, navegar al detalle
+    if (!editingCampanaId) {
+      setTimeout(()=>{ window.location.href='campana-detalle.html?id='+campanaId; }, 600);
+    }
+
+  } catch(e) {
+    console.error('saveCampana:', e);
+    showToast('Error al guardar: '+e.message, 'error');
+  }
+
+  btn.textContent = 'Guardar Campaña'; btn.disabled = false;
+}
+
+// ══════════════════════════════════════════════════════════
+// CHIPS (multi-select) helpers
+// ══════════════════════════════════════════════════════════
+function renderChips(wrapId, inputId, items, removeFn) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  // Remove existing chips
+  wrap.querySelectorAll('.chip').forEach(c=>c.remove());
+  const input = document.getElementById(inputId);
+  items.forEach(item => {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.innerHTML = `${escHtml(item.nombre)}<span class="chip-remove" onclick="event.stopPropagation();${removeFn.name}('${item.id}')">
+      <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </span>`;
+    wrap.insertBefore(chip, input);
+  });
+}
+
+function focusChipInput(id) { document.getElementById(id)?.focus(); }
+
+function searchUsers(inputId, dropdownId, roleFilter) {
+  const q = (document.getElementById(inputId)?.value||'').toLowerCase();
+  const dropdown = document.getElementById(dropdownId);
+  if (!dropdown) return;
+  const roles = roleFilter === 'manager'
+    ? ['admin','campaign_manager']
+    : ['brand_handler'];
+  const results = usuarios.filter(u =>
+    roles.includes(u.role) &&
+    (u.nombre||'').toLowerCase().includes(q) &&
+    !selectedManagers.find(m=>m.id===u.id) &&
+    !selectedHandlers.find(h=>h.id===u.id)
+  ).slice(0,8);
+
+  if (!results.length) { dropdown.style.display='none'; return; }
+  dropdown.style.display = 'block';
+  dropdown.innerHTML = results.map(u=>`
+    <div class="option-item" onclick="addUser('${u.id}','${escHtml(u.nombre)}','${roleFilter}')">
+      <div class="option-avatar">${(u.nombre||'?').substring(0,1).toUpperCase()}</div>
+      <div>
+        <div style="font-size:13px;font-weight:600">${escHtml(u.nombre)}</div>
+        <div style="font-size:11px;color:var(--text-dim)">${u.email}</div>
+      </div>
+    </div>`).join('');
+}
+
+function addUser(id, nombre, type) {
+  const item = {id, nombre};
+  if (type === 'manager') {
+    if (!selectedManagers.find(m=>m.id===id)) {
+      selectedManagers.push(item);
+      renderChips('managers-wrap','managers-input',selectedManagers,removeManager);
+    }
+    document.getElementById('managers-input').value='';
+    document.getElementById('managers-dropdown').style.display='none';
+  } else {
+    if (!selectedHandlers.find(h=>h.id===id)) {
+      selectedHandlers.push(item);
+      renderChips('handlers-wrap','handlers-input',selectedHandlers,removeHandler);
+    }
+    document.getElementById('handlers-input').value='';
+    document.getElementById('handlers-dropdown').style.display='none';
+  }
+}
+
+function removeManager(id) {
+  selectedManagers = selectedManagers.filter(m=>m.id!==id);
+  renderChips('managers-wrap','managers-input',selectedManagers,removeManager);
+}
+function removeHandler(id) {
+  selectedHandlers = selectedHandlers.filter(h=>h.id!==id);
+  renderChips('handlers-wrap','handlers-input',selectedHandlers,removeHandler);
+}
+
+let _talentSearchTimeout = null;
+function searchTalentos(inputId, dropdownId) {
+  clearTimeout(_talentSearchTimeout);
+  _talentSearchTimeout = setTimeout(() => _doSearchTalentos(inputId, dropdownId), 150);
+}
+function _doSearchTalentos(inputId, dropdownId) {
+  const q = (document.getElementById(inputId)?.value||'').toLowerCase().trim();
+  const dropdown = document.getElementById(dropdownId);
+  if (!dropdown) return;
+  
+  // Need at least 1 char to search (1000+ talentos)
+  if (!q) { dropdown.style.display='none'; return; }
+  
+  const results = talentosList.filter(t =>
+    (t.nombre||'').toLowerCase().includes(q) &&
+    !selectedTalentos.find(x=>x.id===t.id)
+  ).slice(0, 10);
+
+  if (!results.length) {
+    dropdown.style.display = 'block';
+    dropdown.innerHTML = '<div class="option-item" style="color:var(--text-dim)">Sin resultados para "'+q+'"</div>';
+    return;
+  }
+  dropdown.style.display = 'block';
+  dropdown.innerHTML = results.map(t=>`
+    <div class="option-item" onclick="addTalento(${t.id},'${escHtml(t.nombre).replace(/'/g,"\'")}')">
+      <div class="option-avatar">${t.foto?`<img src="${t.foto}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`:(t.nombre||'?').substring(0,1).toUpperCase()}</div>
+      <div>
+        <div style="font-size:13px;font-weight:600">${escHtml(t.nombre)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function addTalento(id, nombre) {
+  if (!selectedTalentos.find(t=>t.id===id)) {
+    selectedTalentos.push({id, nombre});
+    renderChips('talentos-wrap','talentos-input',selectedTalentos,removeTalento);
+  }
+  document.getElementById('talentos-input').value='';
+  document.getElementById('talentos-dropdown').style.display='none';
+}
+function removeTalento(id) {
+  id = parseInt(id);
+  selectedTalentos = selectedTalentos.filter(t=>t.id!==id);
+  renderChips('talentos-wrap','talentos-input',selectedTalentos,removeTalento);
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', e => {
+  ['managers-dropdown','handlers-dropdown','talentos-dropdown'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.closest('.chips-input-wrap') && !e.target.closest('#'+id)) {
+      el.style.display = 'none';
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// CLIENTE SELECT
+// ══════════════════════════════════════════════════════════
+function populateClienteSelect() {
+  const sel = document.getElementById('c-cliente');
+  sel.innerHTML = '<option value="">Seleccionar cliente...</option>' +
+    clientes.map(c=>`<option value="${c.id}">${escHtml(c.nombre)}</option>`).join('');
+}
+
+function onClienteChange() {
+  const clienteId = parseInt(document.getElementById('c-cliente').value)||0;
+  const sel = document.getElementById('c-marca');
+  const filtered = marcas.filter(m=>m.cliente_id===clienteId);
+  sel.innerHTML = filtered.length
+    ? '<option value="">Seleccionar marca...</option>'+filtered.map(m=>`<option value="${m.id}">${escHtml(m.nombre)}</option>`).join('')
+    : '<option value="">No hay marcas para este cliente</option>';
+}
+
+function onMarcaChange() {
+  // Auto-populate handlers from marca_handlers if needed in future
+}
+
+// ══════════════════════════════════════════════════════════
+// CLIENTES MODAL
+// ══════════════════════════════════════════════════════════
+function openClientesModal() {
+  renderClientesLista();
+  openModal('modal-clientes');
+}
+
+function renderClientesLista() {
+  const container = document.getElementById('clientes-lista');
+  if (!clientes.length) { container.innerHTML='<p style="color:var(--text-muted);font-size:13px">No hay clientes. Creá el primero.</p>'; return; }
+  container.innerHTML = clientes.map(c=>`
+    <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-weight:700;font-size:14px">${escHtml(c.nombre)}</span>
+        <span style="font-size:11px;color:var(--text-muted);background:var(--surface3);padding:2px 8px;border-radius:20px">${c.tipo==='agencia'?'Agencia':'Marca directa'}</span>
+        ${c.pais?`<span style="font-size:12px;color:var(--text-dim)">${escHtml(c.pais)}</span>`:''}
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="editCliente(${c.id})">Editar</button>
+      </div>
+      ${(c.marcas||[]).length ? `
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${c.marcas.map(m=>`<span style="font-size:12px;background:rgba(178,0,93,0.08);color:var(--primary-light);padding:3px 10px;border-radius:20px;cursor:pointer" onclick="editMarca(${m.id})">${escHtml(m.nombre)}</span>`).join('')}
+        </div>` : `<span style="font-size:12px;color:var(--text-dim)">Sin marcas</span>`}
+    </div>`).join('');
+}
+
+function openNuevoCliente() {
+  editingClienteId = null;
+  document.getElementById('modal-cliente-title').textContent = 'Nuevo Cliente';
+  ['cl-nombre','cl-pais','cl-notas'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('cl-tipo').value = 'marca';
+  openModal('modal-nuevo-cliente');
+}
+
+function editCliente(id) {
+  const c = clientes.find(x=>x.id===id);
+  if (!c) return;
+  editingClienteId = id;
+  document.getElementById('modal-cliente-title').textContent = 'Editar Cliente';
+  document.getElementById('cl-nombre').value = c.nombre||'';
+  document.getElementById('cl-tipo').value = c.tipo||'marca';
+  document.getElementById('cl-pais').value = c.pais||'';
+  document.getElementById('cl-notas').value = c.notas||'';
+  openModal('modal-nuevo-cliente');
+}
+
+async function saveCliente() {
+  const nombre = document.getElementById('cl-nombre').value.trim();
+  if (!nombre) { showToast('El nombre es obligatorio','error'); return; }
+  const payload = {
+    nombre,
+    tipo: document.getElementById('cl-tipo').value,
+    pais: document.getElementById('cl-pais').value.trim(),
+    notas: document.getElementById('cl-notas').value.trim(),
+  };
+  try {
+    if (editingClienteId) {
+      await sb.from('clientes').update(payload).eq('id', editingClienteId);
+    } else {
+      await sb.from('clientes').insert(payload);
+    }
+    await loadClientes();
+    populateFiltroMarcas();
+    renderClientesLista();
+    closeModal('modal-nuevo-cliente');
+    showToast('Cliente guardado ✓','success');
+  } catch(e) { showToast('Error: '+e.message,'error'); }
+}
+
+function openNuevaMarca() {
+  editingMarcaId = null;
+  document.getElementById('modal-marca-title').textContent = 'Nueva Marca';
+  document.getElementById('m-nombre').value='';
+  document.getElementById('m-notas').value='';
+  const sel = document.getElementById('m-cliente');
+  sel.innerHTML = clientes.map(c=>`<option value="${c.id}">${escHtml(c.nombre)}</option>`).join('');
+  openModal('modal-nueva-marca');
+}
+
+function editMarca(id) {
+  const m = marcas.find(x=>x.id===id);
+  if (!m) return;
+  editingMarcaId = id;
+  document.getElementById('modal-marca-title').textContent = 'Editar Marca';
+  document.getElementById('m-nombre').value = m.nombre||'';
+  document.getElementById('m-notas').value = m.notas||'';
+  const sel = document.getElementById('m-cliente');
+  sel.innerHTML = clientes.map(c=>`<option value="${c.id}">${escHtml(c.nombre)}</option>`).join('');
+  sel.value = m.cliente_id||'';
+  openModal('modal-nueva-marca');
+}
+
+async function saveMarca() {
+  const nombre = document.getElementById('m-nombre').value.trim();
+  const clienteId = parseInt(document.getElementById('m-cliente').value)||0;
+  if (!nombre||!clienteId) { showToast('Nombre y cliente son obligatorios','error'); return; }
+  const payload = { nombre, cliente_id: clienteId, notas: document.getElementById('m-notas').value.trim() };
+  try {
+    if (editingMarcaId) {
+      await sb.from('marcas').update(payload).eq('id', editingMarcaId);
+    } else {
+      await sb.from('marcas').insert(payload);
+    }
+    await loadClientes();
+    populateFiltroMarcas();
+    renderClientesLista();
+    closeModal('modal-nueva-marca');
+    showToast('Marca guardada ✓','success');
+  } catch(e) { showToast('Error: '+e.message,'error'); }
+}
+
+// ══════════════════════════════════════════════════════════
+// USUARIOS MODAL
+// ══════════════════════════════════════════════════════════
+function openUsuariosModal() {
+  renderUsuariosLista();
+  openModal('modal-usuarios');
+}
+
+function renderUsuariosLista() {
+  const container = document.getElementById('usuarios-lista');
+  if (!usuarios.length) { container.innerHTML='<p style="color:var(--text-muted);font-size:13px">No hay usuarios.</p>'; return; }
+  const roleLabels = {admin:'Admin',campaign_manager:'Manager',brand_handler:'Handler',talent:'Talento'};
+  const roleColors = {admin:'admin',campaign_manager:'manager',brand_handler:'handler',talent:'talent'};
+  container.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px">
+    ${usuarios.map(u=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+        <div class="option-avatar">${(u.nombre||'?').substring(0,1).toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">${escHtml(u.nombre)}</div>
+          <div style="font-size:12px;color:var(--text-dim)">${escHtml(u.email)}</div>
+        </div>
+        <span class="role-badge ${roleColors[u.role]||''}">${roleLabels[u.role]||u.role}</span>
+        <div style="width:8px;height:8px;border-radius:50%;background:${u.activo?'#22c55e':'#ef4444'}"></div>
+      </div>`).join('')}
+  </div>`;
+}
+
+function openNuevoUsuario() {
+  ['u-nombre','u-email','u-password','u-telefono'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('u-rol').value = 'campaign_manager';
+  document.getElementById('u-talent-group').style.display = 'none';
+  // Populate talento select
+  const sel = document.getElementById('u-talent-id');
+  sel.innerHTML = '<option value="">Seleccionar talento...</option>' +
+    talentosList.map(t=>`<option value="${t.id}">${escHtml(t.nombre)}</option>`).join('');
+  openModal('modal-nuevo-usuario');
+}
+
+function onRolChange() {
+  const rol = document.getElementById('u-rol').value;
+  document.getElementById('u-talent-group').style.display = rol==='talent' ? 'block' : 'none';
+}
+
+async function saveUsuario() {
+  const nombre   = document.getElementById('u-nombre').value.trim();
+  const email    = document.getElementById('u-email').value.trim();
+  const password = document.getElementById('u-password').value;
+  const rol      = document.getElementById('u-rol').value;
+
+  if (!nombre||!email||!password) { showToast('Nombre, email y contraseña son obligatorios','error'); return; }
+  if (password.length < 6) { showToast('La contraseña debe tener al menos 6 caracteres','error'); return; }
+
+  try {
+    // Save current admin session before creating new user
+    const {data:{session: adminSession}} = await sb.auth.getSession();
+
+    // Create user via signUp (admin API not available with anon key)
+    const {data: authData, error: authError} = await sb.auth.signUp({email, password});
+    if (authError) throw authError;
+
+    const userId = authData?.user?.id;
+    if (!userId) throw new Error('No se pudo obtener el ID. Puede que el email ya esté registrado.');
+
+    // Create profile
+    const {error: profileError} = await sb.from('user_profiles').insert({
+      id: userId,
+      nombre,
+      email,
+      role: rol,
+      telefono: document.getElementById('u-telefono').value.trim(),
+      talent_id: rol==='talent' ? (parseInt(document.getElementById('u-talent-id').value)||null) : null,
+      activo: true,
+    });
+    if (profileError) console.warn('Profile insert error:', profileError.message);
+
+    // Restore admin session (signUp may have switched sessions)
+    if (adminSession) {
+      await sb.auth.setSession({
+        access_token: adminSession.access_token,
+        refresh_token: adminSession.refresh_token
+      });
+    }
+
+    await loadUsuarios();
+    renderUsuariosLista();
+    closeModal('modal-nuevo-usuario');
+    showToast('Usuario "'+nombre+'" creado ✓. Debe confirmar su email para poder ingresar.','success');
+  } catch(e) {
+    console.error('saveUsuario:', e);
+    showToast('Error al crear usuario: '+e.message,'error');
+    // Make sure admin stays logged in
+    try { const {data:{session}} = await sb.auth.getSession(); if (!session) location.reload(); } catch(x){}
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ALERTAS
+// ══════════════════════════════════════════════════════════
+function toggleAlertas() {
+  document.getElementById('alertas-panel').classList.toggle('open');
+  if (document.getElementById('alertas-panel').classList.contains('open')) {
+    renderAlertasList();
+  }
+}
+
+function renderAlertasList() {
+  const list = document.getElementById('alertas-list');
+  if (!alertas.length) {
+    list.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text-dim);font-size:13px">Sin alertas pendientes</div>';
+    return;
+  }
+  const tipoLabels = {
+    vencimiento_spark_code:'Spark Code',
+    vencimiento_derechos_imagen:'Derechos de Imagen',
+    vencimiento_pauta:'Pauta',
+    fecha_publicacion_proxima:'Publicación próxima',
+    esperando_aprobacion:'Esperando aprobación',
+    pendiente_pago:'Pendiente de pago',
+  };
+  list.innerHTML = alertas.map(a=>`
+    <div class="alerta-item ${a.leida?'':'no-leida'}" onclick="markRead(${a.id})">
+      <div class="alerta-tipo">${tipoLabels[a.tipo]||a.tipo}</div>
+      <div class="alerta-titulo">${escHtml(a.titulo)}</div>
+      ${a.descripcion?`<div class="alerta-desc">${escHtml(a.descripcion)}</div>`:''}
+      <div class="alerta-fecha">${formatDateTime(a.created_at)}</div>
+    </div>`).join('');
+}
+
+async function markRead(id) {
+  await sb.from('alertas').update({leida:true}).eq('id',id);
+  alertas = alertas.filter(a=>a.id!==id);
+  renderAlertasList();
+  document.getElementById('bell-dot').classList.toggle('visible', alertas.length>0);
+}
+
+async function marcarTodasLeidas() {
+  await sb.from('alertas').update({leida:true}).eq('user_id',currentUser.id).eq('leida',false);
+  alertas = [];
+  renderAlertasList();
+  document.getElementById('bell-dot').classList.remove('visible');
+}
+
+// ══════════════════════════════════════════════════════════
+// THEME
+// ══════════════════════════════════════════════════════════
+function toggleTheme() {
+  document.body.classList.toggle('dark');
+  const isDark = document.body.classList.contains('dark');
+  localStorage.setItem('beme_theme', isDark ? 'dark' : 'light');
+}
+function loadTheme() {
+  // Default is light. Only go dark if explicitly saved as dark.
+  const saved = localStorage.getItem('beme_theme');
+  if (saved === 'dark') document.body.classList.add('dark');
+  else document.body.classList.remove('dark'); // ensure light
+}
+
+// ══════════════════════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════════════════════
+function openModal(id) {
+  document.getElementById(id)?.classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id)?.classList.remove('open');
+}
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('modal-overlay')) {
+    e.target.classList.remove('open');
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));
+    document.getElementById('alertas-panel')?.classList.remove('open');
+  }
+});
+
+// ══════════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════════
+function showToast(msg, type='info', duration=3000) {
+  const container = document.getElementById('toast-container');
+  const icons = {success:'✓',error:'✕',info:'ℹ'};
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span>${icons[type]||'•'}</span><span>${escHtml(msg)}</span>`;
+  container.appendChild(toast);
+  setTimeout(()=>toast.remove(), duration);
+}
+
+// ══════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'});
+}
+function formatDateTime(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleString('es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+
+// ══════════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════════
+loadTheme();
+checkAuth();
+// Safety: force-hide load overlay after 15s
+setTimeout(function(){ var lo=document.getElementById('load-overlay'); if(lo && lo.style.display!=='none'){lo.style.display='none';} }, 15000);
+</script>
+</body>
+</html>

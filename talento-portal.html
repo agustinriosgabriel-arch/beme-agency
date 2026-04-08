@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beme — Portal del Talento</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f7fa;--surface:#fff;--surface2:#f0f0f5;--surface3:#e4e4ec;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);
+  --text:#111;--text-muted:#666;--text-dim:#aaa;
+  --primary:#b2005d;--primary-light:#ed568f;--purple:#9414E0;
+  --gradient:linear-gradient(135deg,#b2005d 0%,#9414E0 100%);
+  --shadow:0 4px 16px rgba(0,0,0,0.08);
+  --radius:12px;--radius-sm:8px;--radius-lg:16px;
+  --green:#16a34a;--blue:#0ea5e9;--yellow:#d97706;--red:#dc2626;
+}
+body.dark{--bg:#0f0f0f;--surface:#181818;--surface2:#202020;--surface3:#2a2a2a;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--text:#f0f0f0;--text-muted:#888;--text-dim:#555;--shadow:0 4px 24px rgba(0,0,0,0.4)}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:99px}
+
+/* ── Topbar ── */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(247,247,250,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;gap:12px}
+body.dark .topbar{background:rgba(15,15,15,0.92)}
+.logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px;text-decoration:none;color:var(--text)}
+.logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.user-chip{display:flex;align-items:center;gap:8px;padding:5px 12px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text-muted)}
+.user-avatar{width:24px;height:24px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0}
+.icon-btn{width:32px;height:32px;border-radius:8px;border:none;background:var(--surface2);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.icon-btn:hover{background:var(--surface3);color:var(--text)}
+.role-tag{font-size:10px;padding:3px 8px;border-radius:20px;background:rgba(34,197,94,0.12);color:#4ade80;font-weight:700}
+
+/* ── Main ── */
+.main{max-width:900px;margin:0 auto;padding:28px 24px}
+.page-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--text-muted);margin-bottom:24px}
+
+/* ── Campaign card ── */
+.camp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.camp-head{display:flex;align-items:center;gap:12px;padding:18px 20px;cursor:pointer;transition:background 0.15s}
+.camp-head:hover{background:var(--surface2)}
+.camp-logo{width:40px;height:40px;border-radius:10px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--text-muted);flex-shrink:0}
+.camp-name{font-size:15px;font-weight:700;flex:1;min-width:0}
+.camp-marca{font-size:12px;color:var(--text-muted)}
+.estado-badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;flex-shrink:0}
+.estado-sin_iniciar{background:rgba(85,85,85,0.12);color:#888}
+.estado-en_curso{background:rgba(14,165,233,0.12);color:#38bdf8}
+.estado-etapa_finanzas{background:rgba(245,158,11,0.12);color:#fbbf24}
+.estado-finalizada{background:rgba(34,197,94,0.12);color:#4ade80}
+.estado-cancelada{background:rgba(239,68,68,0.12);color:#ef4444}
+.camp-expand{transition:transform 0.2s;color:var(--text-dim);flex-shrink:0}
+.camp-card.open .camp-expand{transform:rotate(180deg)}
+.camp-body{display:none;padding:0 20px 20px;border-top:1px solid var(--border)}
+.camp-card.open .camp-body{display:block}
+
+/* ── Brief section ── */
+.brief-section{padding:12px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:16px}
+.brief-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:8px}
+.brief-file{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;text-decoration:none;border:1px solid var(--border2);color:var(--blue);background:var(--surface);transition:all 0.15s;margin:0 6px 6px 0}
+.brief-file:hover{border-color:var(--blue);background:rgba(14,165,233,0.06)}
+
+/* ── Contenido ── */
+.cont-card{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;background:var(--surface)}
+.cont-head{display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;transition:background 0.15s}
+.cont-head:hover{background:var(--surface2)}
+.tipo-badge{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700;flex-shrink:0}
+.tb-tiktok_video{background:rgba(0,0,0,0.06);color:#333}
+body.dark .tb-tiktok_video{background:rgba(255,255,255,0.08);color:#ccc}
+.tb-reel{background:rgba(225,48,108,0.1);color:#e1306c}
+.tb-ig_story{background:rgba(131,58,180,0.1);color:#833ab4}
+.tb-youtube_video,.tb-youtube_short{background:rgba(255,0,0,0.08);color:#cc0000}
+.cont-titulo{font-size:13px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cont-fecha{font-size:11px;color:var(--text-dim);flex-shrink:0}
+.paso-chip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);flex-shrink:0}
+.paso-chip.active{background:rgba(178,0,93,0.08);border-color:rgba(178,0,93,0.2);color:var(--primary)}
+.paso-chip.done{background:rgba(22,163,74,0.08);border-color:rgba(22,163,74,0.2);color:var(--green)}
+.cont-expand{transition:transform 0.2s;color:var(--text-dim);flex-shrink:0}
+.cont-card.open .cont-expand{transform:rotate(180deg)}
+.cont-body{display:none;padding:14px;border-top:1px solid var(--border)}
+.cont-card.open .cont-body{display:block}
+
+/* ── Steps ── */
+.steps-list{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
+.step-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--radius-sm);font-size:13px}
+.step-row.done{background:rgba(22,163,74,0.06);color:var(--green)}
+.step-row.current{background:rgba(178,0,93,0.06);border:1px solid rgba(178,0,93,0.15)}
+.step-row.pending{color:var(--text-dim)}
+.step-icon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+.step-icon.done{background:var(--green);color:#fff}
+.step-icon.current{background:var(--primary);color:#fff}
+.step-icon.pending{background:var(--surface2);border:1px solid var(--border);color:var(--text-dim)}
+.step-label{flex:1}
+.step-current-tag{font-size:10px;font-weight:800;color:var(--primary)}
+.step-actions{display:flex;gap:6px;flex-wrap:wrap}
+.step-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none;cursor:pointer;transition:all 0.15s;border:1px solid var(--border2);background:var(--surface);color:var(--text)}
+.step-btn.view{color:var(--blue);border-color:rgba(14,165,233,0.3)}
+.step-btn.view:hover{background:rgba(14,165,233,0.08)}
+.step-btn.upload{color:var(--purple);border-color:rgba(148,20,224,0.3)}
+.step-btn.upload:hover{background:rgba(148,20,224,0.08)}
+.step-no-file{font-size:10px;color:var(--text-dim);font-style:italic}
+
+/* ── Action box ── */
+.action-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
+.action-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:10px}
+.action-btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;transition:all 0.15s;text-decoration:none}
+.btn-primary{background:var(--gradient);color:#fff}
+.btn-primary:hover{box-shadow:0 4px 16px rgba(178,0,93,0.3)}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border2)}
+.btn-outline:hover{border-color:var(--primary);color:var(--primary)}
+.btn-green{background:rgba(22,163,74,0.1);color:var(--green);border:1px solid rgba(22,163,74,0.2)}
+.btn-ghost{background:transparent;color:var(--text-muted);border:none}
+.btn-sm{padding:6px 12px;font-size:11px}
+.link-group{display:flex;gap:8px;margin-top:8px}
+.link-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-family:inherit;color:var(--text);outline:none}
+.link-input:focus{border-color:var(--primary)}
+
+/* ── Observations ── */
+.obs-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.obs-item{padding:10px 12px;border-radius:var(--radius-sm);border-left:3px solid var(--border2);background:var(--surface2)}
+.obs-meta{font-size:10px;color:var(--text-dim);margin-bottom:3px;display:flex;gap:8px}
+.obs-text{font-size:13px;color:var(--text)}
+
+/* ── Timeline ── */
+.tl-details{margin:10px 0;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.tl-summary{display:flex;align-items:center;gap:7px;padding:10px 14px;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;background:var(--surface2);list-style:none}
+.tl-summary::-webkit-details-marker{display:none}
+.tl-summary::before{content:'▶';font-size:9px;transition:transform 0.2s;color:var(--text-dim)}
+details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
+.tl-list{padding:14px 14px 14px 18px}
+.tl-item{display:flex;gap:12px}
+.tl-track{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:16px}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.tl-dot-ok{background:var(--green);box-shadow:0 0 0 3px rgba(22,163,74,0.15)}
+.tl-dot-reject{background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,0.15)}
+.tl-line{width:2px;flex:1;background:var(--border2);margin:4px 0}
+.tl-content{flex:1;padding-bottom:14px}
+.tl-header{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.tl-paso{font-size:12px;font-weight:700;color:var(--text);background:var(--surface2);padding:1px 8px;border-radius:10px;border:1px solid var(--border)}
+.tl-date{font-size:10px;color:var(--text-dim)}
+.tl-action{font-size:12px;color:var(--text-muted)}
+.tl-author{font-size:10px;color:var(--text-dim);font-style:italic}
+
+/* ── Toast ── */
+.toast-container{position:fixed;top:70px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:11px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;animation:toastIn 0.25s ease;max-width:320px}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+.toast.ok{background:#1a3a2a;border:1px solid #22c55e33;color:#4ade80}
+.toast.err{background:#3a1a1a;border:1px solid #ef444433;color:#f87171}
+.toast.inf{background:#1a2a3a;border:1px solid #3b82f633;color:#60a5fa}
+
+/* ── Loading / Login ── */
+#load-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.loader-logo{font-family:'Syne',sans-serif;font-size:28px;font-weight:800}
+.loader-logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.loader-bar{width:200px;height:3px;background:var(--surface3);border-radius:99px;overflow:hidden}
+.loader-fill{height:100%;width:0;background:var(--gradient);border-radius:99px;animation:lAnim 1.4s ease-in-out infinite}
+@keyframes lAnim{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
+#login-overlay{position:fixed;inset:0;background:rgba(247,247,250,0.97);display:flex;align-items:center;justify-content:center;z-index:9998}
+.login-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:40px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.12)}
+.login-error{display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:10px;font-size:13px;color:#f87171;margin-bottom:14px}
+.login-input{width:100%;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:11px 14px;font-size:14px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;margin-bottom:10px}
+.login-input:focus{border-color:var(--primary)}
+
+/* ── Empty ── */
+.empty{text-align:center;padding:60px 20px;color:var(--text-muted)}
+.empty h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
+.empty p{font-size:13px}
+
+/* ── Responsive ── */
+@media(max-width:640px){.main{padding:16px 12px}.camp-head{padding:14px}.cont-head{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="load-overlay">
+  <div class="loader-logo">Be<span>me</span></div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+  <div id="load-msg" style="font-size:12px;color:var(--text-muted)">Conectando...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-overlay" style="display:none">
+  <div class="login-card">
+    <div style="text-align:center;margin-bottom:28px">
+      <div class="loader-logo">Be<span>me</span></div>
+      <p style="font-size:13px;color:var(--text-muted);margin-top:6px">Portal del Talento</p>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <input type="email" id="login-email" class="login-input" placeholder="Email" onkeydown="if(event.key==='Enter')doLogin()">
+    <input type="password" id="login-pass" class="login-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px" onclick="doLogin()" id="login-btn">Ingresar</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toasts"></div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <header class="topbar">
+    <a href="talento-portal.html" class="logo">Be<span>me</span></a>
+    <span class="role-tag">Talento</span>
+    <div class="topbar-right">
+      <button class="icon-btn" onclick="toggleTheme()" title="Tema">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+      </button>
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span id="user-name">Cargando...</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()" style="font-size:11px;color:var(--text-dim)">Salir</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <h1 class="page-title">Mis Campañas</h1>
+    <p class="page-sub" id="page-sub">Cargando...</p>
+    <div id="campaigns-container"></div>
+  </main>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════════
+const SB_URL = 'https://ngstqwbzvnpggpklifat.supabase.co';
+const SB_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+let currentUser = null, currentProfile = null;
+let campaigns = []; // [{campana, campana_talento, contenidos}]
+
+const PASO_LABELS = {1:'Esperando Brief',2:'Esperando Script',3:'Aprobación Script',4:'Producción',5:'Aprobación Contenido',6:'Publicar',7:'Estadísticas',8:'Completado',9:'Pagado'};
+const TIPO_LABELS = {tiktok_video:'TikTok Video',reel:'Reel',ig_story:'IG Story',youtube_video:'YouTube Video',youtube_short:'YouTube Short'};
+
+// ════════════════════════════════════════════════
+// AUTH
+// ════════════════════════════════════════════════
+async function doLogin() {
+  const email = (document.getElementById('login-email').value||'').trim();
+  const pass = document.getElementById('login-pass').value||'';
+  const btn = document.getElementById('login-btn');
+  if (!email||!pass) { showLoginErr('Completá email y contraseña.'); return; }
+  btn.textContent='Ingresando...'; btn.disabled=true;
+  document.getElementById('login-error').style.display='none';
+  try {
+    const {data,error} = await sb.auth.signInWithPassword({email,password:pass});
+    if (error) { showLoginErr(error.message); }
+    else { currentUser=data.user; await initApp(); }
+  } catch(e) { showLoginErr('Error: '+e.message); }
+  btn.textContent='Ingresar'; btn.disabled=false;
+}
+function showLoginErr(msg) { const d=document.getElementById('login-error'); d.textContent=msg; d.style.display='block'; }
+async function doLogout() { await sb.auth.signOut(); location.reload(); }
+
+async function checkAuth() {
+  const {data:{session}} = await sb.auth.getSession();
+  if (session) { currentUser=session.user; await initApp(); }
+  else { document.getElementById('load-overlay').style.display='none'; document.getElementById('login-overlay').style.display='flex'; }
+}
+
+// ════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════
+async function initApp() {
+  document.getElementById('load-msg').textContent = 'Cargando tus campañas...';
+  try {
+    const {data:p} = await sb.from('user_profiles').select('*').eq('id',currentUser.id).single();
+    currentProfile = p;
+    if (!p) { showLoginErr('No tenés perfil configurado. Contactá al administrador.'); document.getElementById('load-overlay').style.display='none'; document.getElementById('login-overlay').style.display='flex'; return; }
+    if (p.role !== 'talent' || !p.talent_id) { showLoginErr('Este portal es solo para talentos. Tu rol: '+p.role); document.getElementById('load-overlay').style.display='none'; document.getElementById('login-overlay').style.display='flex'; return; }
+
+    // Setup UI
+    const names = (p.nombre||'').split(' ');
+    document.getElementById('user-avatar').textContent = names.map(n=>n[0]||'').join('').substring(0,2).toUpperCase()||'?';
+    document.getElementById('user-name').textContent = p.nombre || currentUser.email;
+
+    await loadCampaigns();
+
+    document.getElementById('login-overlay').style.display='none';
+    document.getElementById('load-overlay').style.display='none';
+    document.getElementById('app').style.display='block';
+    renderAll();
+  } catch(e) {
+    console.error('initApp:', e);
+    toast('Error al cargar: '+e.message, 'err');
+    document.getElementById('load-overlay').style.display='none';
+  }
+}
+
+async function loadCampaigns() {
+  // Get all campana_talentos for this talent
+  const {data: cts, error} = await sb.from('campana_talentos').select(`
+    *,
+    talentos(id,nombre,foto),
+    contenidos(*,contenido_observaciones(*),contenido_scripts(*),contenido_borradores(*),contenido_historial(*)),
+    campanas(*, marcas(id,nombre,clientes(nombre)), campana_briefs(*))
+  `).eq('talent_id', currentProfile.talent_id).order('created_at',{ascending:false});
+
+  if (error) { console.error('loadCampaigns:',error); toast('Error: '+error.message,'err'); return; }
+  campaigns = (cts||[]).filter(ct => ct.campanas); // filter out orphans
+}
+
+function renderAll() {
+  const c = document.getElementById('campaigns-container');
+  document.getElementById('page-sub').textContent = campaigns.length
+    ? campaigns.length + ' campaña' + (campaigns.length!==1?'s':'')
+    : 'No tenés campañas asignadas todavía.';
+
+  if (!campaigns.length) {
+    c.innerHTML = '<div class="empty"><h3>Sin campañas</h3><p>Cuando te asignen a una campaña, va a aparecer acá.</p></div>';
+    return;
+  }
+
+  // Preserve open state
+  const openIds = []; c.querySelectorAll('.open').forEach(el=>{ if(el.id) openIds.push(el.id); });
+  c.innerHTML = campaigns.map(ct => renderCampaignCard(ct)).join('');
+  openIds.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('open'); });
+}
+
+function renderCampaignCard(ct) {
+  const camp = ct.campanas;
+  const briefs = camp.campana_briefs || [];
+  const contenidos = ct.contenidos || [];
+  const done = contenidos.filter(c=>c.paso_actual>=8).length;
+  const estadoLabels = {sin_iniciar:'Sin iniciar',en_curso:'En curso',etapa_finanzas:'Finanzas',finalizada:'Finalizada',cancelada:'Cancelada'};
+
+  const briefsHTML = briefs.length
+    ? `<div class="brief-section"><div class="brief-title">📄 Brief de la campaña</div>${briefs.map(f=>
+        `<a href="${esc(f.url)}" target="_blank" class="brief-file">📄 ${esc((f.nombre||'Brief').substring(0,30))}</a>`
+      ).join('')}</div>`
+    : '';
+
+  const contHTML = contenidos.length
+    ? contenidos.map(c => renderContenido(c, ct)).join('')
+    : '<div style="font-size:12px;color:var(--text-dim);padding:12px 0">Sin contenidos asignados todavía.</div>';
+
+  return `<div class="camp-card" id="camp-${ct.id}">
+    <div class="camp-head" onclick="toggle('camp-${ct.id}')">
+      <div class="camp-logo">${(camp.marcas?.nombre||'?').substring(0,2).toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div class="camp-name">${esc(camp.nombre)}</div>
+        <div class="camp-marca">${esc(camp.marcas?.clientes?.nombre||'')} ${camp.marcas?.nombre?'· '+esc(camp.marcas.nombre):''} · ${contenidos.length} contenido${contenidos.length!==1?'s':''} · ${done} completado${done!==1?'s':''}</div>
+      </div>
+      <span class="estado-badge estado-${camp.estado}">${estadoLabels[camp.estado]||camp.estado}</span>
+      <svg class="camp-expand" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="camp-body">
+      ${briefsHTML}
+      ${contHTML}
+    </div>
+  </div>`;
+}
+
+function renderContenido(c, ct) {
+  const paso = c.paso_actual;
+  const isDone = paso >= 8;
+  const pasoChipCls = isDone ? 'done' : paso > 1 ? 'active' : '';
+  const scripts = (c.contenido_scripts||[]).sort((a,b)=>(b.version||1)-(a.version||1));
+  const drafts = (c.contenido_borradores||[]).sort((a,b)=>(b.version||1)-(a.version||1));
+  const briefs = ct.campanas?.campana_briefs || [];
+
+  // Steps with embedded file access
+  const stepDefs = [
+    {n:1, lbl:'Brief'},
+    ...(c.script_requerido ? [{n:2,lbl:'Script'},{n:3,lbl:'Aprobación Script'}] : []),
+    {n:4, lbl:'Producción (borrador)'},
+    {n:5, lbl:'Aprobación Contenido'},
+    {n:6, lbl:'Publicar'},
+    ...(c.estadisticas_requeridas ? [{n:7,lbl:'Estadísticas'}] : []),
+    {n:8, lbl:'Completado'},
+  ];
+
+  const stepsHTML = stepDefs.map(s => {
+    const d = paso > s.n, cur = paso === s.n;
+    let right = '';
+    if (d || cur) {
+      if (s.n === 1 && briefs.length) right = briefs.slice(0,1).map(f => `<a href="${esc(f.url)}" target="_blank" class="step-btn view">📄 Ver Brief</a>`).join('');
+      if ((s.n===2||s.n===3) && scripts.length) right = `<a href="${esc(scripts[0].url_archivo)}" target="_blank" class="step-btn view">📝 Ver Script</a>`;
+      if ((s.n===2) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" onchange="uploadScript(this,${c.id})">⬆ Subir script</label>`;
+      if ((s.n===4||s.n===5) && drafts.length) right = `<a href="${esc(drafts[0].url_archivo)}" target="_blank" class="step-btn view">🎬 Ver Borrador</a>`;
+      if ((s.n===4) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept="video/*,image/*" onchange="uploadDraft(this,${c.id})">⬆ Subir borrador</label>`;
+      if (s.n===6 && c.url_publicacion) right = `<a href="${esc(c.url_publicacion)}" target="_blank" class="step-btn view">🔗 Ver publicación</a>`;
+    }
+    return `<div class="step-row ${d?'done':cur?'current':'pending'}">
+      <div class="step-icon ${d?'done':cur?'current':'pending'}">${d?'✓':s.n}</div>
+      <span class="step-label">${s.lbl}</span>
+      ${cur?'<span class="step-current-tag">● ACTUAL</span>':''}
+      ${right?`<div class="step-actions">${right}</div>`:''}
+    </div>`;
+  }).join('');
+
+  // Action box for current step (only for steps talent can act on)
+  let actionHTML = '';
+  if (paso === 2) {
+    actionHTML = `<div class="action-box">
+      <div class="action-title">📝 Subir Script</div>
+      <div class="action-btns">
+        <label class="btn btn-primary btn-sm" style="cursor:pointer">
+          <input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" onchange="uploadScript(this,${c.id})">⬆ Subir archivo de script</label>
+        <button class="btn btn-outline btn-sm" onclick="avanzar(${c.id})">Script listo → Enviar a revisión</button>
+      </div>
+    </div>`;
+  }
+  if (paso === 3) {
+    actionHTML = `<div class="action-box"><div class="action-title">⏳ Esperando aprobación del script</div><p style="font-size:12px;color:var(--text-muted)">El equipo de campaña está revisando tu script.</p></div>`;
+  }
+  if (paso === 4) {
+    actionHTML = `<div class="action-box">
+      <div class="action-title">🎬 Subir Contenido</div>
+      <div class="action-btns">
+        <label class="btn btn-primary btn-sm" style="cursor:pointer">
+          <input type="file" style="display:none" accept="video/*,image/*" onchange="uploadDraft(this,${c.id})">⬆ Subir video/imagen</label>
+        <button class="btn btn-outline btn-sm" onclick="avanzar(${c.id})">Contenido listo → Enviar a revisión</button>
+      </div>
+    </div>`;
+  }
+  if (paso === 5) {
+    actionHTML = `<div class="action-box"><div class="action-title">⏳ Esperando aprobación del contenido</div><p style="font-size:12px;color:var(--text-muted)">El equipo está revisando tu contenido.</p></div>`;
+  }
+  if (paso === 6) {
+    actionHTML = `<div class="action-box">
+      <div class="action-title">🔗 Cargar Link de Publicación</div>
+      <div class="link-group">
+        <input type="text" class="link-input" id="link-${c.id}" placeholder="https://www.tiktok.com/@..." value="${esc(c.url_publicacion||'')}">
+        <button class="btn btn-primary btn-sm" onclick="saveLink(${c.id})">Confirmar →</button>
+      </div>
+    </div>`;
+  }
+  if (paso >= 8) {
+    actionHTML = `<div class="action-box" style="background:rgba(22,163,74,0.06);border-color:rgba(22,163,74,0.15)"><div class="action-title" style="color:var(--green)">✓ ${paso===9?'Pagado':'Completado'}</div></div>`;
+  }
+
+  const obsHTML = renderObs(c.contenido_observaciones||[]);
+  const tlHTML = renderTimeline(c.contenido_historial||[]);
+
+  // Spark code
+  let sparkHTML = '';
+  if (c.spark_code_dias) {
+    sparkHTML = `<div class="action-box">
+      <div class="action-title">Spark Code — ${c.spark_code_dias} días</div>
+      <input type="text" class="link-input" style="font-family:monospace;margin-top:6px" id="spark-${c.id}" value="${esc(c.spark_code_texto||'')}" placeholder="Pegá el código aquí..." onblur="saveSparkCode(${c.id},this.value)">
+    </div>`;
+  }
+
+  return `<div class="cont-card" id="cont-${c.id}">
+    <div class="cont-head" onclick="toggle('cont-${c.id}')">
+      <span class="tipo-badge tb-${c.tipo}">${TIPO_LABELS[c.tipo]||c.tipo}</span>
+      <span class="cont-titulo">${esc(c.titulo||TIPO_LABELS[c.tipo]||'Contenido')}</span>
+      ${c.fecha_publicacion?`<span class="cont-fecha">${fmtDate(c.fecha_publicacion)}</span>`:''}
+      <span class="paso-chip ${pasoChipCls}">${isDone?'✓ Completo':'Paso '+paso}</span>
+      <svg class="cont-expand" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="cont-body">
+      <div class="steps-list">${stepsHTML}</div>
+      ${actionHTML}
+      ${obsHTML}
+      ${sparkHTML}
+      ${tlHTML}
+    </div>
+  </div>`;
+}
+
+function renderObs(obs) {
+  if (!obs.length) return '';
+  return `<div class="obs-list">${obs.map(o=>`<div class="obs-item"><div class="obs-meta"><span>${esc(o.autor_nombre||'?')}</span><span>${fmtDT(o.created_at)}</span></div><div class="obs-text">${esc(o.observacion)}</div></div>`).join('')}</div>`;
+}
+
+function renderTimeline(hist) {
+  if (!hist||!hist.length) return '';
+  const sorted = [...hist].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  return `<details class="tl-details"><summary class="tl-summary">
+    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Historial (${sorted.length})</summary>
+    <div class="tl-list">${sorted.map((h,i)=>{
+      const isLast=i===sorted.length-1;
+      const isRej=(h.accion||'').toLowerCase().includes('rechaz');
+      return `<div class="tl-item"><div class="tl-track"><div class="tl-dot ${isRej?'tl-dot-reject':'tl-dot-ok'}"></div>${!isLast?'<div class="tl-line"></div>':''}</div><div class="tl-content"><div class="tl-header"><span class="tl-paso">Paso ${h.paso_anterior||'?'} → ${h.paso_nuevo}</span><span class="tl-date">${fmtDT(h.created_at)}</span></div><div class="tl-action">${esc(h.accion||'Avance')}</div><div class="tl-author">${esc(h.autor_nombre||'Sistema')}</div></div></div>`;
+    }).join('')}</div></details>`;
+}
+
+// ════════════════════════════════════════════════
+// WORKFLOW ACTIONS
+// ════════════════════════════════════════════════
+async function avanzar(contId) {
+  try {
+    const {data,error} = await sb.rpc('avanzar_paso_contenido',{
+      p_contenido_id:contId, p_autor_id:currentUser.id,
+      p_autor_nombre:currentProfile.nombre, p_accion:'Enviado por talento'
+    });
+    if (error) throw error;
+    await loadCampaigns(); renderAll();
+    toast('Paso actualizado → '+(PASO_LABELS[data]||data),'ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+}
+
+async function saveLink(contId) {
+  const link = document.getElementById('link-'+contId)?.value.trim();
+  if (!link) { toast('Ingresá el link de publicación','err'); return; }
+  await sb.from('contenidos').update({url_publicacion:link}).eq('id',contId);
+  await avanzar(contId);
+}
+
+async function uploadScript(input, contId) {
+  const file = input.files[0]; if (!file) return;
+  toast('Subiendo script...','inf');
+  try {
+    const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+    const {error} = await sb.storage.from('content-scripts').upload(path, file);
+    if (error) throw error;
+    const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
+    await sb.from('contenido_scripts').insert({contenido_id:contId, url_archivo:publicUrl||path, subido_por:currentUser.id});
+    await loadCampaigns(); renderAll();
+    toast('Script subido ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+  input.value='';
+}
+
+async function uploadDraft(input, contId) {
+  const file = input.files[0]; if (!file) return;
+  toast('Subiendo contenido...','inf');
+  try {
+    const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+    const {error} = await sb.storage.from('content-drafts').upload(path, file);
+    if (error) throw error;
+    const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);
+    await sb.from('contenido_borradores').insert({contenido_id:contId, url_archivo:publicUrl||path, nombre_archivo:file.name, size_bytes:file.size, subido_por:currentUser.id});
+    await loadCampaigns(); renderAll();
+    toast('Contenido subido ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+  input.value='';
+}
+
+async function saveSparkCode(contId, texto) {
+  try {
+    await sb.from('contenidos').update({spark_code_texto:texto.trim()}).eq('id',contId);
+    toast('Spark Code guardado ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+}
+
+// ════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════
+function toggle(id) { document.getElementById(id)?.classList.toggle('open'); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(d) { if(!d) return ''; return new Date(d+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtDT(d) { if(!d) return ''; return new Date(d).toLocaleString('es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
+
+function toast(msg,type='inf',dur=3500) {
+  const icons={ok:'✓',err:'✕',inf:'ℹ'};
+  const t=document.createElement('div'); t.className='toast '+type;
+  t.innerHTML=`<span>${icons[type]||'•'}</span><span>${esc(msg)}</span>`;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(()=>t.remove(),dur);
+}
+
+function toggleTheme() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('beme_theme', document.body.classList.contains('dark')?'dark':'light');
+}
+function loadTheme() {
+  if (localStorage.getItem('beme_theme')==='dark') document.body.classList.add('dark');
+}
+
+function openModal(id){document.getElementById(id)?.classList.add('open');}
+function closeModal(id){document.getElementById(id)?.classList.remove('open');}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); });
+
+loadTheme();
+checkAuth();
+setTimeout(()=>{ const lo=document.getElementById('load-overlay'); if(lo&&lo.style.display!=='none') lo.style.display='none'; }, 15000);
+</script>
+</body>
+</html>

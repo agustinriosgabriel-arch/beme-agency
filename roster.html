@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roster — Beme</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f2f8;color:#111;min-height:100vh;padding-bottom:130px;}
+.page{background:#fff;max-width:1200px;margin:28px auto;border-radius:16px;padding:36px;box-shadow:0 4px 32px rgba(0,0,0,0.07);}
+a{text-decoration:none;}
+textarea,input{font-family:'Plus Jakarta Sans',sans-serif;}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{display:none;}
+input[type=number]{-moz-appearance:textfield;}
+
+#loading-screen{position:fixed;inset:0;background:#f4f2f8;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px;}
+.loader-logo{font-size:32px;font-weight:300;}
+.loader-logo strong{font-weight:800;color:#b2005d;}
+.loader-spinner{width:36px;height:36px;border:3px solid rgba(178,0,93,0.2);border-top-color:#b2005d;border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-text{font-size:14px;color:#888;}
+
+.desktop-view{display:block;}
+.mobile-view{display:none;}
+
+#summary-bar{
+  position:fixed;bottom:0;left:0;right:0;
+  background:linear-gradient(135deg,#8a0048,#6a0d9e);
+  color:#fff;padding:14px 24px;
+  display:flex;align-items:flex-start;gap:20px;
+  box-shadow:0 -4px 24px rgba(0,0,0,0.22);
+  transition:all 0.3s;opacity:0;transform:translateY(100%);
+  z-index:9999;flex-wrap:wrap;
+}
+#export-btn{
+  background:rgba(255,255,255,0.18);border:1.5px solid rgba(255,255,255,0.5);
+  color:#fff;padding:10px 18px;border-radius:24px;cursor:pointer;
+  font-size:13px;font-weight:700;font-family:inherit;white-space:nowrap;
+  flex-shrink:0;align-self:center;transition:background 0.15s;
+}
+#export-btn:hover{background:rgba(255,255,255,0.28);}
+
+.save-badge{
+  position:fixed;top:16px;right:16px;z-index:500;
+  background:#1D9E75;color:#fff;font-size:12px;font-weight:700;
+  padding:6px 14px;border-radius:20px;opacity:0;transition:opacity 0.3s;
+  box-shadow:0 2px 8px rgba(0,0,0,0.15);
+}
+.save-badge.show{opacity:1;}
+
+@media(max-width:680px){
+  body{padding-bottom:150px;}
+  .page{margin:0;border-radius:0;padding:18px;}
+  .desktop-view{display:none;}
+  .mobile-view{display:block;}
+  #summary-bar{padding:12px 16px;}
+}
+@media print{
+  body{background:#fff;padding:0;}
+  .page{box-shadow:none;margin:0;border-radius:0;padding:20px;}
+  .mobile-view{display:none!important;}
+  .desktop-view{display:block!important;}
+  #summary-bar,#loading-screen,.save-badge{display:none!important;}
+  @page{margin:12mm;size:A4 landscape;}
+}
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loader-logo">Be<strong>me</strong></div>
+  <div class="loader-spinner"></div>
+  <div class="loader-text" id="load-msg">Cargando roster...</div>
+</div>
+
+<div class="save-badge" id="save-badge">✓ Guardado</div>
+
+<div id="app" style="display:none">
+  <div class="page" id="page-content"></div>
+</div>
+
+<div id="summary-bar">
+  <div style="min-width:160px;flex-shrink:0;">
+    <div id="sum-count" style="font-weight:800;font-size:15px;"></div>
+    <div id="sum-total-wrap" style="display:none;align-items:baseline;gap:5px;margin-top:3px;">
+      <span style="font-size:12px;opacity:0.75;">Total:</span>
+      <span id="sum-total" style="font-size:19px;font-weight:800;"></span>
+    </div>
+  </div>
+  <div id="sum-list" style="flex:1;min-width:180px;max-height:100px;overflow-y:auto;font-size:12px;"></div>
+  <button id="export-btn">↓ Exportar CSV</button>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ngstqwbzvnpggpklifat.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const FLAG_MAP = {"Argentina":"🇦🇷","Bolivia":"🇧🇴","Brasil":"🇧🇷","Chile":"🇨🇱","Colombia":"🇨🇴","Costa Rica":"🇨🇷","Cuba":"🇨🇺","Ecuador":"🇪🇨","El Salvador":"🇸🇻","España":"🇪🇸","Estados Unidos":"🇺🇸","Guatemala":"🇬🇹","Honduras":"🇭🇳","México":"🇲🇽","Nicaragua":"🇳🇮","Panamá":"🇵🇦","Paraguay":"🇵🇾","Perú":"🇵🇪","Puerto Rico":"🇵🇷","República Dominicana":"🇩🇴","Uruguay":"🇺🇾","Venezuela":"🇻🇪"};
+
+let ROSTER = null;
+let TALENTS = [];
+let SELS = {}; // talent_id → {selected, accion, precio, contraoferta}
+const COMPACT_MODE = new URLSearchParams(window.location.search).get('compact') === '1';
+
+// ── Helpers ──────────────────────────────────────────────────
+function fmtF(n){if(!n||n===0)return'—';if(n>=1e6)return(n/1e6).toFixed(1).replace('.0','')+'M';if(n>=1000)return Math.floor(n/1000)+'K';return String(n);}
+function ini(name){return name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();}
+function extractH(url){if(!url)return'';const m=url.match(/@([^/?#&]+)/);return m?'@'+m[1]:url.replace(/https?:\/\/(www\.)?[^/]+\//,'').split('/')[0];}
+function countries(t){return(t.paises||[t.pais||'']).filter(Boolean).map(c=>(FLAG_MAP[c]||'')+' '+c);}
+
+// ── Init ─────────────────────────────────────────────────────
+async function init() {
+  const token = new URLSearchParams(window.location.search).get('token');
+  if (!token) { showError('URL inválida — falta el token del roster.'); return; }
+
+  try {
+    document.getElementById('load-msg').textContent = 'Cargando roster...';
+    const { data: roster, error: rErr } = await sb.from('rosters').select('*').eq('public_token', token).single();
+    if (rErr || !roster) { showError('Roster no encontrado. Verificá el link.'); return; }
+    ROSTER = roster;
+    document.title = 'Roster — ' + roster.name;
+
+    const talentIds = (roster.talent_ids || []).map(id => parseInt(id)).filter(Boolean);
+    if (talentIds.length > 0) {
+      document.getElementById('load-msg').textContent = 'Cargando talentos...';
+      const { data: talentsData } = await sb.from('talentos').select('*').in('id', talentIds);
+      // Preserve order from talent_ids
+      TALENTS = talentIds.map(id => (talentsData || []).find(t => t.id === id)).filter(Boolean);
+    }
+
+    // Load existing selections
+    document.getElementById('load-msg').textContent = 'Cargando selecciones previas...';
+    const { data: selData } = await sb.from('roster_selecciones').select('*').eq('roster_id', roster.id);
+    (selData || []).forEach(s => { SELS[s.talent_id] = s; });
+
+    render();
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    restoreSelections();
+    updateSummary();
+  } catch(e) {
+    showError('Error: ' + e.message);
+  }
+}
+
+function showError(msg) {
+  document.getElementById('load-msg').textContent = msg;
+  document.querySelector('.loader-spinner').style.display = 'none';
+}
+
+// ── Render ────────────────────────────────────────────────────
+function render() {
+  const showTT = ROSTER.platforms?.tt !== false;
+  const showIG = ROSTER.platforms?.ig !== false;
+  const showYT = ROSTER.platforms?.yt !== false;
+  const showPriceComments = !COMPACT_MODE;
+  const today = new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'});
+
+  const ttSVG  = '<svg width="13" height="13" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg>';
+  const igSVG  = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg>';
+  const ytSVG  = '<svg width="13" height="13" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg>';
+
+  // Desktop table rows
+  const thStyle = 'padding:12px 14px;text-align:left;color:#fff;font-size:12px;font-weight:700;letter-spacing:0.5px;';
+  const tableHeader = `<tr style="background:linear-gradient(135deg,#b2005d,#9414E0);">
+    <th style="${thStyle}width:52px;text-align:center;"></th>
+    <th style="${thStyle}">Talento</th><th style="${thStyle}">País</th>
+    ${showTT?`<th style="${thStyle}">TikTok</th>`:''}
+    ${showIG?`<th style="${thStyle}">Instagram</th>`:''}
+    ${showYT?`<th style="${thStyle}">YouTube</th>`:''}
+    <th style="${thStyle}">Categorías</th>
+    ${showPriceComments ? `<th style="${thStyle}">Acciones</th>` : ''}
+    ${showPriceComments ? `<th style="${thStyle}">Precio</th>` : ''}
+    ${showPriceComments ? `<th style="${thStyle}">Comentarios</th>` : ''}
+  </tr>`;
+
+  const tableRows = TALENTS.map((t, i) => {
+    const av = t.foto
+      ? `<img src="${t.foto}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;margin-right:8px;flex-shrink:0;">`
+      : `<span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:#f0e0e8;color:#b2005d;font-weight:800;font-size:13px;margin-right:8px;flex-shrink:0;">${ini(t.nombre)}</span>`;
+    const ctries = countries(t).join('<br>');
+    const ttCell = !showTT?'':t.tiktok?`<div style="display:flex;align-items:center;gap:4px;">${ttSVG}<a href="${t.tiktok}" target="_blank" style="color:#ff0050;font-size:12px;font-weight:600;">${extractH(t.tiktok)}</a></div><div style="font-size:11px;color:#777;padding-left:15px;">${fmtF(t.seguidores?.tiktok)}</div>`:'<span style="color:#ccc;">—</span>';
+    const igCell = !showIG?'':t.instagram?`<div style="display:flex;align-items:center;gap:4px;">${igSVG}<a href="${t.instagram}" target="_blank" style="color:#e1306c;font-size:12px;font-weight:600;">${extractH(t.instagram)}</a></div><div style="font-size:11px;color:#777;padding-left:15px;">${fmtF(t.seguidores?.instagram)}</div>`:'<span style="color:#ccc;">—</span>';
+    const ytCell = !showYT?'':t.youtube?`<div style="display:flex;align-items:center;gap:4px;">${ytSVG}<a href="${t.youtube}" target="_blank" style="color:#cc0000;font-size:12px;font-weight:600;">${extractH(t.youtube)}</a></div><div style="font-size:11px;color:#777;padding-left:15px;">${fmtF(t.seguidores?.youtube)}</div>`:'<span style="color:#ccc;">—</span>';
+    const cats = (t.categorias||[]).slice(0,4).map(c=>`<span style="background:#f5f0f8;color:#7a3fa0;font-size:10px;padding:2px 7px;border-radius:10px;display:inline-block;margin:1px;">${c}</span>`).join('');
+    const rowBg = i%2===0?'#fff':'#faf9fc';
+    return `<tr id="row_${t.id}" style="background:${rowBg};transition:background 0.15s,box-shadow 0.15s;">
+      <td style="padding:12px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;text-align:center;width:52px;">
+        <input type="checkbox" class="row-check" data-id="${t.id}" style="width:20px;height:20px;accent-color:#b2005d;cursor:pointer;display:block;margin:auto;">
+      </td>
+      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;">
+        <div style="display:flex;align-items:center;">${av}<div><div style="font-weight:700;font-size:13px;color:#111;">${t.nombre}</div>${t.ciudad?`<div style="font-size:11px;color:#888;">${t.ciudad}</div>`:''}</div></div>
+      </td>
+      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;font-size:12px;color:#444;line-height:1.7;">${ctries}</td>
+      ${showTT?`<td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;">${ttCell}</td>`:''}
+      ${showIG?`<td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;">${igCell}</td>`:''}
+      ${showYT?`<td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;">${ytCell}</td>`:''}
+      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;"><div style="display:flex;flex-wrap:wrap;gap:2px;">${cats}</div></td>
+      ${showPriceComments ? `<td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;min-width:155px;">
+        <textarea class="accion-input" data-id="${t.id}" placeholder="Ej. Post + story..."
+          style="width:100%;min-height:52px;border:1px solid #e0e0e0;border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;color:#111;outline:none;resize:vertical;"></textarea>
+      </td>` : ''}
+      ${showPriceComments ? `<td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;width:120px;">
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span style="font-size:14px;color:#b2005d;font-weight:700;">$</span>
+          <input type="text" inputmode="numeric" pattern="[0-9]*" class="price-input" data-id="${t.id}" placeholder="0"
+            style="width:80px;border:1px solid #e0e0e0;border-radius:6px;padding:6px 8px;font-size:13px;font-family:inherit;color:#111;outline:none;">
+        </div>
+      </td>` : ''}
+      ${showPriceComments ? `<td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;min-width:160px;">
+        <textarea class="counter-input" data-id="${t.id}" placeholder="Comentarios..."
+          style="width:100%;min-height:52px;border:1px solid #e0e0e0;border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;color:#111;outline:none;resize:vertical;line-height:1.4;"></textarea>
+      </td>` : ''}
+    </tr>`;
+  }).join('');
+
+  // Mobile cards
+  const mobileCards = TALENTS.map(t => {
+    const av = t.foto
+      ? `<img src="${t.foto}" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid rgba(178,0,93,0.3);">`
+      : `<div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#f0e0e8,#e8d0e0);color:#b2005d;font-weight:800;font-size:18px;display:flex;align-items:center;justify-content:center;border:2px solid rgba(178,0,93,0.2);">${ini(t.nombre)}</div>`;
+    const ctries = countries(t).join(' · ');
+    const nets = [
+      showTT && t.tiktok ? `<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f5f5f5;">${ttSVG}<a href="${t.tiktok}" target="_blank" style="color:#ff0050;font-weight:700;font-size:13px;flex:1;">${extractH(t.tiktok)}</a><span style="color:#333;font-weight:700;font-size:13px;">${fmtF(t.seguidores?.tiktok)}</span></div>` : '',
+      showIG && t.instagram ? `<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f5f5f5;">${igSVG}<a href="${t.instagram}" target="_blank" style="color:#e1306c;font-weight:700;font-size:13px;flex:1;">${extractH(t.instagram)}</a><span style="color:#333;font-weight:700;font-size:13px;">${fmtF(t.seguidores?.instagram)}</span></div>` : '',
+      showYT && t.youtube ? `<div style="display:flex;align-items:center;gap:8px;padding:9px 0;">${ytSVG}<a href="${t.youtube}" target="_blank" style="color:#cc0000;font-weight:700;font-size:13px;flex:1;">${extractH(t.youtube)}</a><span style="color:#333;font-weight:700;font-size:13px;">${fmtF(t.seguidores?.youtube)}</span></div>` : '',
+    ].filter(Boolean).join('');
+    const cats = (t.categorias||[]).slice(0,4).map(c=>`<span style="background:#f5f0f8;color:#7a3fa0;font-size:11px;padding:3px 9px;border-radius:10px;">${c}</span>`).join(' ');
+    return `<div class="mob-card" id="mob_${t.id}" style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.07);margin-bottom:14px;transition:box-shadow 0.2s;">
+      <div style="background:linear-gradient(135deg,#1a1a1a,#2d2d2d);padding:16px 18px;display:flex;align-items:center;gap:14px;">
+        <input type="checkbox" class="row-check" data-id="${t.id}" style="width:22px;height:22px;accent-color:#b2005d;cursor:pointer;flex-shrink:0;">
+        ${av}
+        <div style="flex:1;min-width:0;">
+          <div style="color:#fff;font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.nombre}</div>
+          <div style="color:rgba(255,255,255,0.5);font-size:12px;margin-top:2px;">${ctries}${t.ciudad?' · '+t.ciudad:''}</div>
+        </div>
+      </div>
+      ${nets?`<div style="padding:0 18px;">${nets}</div>`:''}
+      ${cats?`<div style="padding:10px 18px;border-top:1px solid #f5f5f5;display:flex;flex-wrap:wrap;gap:5px;">${cats}</div>`:''}
+      ${showPriceComments ? `<div style="padding:12px 18px 16px;background:#fdfbfe;border-top:1px solid #f0eaf5;">
+        <div style="margin-bottom:10px;">
+          <label style="font-size:11px;font-weight:700;color:#b2005d;letter-spacing:0.5px;text-transform:uppercase;display:block;margin-bottom:5px;">Acciones</label>
+          <textarea class="accion-input" data-id="${t.id}" placeholder="Ej. Post + story + reel..."
+            style="width:100%;min-height:58px;border:1.5px solid #e8e0f0;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:#111;outline:none;resize:vertical;background:#fff;"></textarea>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <div style="flex:1;">
+            <label style="font-size:11px;font-weight:700;color:#b2005d;letter-spacing:0.5px;text-transform:uppercase;display:block;margin-bottom:5px;">Precio</label>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <span style="font-size:16px;color:#b2005d;font-weight:800;">$</span>
+              <input type="text" inputmode="numeric" pattern="[0-9]*" class="price-input" data-id="${t.id}" placeholder="0"
+                style="flex:1;border:1.5px solid #e8e0f0;border-radius:8px;padding:8px 10px;font-size:15px;font-family:inherit;color:#111;outline:none;background:#fff;">
+            </div>
+          </div>
+          <div style="flex:1;">
+            <label style="font-size:11px;font-weight:700;color:#666;letter-spacing:0.5px;text-transform:uppercase;display:block;margin-bottom:5px;">Comentarios</label>
+            <textarea class="counter-input" data-id="${t.id}" placeholder="Comentarios..."
+              style="width:100%;min-height:52px;border:1.5px solid #e0e0e0;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:#111;outline:none;resize:vertical;background:#fff;line-height:1.4;"></textarea>
+          </div>
+        </div>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+
+  const header = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;padding-bottom:16px;border-bottom:3px solid #b2005d;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div style="font-size:24px;font-weight:300;margin-bottom:5px;">Be<strong style="font-weight:800;color:#b2005d">me</strong></div>
+        <div style="font-family:'Syne',sans-serif;font-size:19px;font-weight:700;color:#111;">${ROSTER.name}</div>
+        ${ROSTER.description?`<div style="font-size:13px;color:#666;margin-top:3px;">${ROSTER.description}</div>`:''}
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:12px;color:#888;line-height:1.8;">
+          <div style="font-weight:700;color:#111;">${TALENTS.length} talento${TALENTS.length!==1?'s':''}</div>
+          <div>${today}</div>
+        </div>
+        <div style="margin-top:8px;font-size:12px;padding:5px 12px;background:#fdf4f8;border:1px solid #f0ccd9;border-radius:10px;color:#b2005d;font-weight:600;">☑ Marcá los talentos de tu interés</div>
+      </div>
+    </div>`;
+
+  document.getElementById('page-content').innerHTML = header + (TALENTS.length === 0
+    ? '<p style="text-align:center;color:#999;padding:40px;">Este roster no tiene talentos todavía.</p>'
+    : `
+    <div class="desktop-view"><div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;box-shadow:0 2px 16px rgba(0,0,0,0.06);">
+        <thead>${tableHeader}</thead><tbody>${tableRows}</tbody>
+      </table>
+    </div></div>
+    <div class="mobile-view">
+      <div style="margin-bottom:14px;font-size:13px;color:#888;">${TALENTS.length} talentos</div>
+      ${mobileCards}
+    </div>`
+  );
+}
+
+// ── Restore previous selections ───────────────────────────────
+function restoreSelections() {
+  Object.entries(SELS).forEach(([tid, sel]) => {
+    const id = parseInt(tid);
+    // Checkboxes
+    document.querySelectorAll(`.row-check[data-id="${id}"]`).forEach(chk => {
+      chk.checked = sel.selected;
+      highlightRow(chk);
+    });
+    // Inputs
+    document.querySelectorAll(`.accion-input[data-id="${id}"]`).forEach(el => { if(sel.accion) el.value = sel.accion; });
+    document.querySelectorAll(`.price-input[data-id="${id}"]`).forEach(el => { if(sel.precio) el.value = sel.precio; });
+    document.querySelectorAll(`.counter-input[data-id="${id}"]`).forEach(el => { if(sel.contraoferta) el.value = sel.contraoferta; });
+  });
+}
+
+// ── Highlight row ─────────────────────────────────────────────
+function highlightRow(checkbox) {
+  const id = checkbox.getAttribute('data-id');
+  const row = document.getElementById('row_' + id);
+  if (row) { row.style.background = checkbox.checked ? '#fff5f9' : ''; row.style.boxShadow = checkbox.checked ? 'inset 3px 0 0 #b2005d' : ''; }
+  const card = document.getElementById('mob_' + id);
+  if (card) card.style.boxShadow = checkbox.checked ? '0 4px 20px rgba(178,0,93,0.18),inset 0 0 0 2px #b2005d' : '0 2px 12px rgba(0,0,0,0.07)';
+  document.querySelectorAll(`.row-check[data-id="${id}"]`).forEach(c => { c.checked = checkbox.checked; });
+}
+
+// ── Save to Supabase (debounced) ──────────────────────────────
+let _saveTimers = {};
+function queueSave(talentId) {
+  clearTimeout(_saveTimers[talentId]);
+  _saveTimers[talentId] = setTimeout(() => saveSelection(talentId), 900);
+}
+
+async function saveSelection(talentId) {
+  const id = parseInt(talentId);
+  const chk = document.querySelector(`.row-check[data-id="${id}"]`);
+  const accionEl = document.querySelector(`.accion-input[data-id="${id}"]`);
+  const priceEl = document.querySelector(`.price-input[data-id="${id}"]`);
+  const counterEl = document.querySelector(`.counter-input[data-id="${id}"]`);
+
+  const row = {
+    roster_id: ROSTER.id,
+    talent_id: id,
+    selected: chk ? chk.checked : false,
+    accion: accionEl ? accionEl.value.trim() : '',
+    precio: priceEl && priceEl.value ? parseFloat(priceEl.value.replace(/[^0-9.]/g, '')) || null : null,
+    contraoferta: counterEl ? counterEl.value.trim() : '',
+    updated_at: new Date().toISOString()
+  };
+  SELS[id] = row;
+
+  const badge = document.getElementById('save-badge');
+  try {
+    await sb.from('roster_selecciones').upsert(row, { onConflict: 'roster_id,talent_id' });
+    badge.textContent = '✓ Guardado';
+    badge.style.background = '#1D9E75';
+  } catch(e) {
+    badge.textContent = '✗ Error al guardar';
+    badge.style.background = '#cc0000';
+  }
+  badge.classList.add('show');
+  setTimeout(() => badge.classList.remove('show'), 2000);
+}
+
+// ── Summary bar ───────────────────────────────────────────────
+function updateSummary() {
+  const checked = document.querySelectorAll('.row-check:checked');
+  const seen = {}; const unique = [];
+  checked.forEach(c => { const id = c.getAttribute('data-id'); if(!seen[id]){ seen[id]=true; unique.push(id); } });
+
+  const bar = document.getElementById('summary-bar');
+  if (!unique.length) { bar.style.opacity='0'; bar.style.transform='translateY(100%)'; return; }
+  bar.style.opacity='1'; bar.style.transform='translateY(0)';
+
+  let total=0, hasPrice=false, html='';
+  unique.forEach(id => {
+    const t = TALENTS.find(x => String(x.id)===String(id));
+    if (!t) return;
+    const p = parseFloat(document.querySelector(`.price-input[data-id="${id}"]`)?.value)||0;
+    const co = (document.querySelector(`.counter-input[data-id="${id}"]`)?.value||'').trim();
+    const a = document.querySelector(`.accion-input[data-id="${id}"]`)?.value.trim()||'';
+    if(p>0) hasPrice=true;
+    total+=p;
+    html+='<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.1);gap:12px;">'
+      +'<div><div style="font-weight:700;font-size:13px;">'+t.nombre+'</div>'+(a?'<div style="font-size:11px;opacity:0.7;margin-top:1px;">'+a+'</div>':'')+(co?'<div style="font-size:10px;opacity:0.6;margin-top:2px;font-style:italic;">'+co+'</div>':'')+'</div>'
+      +'<div style="text-align:right;flex-shrink:0;">'
+      +(p>0?'<div style="font-size:12px;font-weight:700;">$ '+p.toLocaleString('es-ES')+'</div>':'<span style="font-size:12px;opacity:0.4;">Sin precio</span>')
+      +'</div></div>';
+  });
+
+  document.getElementById('sum-count').textContent = unique.length+' talento'+(unique.length!==1?'s':'')+' seleccionado'+(unique.length!==1?'s':'');
+  const tw = document.getElementById('sum-total-wrap');
+  if(hasPrice){ document.getElementById('sum-total').textContent='$ '+total.toLocaleString('es-ES'); tw.style.display='flex'; } else tw.style.display='none';
+  document.getElementById('sum-list').innerHTML = html;
+}
+
+// ── Event delegation ──────────────────────────────────────────
+document.addEventListener('change', e => {
+  if (e.target.classList.contains('row-check')) {
+    highlightRow(e.target);
+    queueSave(e.target.getAttribute('data-id'));
+    updateSummary();
+  }
+});
+document.addEventListener('input', e => {
+  if (e.target.classList.contains('price-input') || e.target.classList.contains('accion-input') || e.target.classList.contains('counter-input')) {
+    // Sanitize price input: only allow digits and one decimal point
+    if(e.target.classList.contains('price-input')) {
+      const cleaned = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+      if(cleaned !== e.target.value) e.target.value = cleaned;
+    }
+    const id = e.target.getAttribute('data-id');
+    const cls = e.target.classList.contains('price-input') ? 'price-input' : e.target.classList.contains('accion-input') ? 'accion-input' : 'counter-input';
+    document.querySelectorAll('.'+cls+'[data-id="'+id+'"]').forEach(el => { if(el!==e.target) el.value=e.target.value; });
+    queueSave(id);
+    updateSummary();
+  }
+});
+document.addEventListener('focusin', e => {
+  if (e.target.classList.contains('price-input') || e.target.classList.contains('accion-input')) e.target.style.borderColor='#b2005d';
+  if (e.target.classList.contains('counter-input')) e.target.style.borderColor='#9414E0';
+});
+document.addEventListener('focusout', e => {
+  if (e.target.classList.contains('price-input') || e.target.classList.contains('accion-input')) e.target.style.borderColor='#e0e0e0';
+  if (e.target.classList.contains('counter-input')) e.target.style.borderColor='#e8d8ff';
+});
+
+// ── Export CSV ────────────────────────────────────────────────
+document.getElementById('export-btn').addEventListener('click', () => {
+  const checked = document.querySelectorAll('.row-check:checked');
+  const seen={}; const ids=[];
+  checked.forEach(c => { const id=c.getAttribute('data-id'); if(!seen[id]){seen[id]=true;ids.push(id);} });
+  if (!ids.length) { alert('Seleccioná al menos un talento primero.'); return; }
+  const lines = [COMPACT_MODE
+    ? 'Talento,País,TikTok,Instagram,YouTube,Acciones'
+    : 'Talento,País,TikTok,Instagram,YouTube,Acciones,Precio,Contraoferta'];
+  ids.forEach(id => {
+    const t = TALENTS.find(x => String(x.id)===String(id));
+    if (!t) return;
+    const p = document.querySelector(`.price-input[data-id="${id}"]`)?.value||'';
+    const co = document.querySelector(`.counter-input[data-id="${id}"]`)?.value||'';
+    const a = document.querySelector(`.accion-input[data-id="${id}"]`)?.value.trim()||'';
+    const paises = (t.paises||[]).filter(Boolean).join(';');
+    const baseCols = ['"'+t.nombre.replace(/"/g,'""')+'"','"'+paises+'"',
+      t.tiktok?'"'+t.tiktok+'"':'""', t.instagram?'"'+t.instagram+'"':'""',
+      t.youtube?'"'+t.youtube+'"':'""', '"'+a.replace(/"/g,'""')+'"'];
+    lines.push(COMPACT_MODE ? baseCols.join(',') : [...baseCols, p, co].join(','));
+  });
+  const blob = new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='seleccion.csv'; a.click(); URL.revokeObjectURL(url);
+});
+
+init();
+</script>
+</body>
+</html>

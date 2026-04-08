@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beme — Panel de Agencia</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0f0f;
+  --surface: #181818;
+  --surface2: #202020;
+  --surface3: #2a2a2a;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.13);
+  --primary: #b2005d;
+  --primary-light: #ed568f;
+  --primary-dark: #8a0048;
+  --purple: #9414E0;
+  --purple-light: #b557f0;
+  --gradient: linear-gradient(135deg, #b2005d 0%, #9414E0 100%);
+  --gradient-h: linear-gradient(135deg, #c8006a 0%, #a718f5 100%);
+  --text: #f4f4f4;
+  --text-muted: #7a7a8a;
+  --text-dim: #444455;
+  --tiktok: #ff0050;
+  --instagram: #e1306c;
+  --youtube: #ff0000;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --shadow: 0 4px 28px rgba(0,0,0,0.55);
+  --shadow-p: 0 4px 20px rgba(178,0,93,0.35);
+}
+
+/* ====== LIGHT THEME ====== */
+body.light {
+  --bg: #f4f4f4;
+  --surface: #ffffff;
+  --surface2: #f0f0f0;
+  --surface3: #e8e8e8;
+  --border: rgba(0,0,0,0.07);
+  --border2: rgba(0,0,0,0.13);
+  --text: #1c1c1c;
+  --text-muted: #5a5a6a;
+  --text-dim: #aaaabd;
+  --shadow: 0 4px 28px rgba(0,0,0,0.10);
+  --shadow-p: 0 4px 20px rgba(178,0,93,0.28);
+}
+body.light .topbar {
+  background: rgba(244,244,244,0.95);
+}
+body.light .tab-nav {
+  background: rgba(244,244,244,0.9);
+}
+body.light .multi-select-trigger,
+body.light .multi-select-panel {
+  background: var(--surface);
+}
+body.light .multi-select-opt:hover { background: var(--surface2); }
+body.light .bottom-bar { background: rgba(244,244,244,0.97); }
+body.light .modal { background: var(--surface); }
+body.light .modal-header,
+body.light .modal-footer { background: var(--surface); }
+body.light .roster-card-mgr { background: var(--surface); }
+
+/* Theme toggle button */
+.theme-toggle {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--border2); background: var(--surface2);
+  color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; flex-shrink: 0;
+}
+.theme-toggle:hover { border-color: var(--primary); color: var(--primary); }
+
+/* Undo floating bar */
+.undo-bar {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px);
+  pointer-events: none;
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border-radius: 14px;
+  background: #1a1a1a; border: 1px solid rgba(255,165,0,0.4);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,165,0,0.1);
+  z-index: 10000; transition: transform 0.3s ease;
+  font-size: 13px; color: #ffa500; font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.undo-bar.visible { transform: translateX(-50%) translateY(0); pointer-events: all; }
+.undo-bar svg { flex-shrink: 0; }
+.undo-bar-btn {
+  background: #ffa500; color: #000; border: none; border-radius: 8px;
+  padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: background 0.15s;
+}
+.undo-bar-btn:hover { background: #ffb833; }
+.undo-bar-close {
+  background: none; border: none; color: rgba(255,165,0,0.5); cursor: pointer;
+  font-size: 16px; padding: 2px 4px; line-height: 1;
+}
+.undo-bar-close:hover { color: #ffa500; }
+body.light .undo-bar { background: #fff; border-color: rgba(230,138,0,0.3); box-shadow: 0 8px 32px rgba(0,0,0,0.12); color: #e68a00; }
+body.light .undo-bar-btn { background: #e68a00; color: #fff; }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+h1,h2,h3{font-family:'Syne',sans-serif;}
+a{color:inherit;text-decoration:none;}
+
+/* ====== TOPBAR ====== */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(15,15,15,0.92);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:16px;
+  padding:0 24px;height:62px;
+}
+.logo{
+  display:flex;align-items:center;gap:2px;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;
+  white-space:nowrap;letter-spacing:-0.5px;
+}
+.logo-be{font-weight:300;color:var(--text);}
+.logo-me{font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.logo-dots{display:flex;gap:3px;margin-left:6px;}
+.logo-dot{width:5px;height:5px;border-radius:50%;}
+.logo-dot:nth-child(1){background:var(--primary);}
+.logo-dot:nth-child(2){background:var(--purple);}
+.logo-dot:nth-child(3){background:var(--primary-light);}
+
+.topbar-stat{display:none;}
+.topbar-search input{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);border-radius:24px;padding:8px 14px 8px 36px;
+  font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border 0.2s;
+}
+.topbar-search input:focus{border-color:var(--primary);}
+.topbar-search input::placeholder{color:var(--text-dim);}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-dim);pointer-events:none;}
+
+/* ====== BUTTONS ====== */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 16px;border-radius:24px;font-size:13px;font-weight:600;
+  cursor:pointer;border:none;transition:all 0.18s;
+  font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;
+}
+.btn-primary{background:var(--gradient);color:#fff;box-shadow:var(--shadow-p);}
+.btn-primary:hover{background:var(--gradient-h);box-shadow:0 6px 24px rgba(178,0,93,0.45);}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text-muted);}
+.btn-outline:hover{border-color:var(--primary);color:var(--primary);}
+.btn-ghost{background:transparent;color:var(--text-muted);padding:7px 12px;}
+.btn-ghost:hover{color:var(--text);}
+.btn-danger{background:rgba(220,50,50,0.1);color:#ff6b6b;border:1px solid rgba(220,50,50,0.2);}
+.btn-danger:hover{background:rgba(220,50,50,0.2);}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-purple{background:linear-gradient(135deg,#6a0d9e,#9414E0);color:#fff;}
+.btn-purple:hover{background:linear-gradient(135deg,#7a0db2,#a520f0);}
+
+/* ====== TABS ====== */
+.tab-nav{
+  display:flex;align-items:center;gap:0;
+  border-bottom:1px solid var(--border);
+  padding:0 24px;background:rgba(15,15,15,0.7);
+  backdrop-filter:blur(10px);
+}
+.tab-btn{
+  display:flex;align-items:center;gap:7px;
+  padding:12px 18px;font-size:13px;font-weight:600;
+  color:var(--text-muted);border:none;background:transparent;
+  cursor:pointer;border-bottom:2px solid transparent;
+  transition:all 0.2s;margin-bottom:-1px;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary);}
+.tab-badge{
+  background:var(--surface2);border-radius:10px;
+  padding:1px 7px;font-size:11px;font-weight:700;
+}
+.tab-btn.active .tab-badge{background:rgba(178,0,93,0.15);color:var(--primary);}
+
+/* ====== LAYOUT ====== */
+.layout{display:flex;min-height:calc(100vh - 110px);}
+
+/* ====== SIDEBAR ====== */
+.sidebar{
+  width:250px;flex-shrink:0;background:var(--surface);
+  border-right:1px solid var(--border);padding:20px 16px;
+  overflow-y:auto;position:sticky;top:110px;
+  height:calc(100vh - 110px);
+}
+.sidebar-section{margin-bottom:24px;}
+.sidebar-label{
+  font-size:10px;font-weight:700;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.sidebar-clear{font-size:10px;color:var(--primary);cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;}
+.sidebar-clear:hover{color:var(--primary-light);}
+
+/* Platform pills - single select */
+.platform-pills{display:flex;flex-direction:column;gap:5px;}
+.platform-pill{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  border-radius:var(--radius-sm);cursor:pointer;font-size:13px;
+  color:var(--text-muted);transition:all 0.15s;border:1px solid transparent;
+  user-select:none;
+}
+.platform-pill:hover{background:var(--surface2);color:var(--text);}
+.platform-pill.active.tt{background:rgba(255,0,80,0.08);color:var(--tiktok);border-color:rgba(255,0,80,0.2);}
+.platform-pill.active.ig{background:rgba(225,48,108,0.08);color:var(--instagram);border-color:rgba(225,48,108,0.2);}
+.platform-pill.active.yt{background:rgba(255,0,0,0.08);color:var(--youtube);border-color:rgba(255,0,0,0.2);}
+.platform-pill-count{margin-left:auto;font-size:11px;color:var(--text-dim);background:var(--surface2);padding:1px 6px;border-radius:10px;}
+
+/* Category chips */
+.cat-filter-list{display:flex;flex-direction:column;gap:4px;}
+.cat-filter-option{
+  display:flex;align-items:center;gap:8px;padding:7px 10px;
+  border-radius:var(--radius-sm);cursor:pointer;font-size:12.5px;
+  color:var(--text-muted);transition:all 0.15s;user-select:none;
+}
+.cat-filter-option:hover{background:var(--surface2);color:var(--text);}
+.cat-filter-option.active{background:rgba(178,0,93,0.1);color:var(--primary);}
+.cat-filter-option .count{margin-left:auto;font-size:11px;color:var(--text-dim);background:var(--surface2);padding:1px 6px;border-radius:10px;}
+.cat-filter-option.active .count{background:rgba(178,0,93,0.12);color:var(--primary);}
+
+/* Country multi-select */
+.multi-select-wrap{position:relative;}
+.multi-select-trigger{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text-muted);border-radius:var(--radius-sm);padding:9px 12px;
+  font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;transition:border 0.2s;
+}
+.multi-select-trigger:hover,.multi-select-trigger.open{border-color:var(--border2);}
+.multi-select-trigger.has-value{color:var(--text);}
+.multi-select-trigger.open{border-color:var(--primary);}
+.multi-select-panel{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;
+  background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);
+  max-height:200px;overflow-y:auto;z-index:60;display:none;box-shadow:var(--shadow);
+}
+.multi-select-panel.open{display:block;}
+.multi-select-opt{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  cursor:pointer;font-size:13px;color:var(--text-muted);transition:background 0.1s;
+}
+.multi-select-opt:hover{background:var(--surface3);color:var(--text);}
+.ms-checkbox{
+  width:14px;height:14px;border-radius:3px;border:1.5px solid var(--border2);
+  background:transparent;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;
+}
+.multi-select-opt.selected{color:var(--text);}
+.multi-select-opt.selected .ms-checkbox{background:var(--primary);border-color:var(--primary);}
+
+/* Selected country pills */
+.country-pills{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
+.country-pill{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(178,0,93,0.1);color:var(--primary);
+  border:1px solid rgba(178,0,93,0.2);border-radius:20px;
+  padding:3px 10px;font-size:11.5px;font-weight:600;cursor:pointer;
+}
+.country-pill:hover{background:rgba(178,0,93,0.18);}
+
+/* Followers range */
+.followers-range{display:flex;gap:8px;align-items:center;}
+.followers-input{
+  flex:1;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;
+  font-size:12.5px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;
+  transition:border 0.2s;
+}
+.followers-input:focus{border-color:var(--primary);}
+.followers-input::placeholder{color:var(--text-dim);}
+.followers-sep{color:var(--text-dim);font-size:12px;}
+
+/* Clear all filters */
+.clear-all-btn{
+  width:100%;text-align:center;padding:8px;font-size:12px;
+  color:var(--text-dim);background:transparent;border:1px dashed var(--border);
+  border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+.clear-all-btn:hover{color:var(--primary);border-color:var(--primary);}
+
+/* ====== MAIN ====== */
+.main{flex:1;padding:24px 28px;overflow-y:auto;}
+.main-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.main-title{font-size:20px;font-weight:700;}
+.main-sub{font-size:13px;color:var(--text-muted);margin-top:2px;}
+.main-actions{display:flex;gap:8px;align-items:center;}
+
+/* View toggle */
+.view-toggle{display:flex;background:var(--surface2);border-radius:var(--radius-sm);padding:3px;gap:2px;}
+.view-btn{
+  padding:5px 9px;border-radius:6px;cursor:pointer;border:none;
+  background:transparent;color:var(--text-muted);transition:all 0.15s;
+  display:flex;align-items:center;
+}
+.view-btn.active{background:var(--surface3);color:var(--text);}
+.view-btn svg{width:15px;height:15px;}
+
+/* ====== TALENT GRID ====== */
+.talent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:16px;}
+.talent-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:20px;transition:all 0.2s;cursor:pointer;
+  position:relative;overflow:hidden;
+}
+.talent-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--gradient);opacity:0;transition:opacity 0.2s;
+}
+.talent-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:var(--shadow);}
+.talent-card:hover::before{opacity:1;}
+.talent-card.selected{border-color:var(--primary);background:rgba(178,0,93,0.03);}
+.talent-card.selected::before{opacity:1;}
+
+.card-select{
+  position:absolute;top:12px;right:12px;
+  width:22px;height:22px;border-radius:50%;
+  border:1.5px solid var(--border2);background:var(--surface2);
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.15s;cursor:pointer;z-index:2;
+}
+.talent-card.selected .card-select{background:var(--primary);border-color:var(--primary);}
+
+.card-avatar{
+  width:60px;height:60px;border-radius:50%;
+  background:var(--surface2);border:2px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-size:20px;font-weight:700;
+  color:var(--primary);overflow:hidden;margin-bottom:12px;
+}
+.card-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.card-name{font-size:15px;font-weight:700;margin-bottom:2px;line-height:1.3;}
+.card-location{font-size:12px;color:var(--text-muted);margin-bottom:12px;display:flex;align-items:center;gap:4px;}
+.card-networks{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+.network-row{display:flex;align-items:center;gap:7px;font-size:12.5px;}
+.network-icon{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.network-icon.tt{background:rgba(255,0,80,0.1);}
+.network-icon.ig{background:rgba(225,48,108,0.1);}
+.network-icon.yt{background:rgba(255,0,0,0.1);}
+.network-link{color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;transition:color 0.15s;}
+.network-link:hover{color:var(--primary);}
+.network-followers{font-weight:600;color:var(--text);margin-left:auto;white-space:nowrap;font-size:12.5px;}
+.card-cats{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;}
+.card-updated{font-size:11px;color:var(--text-dim);margin-bottom:10px;}
+.cat-tag{font-size:10px;padding:3px 8px;border-radius:20px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);}
+.card-footer{border-top:1px solid var(--border);padding-top:10px;display:flex;gap:6px;}
+
+/* ====== TALENT LIST ====== */
+.talent-list{display:flex;flex-direction:column;gap:8px;}
+.talent-list-row{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:12px 16px;
+  display:flex;align-items:center;gap:14px;
+  transition:all 0.15s;cursor:pointer;
+}
+.talent-list-row:hover{border-color:var(--border2);}
+.talent-list-row.selected{border-color:var(--primary);}
+.list-avatar{
+  width:40px;height:40px;border-radius:50%;flex-shrink:0;
+  background:var(--surface2);display:flex;align-items:center;
+  justify-content:center;font-family:'Syne',sans-serif;
+  font-size:14px;font-weight:700;color:var(--primary);overflow:hidden;
+}
+.list-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.list-name{font-weight:600;font-size:14px;flex:1;min-width:0;}
+.list-location{font-size:12px;color:var(--text-muted);}
+.list-networks{display:flex;gap:12px;}
+.list-network{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;}
+.list-cats{display:flex;gap:4px;}
+.list-updated{font-size:11px;color:var(--text-dim);min-width:70px;text-align:right;}
+.list-actions{display:flex;gap:6px;margin-left:auto;}
+
+/* ====== EMPTY STATE ====== */
+.empty-state{text-align:center;padding:72px 20px;color:var(--text-muted);}
+.empty-icon{font-size:44px;margin-bottom:14px;opacity:0.3;}
+.empty-state h3{font-size:18px;margin-bottom:6px;color:var(--text);}
+.empty-state p{font-size:13.5px;}
+
+/* ====== BOTTOM BAR ====== */
+.bottom-bar{
+  position:sticky;bottom:0;
+  background:rgba(15,15,15,0.95);backdrop-filter:blur(16px);
+  border-top:1px solid var(--border);
+  padding:12px 28px;display:flex;align-items:center;gap:12px;
+  transition:all 0.3s;transform:translateY(100%);opacity:0;
+  z-index:50; /* above content, below modals */
+}
+.bottom-bar.visible{transform:translateY(0);opacity:1;}
+.selected-count{font-size:13.5px;color:var(--text-muted);}
+.selected-count strong{color:var(--primary);font-weight:700;}
+.bottom-bar-actions{margin-left:auto;display:flex;gap:8px;}
+
+/* ====== MODAL ====== */
+.modal-overlay{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity 0.2s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--radius-lg);width:100%;max-width:680px;
+  max-height:90vh;overflow-y:auto;
+  transform:scale(0.95) translateY(12px);transition:transform 0.2s;
+}
+.modal-overlay.open .modal{transform:scale(1) translateY(0);}
+.modal-xl{max-width:960px;}
+.modal-sm{max-width:480px;}
+.modal-header{
+  padding:22px 26px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;background:var(--surface);z-index:1;
+}
+.modal-title{font-size:19px;font-weight:700;}
+.modal-close{
+  width:32px;height:32px;border-radius:50%;border:none;
+  background:var(--surface2);cursor:pointer;display:flex;align-items:center;
+  justify-content:center;color:var(--text-muted);transition:all 0.15s;
+}
+.modal-close:hover{background:var(--surface3);color:var(--text);}
+.modal-body{padding:22px 26px;}
+.modal-footer{
+  padding:14px 26px 22px;display:flex;justify-content:flex-end;gap:8px;
+  border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--surface);
+}
+
+/* ====== FORM ====== */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-group.full{grid-column:1 / -1;}
+.form-label{font-size:11.5px;font-weight:600;color:var(--text-muted);}
+.form-input{
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:var(--radius-sm);padding:9px 12px;font-size:13.5px;
+  font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border 0.2s;width:100%;
+}
+.form-input:focus{border-color:var(--primary);}
+.form-input::placeholder{color:var(--text-dim);}
+textarea.form-input{resize:vertical;min-height:80px;}
+select.form-input{cursor:pointer;-webkit-appearance:none;}
+
+/* Category checkboxes */
+.cat-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;}
+.cat-check{
+  padding:6px 12px;border-radius:20px;font-size:12.5px;
+  background:var(--surface2);color:var(--text-muted);
+  border:1px solid var(--border);cursor:pointer;transition:all 0.15s;
+}
+.cat-check:hover{border-color:var(--border2);color:var(--text);}
+.cat-check.selected{background:rgba(178,0,93,0.12);color:var(--primary);border-color:rgba(178,0,93,0.3);}
+.cat-add-btn{
+  padding:6px 12px;border-radius:20px;font-size:12.5px;
+  background:transparent;color:var(--text-dim);
+  border:1px dashed var(--border2);cursor:pointer;transition:all 0.15s;
+  font-family:'Plus Jakarta Sans',sans-serif;display:inline-flex;align-items:center;gap:4px;
+}
+.cat-add-btn:hover{color:var(--primary);border-color:var(--primary);}
+
+/* Photo upload */
+.photo-upload{display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border);}
+.photo-preview{
+  width:72px;height:72px;border-radius:50%;border:2px solid var(--border2);
+  background:var(--surface2);display:flex;align-items:center;
+  justify-content:center;color:var(--text-muted);overflow:hidden;flex-shrink:0;
+}
+.photo-preview img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.photo-upload-info h4{font-size:13.5px;margin-bottom:3px;}
+.photo-upload-info p{font-size:12px;color:var(--text-muted);margin-bottom:8px;}
+
+/* ====== ROSTER MANAGER ====== */
+.roster-manager-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.roster-grid-mgr{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+.roster-card-mgr{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:20px;transition:all 0.2s;
+  position:relative;overflow:hidden;
+}
+.roster-card-mgr::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--gradient);
+}
+.roster-card-mgr:hover{border-color:var(--border2);box-shadow:var(--shadow);}
+.roster-card-new{
+  background:transparent;border:1.5px dashed var(--border2);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:160px;gap:8px;transition:all 0.2s;
+}
+.roster-card-new:hover{border-color:var(--primary);color:var(--primary);}
+/* Roster sort dropdown */
+.roster-sort-wrap{position:relative;}
+.roster-sort-panel{display:none;position:absolute;top:100%;right:0;margin-top:6px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:4px;z-index:100;min-width:180px;box-shadow:var(--shadow);}
+.roster-sort-wrap .roster-sort-panel.open{display:block;}
+.roster-sort-opt{display:block;width:100%;text-align:left;padding:8px 12px;font-size:13px;border:none;background:none;color:var(--text);cursor:pointer;border-radius:var(--radius-sm);font-family:inherit;}
+.roster-sort-opt:hover{background:var(--surface2);}
+.roster-sort-opt.active{color:var(--primary);font-weight:700;}
+/* Archived toggle */
+.archived-toggle{display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);font-family:inherit;transition:all 0.15s;width:100%;}
+.archived-toggle:hover{border-color:var(--border2);color:var(--text);}
+.roster-card-new-icon{
+  width:44px;height:44px;border-radius:50%;background:var(--surface2);
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+}
+.roster-name{font-size:16px;font-weight:700;margin-bottom:4px;}
+.roster-desc{font-size:12.5px;color:var(--text-muted);margin-bottom:12px;line-height:1.5;}
+.roster-meta{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-dim);margin-bottom:14px;}
+.roster-talent-count{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(178,0,93,0.1);color:var(--primary);
+  border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;
+}
+.roster-actions{display:flex;gap:6px;padding-top:12px;border-top:1px solid var(--border);}
+
+/* ====== ROSTER VIEW (client-facing) ====== */
+.roster-view-page{
+  background:#fff;color:#111;padding:40px;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+.roster-view-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  margin-bottom:28px;padding-bottom:20px;
+  border-bottom:3px solid #b2005d;
+}
+.roster-view-logo{font-family:'Plus Jakarta Sans',sans-serif;font-size:26px;}
+.roster-view-logo span{font-weight:300;}
+.roster-view-logo strong{font-weight:800;background:linear-gradient(135deg,#b2005d,#9414E0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.roster-view-info{}
+.roster-view-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;margin-bottom:4px;color:#111;}
+.roster-view-sub{font-size:12px;color:#888;}
+.roster-talent-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.roster-talent-card{border:1px solid #e8e8e8;border-radius:14px;overflow:hidden;}
+.roster-card-top{
+  background:linear-gradient(135deg,#1a1a1a,#2a2a2a);
+  padding:18px;display:flex;align-items:center;gap:12px;
+}
+.roster-avatar{
+  width:52px;height:52px;border-radius:50%;background:#2a2a2a;
+  border:2px solid rgba(178,0,93,0.4);display:flex;align-items:center;
+  justify-content:center;font-family:'Syne',sans-serif;font-size:18px;
+  font-weight:700;color:#b2005d;overflow:hidden;flex-shrink:0;
+}
+.roster-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.roster-talent-name{color:#fff;font-size:14px;font-weight:700;line-height:1.3;}
+.roster-talent-loc{color:rgba(255,255,255,0.45);font-size:11px;margin-top:2px;}
+.roster-card-body{padding:12px 14px;}
+.roster-network{display:flex;align-items:center;gap:7px;font-size:12px;margin-bottom:6px;color:#444;}
+.roster-network-icon{width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;}
+.roster-network-icon.tt{background:#ffe0e8;}
+.roster-network-icon.ig{background:#fde8f0;}
+.roster-network-icon.yt{background:#ffe0e0;}
+.roster-handle{color:#666;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px;}
+.roster-followers{margin-left:auto;font-weight:700;color:#111;font-size:12px;}
+.roster-cats-row{display:flex;flex-wrap:wrap;gap:3px;margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0;}
+.roster-cat{font-size:9.5px;padding:2px 7px;border-radius:10px;background:#f5f5f5;color:#555;}
+
+/* Manage talents in roster */
+.talent-select-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;max-height:400px;overflow-y:auto;}
+.talent-select-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  cursor:pointer;transition:all 0.15s;
+}
+.talent-select-item:hover{border-color:var(--border2);}
+.talent-select-item.in-roster{border-color:var(--primary);background:rgba(178,0,93,0.05);}
+.talent-select-avatar{
+  width:36px;height:36px;border-radius:50%;background:var(--surface3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;color:var(--primary);overflow:hidden;flex-shrink:0;
+}
+.talent-select-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.talent-select-name{font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.talent-select-check{
+  width:18px;height:18px;border-radius:4px;border:1.5px solid var(--border2);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;
+}
+.talent-select-item.in-roster .talent-select-check{background:var(--primary);border-color:var(--primary);}
+
+
+/* ====== YOUTUBE API STYLES ====== */
+.api-key-modal-info {
+  background: rgba(255,0,0,0.06);
+  border: 1px solid rgba(255,0,0,0.15);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.api-key-modal-info a { color: var(--primary); text-decoration: underline; }
+.api-key-modal-info ol { padding-left: 16px; margin-top: 6px; }
+.api-key-modal-info li { margin-bottom: 3px; }
+.api-status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--text-dim); flex-shrink: 0;
+  transition: background 0.3s;
+}
+.api-status-dot.active { background: #4ade80; box-shadow: 0 0 6px rgba(74,222,128,0.5); }
+.api-status-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text-muted);
+}
+.yt-refresh-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  border: none; background: rgba(255,0,0,0.1);
+  color: #ff4444; cursor: pointer; transition: all 0.15s;
+  flex-shrink: 0; padding: 0;
+}
+.yt-refresh-btn:hover { background: rgba(255,0,0,0.2); transform: rotate(30deg); }
+.yt-refresh-btn.spinning { animation: spin 0.8s linear infinite; }
+.yt-fetch-progress {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text-muted);
+  padding: 8px 12px; background: var(--surface2);
+  border-radius: var(--radius-sm); margin-bottom: 12px;
+}
+.progress-bar-wrap {
+  flex: 1; height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%; background: var(--gradient); border-radius: 2px;
+  transition: width 0.3s;
+}
+.api-key-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 0 10px; height: 36px; border-radius: 20px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--text-muted); transition: all 0.18s;
+  font-family: 'Plus Jakarta Sans', sans-serif; white-space: nowrap;
+}
+.api-key-btn:hover { border-color: #ff4444; color: #ff4444; }
+.api-key-btn.configured { border-color: rgba(74,222,128,0.4); color: #4ade80; }
+
+/* ====== INSTAGRAM API STYLES ====== */
+.ig-token-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; padding: 2px 7px; border-radius: 10px;
+  background: rgba(225,48,108,0.1); color: var(--instagram);
+  border: 1px solid rgba(225,48,108,0.2); white-space: nowrap;
+}
+.ig-refresh-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  border: none; background: rgba(225,48,108,0.1);
+  color: #e1306c; cursor: pointer; transition: all 0.15s;
+  flex-shrink: 0; padding: 0;
+}
+.ig-refresh-btn:hover { background: rgba(225,48,108,0.2); transform: rotate(30deg); }
+.ig-refresh-btn.spinning { animation: spin 0.8s linear infinite; }
+.token-section {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px;
+  margin-top: 8px;
+}
+.token-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.token-label {
+  font-size: 12px; font-weight: 600; color: var(--text-muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.token-connected {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: #4ade80;
+}
+.token-expiry {
+  font-size: 11px; color: var(--text-dim);
+}
+.steps-list {
+  counter-reset: steps;
+  display: flex; flex-direction: column; gap: 6px;
+  margin: 10px 0;
+}
+.step-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  font-size: 12.5px; color: var(--text-muted); line-height: 1.5;
+}
+.step-num {
+  min-width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(225,48,108,0.15); color: var(--instagram);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+}
+.step-item a { color: var(--instagram); text-decoration: underline; }
+
+/* ====== EXTENSION SCRAPING ====== */
+.ext-status-bar {
+  display: none;
+  align-items: center; gap: 10px;
+  background: rgba(148,20,224,0.08);
+  border: 1px solid rgba(148,20,224,0.2);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px; margin-bottom: 14px;
+  font-size: 12.5px; color: var(--text-muted);
+}
+.ext-status-bar.visible { display: flex; }
+.ext-dot { width:7px;height:7px;border-radius:50%;background:#9414E0;animation:pulse 1.2s infinite;flex-shrink:0; }
+.ext-progress-bar { flex:1;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden; }
+.ext-progress-fill { height:100%;background:linear-gradient(90deg,#b2005d,#9414E0);border-radius:2px;transition:width 0.3s; }
+.ext-progress-count { font-size:11px;white-space:nowrap; }
+
+.scrape-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  border: none; cursor: pointer; transition: all 0.15s; flex-shrink: 0; padding: 0;
+}
+.scrape-btn.ig { background: rgba(225,48,108,0.1); color: #e1306c; }
+.scrape-btn.tt { background: rgba(255,0,80,0.1); color: #ff0050; }
+.scrape-btn:hover { filter: brightness(1.3); transform: scale(1.15); }
+.scrape-btn.spinning { animation: spin 0.8s linear infinite; }
+@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+.ext-not-installed {
+  display:none;
+  font-size:11.5px; color:var(--text-dim); padding:8px 12px;
+  background:var(--surface2); border-radius:var(--radius-sm);
+  border:1px dashed var(--border2); text-align:center; margin-bottom:12px;
+}
+
+/* ====== NET UPDATE DROPDOWN ====== */
+.topbar-search { flex:1; max-width:320px; margin-left:auto; position:relative; }
+.net-update-wrap { position:relative; flex-shrink:0; }
+.net-update-trigger {
+  display:flex; align-items:center; gap:6px;
+  padding:8px 12px; border-radius:24px;
+  border:1px solid var(--border2); background:var(--surface2);
+  color:var(--text-muted); cursor:pointer; transition:all 0.18s;
+  font-size:13px; font-family:'Plus Jakarta Sans',sans-serif;
+}
+.net-update-trigger:hover { border-color:var(--primary); color:var(--primary); }
+.net-update-panel {
+  position:absolute; top:calc(100% + 8px); right:0;
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:var(--radius-lg); min-width:260px;
+  box-shadow:var(--shadow); z-index:150;
+  display:none; flex-direction:column; padding:6px;
+  animation:fadeIn 0.15s ease;
+}
+.net-update-panel.open { display:flex; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+.net-update-title {
+  font-size:11px; font-weight:700; letter-spacing:1.2px;
+  text-transform:uppercase; color:var(--text-dim);
+  padding:6px 10px 4px;
+}
+.net-update-item {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 10px; border-radius:var(--radius-sm);
+  border:none; background:transparent; cursor:pointer;
+  transition:background 0.15s; text-align:left; width:100%;
+  font-family:'Plus Jakarta Sans',sans-serif; color:var(--text);
+}
+.net-update-item:hover { background:var(--surface2); }
+.net-update-item:disabled { opacity:0.4; cursor:not-allowed; }
+.net-update-item-name { font-size:13px; font-weight:600; color:var(--text); }
+.net-update-item-sub { font-size:11px; color:var(--text-dim); margin-top:1px; }
+.net-update-item-status { margin-left:auto; font-size:13px; flex-shrink:0; }
+.net-update-divider { height:1px; background:var(--border); margin:4px 0; }
+.net-update-all .net-update-item-name { background:var(--gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.net-update-yt-config .net-update-item-name { font-size:12px; color:var(--text-muted); }
+
+/* ====== CARD UPDATE BUTTON ====== */
+.scrape-btn.upd-all {
+  background:rgba(148,20,224,0.1); color:#9414E0;
+  width:26px; height:26px;
+}
+.scrape-btn.upd-all:hover { background:rgba(148,20,224,0.2); }
+
+/* ====== CAT PANEL FOOTER ====== */
+.cat-panel-footer {
+  display:flex; flex-direction:column; gap:4px;
+  padding:6px 8px; border-top:1px solid var(--border); margin-top:4px;
+}
+.cat-panel-add-btn, .cat-panel-manage-btn {
+  display:flex; align-items:center; gap:6px;
+  padding:7px 10px; border-radius:var(--radius-sm);
+  border:none; background:transparent; cursor:pointer;
+  font-size:12.5px; color:var(--text-muted); transition:all 0.15s;
+  font-family:'Plus Jakarta Sans',sans-serif; text-align:left; width:100%;
+}
+.cat-panel-add-btn:hover { color:var(--primary); background:rgba(178,0,93,0.07); }
+.cat-panel-manage-btn:hover { color:var(--text); background:var(--surface3); }
+
+/* ====== SORT DROPDOWN ====== */
+.sort-wrap{position:relative;flex-shrink:0;}
+.sort-trigger{
+  display:flex;align-items:center;gap:5px;
+  padding:7px 11px;border-radius:var(--radius-sm);
+  border:1px solid var(--border2);background:var(--surface2);
+  color:var(--text-muted);cursor:pointer;font-size:12.5px;
+  transition:all 0.15s;font-family:'Plus Jakarta Sans',sans-serif;
+  white-space:nowrap;
+}
+.sort-trigger:hover,.sort-trigger.active{border-color:var(--primary);color:var(--primary);}
+.sort-panel{
+  position:absolute;top:calc(100% + 6px);right:0;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--radius-lg);min-width:220px;
+  box-shadow:var(--shadow);z-index:150;
+  display:none;flex-direction:column;padding:5px;
+}
+.sort-panel.open{display:flex;}
+.sort-option{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 10px;border-radius:var(--radius-sm);
+  cursor:pointer;font-size:13px;color:var(--text-muted);
+  transition:background 0.12s;user-select:none;
+}
+.sort-option:hover{background:var(--surface2);color:var(--text);}
+.sort-option.active{background:rgba(178,0,93,0.1);color:var(--primary);font-weight:600;}
+.sort-sep{height:1px;background:var(--border);margin:3px 0;}
+
+/* ====== ROSTER PLATFORM CHECKS ====== */
+.roster-platforms-grid{display:flex;gap:8px;margin-top:4px;}
+.roster-platform-check{
+  display:flex;align-items:center;gap:7px;
+  padding:8px 12px;border-radius:var(--radius-sm);
+  border:1px solid var(--border2);background:var(--surface2);
+  cursor:pointer;font-size:13px;color:var(--text-muted);
+  transition:all 0.15s;flex:1;user-select:none;
+}
+.roster-platform-check input{display:none;}
+.roster-platform-check:has(input:checked){border-color:var(--primary);background:rgba(178,0,93,0.06);color:var(--text);}
+.rp-icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.rp-icon.tt{background:rgba(255,0,80,0.1);}
+.rp-icon.ig{background:rgba(225,48,108,0.1);}
+.rp-icon.yt{background:rgba(255,0,0,0.1);}
+
+/* ====== UNDO BUTTON ====== */
+#undo-btn{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  display:none;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:24px;padding:10px 18px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.15);
+  cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:13px;font-weight:600;color:var(--text);
+  z-index:400;transition:all 0.2s;
+  white-space:nowrap;max-width:320px;
+}
+#undo-btn:hover{border-color:var(--primary);color:var(--primary);transform:translateX(-50%) translateY(-2px);}
+.undo-label{overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+
+/* ── Skeleton loader ─────────────────────────────── */
+#app-loading-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 14px;
+  z-index: 8000;
+  transition: opacity 0.3s;
+}
+#app-loading-overlay.hidden { opacity: 0; pointer-events: none; }
+.beme-loader-logo { font-size: 28px; font-weight: 300; }
+.beme-loader-logo strong { font-weight: 800; background: linear-gradient(135deg,#b2005d,#9414E0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.beme-loader-bar { width: 160px; height: 3px; background: rgba(178,0,93,0.15); border-radius: 2px; overflow: hidden; }
+.beme-loader-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#b2005d,#9414E0); border-radius: 2px; animation: beme-load 1.8s ease-in-out infinite; }
+@keyframes beme-load { 0%{width:0%;margin-left:0} 50%{width:60%;margin-left:20%} 100%{width:0%;margin-left:100%} }
+.beme-loader-text { font-size: 12px; color: var(--text-muted); }
+
+/* ====== TOAST ====== */
+.toast-container{position:fixed;top:76px;right:20px;z-index:999;display:flex;flex-direction:column;gap:6px;}
+.toast{
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:var(--radius-sm);padding:11px 14px;
+  font-size:13px;color:var(--text);box-shadow:var(--shadow);
+  min-width:230px;animation:slideIn 0.3s ease;display:flex;align-items:center;gap:8px;
+}
+.toast.success{border-left:3px solid #4ade80;}
+.toast.info{border-left:3px solid var(--primary);}
+.toast.error{border-left:3px solid #ff6b6b;}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+.updating{animation:pulse 1s infinite;}
+
+/* ====== RESPONSIVE ====== */
+@media(max-width:768px){
+  .sidebar{display:none;}
+  .form-grid{grid-template-columns:1fr;}
+  .roster-talent-grid{grid-template-columns:repeat(2,1fr);}
+  .topbar-stats{display:none;}
+  .main{padding:16px;}
+}
+
+/* ====== SCROLLBAR ====== */
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* ====== PRINT ====== */
+@media print{
+  body *{visibility:hidden;}
+  .roster-view-page,.roster-view-page *{visibility:visible;}
+  .roster-view-page{position:fixed;inset:0;padding:24px;}
+}
+
+/* ====== DIVIDER ====== */
+.section-divider{height:1px;background:var(--border);margin:16px 0;}
+
+/* Active filter indicator */
+.filter-active-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);display:inline-block;margin-left:4px;}
+
+/* Follower range list */
+.follower-range-list{display:flex;flex-direction:column;gap:3px;}
+.follower-range-opt{
+  display:flex;align-items:center;gap:8px;padding:7px 10px;
+  border-radius:var(--radius-sm);cursor:pointer;font-size:12.5px;
+  color:var(--text-muted);transition:all 0.15s;user-select:none;
+}
+.follower-range-opt:hover{background:var(--surface2);color:var(--text);}
+.follower-range-opt.active{background:rgba(178,0,93,0.1);color:var(--primary);}
+.follower-range-dot{
+  width:8px;height:8px;border-radius:50%;border:1.5px solid currentColor;
+  flex-shrink:0;transition:all 0.15s;
+}
+.follower-range-opt.active .follower-range-dot{background:var(--primary);border-color:var(--primary);}
+
+.manage-countries-btn{
+  width:100%;display:flex;align-items:center;gap:7px;
+  padding:8px 10px;background:transparent;border:1px dashed var(--border2);
+  border-radius:var(--radius-sm);color:var(--text-muted);font-size:12.5px;
+  cursor:pointer;transition:all 0.15s;font-family:'Plus Jakarta Sans',sans-serif;
+}
+.manage-countries-btn:hover{color:var(--primary);border-color:var(--primary);}
+
+.country-mgr-list{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;}
+.country-mgr-item{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+}
+.country-mgr-flag{font-size:18px;width:26px;text-align:center;flex-shrink:0;}
+.country-mgr-name{flex:1;font-size:13.5px;}
+.country-mgr-del{
+  width:26px;height:26px;border-radius:50%;border:none;background:transparent;
+  color:var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all 0.15s;flex-shrink:0;
+}
+.country-mgr-del:hover{background:rgba(220,50,50,0.12);color:#ff6b6b;}
+.country-mgr-add{display:flex;gap:8px;margin-top:12px;}
+.country-mgr-add input{flex:1;}
+.country-flag-hint{font-size:11px;color:var(--text-dim);margin-top:6px;}
+.country-in-use{font-size:10px;color:var(--text-dim);background:var(--surface3);border-radius:10px;padding:1px 7px;}
+</style>
+</head>
+<body class="light">
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="logo">
+    <span class="logo-be">Be</span><span class="logo-me">me</span>
+    <div class="logo-dots">
+      <div class="logo-dot"></div><div class="logo-dot"></div><div class="logo-dot"></div>
+    </div>
+  </div>
+  <div class="topbar-search">
+    <span class="search-icon">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    </span>
+    <input type="text" id="search-input" placeholder="Buscar talento...">
+  </div>
+
+  <!-- Network update dropdown -->
+  <div class="net-update-wrap" id="net-update-wrap">
+    <button class="net-update-trigger" id="net-update-trigger" data-fn="toggleNetUpdateDropdown" title="Actualizar redes sociales">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="net-update-panel" id="net-update-panel">
+      <div class="net-update-title">Actualizar seguidores</div>
+      <!-- TikTok scrape -->
+      <button class="net-update-item" id="scrape-tt-all-btn" data-fn="scrapeAllTikTok">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg>
+        <div><div class="net-update-item-name">Scraping TikTok</div><div class="net-update-item-sub">Via Apify</div></div>
+        <div class="net-update-item-status" id="net-status-tt"></div>
+      </button>
+      <!-- Instagram scrape -->
+      <button class="net-update-item" id="scrape-ig-all-btn" data-fn="scrapeAllInstagram">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#e1306c" stroke="none"/></svg>
+        <div><div class="net-update-item-name">Scraping Instagram</div><div class="net-update-item-sub">Via extensión</div></div>
+        <div class="net-update-item-status" id="net-status-ig"></div>
+      </button>
+      <!-- YouTube API -->
+      <button class="net-update-item" id="update-yt-btn" data-fn="updateAllFollowers">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg>
+        <div>
+          <div class="net-update-item-name">YouTube API</div>
+          <div class="net-update-item-sub" id="yt-api-status-inline">Sin clave configurada</div>
+        </div>
+        <div class="api-status-dot" id="api-status-dot" style="margin-left:auto"></div>
+      </button>
+      <div class="net-update-divider"></div>
+      <button class="net-update-item net-update-all" data-fn="updateAll3Networks">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+        <div><div class="net-update-item-name">Actualizar todas las redes</div><div class="net-update-item-sub">TT + IG primero, luego YouTube</div></div>
+      </button>
+      <div class="net-update-divider"></div>
+      <button class="net-update-item net-update-yt-config" data-fn="openApiKeyModal">
+        <div class="api-status-dot" id="api-status-dot2" style="flex-shrink:0"></div>
+        <div><div class="net-update-item-name">Configurar YouTube API</div><div class="net-update-item-sub" id="yt-api-btn-label">Sin clave</div></div>
+      </button>
+    </div>
+  </div>
+
+  <input type="file" id="csv-file-input" accept=".csv" style="display:none">
+  <button class="theme-toggle" id="theme-toggle-btn" data-fn="toggleTheme" title="Cambiar tema">
+    <svg id="theme-icon-dark" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    <svg id="theme-icon-light" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+  <button class="btn btn-primary" data-fn="openAddModal">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    Agregar Talento
+  </button>
+</header>
+
+<!-- TABS -->
+<nav class="tab-nav">
+  <button class="tab-btn active" id="tab-talents" data-fn="tabTalents">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Talentos
+    <span class="tab-badge" id="tab-total-badge">0</span>
+  </button>
+  <button class="tab-btn" id="tab-rosters" data-fn="tabRosters">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+    Rosters
+    <span class="tab-badge" id="tab-rosters-badge">0</span>
+  </button>
+  <a class="tab-btn" href="campanas.html" style="text-decoration:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Campañas
+  </a>
+</nav>
+
+<div id="ext-scrape-bar" style="display:none;margin:4px 24px 0;padding:7px 14px;background:rgba(148,20,224,0.07);border:1px solid rgba(148,20,224,0.2);border-radius:8px;align-items:center;gap:10px;font-size:12.5px;color:#9414E0;">
+  <div class="ext-dot"></div>
+  <span id="ext-scrape-text">Iniciando scraping...</span>
+  <div class="ext-progress-bar"><div class="ext-progress-fill" id="ext-progress-fill" style="width:0%"></div></div>
+  <span class="ext-progress-count" id="ext-progress-count">0/0</span>
+</div>
+<div id="ig-progress-bar" class="yt-fetch-progress" style="display:none;margin:8px 24px 0;border-left:2px solid #e1306c;">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg>
+  <span id="ig-progress-text">Obteniendo datos de Instagram...</span>
+  <div class="progress-bar-wrap"><div class="progress-bar-fill" id="ig-progress-fill" style="width:0%;background:linear-gradient(90deg,#e1306c,#9414E0)"></div></div>
+  <span id="ig-progress-count" style="white-space:nowrap;font-size:11px;">0/0</span>
+</div>
+<div id="yt-progress-bar" class="yt-fetch-progress" style="display:none;margin:8px 24px 0;">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg>
+  <span id="yt-progress-text">Obteniendo datos de YouTube...</span>
+  <div class="progress-bar-wrap"><div class="progress-bar-fill" id="yt-progress-fill" style="width:0%"></div></div>
+  <span id="yt-progress-count" style="white-space:nowrap;font-size:11px;">0/0</span>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- Platform filter: single select -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Plataforma <span class="sidebar-clear" id="clear-platform" data-fn="clearPlatformFilter" style="display:none">Limpiar</span></div>
+      <div class="platform-pills">
+        <div class="platform-pill tt" id="filter-tt" data-fn="filterTT">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg>
+          TikTok
+          <span class="platform-pill-count" id="count-tt">0</span>
+        </div>
+        <div class="platform-pill ig" id="filter-ig" data-fn="filterIG">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+          Instagram
+          <span class="platform-pill-count" id="count-ig">0</span>
+        </div>
+        <div class="platform-pill yt" id="filter-yt" data-fn="filterYT">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg>
+          YouTube
+          <span class="platform-pill-count" id="count-yt">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Country multi-select -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">País <span class="sidebar-clear" id="clear-countries" data-fn="clearCountryFilter" style="display:none">Limpiar</span></div>
+      <div class="multi-select-wrap" id="country-wrap">
+        <div class="multi-select-trigger" id="country-trigger" data-fn="toggleCountryDropdown">
+          <span id="country-trigger-text">Todos los países</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="multi-select-panel" id="country-panel"></div>
+      </div>
+      <div class="country-pills" id="country-pills-row"></div>
+    </div>
+
+    <!-- Category filter: dropdown -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Categoría <span class="sidebar-clear" id="clear-cats" data-fn="clearCatFilter" style="display:none">Limpiar</span></div>
+      <div class="multi-select-wrap" id="cat-wrap">
+        <div class="multi-select-trigger" id="cat-trigger" data-fn="toggleCatDropdown">
+          <span id="cat-trigger-text">Todas las categorías</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="multi-select-panel" id="cat-panel" style="max-height:260px;overflow-y:auto;">
+          <div id="cat-panel-list"></div>
+          <div class="cat-panel-footer">
+            <button class="cat-panel-add-btn" id="cat-panel-add-btn" data-fn="addCategoryFromPanel">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              Agregar categoría
+            </button>
+            <button class="cat-panel-manage-btn" id="cat-panel-manage-btn" data-fn="openManageCatsModal">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Gestionar categorías
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="country-pills" id="cat-pills-row"></div>
+    </div>
+
+    <!-- Roster filter -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Roster <span class="sidebar-clear" id="clear-roster" data-fn="clearRosterFilter" style="display:none">Limpiar</span></div>
+      <div class="multi-select-wrap" id="roster-filter-wrap">
+        <div class="multi-select-trigger" id="roster-filter-trigger" data-fn="toggleRosterFilterDropdown">
+          <span id="roster-filter-trigger-text">Todos los rosters</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="multi-select-panel" id="roster-filter-panel" style="max-height:220px;overflow-y:auto;">
+          <div id="roster-filter-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Followers range: Min + Max selects -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Seguidores <span class="sidebar-clear" id="clear-followers" data-fn="clearFollowerFilter" style="display:none">Limpiar</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <!-- Red social -->
+        <div style="display:flex;gap:5px;">
+          <button id="fseg-tt" onclick="setFollowerNetwork('tt')" style="flex:1;padding:5px 4px;border-radius:7px;border:1.5px solid var(--border2);background:var(--surface);font-size:11px;font-weight:600;color:var(--text-dim);cursor:pointer;transition:all 0.15s;font-family:inherit;">TikTok</button>
+          <button id="fseg-ig" onclick="setFollowerNetwork('ig')" style="flex:1;padding:5px 4px;border-radius:7px;border:1.5px solid var(--border2);background:var(--surface);font-size:11px;font-weight:600;color:var(--text-dim);cursor:pointer;transition:all 0.15s;font-family:inherit;">IG</button>
+          <button id="fseg-yt" onclick="setFollowerNetwork('yt')" style="flex:1;padding:5px 4px;border-radius:7px;border:1.5px solid var(--border2);background:var(--surface);font-size:11px;font-weight:600;color:var(--text-dim);cursor:pointer;transition:all 0.15s;font-family:inherit;">YT</button>
+          <button id="fseg-total" onclick="setFollowerNetwork('total')" style="flex:1;padding:5px 4px;border-radius:7px;border:1.5px solid #b2005d;background:rgba(178,0,93,0.08);font-size:11px;font-weight:700;color:#b2005d;cursor:pointer;transition:all 0.15s;font-family:inherit;">Total</button>
+        </div>
+        <!-- Min / Max inputs -->
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;color:var(--text-dim);width:26px;flex-shrink:0;">Mín</span>
+          <input type="text" inputmode="numeric" id="filter-seg-min" placeholder="ej. 100K" oninput="applyFollowerInputFilter()"
+            style="flex:1;border:1.5px solid var(--border2);border-radius:7px;padding:5px 8px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;">
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;color:var(--text-dim);width:26px;flex-shrink:0;">Máx</span>
+          <input type="text" inputmode="numeric" id="filter-seg-max" placeholder="ej. 5M" oninput="applyFollowerInputFilter()"
+            style="flex:1;border:1.5px solid var(--border2);border-radius:7px;padding:5px 8px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Keywords search filter -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Keywords <span class="sidebar-clear" id="clear-keywords" data-fn="clearKeywordsFilter" style="display:none">Limpiar</span></div>
+      <input type="text" id="filter-keywords-input" placeholder="Buscar por keyword..." 
+        oninput="applyKeywordsFilter()"
+        style="width:100%;border:1.5px solid var(--border2);border-radius:7px;padding:6px 9px;font-size:12.5px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;transition:border 0.2s;">
+      <div id="keywords-pills-row" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;"></div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <button class="manage-countries-btn" data-fn="openManageCountriesModal">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      Gestionar países
+    </button>
+
+    <button class="clear-all-btn" data-fn="clearAllFilters" style="margin-top:6px">Limpiar todos los filtros</button>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- TALENTS TAB -->
+    <div id="tab-content-talents">
+      <div class="main-header">
+        <div>
+          <h1 class="main-title">Talentos</h1>
+          <div class="main-sub" id="result-count">0 talentos</div>
+        </div>
+        <div class="main-actions">
+          <!-- Select all -->
+          <button class="btn btn-outline btn-sm" id="select-all-btn" data-fn="toggleSelectAll" title="Seleccionar todos los visibles">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/></svg>
+            <span id="select-all-label">Seleccionar todo</span>
+          </button>
+
+          <!-- Sort dropdown -->
+          <div class="sort-wrap" id="sort-wrap">
+            <button class="sort-trigger" id="sort-trigger" data-fn="toggleSortDropdown" title="Ordenar">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
+              <span id="sort-label">Ordenar</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="sort-panel" id="sort-panel">
+              <div class="sort-option" data-action="sort-opt" data-sort="" id="sort-none">Sin ordenar</div>
+              <div class="sort-sep"></div>
+              <div class="sort-option" data-action="sort-opt" data-sort="az" id="sort-az">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h4l-4 6h4M11 7l3 10M14 7l3 10M17 14h-6"/></svg>
+                Nombre A → Z
+              </div>
+              <div class="sort-option" data-action="sort-opt" data-sort="za" id="sort-za">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h4l-4 6h4M11 17l3-10M14 17l3-10M17 10h-6"/></svg>
+                Nombre Z → A
+              </div>
+              <div class="sort-sep"></div>
+              <div class="sort-option" data-action="sort-opt" data-sort="tt-desc" id="sort-tt">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg>
+                TikTok — más seguidores
+              </div>
+              <div class="sort-option" data-action="sort-opt" data-sort="ig-desc" id="sort-ig">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg>
+                Instagram — más seguidores
+              </div>
+              <div class="sort-option" data-action="sort-opt" data-sort="yt-desc" id="sort-yt">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg>
+                YouTube — más seguidores
+              </div>
+              <div class="sort-option" data-action="sort-opt" data-sort="total-desc" id="sort-total">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Total seguidores
+              </div>
+            </div>
+          </div>
+
+          <div class="view-toggle">
+            <button class="view-btn active" id="view-grid" data-fn="viewGrid" title="Cuadrícula">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            </button>
+            <button class="view-btn" id="view-list" data-fn="viewList" title="Lista">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            </button>
+          </div>
+          <button class="btn btn-outline btn-sm" data-fn="triggerCSVImport" title="Importar CSV">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" transform="rotate(180,12,9)"/></svg>
+            Importar
+          </button>
+          <button class="btn btn-outline btn-sm" data-fn="exportCSV" title="Exportar CSV">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Exportar
+          </button>
+        </div>
+      </div>
+      <div id="talent-container"></div>
+    </div>
+
+    <!-- ROSTERS TAB -->
+    <div id="tab-content-rosters" style="display:none">
+      <div class="roster-manager-header">
+        <div>
+          <h1 class="main-title">Rosters</h1>
+          <div class="main-sub">Crea y gestiona rosters para tus clientes</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <!-- Sort dropdown -->
+          <div class="roster-sort-wrap" id="roster-sort-wrap">
+            <button class="btn btn-outline btn-sm" data-fn="toggleRosterSortDropdown" id="roster-sort-trigger" style="gap:5px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5h10M11 9h7M11 13h4M3 17l4 4 4-4M7 3v18"/></svg>
+              <span id="roster-sort-label">Ordenar</span>
+            </button>
+            <div class="roster-sort-panel" id="roster-sort-panel">
+              <button class="roster-sort-opt" data-action="set-roster-sort" data-id="date-desc">Fecha: Más reciente</button>
+              <button class="roster-sort-opt" data-action="set-roster-sort" data-id="date-asc">Fecha: Más antiguo</button>
+              <button class="roster-sort-opt" data-action="set-roster-sort" data-id="name-asc">Nombre: A → Z</button>
+              <button class="roster-sort-opt" data-action="set-roster-sort" data-id="name-desc">Nombre: Z → A</button>
+            </div>
+          </div>
+          <button class="btn btn-primary" data-fn="openCreateRosterModal">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Nuevo Roster
+          </button>
+        </div>
+      </div>
+      <div class="roster-grid-mgr" id="roster-manager-grid"></div>
+
+      <!-- Archived rosters -->
+      <div id="archived-rosters-section" style="display:none;margin-top:24px;">
+        <button class="archived-toggle" data-fn="toggleArchivedRosters" id="archived-toggle-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+          <span id="archived-count-label">Archivados (0)</span>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="archived-chevron" style="transition:transform 0.2s"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="roster-grid-mgr" id="archived-roster-grid" style="display:none;margin-top:12px;"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- BOTTOM SELECTION BAR -->
+<div class="bottom-bar" id="bottom-bar">
+  <div class="selected-count">
+    <strong id="selected-count-num">0</strong> talento(s) seleccionado(s)
+  </div>
+  <button class="btn btn-ghost btn-sm" data-fn="clearSelection">Limpiar</button>
+  <div class="bottom-bar-actions">
+    <button class="btn btn-outline btn-sm" data-fn="updateSelectedAll" title="Actualizar TT+IG y luego YouTube" style="border-color:rgba(148,20,224,0.3);color:#9414E0;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+      Actualizar
+    </button>
+    <button class="btn btn-outline btn-sm" data-fn="exportSelectedCSV">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Exportar
+    </button>
+    <button class="btn btn-outline btn-sm" data-fn="openAddToRosterModal">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      Roster
+    </button>
+    <button class="btn btn-danger btn-sm" data-fn="deleteSelectedTalents">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+      Eliminar
+    </button>
+  </div>
+</div>
+
+<!-- ADD/EDIT TALENT MODAL -->
+<div class="modal-overlay" id="talent-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-title-text">Agregar Talento</h2>
+      <button class="modal-close" data-fn="closeTalentModal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="photo-upload">
+        <div class="photo-preview" id="modal-photo-preview">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div class="photo-upload-info">
+          <h4>Foto de perfil</h4>
+          <p>JPG, PNG o GIF. Máx 5MB</p>
+          <input type="file" id="photo-file" accept="image/*" style="display:none" >
+          <button class="btn btn-outline btn-sm" data-fn="triggerPhotoUpload">Subir foto</button>
+          <button class="btn btn-outline btn-sm" id="btn-fetch-photo" data-fn="fetchProfilePhoto" style="margin-top:4px;font-size:11px;">Extraer de TikTok / IG</button>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Nombre Completo *</label>
+          <input type="text" id="f-nombre" class="form-input" placeholder="Ej. María García Rodríguez">
+        </div>
+        <div class="form-group">
+          <label class="form-label">País(es) *</label>
+          <div class="multi-select-wrap" id="pais-wrap">
+            <div class="multi-select-trigger" id="pais-trigger" data-fn="togglePaisDropdown">
+              <span id="pais-trigger-text">Seleccionar país(es)...</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="multi-select-panel" id="pais-panel" style="max-height:200px;overflow-y:auto;"></div>
+          </div>
+          <div class="country-pills" id="pais-selected-pills"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ciudad</label>
+          <input type="text" id="f-ciudad" class="form-input" placeholder="Ej. Buenos Aires">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Teléfono</label>
+          <input type="tel" id="f-telefono" class="form-input" placeholder="+54 11 1234 5678">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="f-email" class="form-input" placeholder="talento@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:5px;">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg>
+            Link TikTok
+          </label>
+          <input type="url" id="f-tiktok" class="form-input" placeholder="https://tiktok.com/@usuario">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:5px;">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg>
+            Link Instagram
+          </label>
+          <input type="url" id="f-instagram" class="form-input" placeholder="https://instagram.com/usuario">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:5px;">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg>
+            Link YouTube
+          </label>
+          <input type="url" id="f-youtube" class="form-input" placeholder="https://youtube.com/@canal">
+        </div>
+
+        <!-- Manual follower counts -->
+        <div class="form-group full">
+          <label class="form-label" style="margin-bottom:4px;">Seguidores (actualizar manualmente)</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <div>
+              <label class="form-label" style="display:flex;align-items:center;gap:4px;margin-bottom:5px;">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg>
+                TikTok
+              </label>
+              <input type="number" id="f-seg-tiktok" class="form-input" placeholder="0" min="0" style="font-size:13px;">
+            </div>
+            <div>
+              <label class="form-label" style="display:flex;align-items:center;gap:4px;margin-bottom:5px;">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg>
+                Instagram
+              </label>
+              <input type="number" id="f-seg-instagram" class="form-input" placeholder="0" min="0" style="font-size:13px;">
+            </div>
+            <div>
+              <label class="form-label" style="display:flex;align-items:center;gap:4px;margin-bottom:5px;">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg>
+                YouTube
+              </label>
+              <input type="number" id="f-seg-youtube" class="form-input" placeholder="0" min="0" style="font-size:13px;">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group full">
+          <label class="form-label">Valores de Contenido</label>
+          <textarea id="f-valores" class="form-input" placeholder="Describe el estilo y tipo de contenido del talento..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Género</label>
+          <select id="f-genero" class="form-input">
+            <option value="">Sin especificar</option>
+            <option value="Mujer">Mujer</option>
+            <option value="Hombre">Hombre</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Keywords / Palabras clave</label>
+          <input type="text" id="f-keywords" class="form-input" placeholder="ej. fitness, lifestyle, mamá, CEO, vegano...">
+          <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Separadas por coma. Se usan para búsqueda.</div>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Categorías *</label>
+          <div class="cat-grid" id="cat-checkboxes"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="delete-btn" style="display:none;margin-right:auto" data-fn="deleteTalent">Eliminar talento</button>
+      <button class="btn btn-ghost" data-fn="closeTalentModal">Cancelar</button>
+      <button class="btn btn-primary" data-fn="saveTalent">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE/EDIT ROSTER MODAL -->
+<div class="modal-overlay" id="roster-create-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title" id="roster-create-title">Nuevo Roster</h2>
+      <button class="modal-close" data-fn="closeRosterCreateModal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label">Nombre del Roster *</label>
+        <input type="text" id="r-nombre" class="form-input" placeholder="Ej. Micro Influencers Nivea">
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label">Descripción (opcional)</label>
+        <textarea id="r-desc" class="form-input" style="min-height:60px" placeholder="Notas internas sobre este roster..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Plataformas a mostrar en el roster</label>
+        <div class="roster-platforms-grid">
+          <label class="roster-platform-check" id="rp-tt">
+            <input type="checkbox" id="r-show-tt" checked>
+            <div class="rp-icon tt">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg>
+            </div>
+            TikTok
+          </label>
+          <label class="roster-platform-check" id="rp-ig">
+            <input type="checkbox" id="r-show-ig" checked>
+            <div class="rp-icon ig">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg>
+            </div>
+            Instagram
+          </label>
+          <label class="roster-platform-check" id="rp-yt">
+            <input type="checkbox" id="r-show-yt" checked>
+            <div class="rp-icon yt">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg>
+            </div>
+            YouTube
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-fn="closeRosterCreateModal">Cancelar</button>
+      <button class="btn btn-primary" data-fn="saveRoster">Crear Roster</button>
+    </div>
+  </div>
+</div>
+
+<!-- ROSTER VIEW MODAL -->
+<div class="modal-overlay" id="roster-view-modal">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <h2 class="modal-title" id="roster-view-title">Roster</h2>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <!-- View toggle: tabla / tarjetas -->
+        <div class="view-toggle" style="flex-shrink:0;">
+          <button class="view-btn active" id="roster-view-table" data-fn="setRosterViewTable" title="Vista tabla">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+          </button>
+          <button class="view-btn" id="roster-view-cards" data-fn="setRosterViewCards" title="Vista tarjetas">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="10" rx="1"/><rect x="14" y="3" width="7" height="10" rx="1"/><rect x="3" y="17" width="7" height="4" rx="1"/><rect x="14" y="17" width="7" height="4" rx="1"/></svg>
+          </button>
+        </div>
+        <button class="btn btn-outline btn-sm" data-fn="openManageTalentsModal">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Talentos
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCurrentRoster()" title="Eliminar roster">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>
+          Eliminar
+        </button>
+        <button class="btn btn-outline btn-sm" data-fn="downloadCurrentRoster">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Descargar
+        </button>
+        <button class="btn btn-primary btn-sm" data-fn="printRoster">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Imprimir
+        </button>
+        <button class="modal-close" data-fn="closeRosterViewModal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="roster-view-content" class="roster-view-page"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- CSV PREVIEW MODAL -->
+<div class="modal-overlay" id="csv-preview-modal">
+  <div class="modal modal-xl" style="max-width:900px;">
+    <div class="modal-header">
+      <h2 class="modal-title">Previsualizar importación</h2>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="csv-preview-count" style="font-size:13px;color:var(--text-muted);"></span>
+        <button class="btn btn-primary btn-sm" id="csv-confirm-btn" onclick="confirmCSVImport()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Importar todos
+        </button>
+        <button class="modal-close" onclick="closeModal('csv-preview-modal')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="modal-body" style="padding:0;max-height:65vh;overflow-y:auto;">
+      <table id="csv-preview-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead id="csv-preview-head" style="position:sticky;top:0;z-index:1;"></thead>
+        <tbody id="csv-preview-body"></tbody>
+      </table>
+    </div>
+    <div id="csv-preview-footer" style="padding:14px 20px;border-top:1px solid var(--border2);font-size:12px;color:var(--text-muted);display:flex;gap:16px;flex-wrap:wrap;"></div>
+  </div>
+</div>
+
+<!-- MANAGE TALENTS IN ROSTER MODAL -->
+<div class="modal-overlay" id="manage-talents-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Gestionar talentos</h2>
+      <button class="modal-close" data-fn="closeManageTalentsModal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Haz clic para agregar o quitar talentos del roster.</p>
+      <input type="text" id="manage-talents-search" placeholder="Buscar talento..." style="width:100%;padding:9px 14px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-size:13px;font-family:inherit;margin-bottom:12px;outline:none;">
+      <div class="talent-select-grid" id="manage-talents-grid"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-fn="closeManageTalentsModal">Cerrar</button>
+      <button class="btn btn-primary" data-fn="applyManageTalents">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TO ROSTER FROM SELECTION MODAL -->
+<div class="modal-overlay" id="add-to-roster-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title">Agregar a Roster</h2>
+      <button class="modal-close" data-fn="closeAddToRosterModal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Selecciona el roster al que deseas agregar los talentos seleccionados.</p>
+      <div id="add-to-roster-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div class="section-divider"></div>
+      <button class="btn btn-outline" style="width:100%" data-fn="openCreateRosterAndAdd">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Crear nuevo roster
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE CATEGORIES MODAL -->
+<div class="modal-overlay" id="manage-cats-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title">Gestionar Categorías</h2>
+      <button class="modal-close" data-fn="closeManageCatsModal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="country-mgr-list" id="cats-mgr-list"></div>
+      <div class="country-mgr-add">
+        <input type="text" id="new-cat-name" class="form-input" placeholder="Nueva categoría...">
+        <button class="btn btn-primary btn-sm" data-fn="addCategoryFromModal">Añadir</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-fn="closeManageCatsModal">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE COUNTRIES MODAL -->
+<div class="modal-overlay" id="manage-countries-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title">Gestionar Países</h2>
+      <button class="modal-close" data-fn="closeManageCountriesModal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="country-mgr-list" id="country-mgr-list"></div>
+      <div class="country-mgr-add">
+        <input type="text" id="new-country-name" class="form-input" placeholder="Nombre del país...">
+        <input type="text" id="new-country-flag" class="form-input" style="width:70px;text-align:center;" placeholder="🏳️">
+        <button class="btn btn-primary btn-sm" data-fn="addCountry">Añadir</button>
+      </div>
+      <div class="country-flag-hint">Opcional: pega el emoji de bandera en el segundo campo.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-fn="closeManageCountriesModal">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- YOUTUBE API KEY MODAL -->
+<div class="modal-overlay" id="yt-api-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title" style="display:flex;align-items:center;gap:8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg>
+        YouTube Data API
+      </h2>
+      <button class="modal-close" data-fn="closeYtApiModal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="api-key-modal-info">
+        <strong>¿Cómo obtener tu clave gratis?</strong>
+        <ol>
+          <li>Ve a <a href="https://console.cloud.google.com/" target="_blank">console.cloud.google.com</a></li>
+          <li>Crea un proyecto nuevo (o usa uno existente)</li>
+          <li>Activa la <strong>YouTube Data API v3</strong></li>
+          <li>En "Credenciales" → Crear clave de API</li>
+          <li>Copia y pega la clave aquí abajo</li>
+        </ol>
+        La API gratuita permite hasta 10.000 consultas/día.
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label">Clave de API</label>
+        <div style="display:flex;gap:8px;">
+          <input type="password" id="yt-api-key-input" class="form-input" placeholder="AIza..." autocomplete="off">
+          <button class="btn btn-outline btn-sm" data-fn="toggleApiKeyVisibility" id="yt-eye-btn" style="flex-shrink:0;padding:0 10px;">👁</button>
+        </div>
+      </div>
+      <div class="api-status-row" id="yt-api-status-row" style="display:none">
+        <div class="api-status-dot active"></div>
+        <span id="yt-api-status-text">Clave configurada</span>
+        <button class="btn btn-ghost btn-sm" data-fn="clearApiKey" style="margin-left:auto;color:#ff6b6b;font-size:11px;">Eliminar</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-fn="closeYtApiModal">Cancelar</button>
+      <button class="btn btn-primary" data-fn="saveApiKey">Guardar y probar</button>
+    </div>
+
+    <!-- Apify Section -->
+    <div style="border-top:1px solid var(--border);margin:0 -24px;padding:20px 24px 0;">
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-primary)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Apify — Instagram &amp; TikTok
+      </h3>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.5;">
+        Obtené tu API token en <a href="https://console.apify.com/account/integrations" target="_blank" style="color:var(--primary)">console.apify.com → Integrations</a>. El plan gratuito incluye $5/mes de crédito.
+      </p>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label">API Token de Apify</label>
+        <div style="display:flex;gap:8px;">
+          <input type="password" id="apify-token-input" class="form-input" placeholder="apify_api_xxxx..." autocomplete="off">
+          <button class="btn btn-outline btn-sm" data-fn="toggleApifyTokenVisibility" style="flex-shrink:0;padding:0 10px;">👁</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <div class="api-status-dot" id="apify-status-dot"></div>
+        <div style="display:flex;gap:8px;flex:1;">
+          <button class="btn btn-outline btn-sm" data-fn="saveApifyToken">Guardar</button>
+          <button class="btn btn-outline btn-sm" data-fn="testApifyToken" style="color:#0055ff;border-color:rgba(0,85,255,0.3);">Probar</button>
+          <button class="btn btn-ghost btn-sm" data-fn="clearApifyToken" style="color:#ff6b6b;font-size:11px;margin-left:auto;">Eliminar</button>
+        </div>
+      </div>
+      <div id="apify-status-text" style="font-size:12px;color:var(--text-muted);min-height:18px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- UNDO BAR — fixed at bottom center -->
+<div class="undo-bar" id="undo-bar">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 2.1-5.3L3 7"/></svg>
+  <span id="undo-bar-text">Acción deshecha disponible</span>
+  <button class="undo-bar-btn" data-fn="executeUndo">Deshacer</button>
+  <button class="undo-bar-close" data-fn="dismissUndo">✕</button>
+</div>
+
+<!-- APP LOADING OVERLAY -->
+<div id="app-loading-overlay">
+  <div class="beme-loader-logo">Be<strong>me</strong></div>
+  <div class="beme-loader-bar"><div class="beme-loader-bar-fill"></div></div>
+  <div class="beme-loader-text" id="app-load-msg">Conectando...</div>
+</div>
+
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay" style="position:fixed;inset:0;background:#f4f2f8;display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:0;">
+  <div style="background:#fff;border-radius:20px;padding:40px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.12);">
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:32px;font-weight:300;margin-bottom:4px;">Be<strong style="font-weight:800;color:#b2005d">me</strong></div>
+      <div style="font-size:13px;color:#888;">Panel de agencia</div>
+    </div>
+    <div id="login-error" style="display:none;background:#fff0f0;border:1px solid #fcc;border-radius:8px;padding:10px 14px;font-size:13px;color:#cc0000;margin-bottom:16px;"></div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <input type="email" id="login-email" placeholder="Email" autocomplete="email" onkeydown="if(event.key==='Enter')doLogin()"
+        style="border:1px solid #e0e0e0;border-radius:10px;padding:12px 14px;font-size:14px;font-family:inherit;outline:none;width:100%;">
+      <input type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"
+        style="border:1px solid #e0e0e0;border-radius:10px;padding:12px 14px;font-size:14px;font-family:inherit;outline:none;width:100%;">
+      <button id="login-btn" onclick="doLogin()"
+        style="background:linear-gradient(135deg,#b2005d,#9414E0);color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.15s;">
+        Ingresar
+      </button>
+    </div>
+    <div style="text-align:center;margin-top:18px;">
+      <button id="show-signup" onclick="toggleSignupSection()" style="background:none;border:none;color:#b2005d;font-size:13px;cursor:pointer;font-family:inherit;">¿Primera vez? Crear cuenta</button>
+    </div>
+    <div id="signup-section" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid #f0f0f0;">
+      <div style="font-size:12px;color:#888;margin-bottom:10px;text-align:center;">Crear cuenta nueva</div>
+      <input type="email" id="signup-email" placeholder="Email del nuevo usuario" 
+        style="border:1px solid #e0e0e0;border-radius:10px;padding:11px 14px;font-size:13px;font-family:inherit;outline:none;width:100%;margin-bottom:8px;">
+      <input type="password" id="signup-pass" placeholder="Contraseña (mín 6 caracteres)"
+        style="border:1px solid #e0e0e0;border-radius:10px;padding:11px 14px;font-size:13px;font-family:inherit;outline:none;width:100%;margin-bottom:8px;">
+      <button id="signup-btn" onclick="doSignup()"
+        style="background:#1D9E75;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;">
+        Registrar usuario
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SYNC STATUS INDICATOR -->
+<div id="sync-indicator" style="position:fixed;bottom:16px;right:16px;z-index:500;font-size:12px;padding:6px 14px;border-radius:20px;background:#1D9E75;color:#fff;font-weight:700;opacity:0;transition:opacity 0.3s;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+  ✓ Guardado
+</div>
+
+
+<!-- UNDO BUTTON -->
+<button id="undo-btn" data-fn="undoLastAction">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+  Deshacer: <span class="undo-label"></span>
+</button>
+
+<script src="dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,1721 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beme — Detalle de Campaña</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f7fa;--surface:#fff;--surface2:#f0f0f5;--surface3:#e4e4ec;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);
+  --text:#111;--text-muted:#666;--text-dim:#aaa;
+  --primary:#b2005d;--primary-light:#ed568f;--purple:#9414E0;
+  --gradient:linear-gradient(135deg,#b2005d 0%,#9414E0 100%);
+  --gradient-h:linear-gradient(135deg,#c8006a 0%,#a718f5 100%);
+  --shadow:0 4px 16px rgba(0,0,0,0.08);
+  --radius:12px;--radius-sm:8px;--radius-lg:16px;
+  --green:#16a34a;--blue:#0ea5e9;--yellow:#d97706;--red:#dc2626;
+}
+body.dark{
+  --bg:#0f0f0f;--surface:#181818;--surface2:#202020;--surface3:#2a2a2a;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#f0f0f0;--text-muted:#888;--text-dim:#555;
+  --shadow:0 4px 24px rgba(0,0,0,0.4);
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:99px}
+
+/* ── Topbar ── */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(247,247,250,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;gap:12px}
+body.dark .topbar{background:rgba(15,15,15,0.92)}
+.logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;text-decoration:none;color:var(--text)}
+.logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted);flex:1;min-width:0}
+.breadcrumb a{color:var(--text-muted);text-decoration:none;white-space:nowrap}
+.breadcrumb a:hover{color:var(--text)}
+.breadcrumb-sep{color:var(--text-dim);flex-shrink:0}
+.breadcrumb-current{color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.icon-btn{width:32px;height:32px;border-radius:8px;border:none;background:var(--surface2);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.icon-btn:hover{background:var(--surface3);color:var(--text)}
+
+/* ── Layout ── */
+.layout{display:grid;grid-template-columns:1fr 300px;min-height:calc(100vh - 56px)}
+.main-col{padding:24px;overflow-y:auto;min-width:0}
+.side-col{padding:20px;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;border:none;transition:all 0.15s;text-decoration:none;white-space:nowrap}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none !important}
+.btn-primary{background:var(--gradient);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--gradient-h);transform:translateY(-1px);box-shadow:0 4px 16px rgba(178,0,93,0.3)}
+.btn-outline{background:var(--surface);color:var(--text);border:1px solid var(--border2)}
+.btn-outline:hover:not(:disabled){border-color:var(--primary);color:var(--primary)}
+.btn-ghost{background:transparent;color:var(--text-muted);border:none}
+.btn-ghost:hover:not(:disabled){color:var(--text);background:var(--surface2)}
+.btn-green{background:rgba(22,163,74,0.1);color:var(--green);border:1px solid rgba(22,163,74,0.25)}
+.btn-green:hover:not(:disabled){background:rgba(22,163,74,0.18)}
+.btn-red{background:rgba(220,38,38,0.08);color:var(--red);border:1px solid rgba(220,38,38,0.2)}
+.btn-red:hover:not(:disabled){background:rgba(220,38,38,0.15)}
+.btn-sm{padding:5px 11px;font-size:12px;gap:5px}
+.btn-xs{padding:3px 8px;font-size:11px;gap:4px}
+
+/* ── Campaign header ── */
+.camp-header{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.camp-title-row{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
+.camp-logo{width:48px;height:48px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--text-muted);flex-shrink:0}
+.camp-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.3px;line-height:1.2}
+.camp-sub{font-size:13px;color:var(--text-muted);margin-top:3px}
+.camp-meta-strip{display:flex;gap:16px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--border)}
+.meta-item{display:flex;flex-direction:column;gap:1px}
+.meta-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim)}
+.meta-value{font-size:13px;font-weight:600}
+
+/* ── Estado select ── */
+.estado-wrap{margin-left:auto;flex-shrink:0}
+.estado-select{appearance:none;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:5px 22px 5px 10px;border-radius:20px;border:none;outline:none;background-image:url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L4 4L7 1' stroke='%23888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+.es-sin_iniciar{background-color:rgba(136,136,136,0.12);color:#888}
+.es-en_curso{background-color:rgba(14,165,233,0.12);color:#0284c7}
+.es-etapa_finanzas{background-color:rgba(217,119,6,0.12);color:var(--yellow)}
+.es-finalizada{background-color:rgba(22,163,74,0.12);color:var(--green)}
+.es-cancelada{background-color:rgba(220,38,38,0.12);color:var(--red)}
+
+/* ── Section ── */
+.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-dim);display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.section-title::before{content:'';width:3px;height:13px;background:var(--gradient);border-radius:99px;flex-shrink:0}
+
+/* ── Talento card ── */
+.talento-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.talento-head{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;transition:background 0.15s}
+.talento-head:hover{background:var(--surface2)}
+.t-avatar{width:38px;height:38px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--text-muted);overflow:hidden;flex-shrink:0}
+.t-avatar img{width:100%;height:100%;object-fit:cover}
+.t-info{flex:1;min-width:0}
+.t-name{font-size:14px;font-weight:700}
+.t-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
+.t-expand{transition:transform 0.2s;color:var(--text-dim);flex-shrink:0}
+.talento-card.open .t-expand{transform:rotate(180deg)}
+.talento-body{display:none;border-top:1px solid var(--border)}
+.talento-card.open .talento-body{display:block}
+
+/* ── Fees ── */
+.fees-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 18px;background:rgba(178,0,93,0.03);border-bottom:1px solid var(--border)}
+.fee-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px}
+.fee-box.ganancia{background:rgba(22,163,74,0.05);border-color:rgba(22,163,74,0.2)}
+.fee-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-dim);margin-bottom:3px}
+.fee-value{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;line-height:1}
+.fee-value.pos{color:var(--green)}
+.fee-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:13px;font-family:inherit;color:var(--text);outline:none;margin-top:5px}
+.fee-input:focus{border-color:var(--primary)}
+
+/* ── Talento extras ── */
+.talento-extras{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 18px;border-bottom:1px solid var(--border)}
+.extra-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px}
+.extra-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-dim);margin-bottom:5px}
+
+/* ── Contenidos ── */
+.contenidos-wrap{padding:14px 18px}
+.add-contenido-btn{display:flex;align-items:center;gap:6px;padding:8px 12px;border:2px dashed var(--border2);border-radius:var(--radius-sm);font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;background:none;width:100%;justify-content:center;transition:all 0.15s;margin-top:10px;font-family:inherit}
+.add-contenido-btn:hover{border-color:var(--primary);color:var(--primary)}
+
+/* ── Contenido item ── */
+.contenido-item{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;background:var(--surface)}
+.cont-head{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;transition:background 0.15s}
+.cont-head:hover{background:var(--surface2)}
+.tipo-badge{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700;flex-shrink:0}
+.tb-tiktok_video{background:rgba(0,0,0,0.06);color:#333;border:1px solid rgba(0,0,0,0.1)}
+body.dark .tb-tiktok_video{background:rgba(255,255,255,0.08);color:#ccc}
+.tb-reel{background:rgba(225,48,108,0.1);color:#e1306c}
+.tb-ig_story{background:rgba(131,58,180,0.1);color:#833ab4}
+.tb-youtube_video{background:rgba(255,0,0,0.08);color:#cc0000}
+.tb-youtube_short{background:rgba(255,0,0,0.06);color:#cc0000}
+.cont-titulo{font-size:13px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cont-fecha{font-size:11px;color:var(--text-dim);flex-shrink:0}
+.paso-chip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);flex-shrink:0;white-space:nowrap}
+.paso-chip.active{background:rgba(178,0,93,0.08);border-color:rgba(178,0,93,0.2);color:var(--primary)}
+.paso-chip.done{background:rgba(22,163,74,0.08);border-color:rgba(22,163,74,0.2);color:var(--green)}
+.cont-expand{transition:transform 0.2s;color:var(--text-dim);flex-shrink:0}
+.contenido-item.open .cont-expand{transform:rotate(180deg)}
+.cont-body{display:none;padding:14px;border-top:1px solid var(--border)}
+.contenido-item.open .cont-body{display:block}
+
+/* ── Workflow steps ── */
+.steps-list{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
+.step-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--radius-sm);font-size:13px}
+.step-row.done{background:rgba(22,163,74,0.06);color:var(--green)}
+.step-row.current{background:rgba(178,0,93,0.06);border:1px solid rgba(178,0,93,0.15)}
+.step-row.pending{color:var(--text-dim)}
+.step-icon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+.step-icon.done{background:var(--green);color:#fff}
+.step-icon.current{background:var(--primary);color:#fff}
+.step-icon.pending{background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);font-size:10px}
+.step-label{flex:1}
+.step-current-tag{font-size:10px;font-weight:800;color:var(--primary);letter-spacing:0.3px}
+
+/* ── Workflow actions area ── */
+.workflow-action-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
+.action-box-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:10px}
+.action-btns{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── Upload area ── */
+.upload-area{border:2px dashed var(--border2);border-radius:var(--radius-sm);padding:14px;text-align:center;cursor:pointer;transition:all 0.15s;background:var(--surface)}
+.upload-area:hover{border-color:var(--primary);background:rgba(178,0,93,0.02)}
+.upload-area input{display:none}
+.upload-area-text{font-size:12px;font-weight:600;color:var(--text-muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.upload-area-sub{font-size:10px;color:var(--text-dim);margin-top:3px}
+
+/* ── File list ── */
+.file-list{display:flex;flex-direction:column;gap:6px}
+.file-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.file-icon{width:30px;height:30px;border-radius:7px;background:rgba(178,0,93,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--primary)}
+.file-name{flex:1;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-size{font-size:11px;color:var(--text-dim);flex-shrink:0}
+.file-actions{display:flex;gap:4px;flex-shrink:0}
+.file-action-btn{width:26px;height:26px;border:none;background:none;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--text-dim);transition:all 0.15s}
+.file-action-btn:hover.del{color:var(--red);background:rgba(220,38,38,0.08)}
+.file-action-btn:hover.dl{color:var(--primary);background:rgba(178,0,93,0.08)}
+
+/* ── Comments/observations ── */
+.obs-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.obs-item{padding:10px 12px;border-radius:var(--radius-sm);border-left:3px solid var(--border2);background:var(--surface2)}
+.obs-item.reject{border-left-color:var(--red);background:rgba(220,38,38,0.04)}
+.obs-item.approve{border-left-color:var(--green);background:rgba(22,163,74,0.04)}
+.obs-meta{font-size:10px;color:var(--text-dim);margin-bottom:3px;display:flex;gap:8px}
+.obs-text{font-size:13px;color:var(--text)}
+.obs-input-group{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.obs-textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:13px;font-family:inherit;color:var(--text);outline:none;resize:vertical;min-height:60px}
+.obs-textarea:focus{border-color:var(--primary)}
+.obs-btn-row{display:flex;gap:8px}
+
+/* ── File Access Buttons (prominent, always visible) ── */
+.cont-file-buttons{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.file-access-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;text-decoration:none;transition:all 0.15s;border:1px solid var(--border2);background:var(--surface);color:var(--text)}
+.file-access-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+.file-access-btn.brief{border-color:rgba(14,165,233,0.3);color:#0ea5e9}
+.file-access-btn.brief:hover{background:rgba(14,165,233,0.08);border-color:#0ea5e9}
+.file-access-btn.script{border-color:rgba(148,20,224,0.3);color:#9414E0}
+.file-access-btn.script:hover{background:rgba(148,20,224,0.08);border-color:#9414E0}
+.file-access-btn.draft{border-color:rgba(255,0,80,0.3);color:#ff0050}
+.file-access-btn.draft:hover{background:rgba(255,0,80,0.08);border-color:#ff0050}
+.file-access-btn.link{border-color:rgba(34,197,94,0.3);color:#22c55e}
+.file-access-btn.link:hover{background:rgba(34,197,94,0.08);border-color:#22c55e}
+
+/* ── Timeline / Historial ── */
+.tl-details{margin:10px 0;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.tl-summary{display:flex;align-items:center;gap:7px;padding:10px 14px;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;background:var(--surface2);transition:background 0.15s;list-style:none}
+.tl-summary::-webkit-details-marker{display:none}
+.tl-summary::before{content:'▶';font-size:9px;transition:transform 0.2s;color:var(--text-dim)}
+details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
+.tl-summary:hover{background:var(--surface3)}
+.tl-list{padding:14px 14px 14px 18px;display:flex;flex-direction:column}
+.tl-item{display:flex;gap:12px;min-height:0}
+.tl-track{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:16px}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.tl-dot-ok{background:var(--green);box-shadow:0 0 0 3px rgba(22,163,74,0.15)}
+.tl-dot-reject{background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,0.15)}
+.tl-line{width:2px;flex:1;background:var(--border2);margin:4px 0}
+.tl-content{flex:1;padding-bottom:14px;min-width:0}
+.tl-header{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.tl-paso{font-size:12px;font-weight:700;color:var(--text);background:var(--surface2);padding:1px 8px;border-radius:10px;border:1px solid var(--border)}
+.tl-date{font-size:10px;color:var(--text-dim)}
+.tl-action{font-size:12px;color:var(--text-muted);margin-bottom:2px}
+.tl-author{font-size:10px;color:var(--text-dim);font-style:italic}
+
+/* ── Back to Previous Step Button ── */
+.back-paso-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;margin:8px 0;border-radius:var(--radius-sm);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:1.5px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.06);color:#d97706;transition:all 0.15s;width:fit-content}
+.back-paso-btn:hover{background:rgba(245,158,11,0.14);border-color:#d97706;transform:translateY(-1px)}
+
+/* ── Link input ── */
+.link-group{display:flex;gap:8px;margin-top:8px}
+.link-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-family:inherit;color:var(--text);outline:none}
+.link-input:focus{border-color:var(--primary)}
+
+/* ── Pago badge ── */
+.pago-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.pago-pendiente{background:rgba(217,119,6,0.1);color:var(--yellow)}
+.pago-pagado{background:rgba(22,163,74,0.1);color:var(--green)}
+
+/* ── Side col sections ── */
+.side-section{margin-bottom:22px}
+.side-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-dim);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.side-title::before{content:'';width:2px;height:12px;background:var(--gradient);border-radius:99px}
+
+/* ── Financial table ── */
+.fin-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.fin-row:last-child{border-bottom:none;font-weight:800;font-size:14px;padding-top:8px}
+.fin-row .lbl{color:var(--text-muted)}
+.fin-ganancia{color:var(--green)}
+
+/* ── Equipo ── */
+.equipo-item{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px}
+.eq-avatar{width:28px;height:28px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0}
+
+/* ── Chat ── */
+.chat-wrap{display:flex;flex-direction:column;gap:8px}
+.chat-msgs{max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.chat-msg{padding:7px 10px;border-radius:8px;font-size:12px;max-width:88%}
+.chat-msg.mine{background:rgba(178,0,93,0.1);border:1px solid rgba(178,0,93,0.15);align-self:flex-end}
+.chat-msg.other{background:var(--surface2);border:1px solid var(--border);align-self:flex-start}
+.chat-autor{font-size:10px;font-weight:700;color:var(--text-dim);margin-bottom:2px}
+.chat-time{font-size:10px;color:var(--text-dim);margin-top:2px;text-align:right}
+.chat-input-row{display:flex;gap:6px}
+.chat-textarea{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;font-family:inherit;color:var(--text);outline:none;resize:none}
+.chat-textarea:focus{border-color:var(--primary)}
+
+/* ── Toggle ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+.toggle-lbl{font-size:13px;color:var(--text-muted)}
+.toggle{position:relative;width:36px;height:20px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-sl{position:absolute;inset:0;background:var(--surface3);border-radius:10px;transition:0.2s}
+.toggle-sl::before{content:'';position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.2s}
+.toggle input:checked + .toggle-sl{background:var(--primary)}
+.toggle input:checked + .toggle-sl::before{transform:translateX(16px)}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity 0.2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;transform:scale(0.96) translateY(10px);transition:transform 0.2s;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
+.modal-overlay.open .modal{transform:none}
+.modal-lg{max-width:680px}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1}
+.modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800}
+.modal-close{width:28px;height:28px;border:none;background:var(--surface2);border-radius:6px;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:var(--surface3);color:var(--text)}
+.modal-body{padding:20px}
+.modal-foot{display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--border)}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.form-group:last-child{margin-bottom:0}
+.form-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px}
+.form-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;font-family:inherit;color:var(--text);outline:none;transition:border 0.2s;width:100%}
+.form-input:focus{border-color:var(--primary)}
+.form-input::placeholder{color:var(--text-dim)}
+select.form-input{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ── Toast ── */
+.toast-wrap{position:fixed;top:68px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;display:flex;align-items:center;gap:9px;animation:tin 0.2s ease;max-width:300px;pointer-events:all}
+@keyframes tin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+.toast.ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}
+.toast.err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+.toast.inf{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8}
+body.dark .toast.ok{background:#1a3a2a;border-color:#22c55e44;color:#4ade80}
+body.dark .toast.err{background:#3a1a1a;border-color:#ef444444;color:#f87171}
+body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
+
+/* ── Load overlay ── */
+#load-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.loader-logo{font-family:'Syne',sans-serif;font-size:28px;font-weight:800}
+.loader-logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.loader-bar{width:180px;height:3px;background:var(--surface3);border-radius:99px;overflow:hidden}
+.loader-fill{height:100%;background:var(--gradient);border-radius:99px;animation:ldr 1.4s ease-in-out infinite}
+@keyframes ldr{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
+
+@media(max-width:860px){.layout{grid-template-columns:1fr}.side-col{display:none}}
+</style>
+</head>
+<body>
+
+<div id="load-overlay">
+  <div class="loader-logo">Be<span>me</span></div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+</div>
+
+<div id="err-overlay" style="display:none;position:fixed;inset:0;z-index:9998;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:16px">
+  <div style="font-size:18px;font-weight:700;color:var(--text)">No se pudo cargar la campaña</div>
+  <div id="err-msg" style="font-size:13px;color:var(--text-muted)"></div>
+  <a href="campanas.html" class="btn btn-primary">← Volver a Campañas</a>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <a href="index.html" class="logo">Be<span>me</span></a>
+  <div class="breadcrumb">
+    <span class="breadcrumb-sep">/</span>
+    <a href="campanas.html">Campañas</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current" id="bc-nombre">Cargando...</span>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-outline btn-sm" onclick="openEditCampana()" id="btn-editar" style="display:none">✎ Editar</button>
+    <button class="btn btn-primary btn-sm" onclick="openAddTalento()" id="btn-add-t" style="display:none">+ Talento</button>
+    <button class="icon-btn" onclick="toggleTheme()" title="Tema">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="layout" id="app" style="display:none">
+
+  <!-- MAIN -->
+  <div class="main-col">
+
+    <!-- Campaña header -->
+    <div class="camp-header" id="camp-header"></div>
+
+    <!-- Talentos -->
+    <div class="section-title">Talentos y Contenidos</div>
+    <div id="talentos-container"></div>
+
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="side-col">
+
+    <!-- Brief general -->
+    <div class="side-section">
+      <div class="side-title">Brief de Campaña</div>
+      <div class="file-list" id="brief-file-list"></div>
+      <label class="upload-area" style="display:block;margin-top:8px;cursor:pointer" id="brief-upload-label">
+        <input type="file" id="brief-file-input" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" onchange="uploadBriefFiles(this)" style="display:none">
+        <div class="upload-area-text">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Subir archivos
+        </div>
+        <div class="upload-area-sub">PDF, Word, imágenes — máx 50MB</div>
+      </label>
+    </div>
+
+    <!-- Finanzas (solo admin) -->
+    <div class="side-section" id="side-fin" style="display:none">
+      <div class="side-title">Resumen Financiero</div>
+      <div id="fin-content"></div>
+    </div>
+
+    <!-- Equipo -->
+    <div class="side-section">
+      <div class="side-title">Equipo</div>
+      <div id="equipo-list"></div>
+    </div>
+
+    <!-- Chat (solo internos) -->
+    <div class="side-section" id="side-chat" style="display:none">
+      <div class="side-title">Chat Interno</div>
+      <div class="chat-wrap">
+        <div class="chat-msgs" id="chat-msgs"></div>
+        <div class="chat-input-row">
+          <textarea class="chat-textarea" id="chat-input" rows="2" placeholder="Mensaje..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+          <button class="icon-btn" onclick="sendChat()">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Datos de cobro (solo admin) -->
+    <div class="side-section" id="side-cobro" style="display:none">
+      <div class="side-title">Datos de Cobro</div>
+      <div id="cobro-content"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ MODAL: Agregar Talento ══ -->
+<div class="modal-overlay" id="modal-talento">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Agregar Talento</div>
+      <button class="modal-close" onclick="closeModal('modal-talento')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Talento *</label>
+        <select id="at-id" class="form-input"></select>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Fee Marca (cobra la marca)</label>
+          <input type="number" id="at-fee-marca" class="form-input" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fee Talento (cobra el talento)</label>
+          <input type="number" id="at-fee-talento" class="form-input" placeholder="0.00">
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Moneda</label>
+          <select id="at-moneda" class="form-input">
+            <option value="USD">USD</option><option value="ARS">ARS</option>
+            <option value="MXN">MXN</option><option value="EUR">EUR</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Método de Pago</label>
+          <input type="text" id="at-metodo" class="form-input" placeholder="Transferencia...">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-talento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTalento()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Agregar Contenido ══ -->
+<div class="modal-overlay" id="modal-contenido">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-cont-title">Nuevo Contenido</div>
+      <button class="modal-close" onclick="closeModal('modal-contenido')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mc-ct-id">
+      <input type="hidden" id="mc-cont-id">
+      <div class="form-group">
+        <label class="form-label">Tipo *</label>
+        <select id="mc-tipo" class="form-input" onchange="onMcTipoChange()">
+          <option value="tiktok_video">TikTok Video</option>
+          <option value="reel">Reel</option>
+          <option value="ig_story">IG Story</option>
+          <option value="youtube_video">YouTube Video</option>
+          <option value="youtube_short">YouTube Short</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Título</label>
+        <input type="text" id="mc-titulo" class="form-input" placeholder="Ej: TikTok #1 — Unboxing">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha de Publicación</label>
+        <input type="date" id="mc-fecha" class="form-input">
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-lbl">Requiere Script</span>
+        <label class="toggle"><input type="checkbox" id="mc-script"><span class="toggle-sl"></span></label>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-lbl">Requiere Estadísticas</span>
+        <label class="toggle"><input type="checkbox" id="mc-stats"><span class="toggle-sl"></span></label>
+      </div>
+      <div id="mc-spark" style="display:none;margin-top:12px;padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
+        <div class="action-box-title">Spark Code</div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Días</label>
+            <select id="mc-spark-dias" class="form-input">
+              <option value="">Sin spark</option>
+              <option value="3">3d</option><option value="7">7d</option><option value="30">30d</option>
+              <option value="60">60d</option><option value="180">180d</option><option value="360">360d</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Valor</label>
+            <input type="number" id="mc-spark-valor" class="form-input" placeholder="0.00">
+          </div>
+        </div>
+      </div>
+      <div id="mc-pauta" style="display:none;margin-top:12px;padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
+        <div class="action-box-title">Pauta Publicitaria</div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Días</label>
+            <select id="mc-pauta-dias" class="form-input">
+              <option value="">Sin pauta</option>
+              <option value="3">3d</option><option value="7">7d</option><option value="30">30d</option>
+              <option value="60">60d</option><option value="180">180d</option><option value="360">360d</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Valor</label>
+            <input type="number" id="mc-pauta-valor" class="form-input" placeholder="0.00">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-red btn-sm" id="mc-del-btn" onclick="deleteContenido()" style="display:none;margin-right:auto">Eliminar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-contenido')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveContenido()" id="mc-save-btn">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Derechos de imagen ══ -->
+<div class="modal-overlay" id="modal-derechos">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Derechos de Imagen</div>
+      <button class="modal-close" onclick="closeModal('modal-derechos')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Días</label>
+          <select id="dr-dias" class="form-input">
+            <option value="">Sin derechos</option>
+            <option value="30">30d</option><option value="60">60d</option>
+            <option value="180">180d</option><option value="360">360d</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Valor</label>
+          <input type="number" id="dr-valor" class="form-input" placeholder="0.00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha Desde</label>
+        <input type="date" id="dr-desde" class="form-input">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-derechos')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveDerechos()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Producto ══ -->
+<div class="modal-overlay" id="modal-producto">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Recepción de Producto</div>
+      <button class="modal-close" onclick="closeModal('modal-producto')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <select id="pr-estado" class="form-input">
+          <option value="no_aplica">No aplica</option>
+          <option value="en_espera">En espera</option>
+          <option value="recibido">Recibido</option>
+          <option value="con_inconvenientes">Con inconvenientes</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Paquetería</label><input type="text" id="pr-pak" class="form-input" placeholder="DHL, FedEx..."></div>
+      <div class="form-group"><label class="form-label">Tracking</label><input type="text" id="pr-track" class="form-input"></div>
+      <div class="form-group"><label class="form-label">Notas</label><textarea id="pr-notas" class="form-input" rows="2"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-producto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveProducto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════════
+const SB_URL = 'https://ngstqwbzvnpggpklifat.supabase.co';
+const SB_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+const campanaId = parseInt(new URLSearchParams(location.search).get('id'));
+
+let campana = null, currentUser = null, currentProfile = null;
+let talentosList = [], editingDrCtId = null, editingPrCtId = null;
+let _savingContenido = false;
+
+const PASO_LABELS = {
+  1:'Esperando Brief',
+  2:'Esperando Script',
+  3:'Aprobación Script',
+  4:'Producción',
+  5:'Aprobación Contenido',
+  6:'Publicar — cargar link',
+  7:'Esperando estadísticas',
+  8:'Completado / Pendiente pago',
+  9:'Pagado'
+};
+const TIPO_LABELS = {tiktok_video:'TikTok Video',reel:'Reel',ig_story:'IG Story',youtube_video:'YouTube Video',youtube_short:'YouTube Short'};
+
+// ════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════
+function loadTheme() {
+  const s = localStorage.getItem('beme_theme');
+  if (s === 'dark') document.body.classList.add('dark');
+  else document.body.classList.remove('dark');
+}
+function toggleTheme() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('beme_theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+}
+
+async function init() {
+  loadTheme();
+  try {
+    if (!campanaId) { location.href = 'campanas.html'; return; }
+    const {data:{session}} = await sb.auth.getSession();
+    if (!session) { location.href = 'campanas.html'; return; }
+    currentUser = session.user;
+    
+    const {data: p, error: pErr} = await sb.from('user_profiles').select('*').eq('id', currentUser.id).single();
+    if (pErr || !p) { 
+      // Show error instead of redirect so user knows what happened
+      document.getElementById('load-overlay').style.display = 'none';
+      document.getElementById('err-overlay').style.display = 'flex';
+      return; 
+    }
+    currentProfile = p;
+
+    await Promise.all([loadCampana(), loadTalentos()]);
+    
+    if (!campana) return; // loadCampana showed toast and returned
+    
+    renderAll();
+    document.getElementById('load-overlay').style.display = 'none';
+    document.getElementById('app').style.display = 'grid';
+
+    if (isInternal()) {
+      document.getElementById('btn-editar').style.display = 'inline-flex';
+      document.getElementById('btn-add-t').style.display = 'inline-flex';
+      document.getElementById('side-chat').style.display = 'block';
+      subscribeChat();
+    }
+    if (isAdmin()) {
+      document.getElementById('side-fin').style.display = 'block';
+      document.getElementById('side-cobro').style.display = 'block';
+    }
+  } catch(e) {
+    console.error('init error:', e);
+    document.getElementById('load-overlay').style.display = 'none';
+    document.getElementById('err-overlay').style.display = 'flex';
+    document.getElementById('err-msg').textContent = 'Error: ' + e.message;
+  }
+}
+
+function isAdmin() { return currentProfile?.role === 'admin'; }
+function isInternal() { return ['admin','campaign_manager'].includes(currentProfile?.role); }
+function isHandler() { return currentProfile?.role === 'brand_handler'; }
+function isTalentOf(ct) { return currentProfile?.role === 'talent' && currentProfile?.talent_id === ct.talent_id; }
+
+// ════════════════════════════════════════════════
+// LOAD
+// ════════════════════════════════════════════════
+async function loadCampana() {
+  const {data, error} = await sb.from('campanas').select(`
+    *,
+    marcas(id,nombre,logo_url,clientes(nombre)),
+    campana_managers(user_id),
+    campana_handlers(user_id),
+    campana_briefs(*),
+    campana_mensajes(*),
+    campana_talentos(
+      *,
+      talentos(id,nombre,foto),
+      contenidos(*,contenido_observaciones(*),contenido_scripts(*),contenido_borradores(*),contenido_historial(*))
+    )
+  `).eq('id', campanaId).single();
+  if (error) {
+    console.error('loadCampana error:', error);
+    toast('Error al cargar campaña: ' + error.message, 'err');
+    return;
+  }
+  if (!data) { location.href = 'campanas.html'; return; }
+  campana = data;
+  
+  // Load team names separately (avoids RLS join issues)
+  await loadEquipoNames();
+}
+async function loadTalentos() {
+  const {data} = await sb.from('talentos').select('id,nombre,foto').order('nombre');
+  talentosList = data || [];
+}
+
+// Store team member names (loaded separately to avoid RLS issues)
+let teamNames = {}; // user_id -> nombre
+
+async function loadEquipoNames() {
+  if (!campana) return;
+  const ids = [
+    ...(campana.campana_managers||[]).map(m=>m.user_id),
+    ...(campana.campana_handlers||[]).map(h=>h.user_id),
+  ].filter(Boolean);
+  if (!ids.length) return;
+  // Each user can see their own profile; admin can see all
+  // We try to load them, and use what we get
+  try {
+    const {data} = await sb.from('user_profiles').select('id,nombre').in('id', ids);
+    (data||[]).forEach(u => { teamNames[u.id] = u.nombre; });
+  } catch(e) {
+    console.log('Could not load team names (RLS):', e.message);
+  }
+}
+
+// ════════════════════════════════════════════════
+// RENDER ALL
+// ════════════════════════════════════════════════
+function renderAll() {
+  // Save which cards are expanded before re-rendering
+  const openIds = [];
+  document.querySelectorAll('.open').forEach(el => { if(el.id) openIds.push(el.id); });
+
+  renderHeader();
+  renderBriefFiles();
+  renderTalentos();
+  renderEquipo();
+  renderFinanzas();
+  renderCobro();
+  renderChat();
+
+  // Restore expanded state
+  openIds.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.classList.add('open');
+  });
+}
+
+function renderHeader() {
+  document.title = 'Beme — ' + campana.nombre;
+  document.getElementById('bc-nombre').textContent = campana.nombre;
+
+  const totalCont = campana.campana_talentos?.flatMap(ct=>ct.contenidos||[]).length || 0;
+  const doneCont = campana.campana_talentos?.flatMap(ct=>ct.contenidos||[]).filter(c=>c.paso_actual>=8).length || 0;
+  const pct = totalCont ? Math.round(doneCont/totalCont*100) : 0;
+
+  const estadoClass = {sin_iniciar:'es-sin_iniciar',en_curso:'es-en_curso',etapa_finanzas:'es-etapa_finanzas',finalizada:'es-finalizada',cancelada:'es-cancelada'};
+  const disabled = isInternal() ? '' : 'disabled';
+
+  document.getElementById('camp-header').innerHTML = `
+    <div class="camp-title-row">
+      <div class="camp-logo">${(campana.marcas?.nombre||'?').substring(0,2).toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div class="camp-title">${esc(campana.nombre)}</div>
+        <div class="camp-sub">${esc(campana.marcas?.clientes?.nombre||'')} ${campana.marcas?.nombre ? '· '+esc(campana.marcas.nombre) : ''}</div>
+      </div>
+      <div class="estado-wrap">
+        <select class="estado-select ${estadoClass[campana.estado]||'es-sin_iniciar'}" onchange="updateEstado(this.value)" ${disabled}>
+          <option value="sin_iniciar" ${campana.estado==='sin_iniciar'?'selected':''}>Sin iniciar</option>
+          <option value="en_curso" ${campana.estado==='en_curso'?'selected':''}>En curso</option>
+          <option value="etapa_finanzas" ${campana.estado==='etapa_finanzas'?'selected':''}>Etapa Finanzas</option>
+          <option value="finalizada" ${campana.estado==='finalizada'?'selected':''}>Finalizada</option>
+          <option value="cancelada" ${campana.estado==='cancelada'?'selected':''}>Cancelada</option>
+        </select>
+      </div>
+    </div>
+    <div class="camp-meta-strip">
+      ${campana.fecha_inicio?`<div class="meta-item"><div class="meta-label">Inicio</div><div class="meta-value">${fmtDate(campana.fecha_inicio)}</div></div>`:''}
+      ${campana.fecha_fin?`<div class="meta-item"><div class="meta-label">Fin</div><div class="meta-value">${fmtDate(campana.fecha_fin)}</div></div>`:''}
+      <div class="meta-item"><div class="meta-label">Talentos</div><div class="meta-value">${campana.campana_talentos?.length||0}</div></div>
+      <div class="meta-item"><div class="meta-label">Contenidos</div><div class="meta-value">${doneCont}/${totalCont} completados</div></div>
+      ${pct>0?`<div class="meta-item"><div class="meta-label">Progreso</div><div class="meta-value" style="color:var(--primary)">${pct}%</div></div>`:''}
+    </div>`;
+}
+
+// ════════════════════════════════════════════════
+// BRIEF FILES
+// ════════════════════════════════════════════════
+function renderBriefFiles() {
+  const files = campana.campana_briefs || [];
+  const list = document.getElementById('brief-file-list');
+  if (!files.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text-dim);padding:4px 0">Sin archivos adjuntos</div>';
+    return;
+  }
+  list.innerHTML = files.map(f => `
+    <div class="file-item">
+      <div class="file-icon">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <span class="file-name" title="${esc(f.nombre)}">${esc(f.nombre)}</span>
+      <span class="file-size">${f.size_bytes ? fmtSize(f.size_bytes) : ''}</span>
+      <div class="file-actions">
+        <a href="${esc(f.url)}" target="_blank" download class="file-action-btn dl" title="Descargar">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </a>
+        <a href="${esc(f.url)}" target="_blank" class="file-action-btn dl" title="Ver">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </a>
+        ${isInternal()?`<button class="file-action-btn del" onclick="deleteBriefFile(${f.id},'${esc(f.url)}')" title="Eliminar">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>`:''}
+      </div>
+    </div>`).join('');
+}
+
+async function uploadBriefFiles(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  const lbl = document.getElementById('brief-upload-label');
+  lbl.style.opacity = '0.5';
+  let uploaded = 0;
+  for (const file of files) {
+    try {
+      const path = `campana-${campanaId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+      const {error: upErr} = await sb.storage.from('campaign-briefs').upload(path, file);
+      if (upErr) throw upErr;
+      const {data:{publicUrl}} = sb.storage.from('campaign-briefs').getPublicUrl(path);
+      await sb.from('campana_briefs').insert({
+        campana_id: campanaId, nombre: file.name,
+        url: publicUrl || path, size_bytes: file.size, uploaded_by: currentUser.id
+      });
+      uploaded++;
+    } catch(e) { toast('Error al subir '+file.name+': '+e.message,'err'); }
+  }
+  input.value = '';
+  lbl.style.opacity = '1';
+  if (uploaded > 0) {
+    await loadCampana();
+    renderBriefFiles();
+    // Auto-advance contenidos en paso 1 → paso 2
+    const en1 = campana.campana_talentos?.flatMap(ct=>ct.contenidos||[]).filter(c=>c.paso_actual===1)||[];
+    for (const c of en1) {
+      await sb.rpc('avanzar_paso_contenido',{
+        p_contenido_id:c.id, p_autor_id:currentUser.id,
+        p_autor_nombre:currentProfile.nombre, p_accion:'Brief cargado'
+      });
+    }
+    if (en1.length) { await loadCampana(); renderTalentos(); }
+    toast(`${uploaded} archivo${uploaded>1?'s':''} subido${uploaded>1?'s':''} ✓`,'ok');
+    if (en1.length) toast(`${en1.length} contenido${en1.length>1?'s':''} avanzado${en1.length>1?'s':''} a "Esperando Script"`,'inf');
+  }
+}
+
+async function deleteBriefFile(id, url) {
+  if (!confirm('¿Eliminar este archivo?')) return;
+  await sb.from('campana_briefs').delete().eq('id', id);
+  const path = url.split('/campaign-briefs/')[1];
+  if (path) await sb.storage.from('campaign-briefs').remove([decodeURIComponent(path)]);
+  await loadCampana(); renderBriefFiles();
+  toast('Archivo eliminado','inf');
+}
+
+// ════════════════════════════════════════════════
+// TALENTOS
+// ════════════════════════════════════════════════
+function renderTalentos() {
+  const cts = campana.campana_talentos || [];
+  const c = document.getElementById('talentos-container');
+  // ── Preserve expanded cards ──
+  const openIds = [];
+  c.querySelectorAll('.open').forEach(el => { if(el.id) openIds.push(el.id); });
+
+  if (!cts.length) {
+    c.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text-muted);font-size:13px;border:2px dashed var(--border2);border-radius:var(--radius-lg)">
+      ${isInternal() ? 'Sin talentos. Usá el botón <strong>+ Talento</strong> para agregar.' : 'Sin talentos en esta campaña.'}
+    </div>`;
+    return;
+  }
+  c.innerHTML = cts.map(ct => renderTalentoCard(ct)).join('');
+  // ── Restore expanded cards ──
+  openIds.forEach(id => { const el = document.getElementById(id); if(el) el.classList.add('open'); });
+}
+
+function renderTalentoCard(ct) {
+  const t = ct.talentos || {};
+  const ini = (t.nombre||'?')[0].toUpperCase();
+  const contenidos = ct.contenidos || [];
+  const done = contenidos.filter(c=>c.paso_actual>=8).length;
+  const fm = ct.fee_marca||0, ft = ct.fee_talento||0, gan = fm-ft;
+  const mon = ct.moneda||'USD';
+
+  const prColor = {no_aplica:'var(--text-dim)',en_espera:'var(--yellow)',recibido:'var(--green)',con_inconvenientes:'var(--red)'};
+  const prLabel = {no_aplica:'No aplica',en_espera:'En espera',recibido:'Recibido',con_inconvenientes:'Con inconvenientes'};
+
+  return `<div class="talento-card" id="tc-${ct.id}">
+    <div class="talento-head" onclick="toggleCard('tc-${ct.id}')">
+      <div class="t-avatar">${t.foto?`<img src="${esc(t.foto)}" loading="lazy">`:ini}</div>
+      <div class="t-info">
+        <div class="t-name">${esc(t.nombre||'—')}</div>
+        <div class="t-meta">${contenidos.length} contenido${contenidos.length!==1?'s':''} · ${done} completado${done!==1?'s':''}
+          <span class="pago-badge ${ct.pago_estado==='pagado'?'pago-pagado':'pago-pendiente'}" style="margin-left:6px">${ct.pago_estado==='pagado'?'✓ Pagado':'Pago pendiente'}</span>
+        </div>
+      </div>
+      ${isInternal()?`<button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openEditContenidoBtn(${ct.id})" style="flex-shrink:0">+ Contenido</button>`:''}
+      <svg class="t-expand" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+
+    ${isAdmin()?`<div class="fees-row">
+      <div class="fee-box">
+        <div class="fee-label">Fee Marca</div>
+        <div class="fee-value">${fmtMoney(fm,mon)}</div>
+        <input type="number" class="fee-input" id="fm-${ct.id}" value="${fm||''}" placeholder="0.00" onblur="saveFees(${ct.id})">
+      </div>
+      <div class="fee-box">
+        <div class="fee-label">Fee Talento</div>
+        <div class="fee-value">${fmtMoney(ft,mon)}</div>
+        <input type="number" class="fee-input" id="ft-${ct.id}" value="${ft||''}" placeholder="0.00" onblur="saveFees(${ct.id})">
+      </div>
+      <div class="fee-box ganancia">
+        <div class="fee-label">Ganancia Agencia</div>
+        <div class="fee-value pos">${fmtMoney(gan,mon)}</div>
+      </div>
+    </div>`:''}
+
+    <div class="talento-body">
+      <div class="talento-extras">
+        <div class="extra-box">
+          <div class="extra-title">Producto</div>
+          <div style="font-size:12px;font-weight:600;color:${prColor[ct.producto_estado||'no_aplica']}">${prLabel[ct.producto_estado||'no_aplica']}</div>
+          ${ct.producto_tracking?`<div style="font-size:11px;color:var(--text-dim);margin-top:2px">${esc(ct.producto_paqueteria)} · ${esc(ct.producto_tracking)}</div>`:''}
+          ${isInternal()?`<button class="btn btn-ghost btn-xs" style="margin-top:6px" onclick="openProducto(${ct.id})">Editar</button>`:''}
+        </div>
+        <div class="extra-box">
+          <div class="extra-title">Derechos de Imagen</div>
+          ${ct.derechos_imagen_dias
+            ? `<div style="font-size:12px;font-weight:600">${ct.derechos_imagen_dias}d · ${fmtMoney(ct.derechos_imagen_valor||0,mon)}</div>
+               <div style="font-size:11px;color:var(--text-dim)">Desde ${ct.derechos_imagen_desde?fmtDate(ct.derechos_imagen_desde):'—'}</div>`
+            : `<div style="font-size:12px;color:var(--text-dim)">Sin derechos</div>`}
+          ${isAdmin()?`<button class="btn btn-ghost btn-xs" style="margin-top:6px" onclick="openDerechos(${ct.id})">Editar</button>`:''}
+        </div>
+      </div>
+      ${isAdmin()?`<div style="padding:0 18px 10px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:12px;font-weight:700;color:var(--text-muted)">Pago:</span>
+        <select class="form-input" style="width:auto;font-size:12px;padding:4px 24px 4px 8px" onchange="savePago(${ct.id},this.value)">
+          <option value="pendiente" ${ct.pago_estado!=='pagado'?'selected':''}>Pendiente</option>
+          <option value="pagado" ${ct.pago_estado==='pagado'?'selected':''}>Pagado</option>
+        </select>
+        ${ct.pago_fecha?`<span style="font-size:11px;color:var(--text-dim)">${fmtDate(ct.pago_fecha)}</span>`:''}
+      </div>`:''}
+      <div class="contenidos-wrap">
+        ${contenidos.length ? contenidos.map(c=>renderContenido(c,ct)).join('') : `<div style="font-size:12px;color:var(--text-dim);padding:8px 0">Sin contenidos aún.</div>`}
+        ${isInternal()?`<button class="add-contenido-btn" onclick="openEditContenidoBtn(${ct.id})">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Agregar contenido
+        </button>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderContenido(c, ct) {
+  const paso = c.paso_actual;
+  const isDone = paso >= 8;
+  const pasoChipCls = isDone ? 'done' : paso > 1 ? 'active' : '';
+
+  const scripts = (c.contenido_scripts||[]).sort((a,b)=>(b.version||1)-(a.version||1));
+  const drafts  = (c.contenido_borradores||[]).sort((a,b)=>(b.version||1)-(a.version||1));
+  const briefs  = campana.campana_briefs || [];
+
+  // ── Simple step list (no inline files) ──
+  const stepDefs = [
+    {n:1, lbl:'Brief'},
+    ...(c.script_requerido ? [{n:2,lbl:'Script'},{n:3,lbl:'Aprobación Script'}] : []),
+    {n:4, lbl:'Producción'},
+    {n:5, lbl:'Aprobación Contenido'},
+    {n:6, lbl:'Publicar'},
+    ...(c.estadisticas_requeridas ? [{n:7,lbl:'Estadísticas'}] : []),
+    {n:8, lbl:'Completado'},
+  ];
+  const stepsHTML = stepDefs.map(s => {
+    const d = paso > s.n, cur = paso === s.n;
+    return `<div class="step-row ${d?'done':cur?'current':'pending'}">
+      <div class="step-icon ${d?'done':cur?'current':'pending'}">${d?'✓':s.n}</div>
+      <span class="step-label">${s.lbl}</span>
+      ${cur?'<span class="step-current-tag">● ACTUAL</span>':''}
+    </div>`;
+  }).join('');
+
+  // ── File access buttons (always visible, prominent) ──
+  let fileButtonsHTML = '<div class="cont-file-buttons">';
+  // Brief
+  if (briefs.length) {
+    fileButtonsHTML += briefs.slice(0,3).map(f =>
+      `<a href="${esc(f.url)}" target="_blank" class="file-access-btn brief">📄 ${esc((f.nombre||'Brief').substring(0,25))}</a>`
+    ).join('');
+  }
+  // Scripts
+  if (scripts.length) {
+    fileButtonsHTML += scripts.map(s =>
+      `<a href="${esc(s.url_archivo)}" target="_blank" class="file-access-btn script">📝 Script v${s.version||1}</a>`
+    ).join('');
+  }
+  // Borradores
+  if (drafts.length) {
+    fileButtonsHTML += drafts.map(d => {
+      const nm = (d.nombre_archivo||'Borrador').substring(0,25);
+      return `<a href="${esc(d.url_archivo)}" target="_blank" class="file-access-btn draft">🎬 ${esc(nm)}</a>`;
+    }).join('');
+  }
+  // Link publicado
+  if (c.url_publicacion) {
+    fileButtonsHTML += `<a href="${esc(c.url_publicacion)}" target="_blank" class="file-access-btn link">🔗 Ver publicación</a>`;
+  }
+  fileButtonsHTML += '</div>';
+  // Only show section if there are files
+  const hasFiles = briefs.length || scripts.length || drafts.length || c.url_publicacion;
+
+  // ── Back button (admin only) ──
+  let backBtnHTML = '';
+  if (isInternal() && paso > 1 && paso <= 8) {
+    backBtnHTML = `<button class="back-paso-btn" onclick="retrocederPaso(${c.id},${paso})">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Volver al paso anterior (paso ${paso-1})
+    </button>`;
+  }
+
+  const obsHTML = renderObservaciones(c.contenido_observaciones||[]);
+  const actionsHTML = buildActions(c, ct);
+
+  // ── Extras: Spark code with text field, Pauta, Link ──
+  const extras = [];
+  if (c.spark_code_dias) {
+    extras.push(`<div class="extra-box" style="grid-column:1/-1">
+      <div class="extra-title">Spark Code — ${c.spark_code_dias} días · ${fmtMoney(c.spark_code_valor||0,ct.moneda||'USD')}</div>
+      ${c.spark_code_desde?`<div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">Desde ${fmtDate(c.spark_code_desde)}</div>`:''}
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" class="form-input" style="flex:1;font-size:13px;padding:7px 10px;font-family:monospace" 
+          id="spark-txt-${c.id}" value="${esc(c.spark_code_texto||'')}" 
+          placeholder="Pegá el código del Spark Code aquí..."
+          onblur="saveSparkCodeTexto(${c.id},this.value)">
+        ${c.spark_code_texto?`<button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('spark-txt-${c.id}').value);toast('Código copiado ✓','ok')" style="flex-shrink:0">📋 Copiar</button>`:''}
+      </div>
+    </div>`);
+  }
+  if (c.pauta_dias) {
+    extras.push(`<div class="extra-box"><div class="extra-title">Pauta</div><div style="font-size:12px;font-weight:600">${c.pauta_dias}d · ${fmtMoney(c.pauta_valor||0,ct.moneda||'USD')}</div>${c.pauta_desde?`<div style="font-size:11px;color:var(--text-dim)">Desde ${fmtDate(c.pauta_desde)}</div>`:''}</div>`);
+  }
+
+  return `<div class="contenido-item ${isDone?'done':''}" id="cont-${c.id}">
+    <div class="cont-head" onclick="toggleCard('cont-${c.id}')">
+      <span class="tipo-badge tb-${c.tipo}">${TIPO_LABELS[c.tipo]||c.tipo}</span>
+      <span class="cont-titulo">${esc(c.titulo||TIPO_LABELS[c.tipo]||'Contenido')}</span>
+      ${c.fecha_publicacion?`<span class="cont-fecha">${fmtDate(c.fecha_publicacion)}</span>`:''}
+      <span class="paso-chip ${pasoChipCls}">Paso ${paso}</span>
+      ${isInternal()?`<button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openEditCont(${c.id})" style="flex-shrink:0">✎</button>`:''}
+      <svg class="cont-expand" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="cont-body">
+      <div class="steps-list">${stepsHTML}</div>
+      ${hasFiles?fileButtonsHTML:''}
+      ${backBtnHTML}
+      ${actionsHTML}
+      ${obsHTML}
+      ${renderTimeline(c.contenido_historial||[])}
+      ${extras.length?`<div class="talento-extras" style="margin-top:10px">${extras.join('')}</div>`:''}
+    </div>
+  </div>`;
+}
+
+function renderObservaciones(obs) {
+  if (!obs.length) return '';
+  return `<div class="obs-list">${obs.slice(-4).map(o => `
+    <div class="obs-item">
+      <div class="obs-meta">
+        <span>${esc(o.user_profiles?.nombre||o.autor_nombre||'?')}</span>
+        <span>${fmtDT(o.created_at)}</span>
+      </div>
+      <div class="obs-text">${esc(o.observacion)}</div>
+    </div>`).join('')}</div>`;
+}
+
+function renderTimeline(historial) {
+  if (!historial || !historial.length) return '';
+  const sorted = [...historial].sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+  const items = sorted.map((h, i) => {
+    const isLast = i === sorted.length - 1;
+    const isReject = (h.accion||'').toLowerCase().includes('rechaz');
+    const dotCls = isReject ? 'tl-dot-reject' : 'tl-dot-ok';
+    return `<div class="tl-item">
+      <div class="tl-track">
+        <div class="tl-dot ${dotCls}"></div>
+        ${!isLast ? '<div class="tl-line"></div>' : ''}
+      </div>
+      <div class="tl-content">
+        <div class="tl-header">
+          <span class="tl-paso">Paso ${h.paso_anterior||'?'} → ${h.paso_nuevo}</span>
+          <span class="tl-date">${fmtDT(h.created_at)}</span>
+        </div>
+        <div class="tl-action">${esc(h.accion||'Avance de paso')}</div>
+        <div class="tl-author">${esc(h.autor_nombre||'Sistema')}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<details class="tl-details">
+    <summary class="tl-summary">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Historial (${sorted.length} cambio${sorted.length!==1?'s':''})
+    </summary>
+    <div class="tl-list">${items}</div>
+  </details>`;
+}
+
+function buildActions(c, ct) {
+  const paso = c.paso_actual;
+  const canI = isInternal(), canH = isHandler(), canT = isTalentOf(ct);
+  if (!canI && !canH && !canT) return '';
+
+  let html = '';
+
+  // ── Paso 1: Brief ──
+  if (paso === 1 && canI) {
+    html += `<div class="workflow-action-box">
+      <div class="action-box-title">📄 Brief</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Subí el brief en el panel lateral. Al subir, todos los contenidos avanzan automáticamente.</p>
+      <div class="action-btns">
+        <button class="btn btn-green btn-sm" onclick="avanzar(${c.id})">Brief enviado → Siguiente paso</button>
+      </div>
+    </div>`;
+  }
+
+  // ── Paso 2: Script ──
+  if (paso === 2 && (canI || canT)) {
+    html += `<div class="workflow-action-box">
+      <div class="action-box-title">📝 Subir Script</div>
+      <div class="action-btns">
+        <label class="btn btn-primary btn-sm" style="cursor:pointer">
+          <input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" onchange="uploadScript(this,${c.id})">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Subir archivo de script
+        </label>
+        <button class="btn btn-outline btn-sm" onclick="avanzar(${c.id})">Script listo → Revisión</button>
+      </div>
+    </div>`;
+  }
+
+  // ── Paso 3: Aprobación script ──
+  if (paso === 3 && (canI || canH)) {
+    html += `<div class="workflow-action-box">
+      <div class="action-box-title">📋 Aprobación de Script</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Revisá el script usando el botón "📝 Script" de arriba.</p>
+      <div class="obs-input-group">
+        <textarea class="obs-textarea" id="obs-script-${c.id}" placeholder="Comentario (requerido para rechazar)..."></textarea>
+        <div class="obs-btn-row">
+          <button class="btn btn-green btn-sm" onclick="aprobarScript(${c.id})">✓ Aprobar</button>
+          <button class="btn btn-red btn-sm" onclick="rechazarPaso(${c.id},3,'obs-script-${c.id}')">✕ Rechazar → paso 2</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ── Paso 4: Producción ──
+  if (paso === 4 && (canI || canT)) {
+    html += `<div class="workflow-action-box">
+      <div class="action-box-title">🎬 Subir Contenido</div>
+      <div class="action-btns">
+        <label class="btn btn-primary btn-sm" style="cursor:pointer">
+          <input type="file" style="display:none" accept="video/*,image/*" onchange="uploadDraft(this,${c.id})">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Subir archivo
+        </label>
+        <button class="btn btn-outline btn-sm" onclick="avanzar(${c.id})">Contenido listo → Revisión</button>
+      </div>
+    </div>`;
+  }
+
+  // ── Paso 5: Aprobación contenido ──
+  if (paso === 5 && (canI || canH)) {
+    html += `<div class="workflow-action-box">
+      <div class="action-box-title">🎯 Aprobación de Contenido</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Revisá el contenido usando el botón "🎬 Borrador" de arriba.</p>
+      <div class="obs-input-group">
+        <textarea class="obs-textarea" id="obs-cont-${c.id}" placeholder="Comentario (requerido para rechazar)..."></textarea>
+        <div class="obs-btn-row">
+          <button class="btn btn-green btn-sm" onclick="aprobarContenido(${c.id})">✓ Aprobar</button>
+          <button class="btn btn-red btn-sm" onclick="rechazarPaso(${c.id},5,'obs-cont-${c.id}')">✕ Rechazar → Producción</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ── Paso 6: Cargar link ──
+  if (paso === 6 && (canI || canT)) {
+    html += `<div class="workflow-action-box">
+      <div class="action-box-title">🔗 Cargar Link de Publicación</div>
+      <div class="link-group">
+        <input type="text" class="link-input" id="link-${c.id}" placeholder="https://www.tiktok.com/@..." value="${esc(c.url_publicacion||'')}">
+        <button class="btn btn-primary btn-sm" onclick="saveLink(${c.id})">Confirmar →</button>
+      </div>
+    </div>`;
+  }
+
+  // ── Paso 7: Estadísticas ──
+  if (paso === 7 && canI) {
+    html += `<div class="workflow-action-box">
+      <div class="action-box-title">📊 Estadísticas</div>
+      <div class="action-btns">
+        <label class="btn btn-primary btn-sm" style="cursor:pointer">
+          <input type="file" style="display:none" accept="image/*" multiple onchange="uploadStats(this,${c.id})">
+          Subir screenshots
+        </label>
+        <button class="btn btn-green btn-sm" onclick="avanzar(${c.id})">✓ Estadísticas recibidas</button>
+      </div>
+    </div>`;
+  }
+
+  return html;
+}
+
+// ════════════════════════════════════════════════
+// WORKFLOW ACTIONS
+// ════════════════════════════════════════════════
+async function avanzar(contId) {
+  try {
+    const {data, error} = await sb.rpc('avanzar_paso_contenido',{
+      p_contenido_id: contId, p_autor_id: currentUser.id,
+      p_autor_nombre: currentProfile.nombre, p_accion: 'Avanzado manualmente'
+    });
+    if (error) throw error;
+    await loadCampana(); renderAll();
+    toast(`Paso actualizado → ${PASO_LABELS[data]||data}`, 'ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+}
+
+async function retrocederPaso(contId, pasoActual) {
+  if (pasoActual <= 1) return;
+  if (!confirm('¿Volver al paso ' + (pasoActual-1) + '? Esto reinicia el paso actual.')) return;
+  try {
+    const nuevoPaso = pasoActual - 1;
+    const {error} = await sb.from('contenidos').update({paso_actual: nuevoPaso}).eq('id', contId);
+    if (error) throw error;
+    // Log in historial
+    await sb.from('contenido_historial').insert({
+      contenido_id: contId, paso_anterior: pasoActual, paso_nuevo: nuevoPaso,
+      accion: 'Retrocedido manualmente por admin', autor_id: currentUser.id, autor_nombre: currentProfile.nombre
+    });
+    await loadCampana(); renderAll();
+    toast(`Paso retrocedido → ${PASO_LABELS[nuevoPaso]||nuevoPaso}`, 'inf');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+}
+
+async function aprobarScript(contId) {
+  const obs = document.getElementById('obs-script-'+contId)?.value.trim()||'';
+  if (obs) {
+    await sb.from('contenido_observaciones').insert({
+      contenido_id: contId, paso: 3, tipo: 'script',
+      observacion: '✓ Aprobado' + (obs ? ': '+obs : ''),
+      autor_id: currentUser.id, autor_nombre: currentProfile.nombre
+    });
+  }
+  await avanzar(contId);
+}
+
+async function aprobarContenido(contId) {
+  const obs = document.getElementById('obs-cont-'+contId)?.value.trim()||'';
+  if (obs) {
+    await sb.from('contenido_observaciones').insert({
+      contenido_id: contId, paso: 5, tipo: 'borrador',
+      observacion: '✓ Aprobado' + (obs ? ': '+obs : ''),
+      autor_id: currentUser.id, autor_nombre: currentProfile.nombre
+    });
+  }
+  await avanzar(contId);
+}
+
+async function rechazarPaso(contId, paso, obsId) {
+  const obs = document.getElementById(obsId)?.value.trim()||'';
+  if (!obs) { toast('Escribí una observación para rechazar','err'); return; }
+  try {
+    const {error} = await sb.rpc('rechazar_contenido',{
+      p_contenido_id: contId, p_autor_id: currentUser.id,
+      p_autor_nombre: currentProfile.nombre, p_observacion: obs
+    });
+    if (error) throw error;
+    await loadCampana(); renderAll();
+    document.getElementById('cont-'+contId)?.classList.add('open');
+    toast('Rechazo enviado — vuelve al paso anterior','inf');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+}
+
+async function saveLink(contId) {
+  const link = document.getElementById('link-'+contId)?.value.trim();
+  if (!link) { toast('Ingresá el link de publicación','err'); return; }
+  await sb.from('contenidos').update({url_publicacion: link}).eq('id', contId);
+  // Advance paso 6 → 7 (stats) or 8 (no stats) — handled by DB function
+  await avanzar(contId);
+}
+
+async function uploadScript(input, contId) {
+  const file = input.files[0];
+  if (!file) return;
+  toast('Subiendo script...','inf');
+  try {
+    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+    const {error} = await sb.storage.from('content-scripts').upload(path, file);
+    if (error) throw error;
+    const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
+    await sb.from('contenido_scripts').insert({
+      contenido_id: contId, url_archivo: publicUrl||path, subido_por: currentUser.id
+    });
+    await avanzar(contId);
+    toast('Script subido ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+  input.value='';
+}
+
+async function uploadDraft(input, contId) {
+  const file = input.files[0];
+  if (!file) return;
+  toast('Subiendo contenido...','inf');
+  try {
+    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+    const {error} = await sb.storage.from('content-drafts').upload(path, file);
+    if (error) throw error;
+    const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);
+    await sb.from('contenido_borradores').insert({
+      contenido_id: contId, url_archivo: publicUrl||path,
+      nombre_archivo: file.name, size_bytes: file.size, subido_por: currentUser.id
+    });
+    await avanzar(contId);
+    toast('Contenido subido ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+  input.value='';
+}
+
+async function uploadStats(input, contId) {
+  const files = Array.from(input.files);
+  for (const file of files) {
+    const path = `campana-${campanaId}/contenido-${contId}/stats-${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+    try {
+      await sb.storage.from('content-stats').upload(path, file);
+      const {data:{publicUrl}} = sb.storage.from('content-stats').getPublicUrl(path);
+      await sb.from('contenido_estadisticas').insert({contenido_id:contId, periodo:'7d', url_screenshot:publicUrl||path, subido_por:currentUser.id});
+    } catch(e) { toast('Error: '+e.message,'err'); }
+  }
+  input.value='';
+  toast('Screenshots subidos ✓','ok');
+}
+
+async function replaceScript(input, contId, scriptId) {
+  const file = input.files[0];
+  if (!file) return;
+  toast('Reemplazando script...','inf');
+  try {
+    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+    const {error} = await sb.storage.from('content-scripts').upload(path, file);
+    if (error) throw error;
+    const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
+    await sb.from('contenido_scripts').update({url_archivo: publicUrl||path}).eq('id', scriptId);
+    await loadCampana(); renderAll();
+    toast('Script reemplazado ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+  input.value='';
+}
+
+async function replaceDraft(input, contId, draftId) {
+  const file = input.files[0];
+  if (!file) return;
+  toast('Reemplazando borrador...','inf');
+  try {
+    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+    const {error} = await sb.storage.from('content-drafts').upload(path, file);
+    if (error) throw error;
+    const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);
+    await sb.from('contenido_borradores').update({url_archivo: publicUrl||path, nombre_archivo: file.name, size_bytes: file.size}).eq('id', draftId);
+    await loadCampana(); renderAll();
+    toast('Borrador reemplazado ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+  input.value='';
+}
+
+// ════════════════════════════════════════════════
+// TALENTO CRUD
+// ════════════════════════════════════════════════
+function openAddTalento() {
+  const existing = new Set((campana.campana_talentos||[]).map(ct=>ct.talent_id));
+  const avail = talentosList.filter(t=>!existing.has(t.id));
+  document.getElementById('at-id').innerHTML = avail.length
+    ? avail.map(t=>`<option value="${t.id}">${esc(t.nombre)}</option>`).join('')
+    : '<option value="">Sin talentos disponibles</option>';
+  ['at-fee-marca','at-fee-talento','at-metodo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('at-moneda').value='USD';
+  openModal('modal-talento');
+}
+
+async function saveTalento() {
+  const tid = parseInt(document.getElementById('at-id').value);
+  if (!tid) { toast('Seleccioná un talento','err'); return; }
+  try {
+    await sb.from('campana_talentos').insert({
+      campana_id: campanaId, talent_id: tid,
+      fee_marca: parseFloat(document.getElementById('at-fee-marca').value)||null,
+      fee_talento: parseFloat(document.getElementById('at-fee-talento').value)||null,
+      moneda: document.getElementById('at-moneda').value,
+      metodo_pago: document.getElementById('at-metodo').value.trim()
+    });
+    closeModal('modal-talento');
+    await loadCampana(); renderAll();
+    toast('Talento agregado ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+}
+
+async function saveFees(ctId) {
+  const fm = parseFloat(document.getElementById('fm-'+ctId)?.value)||0;
+  const ft = parseFloat(document.getElementById('ft-'+ctId)?.value)||0;
+  await sb.from('campana_talentos').update({fee_marca:fm,fee_talento:ft}).eq('id',ctId);
+  const ct = campana.campana_talentos?.find(x=>x.id===ctId);
+  if (ct) { ct.fee_marca=fm; ct.fee_talento=ft; }
+  renderFinanzas();
+  toast('Fees actualizados ✓','ok');
+}
+
+async function saveSparkCodeTexto(contId, texto) {
+  try {
+    await sb.from('contenidos').update({spark_code_texto: texto.trim()}).eq('id', contId);
+    // Update local data
+    const c = findCont(contId);
+    if (c) c.spark_code_texto = texto.trim();
+    toast('Spark Code guardado ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+}
+
+async function savePago(ctId, estado) {
+  const payload = {pago_estado:estado};
+  if (estado==='pagado') payload.pago_fecha = new Date().toISOString().split('T')[0];
+  await sb.from('campana_talentos').update(payload).eq('id',ctId);
+  toast('Estado de pago actualizado ✓','ok');
+  await loadCampana(); renderTalentos();
+}
+
+// ════════════════════════════════════════════════
+// CONTENIDO CRUD
+// ════════════════════════════════════════════════
+let _mcCtId = null;
+
+function openEditContenidoBtn(ctId) {
+  _mcCtId = ctId;
+  document.getElementById('mc-cont-id').value = '';
+  document.getElementById('modal-cont-title').textContent = 'Nuevo Contenido';
+  document.getElementById('mc-del-btn').style.display = 'none';
+  document.getElementById('mc-save-btn').textContent = 'Agregar Contenido';
+  ['mc-titulo','mc-spark-valor','mc-pauta-valor'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mc-tipo').value='tiktok_video';
+  document.getElementById('mc-fecha').value='';
+  document.getElementById('mc-script').checked=false;
+  document.getElementById('mc-stats').checked=false;
+  document.getElementById('mc-spark-dias').value='';
+  document.getElementById('mc-pauta-dias').value='';
+  onMcTipoChange();
+  openModal('modal-contenido');
+}
+
+function openEditCont(contId) {
+  const c = findCont(contId);
+  if (!c) return;
+  _mcCtId = null; // editing existing
+  document.getElementById('mc-cont-id').value = contId;
+  document.getElementById('modal-cont-title').textContent = 'Editar Contenido';
+  document.getElementById('mc-del-btn').style.display = 'inline-flex';
+  document.getElementById('mc-save-btn').textContent = 'Guardar cambios';
+  document.getElementById('mc-tipo').value = c.tipo;
+  document.getElementById('mc-titulo').value = c.titulo||'';
+  document.getElementById('mc-fecha').value = c.fecha_publicacion||'';
+  document.getElementById('mc-script').checked = !!c.script_requerido;
+  document.getElementById('mc-stats').checked = !!c.estadisticas_requeridas;
+  document.getElementById('mc-spark-dias').value = c.spark_code_dias||'';
+  document.getElementById('mc-spark-valor').value = c.spark_code_valor||'';
+  document.getElementById('mc-pauta-dias').value = c.pauta_dias||'';
+  document.getElementById('mc-pauta-valor').value = c.pauta_valor||'';
+  onMcTipoChange();
+  openModal('modal-contenido');
+}
+
+function onMcTipoChange() {
+  const t = document.getElementById('mc-tipo').value;
+  document.getElementById('mc-spark').style.display = t==='tiktok_video'?'block':'none';
+  document.getElementById('mc-pauta').style.display = t==='reel'?'block':'none';
+}
+
+async function saveContenido() {
+  if (_savingContenido) return;
+  const btn = document.getElementById('mc-save-btn');
+  _savingContenido = true; btn.disabled = true;
+  try {
+    const tipo = document.getElementById('mc-tipo').value;
+    const payload = {
+      tipo, titulo: document.getElementById('mc-titulo').value.trim(),
+      fecha_publicacion: document.getElementById('mc-fecha').value||null,
+      script_requerido: document.getElementById('mc-script').checked,
+      estadisticas_requeridas: document.getElementById('mc-stats').checked,
+    };
+    if (tipo==='tiktok_video') {
+      payload.spark_code_dias = parseInt(document.getElementById('mc-spark-dias').value)||null;
+      payload.spark_code_valor = parseFloat(document.getElementById('mc-spark-valor').value)||null;
+    }
+    if (tipo==='reel') {
+      payload.pauta_dias = parseInt(document.getElementById('mc-pauta-dias').value)||null;
+      payload.pauta_valor = parseFloat(document.getElementById('mc-pauta-valor').value)||null;
+    }
+
+    const editId = document.getElementById('mc-cont-id').value;
+    if (editId) {
+      await sb.from('contenidos').update(payload).eq('id', parseInt(editId));
+      toast('Contenido actualizado ✓','ok');
+    } else {
+      if (!_mcCtId) throw new Error('Sin talento seleccionado');
+      // Auto-set paso_actual based on brief
+      const hasBrief = (campana.campana_briefs||[]).length > 0;
+      payload.campana_talento_id = _mcCtId;
+      payload.paso_actual = hasBrief ? 2 : 1;
+      await sb.from('contenidos').insert(payload);
+      toast('Contenido agregado ✓','ok');
+    }
+    closeModal('modal-contenido');
+    await loadCampana(); renderAll();
+    if (_mcCtId) document.getElementById('tc-'+_mcCtId)?.classList.add('open');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+  _savingContenido = false; btn.disabled = false;
+}
+
+async function deleteContenido() {
+  const id = parseInt(document.getElementById('mc-cont-id').value);
+  if (!id || !confirm('¿Eliminar este contenido? Esta acción no se puede deshacer.')) return;
+  await sb.from('contenidos').delete().eq('id',id);
+  closeModal('modal-contenido');
+  await loadCampana(); renderAll();
+  toast('Contenido eliminado','inf');
+}
+
+// ════════════════════════════════════════════════
+// DERECHOS / PRODUCTO
+// ════════════════════════════════════════════════
+function openDerechos(ctId) {
+  editingDrCtId = ctId;
+  const ct = campana.campana_talentos?.find(x=>x.id===ctId)||{};
+  document.getElementById('dr-dias').value = ct.derechos_imagen_dias||'';
+  document.getElementById('dr-valor').value = ct.derechos_imagen_valor||'';
+  document.getElementById('dr-desde').value = ct.derechos_imagen_desde||'';
+  openModal('modal-derechos');
+}
+async function saveDerechos() {
+  await sb.from('campana_talentos').update({
+    derechos_imagen_dias: parseInt(document.getElementById('dr-dias').value)||null,
+    derechos_imagen_valor: parseFloat(document.getElementById('dr-valor').value)||null,
+    derechos_imagen_desde: document.getElementById('dr-desde').value||null
+  }).eq('id',editingDrCtId);
+  closeModal('modal-derechos');
+  await loadCampana(); renderAll();
+  toast('Derechos actualizados ✓','ok');
+}
+
+function openProducto(ctId) {
+  editingPrCtId = ctId;
+  const ct = campana.campana_talentos?.find(x=>x.id===ctId)||{};
+  document.getElementById('pr-estado').value = ct.producto_estado||'no_aplica';
+  document.getElementById('pr-pak').value = ct.producto_paqueteria||'';
+  document.getElementById('pr-track').value = ct.producto_tracking||'';
+  document.getElementById('pr-notas').value = ct.producto_notas||'';
+  openModal('modal-producto');
+}
+async function saveProducto() {
+  await sb.from('campana_talentos').update({
+    producto_estado: document.getElementById('pr-estado').value,
+    producto_paqueteria: document.getElementById('pr-pak').value.trim(),
+    producto_tracking: document.getElementById('pr-track').value.trim(),
+    producto_notas: document.getElementById('pr-notas').value.trim()
+  }).eq('id',editingPrCtId);
+  closeModal('modal-producto');
+  await loadCampana(); renderAll();
+  toast('Producto actualizado ✓','ok');
+}
+
+// ════════════════════════════════════════════════
+// ESTADO CAMPAÑA
+// ════════════════════════════════════════════════
+async function updateEstado(val) {
+  await sb.from('campanas').update({estado:val}).eq('id',campanaId);
+  campana.estado = val;
+  toast('Estado actualizado ✓','ok');
+}
+
+function openEditCampana() {
+  window.location.href = 'campanas.html?edit='+campanaId;
+}
+
+// ════════════════════════════════════════════════
+// SIDE: FINANZAS / COBRO / EQUIPO / CHAT
+// ════════════════════════════════════════════════
+function renderFinanzas() {
+  if (!isAdmin()) return;
+  const cts = campana.campana_talentos||[];
+  let tm=0, tt=0;
+  const rows = cts.map(ct=>{
+    const fm=ct.fee_marca||0, ft=ct.fee_talento||0;
+    tm+=fm; tt+=ft;
+    return `<div class="fin-row"><span class="lbl">${esc(ct.talentos?.nombre||'—')}</span><span>${fmtMoney(fm,ct.moneda||'USD')} / ${fmtMoney(ft,ct.moneda||'USD')}</span></div>`;
+  }).join('');
+  document.getElementById('fin-content').innerHTML = rows +
+    `<div class="fin-row"><span class="lbl">Total Marca</span><span>${fmtMoney(tm,'USD')}</span></div>
+     <div class="fin-row"><span class="lbl">Total Talentos</span><span>${fmtMoney(tt,'USD')}</span></div>
+     <div class="fin-row"><span class="lbl fin-ganancia">Ganancia Agencia</span><span class="fin-ganancia">${fmtMoney(tm-tt,'USD')}</span></div>`;
+}
+
+function renderCobro() {
+  if (!isAdmin()) return;
+  const rows = [
+    {l:'Método de pago',v:campana.metodo_pago_marca||'—'},
+    {l:'País facturación',v:campana.pais_facturacion||'—'},
+    {l:'Requiere factura',v:{no:'No',si:'Sí',solo_invoice:'Solo Invoice'}[campana.requiere_factura]||'No'},
+    ...(campana.notas_finanzas?[{l:'Notas',v:campana.notas_finanzas}]:[])
+  ];
+  document.getElementById('cobro-content').innerHTML = rows.map(r=>
+    `<div class="fin-row"><span class="lbl">${r.l}</span><span>${esc(r.v)}</span></div>`
+  ).join('');
+}
+
+function renderEquipo() {
+  const managers = campana.campana_managers||[];
+  const handlers = campana.campana_handlers||[];
+  const all = [
+    ...managers.map(m=>({n:teamNames[m.user_id]||m.user_id?.substring(0,8)+'…'||'Manager',r:'Manager'})),
+    ...handlers.map(h=>({n:teamNames[h.user_id]||h.user_id?.substring(0,8)+'…'||'Handler',r:'Handler'}))
+  ];
+  document.getElementById('equipo-list').innerHTML = all.length
+    ? all.map(p=>`<div class="equipo-item"><div class="eq-avatar">${(p.n||'?')[0].toUpperCase()}</div><span style="flex:1;font-size:12px;font-weight:600">${esc(p.n)}</span><span style="font-size:11px;color:var(--text-dim)">${p.r}</span></div>`).join('')
+    : '<div style="font-size:12px;color:var(--text-dim)">Sin asignaciones</div>';
+}
+
+function renderChat() {
+  const msgs = campana.campana_mensajes||[];
+  const c = document.getElementById('chat-msgs');
+  c.innerHTML = msgs.length
+    ? msgs.map(m=>`<div class="chat-msg ${m.autor_id===currentUser.id?'mine':'other'}">
+        <div class="chat-autor">${esc(m.autor_nombre||'?')}</div>
+        <div>${esc(m.mensaje)}</div>
+        <div class="chat-time">${fmtDT(m.created_at)}</div>
+      </div>`).join('')
+    : '<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:10px">Sin mensajes</div>';
+  c.scrollTop = c.scrollHeight;
+}
+
+function subscribeChat() {
+  sb.channel('chat-'+campanaId)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'campana_mensajes',filter:`campana_id=eq.${campanaId}`},
+      pl=>{ campana.campana_mensajes=[...(campana.campana_mensajes||[]),pl.new]; renderChat(); })
+    .subscribe();
+}
+
+async function sendChat() {
+  const inp = document.getElementById('chat-input');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = '';
+  await sb.from('campana_mensajes').insert({
+    campana_id: campanaId, autor_id: currentUser.id,
+    autor_nombre: currentProfile.nombre, mensaje: msg
+  });
+}
+
+// ════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════
+function toggleCard(id) { document.getElementById(id)?.classList.toggle('open'); }
+function findCont(id) { for(const ct of campana.campana_talentos||[]){const c=(ct.contenidos||[]).find(x=>x.id===id);if(c)return c;} return null;}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDate(d){if(!d)return'';return new Date(d+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'});}
+function fmtDT(d){if(!d)return'';return new Date(d).toLocaleString('es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}
+function fmtMoney(v,m){const s={USD:'$',ARS:'$',MXN:'$',EUR:'€'}[m]||'$';return`${s}${Number(v||0).toLocaleString('es-ES',{minimumFractionDigits:0,maximumFractionDigits:2})} ${m||''}`;}
+function fmtSize(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
+
+function openModal(id){document.getElementById(id)?.classList.add('open');}
+function closeModal(id){document.getElementById(id)?.classList.remove('open');}
+document.addEventListener('click',e=>{if(e.target.classList.contains('modal-overlay'))e.target.classList.remove('open');});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));});
+
+function toast(msg, type='inf', dur=3500) {
+  const icons={ok:'✓',err:'✕',inf:'ℹ'};
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;
+  t.innerHTML=`<span>${icons[type]||'•'}</span><span>${esc(msg)}</span>`;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(()=>t.remove(),dur);
+}
+
+init();
+// Safety: force-hide load overlay after 15s
+setTimeout(function(){ var lo=document.getElementById('load-overlay'); if(lo && lo.style.display!=='none'){lo.style.display='none';} }, 15000);
+</script>
+</body>
+</html>
