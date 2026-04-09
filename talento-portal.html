@@ -381,11 +381,11 @@ function renderContenido(c, ct) {
     const d = paso > s.n, cur = paso === s.n;
     let right = '';
     if (d || cur) {
-      if (s.n === 1 && briefs.length) right = briefs.slice(0,1).map(f => `<a href="${esc(f.url)}" target="_blank" class="step-btn view">📄 Ver Brief</a>`).join('');
-      if ((s.n===2||s.n===3) && scripts.length) right = `<a href="${esc(scripts[0].url_archivo)}" target="_blank" class="step-btn view">📝 Ver Script</a>`;
-      if ((s.n===2) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" onchange="uploadScript(this,${c.id})">⬆ Subir script</label>`;
-      if ((s.n===4||s.n===5) && drafts.length) right = `<a href="${esc(drafts[0].url_archivo)}" target="_blank" class="step-btn view">🎬 Ver Borrador</a>`;
-      if ((s.n===4) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept="video/*,image/*" onchange="uploadDraft(this,${c.id})">⬆ Subir borrador</label>`;
+      if (s.n === 1 && briefs.length) right = briefs.map(f => `<a href="${esc(f.url)}" target="_blank" class="step-btn view">📄 ${esc((f.nombre||'Brief').substring(0,20))}</a>`).join('');
+      if ((s.n===2||s.n===3) && scripts.length) right = scripts.map(sc => `<a href="${esc(sc.url_archivo)}" target="_blank" class="step-btn view">📝 Script v${sc.version||1}</a>`).join('');
+      if ((s.n===2) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" multiple onchange="uploadScript(this,${c.id})">⬆ Subir script(s)</label>`;
+      if ((s.n===4||s.n===5) && drafts.length) right = drafts.map(dr => `<a href="${esc(dr.url_archivo)}" target="_blank" class="step-btn view">🎬 ${esc((dr.nombre_archivo||'Borrador').substring(0,20))}</a>`).join('');
+      if ((s.n===4) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept="video/*,image/*" multiple onchange="uploadDraft(this,${c.id})">⬆ Subir borrador(es)</label>`;
       if (s.n===6 && c.url_publicacion) right = `<a href="${esc(c.url_publicacion)}" target="_blank" class="step-btn view">🔗 Ver publicación</a>`;
     }
     return `<div class="step-row ${d?'done':cur?'current':'pending'}">
@@ -399,12 +399,22 @@ function renderContenido(c, ct) {
   // Action box for current step (only for steps talent can act on)
   let actionHTML = '';
   if (paso === 2) {
+    const hasScripts = scripts.length > 0;
+    let scriptFilesHTML = '';
+    if (hasScripts) {
+      scriptFilesHTML = `<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px">${scripts.map(sc =>
+        `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px">
+          <a href="${esc(sc.url_archivo)}" target="_blank" style="color:var(--purple);text-decoration:none">📝 v${sc.version||1}</a>
+          <label style="cursor:pointer;color:var(--text-muted)" title="Reemplazar"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" onchange="replaceScript(this,${c.id},${sc.id})">↻</label>
+        </span>`).join('')}</div>`;
+    }
     actionHTML = `<div class="action-box">
       <div class="action-title">📝 Subir Script</div>
+      ${scriptFilesHTML}
       <div class="action-btns">
         <label class="btn btn-primary btn-sm" style="cursor:pointer">
-          <input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" onchange="uploadScript(this,${c.id})">⬆ Subir archivo de script</label>
-        <button class="btn btn-outline btn-sm" onclick="avanzar(${c.id})">Script listo → Enviar a revisión</button>
+          <input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" multiple onchange="uploadScript(this,${c.id})">⬆ Subir archivo(s) de script</label>
+        <button class="btn btn-outline btn-sm" onclick="avanzar(${c.id})" ${hasScripts?'':'disabled style="opacity:0.5;cursor:not-allowed"'} title="${hasScripts?'':'Subí al menos un archivo antes de enviar'}">Script listo → Enviar a revisión</button>
       </div>
     </div>`;
   }
@@ -412,12 +422,28 @@ function renderContenido(c, ct) {
     actionHTML = `<div class="action-box"><div class="action-title">⏳ Esperando aprobación del script</div><p style="font-size:12px;color:var(--text-muted)">El equipo de campaña está revisando tu script.</p></div>`;
   }
   if (paso === 4) {
+    const hasDrafts = drafts.length > 0;
+    let draftFilesHTML = '';
+    if (hasDrafts) {
+      draftFilesHTML = `<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px">${drafts.map(dr =>
+        `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px">
+          <a href="${esc(dr.url_archivo)}" target="_blank" style="color:#ff0050;text-decoration:none">🎬 ${esc((dr.nombre_archivo||'Borrador').substring(0,20))}</a>
+          <label style="cursor:pointer;color:var(--text-muted)" title="Reemplazar"><input type="file" style="display:none" accept="video/*,image/*" onchange="replaceDraft(this,${c.id},${dr.id})">↻</label>
+        </span>`).join('')}</div>`;
+    }
     actionHTML = `<div class="action-box">
       <div class="action-title">🎬 Subir Contenido</div>
+      ${draftFilesHTML}
       <div class="action-btns">
         <label class="btn btn-primary btn-sm" style="cursor:pointer">
-          <input type="file" style="display:none" accept="video/*,image/*" onchange="uploadDraft(this,${c.id})">⬆ Subir video/imagen</label>
-        <button class="btn btn-outline btn-sm" onclick="avanzar(${c.id})">Contenido listo → Enviar a revisión</button>
+          <input type="file" style="display:none" accept="video/*,image/*" multiple onchange="uploadDraft(this,${c.id})">⬆ Subir video/imagen</label>
+      </div>
+      <div style="margin-top:10px">
+        <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">📋 Copy / Caption para la publicación</label>
+        <textarea class="link-input" id="copy-${c.id}" placeholder="Escribí el copy/caption que se usará en la publicación..." style="min-height:60px;width:100%;resize:vertical;font-family:inherit;font-size:13px">${esc(c.copy_texto||'')}</textarea>
+      </div>
+      <div class="action-btns" style="margin-top:8px">
+        <button class="btn btn-outline btn-sm" onclick="saveCopyAndAdvance(${c.id})" ${hasDrafts?'':'disabled style="opacity:0.5;cursor:not-allowed"'} title="${hasDrafts?'':'Subí al menos un archivo antes de enviar'}">Contenido listo → Enviar a revisión</button>
       </div>
     </div>`;
   }
@@ -508,33 +534,78 @@ async function saveLink(contId) {
 }
 
 async function uploadScript(input, contId) {
+  const files = Array.from(input.files); if (!files.length) return;
+  toast('Subiendo script(s)...','inf');
+  try {
+    for (const file of files) {
+      const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+      const {error} = await sb.storage.from('content-scripts').upload(path, file);
+      if (error) throw error;
+      const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
+      await sb.from('contenido_scripts').insert({contenido_id:contId, url_archivo:publicUrl||path, subido_por:currentUser.id});
+    }
+    await loadCampaigns(); renderAll();
+    toast(files.length > 1 ? `${files.length} scripts subidos ✓` : 'Script subido ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+  input.value='';
+}
+
+async function replaceScript(input, contId, scriptId) {
   const file = input.files[0]; if (!file) return;
-  toast('Subiendo script...','inf');
+  toast('Reemplazando script...','inf');
   try {
     const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
     const {error} = await sb.storage.from('content-scripts').upload(path, file);
     if (error) throw error;
     const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
-    await sb.from('contenido_scripts').insert({contenido_id:contId, url_archivo:publicUrl||path, subido_por:currentUser.id});
+    await sb.from('contenido_scripts').update({url_archivo:publicUrl||path}).eq('id',scriptId);
     await loadCampaigns(); renderAll();
-    toast('Script subido ✓','ok');
+    toast('Script reemplazado ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
   input.value='';
 }
 
 async function uploadDraft(input, contId) {
-  const file = input.files[0]; if (!file) return;
+  const files = Array.from(input.files); if (!files.length) return;
   toast('Subiendo contenido...','inf');
+  try {
+    for (const file of files) {
+      const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+      const {error} = await sb.storage.from('content-drafts').upload(path, file);
+      if (error) throw error;
+      const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);
+      await sb.from('contenido_borradores').insert({contenido_id:contId, url_archivo:publicUrl||path, nombre_archivo:file.name, size_bytes:file.size, subido_por:currentUser.id});
+    }
+    await loadCampaigns(); renderAll();
+    toast(files.length > 1 ? `${files.length} archivos subidos ✓` : 'Contenido subido ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+  input.value='';
+}
+
+async function replaceDraft(input, contId, draftId) {
+  const file = input.files[0]; if (!file) return;
+  toast('Reemplazando borrador...','inf');
   try {
     const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
     const {error} = await sb.storage.from('content-drafts').upload(path, file);
     if (error) throw error;
     const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);
-    await sb.from('contenido_borradores').insert({contenido_id:contId, url_archivo:publicUrl||path, nombre_archivo:file.name, size_bytes:file.size, subido_por:currentUser.id});
+    await sb.from('contenido_borradores').update({url_archivo:publicUrl||path, nombre_archivo:file.name, size_bytes:file.size}).eq('id',draftId);
     await loadCampaigns(); renderAll();
-    toast('Contenido subido ✓','ok');
+    toast('Borrador reemplazado ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
   input.value='';
+}
+
+async function saveCopyAndAdvance(contId) {
+  const copyEl = document.getElementById('copy-' + contId);
+  const copyText = copyEl ? copyEl.value.trim() : '';
+  try {
+    if (copyText) {
+      await sb.from('contenidos').update({copy_texto: copyText}).eq('id', contId);
+    }
+    await avanzar(contId);
+  } catch(e) { toast('Error: '+e.message,'err'); }
 }
 
 async function saveSparkCode(contId, texto) {

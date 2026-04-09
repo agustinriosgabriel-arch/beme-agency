@@ -204,6 +204,10 @@ body.dark .tb-tiktok_video{background:rgba(255,255,255,0.08);color:#ccc}
 .file-access-btn.draft:hover{background:rgba(255,0,80,0.08);border-color:#ff0050}
 .file-access-btn.link{border-color:rgba(34,197,94,0.3);color:#22c55e}
 .file-access-btn.link:hover{background:rgba(34,197,94,0.08);border-color:#22c55e}
+.file-access-wrap{display:inline-flex;align-items:center;gap:0}
+.file-replace-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;border:1px solid var(--border2);border-left:0;background:var(--surface2);color:var(--text-muted);font-size:13px;cursor:pointer;transition:all 0.15s}
+.file-replace-btn:hover{background:var(--surface3);color:var(--text)}
+.file-access-wrap .file-access-btn{border-radius:var(--radius-sm) 0 0 var(--radius-sm)}
 
 /* ── Timeline / Historial ── */
 .tl-details{margin:10px 0;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
@@ -1015,17 +1019,21 @@ function renderContenido(c, ct) {
       `<a href="${esc(f.url)}" target="_blank" class="file-access-btn brief">📄 ${esc((f.nombre||'Brief').substring(0,25))}</a>`
     ).join('');
   }
-  // Scripts
+  // Scripts (show ALL, with replace button)
   if (scripts.length) {
-    fileButtonsHTML += scripts.map(s =>
-      `<a href="${esc(s.url_archivo)}" target="_blank" class="file-access-btn script">📝 Script v${s.version||1}</a>`
-    ).join('');
+    fileButtonsHTML += scripts.map(s => {
+      const replBtn = (isInternal() || isTalentOf(ct)) && paso <= 3
+        ? `<label class="file-replace-btn" title="Reemplazar"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" onchange="replaceScript(this,${c.id},${s.id})">↻</label>` : '';
+      return `<span class="file-access-wrap"><a href="${esc(s.url_archivo)}" target="_blank" class="file-access-btn script">📝 Script v${s.version||1}</a>${replBtn}</span>`;
+    }).join('');
   }
-  // Borradores
+  // Borradores (show ALL, with replace button)
   if (drafts.length) {
     fileButtonsHTML += drafts.map(d => {
       const nm = (d.nombre_archivo||'Borrador').substring(0,25);
-      return `<a href="${esc(d.url_archivo)}" target="_blank" class="file-access-btn draft">🎬 ${esc(nm)}</a>`;
+      const replBtn = (isInternal() || isTalentOf(ct)) && paso <= 5
+        ? `<label class="file-replace-btn" title="Reemplazar"><input type="file" style="display:none" accept="video/*,image/*" onchange="replaceDraft(this,${c.id},${d.id})">↻</label>` : '';
+      return `<span class="file-access-wrap"><a href="${esc(d.url_archivo)}" target="_blank" class="file-access-btn draft">🎬 ${esc(nm)}</a>${replBtn}</span>`;
     }).join('');
   }
   // Link publicado
@@ -1152,15 +1160,16 @@ function buildActions(c, ct) {
 
   // ── Paso 2: Script ──
   if (paso === 2 && (canI || canT)) {
+    const hasScripts = (c.contenido_scripts||[]).length > 0;
     html += `<div class="workflow-action-box">
       <div class="action-box-title">📝 Subir Script</div>
       <div class="action-btns">
         <label class="btn btn-primary btn-sm" style="cursor:pointer">
-          <input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" onchange="uploadScript(this,${c.id})">
+          <input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" multiple onchange="uploadScript(this,${c.id})">
           <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Subir archivo de script
+          Subir archivo(s) de script
         </label>
-        <button class="btn btn-outline btn-sm" onclick="avanzar(${c.id})">Script listo → Revisión</button>
+        <button class="btn btn-outline btn-sm" onclick="avanzar(${c.id})" ${hasScripts?'':'disabled style="opacity:0.5;cursor:not-allowed"'} title="${hasScripts?'':'Subí al menos un archivo antes de enviar'}">Script listo → Revisión</button>
       </div>
     </div>`;
   }
@@ -1182,24 +1191,36 @@ function buildActions(c, ct) {
 
   // ── Paso 4: Producción ──
   if (paso === 4 && (canI || canT)) {
+    const hasDrafts = (c.contenido_borradores||[]).length > 0;
     html += `<div class="workflow-action-box">
       <div class="action-box-title">🎬 Subir Contenido</div>
       <div class="action-btns">
         <label class="btn btn-primary btn-sm" style="cursor:pointer">
-          <input type="file" style="display:none" accept="video/*,image/*" onchange="uploadDraft(this,${c.id})">
+          <input type="file" style="display:none" accept="video/*,image/*" multiple onchange="uploadDraft(this,${c.id})">
           <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Subir archivo
+          Subir archivo(s)
         </label>
-        <button class="btn btn-outline btn-sm" onclick="avanzar(${c.id})">Contenido listo → Revisión</button>
+      </div>
+      <div style="margin-top:10px">
+        <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">📋 Copy / Caption para la publicación</label>
+        <textarea class="obs-textarea" id="copy-${c.id}" placeholder="Escribí el copy/caption que se usará en la publicación..." style="min-height:60px">${esc(c.copy_texto||'')}</textarea>
+      </div>
+      <div class="action-btns" style="margin-top:8px">
+        <button class="btn btn-outline btn-sm" onclick="saveCopyAndAdvance(${c.id})" ${hasDrafts?'':'disabled style="opacity:0.5;cursor:not-allowed"'} title="${hasDrafts?'':'Subí al menos un archivo antes de enviar'}">Contenido listo → Revisión</button>
       </div>
     </div>`;
   }
 
   // ── Paso 5: Aprobación contenido ──
   if (paso === 5 && (canI || canH)) {
+    const copyTxt = c.copy_texto || '';
     html += `<div class="workflow-action-box">
       <div class="action-box-title">🎯 Aprobación de Contenido</div>
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Revisá el contenido usando el botón "🎬 Borrador" de arriba.</p>
+      ${copyTxt ? `<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px">📋 Copy / Caption propuesto:</div>
+        <div style="font-size:13px;color:var(--text);white-space:pre-wrap">${esc(copyTxt)}</div>
+      </div>` : ''}
       <div class="obs-input-group">
         <textarea class="obs-textarea" id="obs-cont-${c.id}" placeholder="Comentario (requerido para rechazar)..."></textarea>
         <div class="obs-btn-row">
@@ -1250,6 +1271,17 @@ async function avanzar(contId) {
     if (error) throw error;
     await loadCampana(); renderAll();
     toast(`Paso actualizado → ${PASO_LABELS[data]||data}`, 'ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+}
+
+async function saveCopyAndAdvance(contId) {
+  const copyEl = document.getElementById('copy-' + contId);
+  const copyText = copyEl ? copyEl.value.trim() : '';
+  try {
+    if (copyText) {
+      await sb.from('contenidos').update({copy_texto: copyText}).eq('id', contId);
+    }
+    await avanzar(contId);
   } catch(e) { toast('Error: '+e.message,'err'); }
 }
 
@@ -1318,38 +1350,42 @@ async function saveLink(contId) {
 }
 
 async function uploadScript(input, contId) {
-  const file = input.files[0];
-  if (!file) return;
-  toast('Subiendo script...','inf');
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  toast('Subiendo script(s)...','inf');
   try {
-    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
-    const {error} = await sb.storage.from('content-scripts').upload(path, file);
-    if (error) throw error;
-    const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
-    await sb.from('contenido_scripts').insert({
-      contenido_id: contId, url_archivo: publicUrl||path, subido_por: currentUser.id
-    });
-    await avanzar(contId);
-    toast('Script subido ✓','ok');
+    for (const file of files) {
+      const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+      const {error} = await sb.storage.from('content-scripts').upload(path, file);
+      if (error) throw error;
+      const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
+      await sb.from('contenido_scripts').insert({
+        contenido_id: contId, url_archivo: publicUrl||path, subido_por: currentUser.id
+      });
+    }
+    await loadCampana(); renderAll();
+    toast(files.length > 1 ? `${files.length} scripts subidos ✓` : 'Script subido ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
   input.value='';
 }
 
 async function uploadDraft(input, contId) {
-  const file = input.files[0];
-  if (!file) return;
+  const files = Array.from(input.files);
+  if (!files.length) return;
   toast('Subiendo contenido...','inf');
   try {
-    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
-    const {error} = await sb.storage.from('content-drafts').upload(path, file);
-    if (error) throw error;
-    const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);
-    await sb.from('contenido_borradores').insert({
-      contenido_id: contId, url_archivo: publicUrl||path,
-      nombre_archivo: file.name, size_bytes: file.size, subido_por: currentUser.id
-    });
-    await avanzar(contId);
-    toast('Contenido subido ✓','ok');
+    for (const file of files) {
+      const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+      const {error} = await sb.storage.from('content-drafts').upload(path, file);
+      if (error) throw error;
+      const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);
+      await sb.from('contenido_borradores').insert({
+        contenido_id: contId, url_archivo: publicUrl||path,
+        nombre_archivo: file.name, size_bytes: file.size, subido_por: currentUser.id
+      });
+    }
+    await loadCampana(); renderAll();
+    toast(files.length > 1 ? `${files.length} archivos subidos ✓` : 'Contenido subido ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
   input.value='';
 }
