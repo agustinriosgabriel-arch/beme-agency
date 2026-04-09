@@ -1778,7 +1778,20 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
     </div>
     <div class="modal-body">
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Haz clic para agregar o quitar talentos del roster.</p>
-      <input type="text" id="manage-talents-search" placeholder="Buscar talento..." style="width:100%;padding:9px 14px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-size:13px;font-family:inherit;margin-bottom:12px;outline:none;">
+      <input type="text" id="manage-talents-search" placeholder="Buscar talento..." style="width:100%;padding:9px 14px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-size:13px;font-family:inherit;margin-bottom:8px;outline:none;">
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <select id="manage-filter-cat" style="flex:1;min-width:120px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-size:12px;font-family:inherit;">
+          <option value="">Categoría</option>
+        </select>
+        <select id="manage-filter-gender" style="flex:1;min-width:100px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-size:12px;font-family:inherit;">
+          <option value="">Género</option>
+          <option value="Mujer">Mujer</option>
+          <option value="Hombre">Hombre</option>
+        </select>
+        <select id="manage-filter-country" style="flex:1;min-width:120px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-size:12px;font-family:inherit;">
+          <option value="">País</option>
+        </select>
+      </div>
       <div class="talent-select-grid" id="manage-talents-grid"></div>
     </div>
     <div class="modal-footer">

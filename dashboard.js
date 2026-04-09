@@ -2583,20 +2583,45 @@ function openManageTalentsForRoster(rosterId) {
   if(!roster) return;
   managingRosterTemp = (roster.talentIds||[]).map(id => parseInt(id));
 
-  // Clear search and render
+  // Clear search and filters, then render
   const searchEl = document.getElementById('manage-talents-search');
-  if(searchEl) { searchEl.value = ''; searchEl.oninput = () => renderManageTalentsGrid(searchEl.value); }
-  renderManageTalentsGrid('');
+  if(searchEl) { searchEl.value = ''; searchEl.oninput = () => renderManageTalentsGrid(); }
+
+  // Populate category filter from roster talents
+  const catSel = document.getElementById('manage-filter-cat');
+  if(catSel) {
+    const rosterTalents = talents.filter(t => managingRosterTemp.includes(t.id));
+    const cats = [...new Set(rosterTalents.flatMap(t => t.categorias || []))].sort();
+    catSel.innerHTML = '<option value="">Categoría</option>' + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    catSel.onchange = () => renderManageTalentsGrid();
+  }
+  // Populate country filter from roster talents
+  const countrySel = document.getElementById('manage-filter-country');
+  if(countrySel) {
+    const rosterTalents = talents.filter(t => managingRosterTemp.includes(t.id));
+    const countries = [...new Set(rosterTalents.flatMap(t => t.paises || []))].sort();
+    countrySel.innerHTML = '<option value="">País</option>' + countries.map(c => `<option value="${escapeHtml(c)}">${(COUNTRY_FLAGS[c]||'')} ${escapeHtml(c)}</option>`).join('');
+    countrySel.onchange = () => renderManageTalentsGrid();
+  }
+  const genderSel = document.getElementById('manage-filter-gender');
+  if(genderSel) { genderSel.value = ''; genderSel.onchange = () => renderManageTalentsGrid(); }
+
+  renderManageTalentsGrid();
   openModal('manage-talents-modal');
 }
 
-function renderManageTalentsGrid(search) {
+function renderManageTalentsGrid() {
   const grid = document.getElementById('manage-talents-grid');
   grid.innerHTML = '';
-  const q = (search || '').toLowerCase().trim();
-  const filtered = q
-    ? talents.filter(t => t.nombre.toLowerCase().includes(q) || (t.paises||[]).some(p => p.toLowerCase().includes(q)) || (t.ciudad||'').toLowerCase().includes(q) || (t.keywords||'').toLowerCase().includes(q) || (t.categorias||[]).some(c=>c.toLowerCase().includes(q)))
-    : talents;
+  const q = (document.getElementById('manage-talents-search')?.value || '').toLowerCase().trim();
+  const fCat = document.getElementById('manage-filter-cat')?.value || '';
+  const fGender = document.getElementById('manage-filter-gender')?.value || '';
+  const fCountry = document.getElementById('manage-filter-country')?.value || '';
+  let filtered = talents.filter(t => managingRosterTemp.includes(t.id));
+  if(q) filtered = filtered.filter(t => t.nombre.toLowerCase().includes(q) || (t.paises||[]).some(p => p.toLowerCase().includes(q)) || (t.ciudad||'').toLowerCase().includes(q) || (t.keywords||'').toLowerCase().includes(q) || (t.categorias||[]).some(c=>c.toLowerCase().includes(q)));
+  if(fCat) filtered = filtered.filter(t => (t.categorias||[]).includes(fCat));
+  if(fGender) filtered = filtered.filter(t => t.genero === fGender);
+  if(fCountry) filtered = filtered.filter(t => (t.paises||[]).includes(fCountry));
 
   if(filtered.length === 0) {
     grid.innerHTML = '<p style="font-size:13px;color:var(--text-muted);text-align:center;padding:20px;grid-column:1/-1">Sin resultados</p>';
