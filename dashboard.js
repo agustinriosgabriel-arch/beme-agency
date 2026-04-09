@@ -143,6 +143,14 @@ async function doSignup() {
   } catch(e) { _loginErr('Error inesperado: ' + (e.message || String(e))); }
   if (btn) { btn.textContent = 'Registrar usuario'; btn.disabled = false; }
 }
+async function doLogout() {
+  if (!sb) return;
+  if (!confirm('¿Cerrar sesión?')) return;
+  await sb.auth.signOut();
+  currentUser = null;
+  showLoginOverlay();
+}
+
 async function initAuth() {
   if (!sb) initSupabase();
   if (!sb) { showLoginOverlay(); return; }
@@ -269,6 +277,7 @@ async function loadFromSupabase() {
     populateCatCheckboxes();
     populateCountryDropdown();
     updateApiKeyUI();
+    loadGeneralRosters();
 
     // Subscribe to realtime changes so all users see updates instantly
     setupRealtimeSubscription();
@@ -518,6 +527,7 @@ async function copyTextWithToast(url, successMessage) {
 
 let FN_MAP = {
   toggleTheme,
+  doLogout,
   triggerCSVImport,
   openApiKeyModal,
   updateAllFollowers,
@@ -572,10 +582,14 @@ let FN_MAP = {
   clearApifyToken,
   toggleApifyTokenVisibility: function(){var i=document.getElementById("apify-token-input");if(i)i.type=i.type==="password"?"text":"password";},  // apify
   openCreateRosterModal,
+  openCreateGeneralRosterModal: () => openCreateGeneralRosterModal(),
+  closeGeneralRosterModal,
+  saveGeneralRoster,
   toggleRosterSortDropdown,
   setRosterSort,
   toggleArchivedRosters,
   deleteSelectedTalents,
+  fetchPhotosSelected,
   toggleNetUpdateDropdown,
   scrapeAllTikTok,
   scrapeAllInstagram,
@@ -619,6 +633,10 @@ let ACTION_MAP = {
   'duplicate-roster':(id)    => duplicateRoster(parseInt(id)),
   'copy-url':        (id)    => copyRosterUrl(parseInt(id)),
   'copy-url-compact':(id)    => copyCompactRosterUrl(parseInt(id)),
+  'switch-roster-subtab': (id) => switchRosterSubtab(id),
+  'edit-general-roster':  (id) => openCreateGeneralRosterModal(parseInt(id)),
+  'delete-general-roster':(id) => deleteGeneralRoster(id),
+  'copy-general-roster-url':(id) => copyGeneralRosterUrl(id),
 };
 
 document.addEventListener('click', (e) => {
@@ -1535,8 +1553,10 @@ function updateStats() {
   const total = talents.reduce((s,t) => s+(t.seguidores.tiktok||0)+(t.seguidores.instagram||0)+(t.seguidores.youtube||0), 0);
   set('stat-followers', formatFollowers(total));
   set('stat-rosters', rosters.length);
-  set('tab-rosters-badge', rosters.length);
+  set('tab-rosters-badge', rosters.length + generalRosters.length);
   set('tab-total-badge', talents.length);
+  set('subtab-personalizados-badge', rosters.length);
+  set('subtab-generales-badge', generalRosters.length);
 }
 
 // ===================== VIEW / TABS =====================
@@ -1553,7 +1573,10 @@ function switchTab(tab) {
   document.getElementById('tab-content-rosters').style.display = tab==='rosters'?'block':'none';
   document.getElementById('tab-talents').classList.toggle('active', tab==='talents');
   document.getElementById('tab-rosters').classList.toggle('active', tab==='rosters');
-  if(tab==='rosters') renderRosters();
+  if(tab==='rosters') {
+    if(currentRosterSubtab === 'generales') renderGeneralRosters();
+    else renderRosters();
+  }
 }
 
 // ===================== MODAL =====================
@@ -1711,6 +1734,65 @@ async function fetchProfilePhoto() {
     showToast(lastError || 'No se pudo extraer la foto. Intenta subir una manualmente.', 'error');
   }
   if(btn) { btn.disabled = false; btn.textContent = 'Extraer de TikTok / IG'; }
+}
+
+// ===================== BULK FETCH PROFILE PHOTOS =====================
+async function fetchPhotosSelected() {
+  const sel = talents.filter(t => selectedIds.has(t.id));
+  if (!sel.length) { showToast('No hay talentos seleccionados', 'error'); return; }
+  // Only process talents without a photo
+  const noPhoto = sel.filter(t => !t.foto);
+  if (noPhoto.length === 0) { showToast('Todos los talentos seleccionados ya tienen foto', 'info'); return; }
+  if (!confirm('Extraer foto de perfil para ' + noPhoto.length + ' talento(s) sin foto?')) return;
+
+  showToast('Extrayendo fotos... 0/' + noPhoto.length, 'info');
+  let ok = 0, fail = 0;
+  for (let i = 0; i < noPhoto.length; i++) {
+    const t = noPhoto[i];
+    const urls = [];
+    if (t.tiktok) {
+      const u = normalizeSocialUrl(t.tiktok, 'tiktok');
+      if (u) urls.push(u);
+    }
+    if (t.instagram) {
+      const u = normalizeSocialUrl(t.instagram, 'instagram');
+      if (u) urls.push(u);
+    }
+    if (urls.length === 0) { fail++; continue; }
+
+    let found = false;
+    for (const url of urls) {
+      try {
+        const resp = await fetch('/.netlify/functions/fetch-profile-photo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        if (!resp.ok) continue;
+        const data = await resp.json();
+        if (data.photoUrl) {
+          t.foto = data.photoUrl;
+          if (sb && currentUser) {
+            await sb.from('talentos').update({ foto: data.photoUrl }).eq('id', t.id);
+          }
+          ok++;
+          found = true;
+          break;
+        }
+      } catch (e) {
+        console.warn('Bulk photo error for', t.nombre, e.message);
+      }
+    }
+    if (!found) fail++;
+    // Update progress every 3
+    if ((i + 1) % 3 === 0 || i === noPhoto.length - 1) {
+      showToast('Extrayendo fotos... ' + (i + 1) + '/' + noPhoto.length, 'info');
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+  renderTalents();
+  if (ok > 0) showToast(ok + ' foto(s) extraída(s)', 'success');
+  else showToast('No se pudo extraer ninguna foto', 'error');
 }
 
 // ===================== TALENT CRUD =====================
@@ -2566,6 +2648,275 @@ function openCreateRosterAndAdd() {
   closeModal('add-to-roster-modal');
   _pendingRosterTalentIds = [...selectedIds]; // save current selection
   openCreateRosterModal();
+}
+
+// ===================== GENERAL ROSTERS =====================
+let generalRosters = [];
+let editingGeneralRosterId = null;
+let currentRosterSubtab = 'generales';
+
+function switchRosterSubtab(tab) {
+  currentRosterSubtab = tab;
+  document.getElementById('subtab-generales').classList.toggle('active', tab === 'generales');
+  document.getElementById('subtab-personalizados').classList.toggle('active', tab === 'personalizados');
+  document.getElementById('roster-subtab-generales').style.display = tab === 'generales' ? 'block' : 'none';
+  document.getElementById('roster-subtab-personalizados').style.display = tab === 'personalizados' ? 'block' : 'none';
+  if (tab === 'generales') renderGeneralRosters();
+  if (tab === 'personalizados') renderRosters();
+}
+
+function openCreateGeneralRosterModal(id) {
+  editingGeneralRosterId = id || null;
+  document.getElementById('rg-nombre').value = '';
+  document.getElementById('rg-desc').value = '';
+  document.getElementById('rg-categoria').value = '';
+  document.getElementById('rg-pais').value = '';
+  document.getElementById('rg-genero').value = '';
+  document.getElementById('rg-min-seg').value = '';
+  document.getElementById('rg-max-seg').value = '';
+  ['rg-show-tt','rg-show-ig','rg-show-yt'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = true;
+  });
+
+  // Populate category select
+  const catSel = document.getElementById('rg-categoria');
+  catSel.innerHTML = '<option value="">— Todas las categorías —</option>';
+  CATEGORIES.forEach(c => {
+    catSel.innerHTML += '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>';
+  });
+
+  // Populate country select
+  const paisSel = document.getElementById('rg-pais');
+  paisSel.innerHTML = '<option value="">— Todos los países —</option>';
+  COUNTRIES.forEach(c => {
+    paisSel.innerHTML += '<option value="' + escapeHtml(c) + '">' + (COUNTRY_FLAGS[c] || '') + ' ' + escapeHtml(c) + '</option>';
+  });
+
+  if (id) {
+    const rg = generalRosters.find(r => r.id === id);
+    if (rg) {
+      document.getElementById('rg-nombre').value = rg.name || '';
+      document.getElementById('rg-desc').value = rg.description || '';
+      document.getElementById('rg-categoria').value = rg.filters?.categoria || '';
+      document.getElementById('rg-pais').value = rg.filters?.pais || '';
+      document.getElementById('rg-genero').value = rg.filters?.genero || '';
+      document.getElementById('rg-min-seg').value = rg.filters?.min_seguidores || '';
+      document.getElementById('rg-max-seg').value = rg.filters?.max_seguidores || '';
+      if (rg.platforms) {
+        if (document.getElementById('rg-show-tt')) document.getElementById('rg-show-tt').checked = rg.platforms.tt !== false;
+        if (document.getElementById('rg-show-ig')) document.getElementById('rg-show-ig').checked = rg.platforms.ig !== false;
+        if (document.getElementById('rg-show-yt')) document.getElementById('rg-show-yt').checked = rg.platforms.yt !== false;
+      }
+      document.getElementById('general-roster-title').textContent = 'Editar Roster General';
+    }
+  } else {
+    document.getElementById('general-roster-title').textContent = 'Nuevo Roster General';
+  }
+  openModal('general-roster-modal');
+}
+
+function closeGeneralRosterModal() {
+  closeModal('general-roster-modal');
+}
+
+async function saveGeneralRoster() {
+  const name = document.getElementById('rg-nombre').value.trim();
+  if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
+  const desc = document.getElementById('rg-desc').value.trim();
+  const filters = {
+    categoria: document.getElementById('rg-categoria').value,
+    pais: document.getElementById('rg-pais').value,
+    genero: document.getElementById('rg-genero').value,
+    min_seguidores: parseInt(document.getElementById('rg-min-seg').value) || 0,
+    max_seguidores: parseInt(document.getElementById('rg-max-seg').value) || 0,
+  };
+  const platforms = {
+    tt: document.getElementById('rg-show-tt')?.checked ?? true,
+    ig: document.getElementById('rg-show-ig')?.checked ?? true,
+    yt: document.getElementById('rg-show-yt')?.checked ?? true,
+  };
+  if (!platforms.tt && !platforms.ig && !platforms.yt) {
+    showToast('Selecciona al menos una plataforma', 'error'); return;
+  }
+  closeModal('general-roster-modal');
+
+  if (editingGeneralRosterId) {
+    // UPDATE
+    const rg = generalRosters.find(r => r.id === editingGeneralRosterId);
+    if (rg) {
+      rg.name = name; rg.description = desc; rg.filters = filters; rg.platforms = platforms;
+    }
+    renderGeneralRosters(); updateGeneralRosterBadge();
+    if (sb && currentUser) {
+      const { error } = await sb.from('rosters_generales').update({ name, description: desc, filters, platforms }).eq('id', editingGeneralRosterId);
+      if (error) showToast('Error: ' + error.message, 'error');
+      else showToast('Roster general actualizado', 'success');
+    }
+  } else {
+    // CREATE
+    const token = generateToken();
+    const newRG = {
+      id: Date.now(),
+      name, description: desc, filters, platforms,
+      public_token: token,
+      created_at: new Date().toISOString(),
+    };
+
+    if (sb && currentUser) {
+      const { data, error } = await sb.from('rosters_generales').insert({
+        name, description: desc, filters, platforms, public_token: token
+      }).select().single();
+      if (error) {
+        showToast('Error: ' + error.message, 'error');
+        return;
+      }
+      newRG.id = data.id;
+      newRG.created_at = data.created_at;
+    }
+    generalRosters.push(newRG);
+    renderGeneralRosters(); updateGeneralRosterBadge();
+    showToast('Roster general "' + name + '" creado', 'success');
+  }
+}
+
+function getGeneralRosterTalents(rg) {
+  let filtered = [...talents];
+  const f = rg.filters || {};
+  if (f.categoria) {
+    filtered = filtered.filter(t => (t.categorias || []).some(c => c === f.categoria));
+  }
+  if (f.pais) {
+    filtered = filtered.filter(t => (t.paises || []).includes(f.pais));
+  }
+  if (f.genero) {
+    filtered = filtered.filter(t => t.genero === f.genero);
+  }
+  if (f.min_seguidores > 0) {
+    filtered = filtered.filter(t => {
+      const total = (t.seguidores?.tiktok || 0) + (t.seguidores?.instagram || 0) + (t.seguidores?.youtube || 0);
+      return total >= f.min_seguidores;
+    });
+  }
+  if (f.max_seguidores > 0) {
+    filtered = filtered.filter(t => {
+      const total = (t.seguidores?.tiktok || 0) + (t.seguidores?.instagram || 0) + (t.seguidores?.youtube || 0);
+      return total <= f.max_seguidores;
+    });
+  }
+  return filtered;
+}
+
+function renderGeneralRosters() {
+  const grid = document.getElementById('general-roster-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  if (generalRosters.length === 0) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:60px 20px"><div class="empty-icon" style="font-size:40px">🌐</div><h3>Sin rosters generales</h3><p>Crea tu primer roster general para mostrar talentos por categoría.</p></div>';
+    return;
+  }
+
+  generalRosters.forEach(rg => {
+    const matchingTalents = getGeneralRosterTalents(rg);
+    const f = rg.filters || {};
+    const card = document.createElement('div');
+    card.className = 'rg-card';
+
+    // Filter tags
+    const tags = [];
+    if (f.categoria) tags.push(f.categoria);
+    if (f.pais) tags.push((COUNTRY_FLAGS[f.pais] || '') + ' ' + f.pais);
+    if (f.genero) tags.push(f.genero);
+    if (f.min_seguidores > 0 || f.max_seguidores > 0) {
+      let segTxt = '';
+      if (f.min_seguidores > 0 && f.max_seguidores > 0) segTxt = formatFollowers(f.min_seguidores) + ' — ' + formatFollowers(f.max_seguidores);
+      else if (f.min_seguidores > 0) segTxt = '>' + formatFollowers(f.min_seguidores);
+      else segTxt = '<' + formatFollowers(f.max_seguidores);
+      tags.push(segTxt + ' seguidores');
+    }
+
+    const tagsHTML = tags.length > 0
+      ? '<div class="rg-filters-summary">' + tags.map(t => '<span class="rg-filter-tag">' + escapeHtml(t) + '</span>').join('') + '</div>'
+      : '';
+
+    // Avatars preview
+    const previewTalents = matchingTalents.slice(0, 3);
+    const avatarsHTML = previewTalents.map(t => {
+      return t.foto
+        ? '<img src="' + t.foto + '" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:2px solid var(--surface);margin-left:-6px">'
+        : '<div style="width:24px;height:24px;border-radius:50%;background:rgba(148,20,224,0.2);border:2px solid var(--surface);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--purple);margin-left:-6px">' + getInitials(t.nombre) + '</div>';
+    }).join('');
+
+    card.innerHTML = '\
+      <div class="rg-name">' + escapeHtml(rg.name) + '</div>\
+      ' + (rg.description ? '<div class="rg-desc">' + escapeHtml(rg.description) + '</div>' : '') + '\
+      ' + tagsHTML + '\
+      <div class="rg-meta">\
+        <span class="rg-talent-count">\
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>\
+          ' + matchingTalents.length + ' talentos\
+        </span>\
+      </div>\
+      ' + (matchingTalents.length > 0 ? '<div style="display:flex;margin-left:6px;margin-bottom:12px">' + avatarsHTML + (matchingTalents.length > 3 ? '<div style="width:24px;height:24px;border-radius:50%;background:var(--surface2);border:2px solid var(--surface);display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);margin-left:-6px">+' + (matchingTalents.length - 3) + '</div>' : '') + '</div>' : '') + '\
+      <div class="rg-actions">\
+        <button class="btn btn-outline btn-sm" style="flex:1" data-action="copy-general-roster-url" data-id="' + rg.id + '">\
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>\
+          Copiar Link\
+        </button>\
+        <button class="btn btn-outline btn-sm" data-action="edit-general-roster" data-id="' + rg.id + '" title="Editar"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>\
+        <button class="btn btn-danger btn-sm" data-action="delete-general-roster" data-id="' + rg.id + '" title="Eliminar"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>\
+      </div>';
+    grid.appendChild(card);
+  });
+}
+
+function updateGeneralRosterBadge() {
+  const el = document.getElementById('subtab-generales-badge');
+  if (el) el.textContent = generalRosters.length;
+  const el2 = document.getElementById('subtab-personalizados-badge');
+  if (el2) el2.textContent = rosters.length;
+}
+
+function copyGeneralRosterUrl(id) {
+  const rg = generalRosters.find(r => r.id === parseInt(id));
+  if (!rg) return;
+  const baseUrl = window.location.origin;
+  const url = baseUrl + '/roster-general.html?token=' + (rg.public_token || '');
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('Link copiado al portapapeles', 'success');
+  }).catch(() => {
+    showToast('No se pudo copiar', 'error');
+  });
+}
+
+async function deleteGeneralRoster(id) {
+  id = parseInt(id);
+  const rg = generalRosters.find(r => r.id === id);
+  if (!rg) return;
+  if (!confirm('¿Eliminar roster general "' + rg.name + '"?')) return;
+  generalRosters = generalRosters.filter(r => r.id !== id);
+  renderGeneralRosters(); updateGeneralRosterBadge();
+  if (sb && currentUser) {
+    await sb.from('rosters_generales').delete().eq('id', id);
+  }
+  showToast('Roster general eliminado', 'success');
+}
+
+async function loadGeneralRosters() {
+  if (!sb || !currentUser) return;
+  const { data, error } = await sb.from('rosters_generales').select('*').order('created_at', { ascending: false });
+  if (error) {
+    console.warn('[Beme] Error loading general rosters:', error.message);
+    return;
+  }
+  generalRosters = (data || []).map(r => ({
+    ...r,
+    filters: r.filters || {},
+    platforms: r.platforms || { tt: true, ig: true, yt: true },
+  }));
+  renderGeneralRosters();
+  updateGeneralRosterBadge();
 }
 
 // ===================== VIEW ROSTER =====================

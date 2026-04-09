@@ -43,6 +43,17 @@ nombre  text NOT NULL
 created timestamp DEFAULT now()
 ```
 
+### `rosters_generales`
+```sql
+id              serial PRIMARY KEY
+name            text NOT NULL
+description     text DEFAULT ''
+filters         jsonb DEFAULT '{}'   -- {categoria, pais, genero, min_seguidores, max_seguidores}
+platforms       jsonb DEFAULT '{"tt":true,"ig":true,"yt":true}'
+public_token    text UNIQUE
+created_at      timestamp DEFAULT now()
+```
+
 ### `roster_selecciones`
 ```sql
 roster_id   integer REFERENCES rosters(id)
