@@ -1815,10 +1815,18 @@ async function saveTalent() {
   const youtubeVal = normalizeSocialUrl(document.getElementById('f-youtube').value.trim(), 'youtube') || '';
 
   // Duplicate check (skip if editing the same talent)
+  // Compare by extracted handle to avoid URL format mismatches
+  function _extractHandle(url) {
+    if (!url) return '';
+    const m = url.toLowerCase().match(/@([^/?#]+)/);
+    if (m) return m[1];
+    const parts = url.toLowerCase().replace(/\/+$/,'').split('/');
+    return parts[parts.length - 1] || '';
+  }
   const dupeByName = talents.find(t => t.id !== editingId && t.nombre.toLowerCase().trim() === nombre.toLowerCase());
-  const dupeByTT = tiktokVal && talents.find(t => t.id !== editingId && t.tiktok && t.tiktok.toLowerCase().trim() === tiktokVal.toLowerCase());
-  const dupeByIG = instagramVal && talents.find(t => t.id !== editingId && t.instagram && t.instagram.toLowerCase().trim() === instagramVal.toLowerCase());
-  const dupeByYT = youtubeVal && talents.find(t => t.id !== editingId && t.youtube && t.youtube.toLowerCase().trim() === youtubeVal.toLowerCase());
+  const dupeByTT = tiktokVal && talents.find(t => t.id !== editingId && t.tiktok && _extractHandle(t.tiktok) === _extractHandle(tiktokVal));
+  const dupeByIG = instagramVal && talents.find(t => t.id !== editingId && t.instagram && _extractHandle(t.instagram) === _extractHandle(instagramVal));
+  const dupeByYT = youtubeVal && talents.find(t => t.id !== editingId && t.youtube && _extractHandle(t.youtube) === _extractHandle(youtubeVal));
   if (dupeByName) { showToast('Ya existe un talento con el nombre "' + dupeByName.nombre + '"', 'error'); return; }
   if (dupeByTT) { showToast('El TikTok ya está asignado a "' + dupeByTT.nombre + '"', 'error'); return; }
   if (dupeByIG) { showToast('El Instagram ya está asignado a "' + dupeByIG.nombre + '"', 'error'); return; }
