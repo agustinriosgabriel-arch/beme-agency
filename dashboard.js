@@ -845,6 +845,8 @@ async function parseCSV(text) {
 
   const existingTT = new Set(talents.map(t=>t.tiktok).filter(Boolean).map(u=>u.toLowerCase().trim()));
   const existingIG = new Set(talents.map(t=>t.instagram).filter(Boolean).map(u=>u.toLowerCase().trim()));
+  const existingYT = new Set(talents.map(t=>t.youtube).filter(Boolean).map(u=>u.toLowerCase().trim()));
+  const existingNames = new Set(talents.map(t=>t.nombre).filter(Boolean).map(n=>n.toLowerCase().trim()));
 
   const rows = [];
   let skippedDupe=0, skippedEmpty=0;
@@ -860,8 +862,11 @@ async function parseCSV(text) {
 
     const ttUrl = row['tiktok']||'';
     const igUrl = row['instagram']||'';
+    const ytUrl = row['youtube']||'';
+    if(nombre && existingNames.has(nombre.toLowerCase())) { skippedDupe++; continue; }
     if(ttUrl && existingTT.has(ttUrl.toLowerCase())) { skippedDupe++; continue; }
     if(igUrl && existingIG.has(igUrl.toLowerCase())) { skippedDupe++; continue; }
+    if(ytUrl && existingYT.has(ytUrl.toLowerCase())) { skippedDupe++; continue; }
 
     const paisRaw = row['paises']||row['países']||row['pais']||row['country']||'';
     const paises = paisRaw.split(';').map(x=>x.trim()).filter(Boolean);
@@ -884,8 +889,10 @@ async function parseCSV(text) {
       foto: '',
       updated: new Date().toISOString().split('T')[0]
     });
+    existingNames.add(nombre.toLowerCase());
     if(ttUrl) existingTT.add(ttUrl.toLowerCase());
     if(igUrl) existingIG.add(igUrl.toLowerCase());
+    if(ytUrl) existingYT.add(ytUrl.toLowerCase());
   }
 
   if(rows.length===0) {
@@ -1803,15 +1810,29 @@ async function saveTalent() {
   if(paises.length === 0) { showToast('Selecciona al menos un país', 'error'); return; }
   const cats = Array.from(document.querySelectorAll('.cat-check.selected')).map(el=>el.textContent.trim());
   if(cats.length === 0) { showToast('Selecciona al menos una categoría', 'error'); return; }
+  const tiktokVal = normalizeSocialUrl(document.getElementById('f-tiktok').value.trim(), 'tiktok') || '';
+  const instagramVal = normalizeSocialUrl(document.getElementById('f-instagram').value.trim(), 'instagram') || '';
+  const youtubeVal = normalizeSocialUrl(document.getElementById('f-youtube').value.trim(), 'youtube') || '';
+
+  // Duplicate check (skip if editing the same talent)
+  const dupeByName = talents.find(t => t.id !== editingId && t.nombre.toLowerCase().trim() === nombre.toLowerCase());
+  const dupeByTT = tiktokVal && talents.find(t => t.id !== editingId && t.tiktok && t.tiktok.toLowerCase().trim() === tiktokVal.toLowerCase());
+  const dupeByIG = instagramVal && talents.find(t => t.id !== editingId && t.instagram && t.instagram.toLowerCase().trim() === instagramVal.toLowerCase());
+  const dupeByYT = youtubeVal && talents.find(t => t.id !== editingId && t.youtube && t.youtube.toLowerCase().trim() === youtubeVal.toLowerCase());
+  if (dupeByName) { showToast('Ya existe un talento con el nombre "' + dupeByName.nombre + '"', 'error'); return; }
+  if (dupeByTT) { showToast('El TikTok ya está asignado a "' + dupeByTT.nombre + '"', 'error'); return; }
+  if (dupeByIG) { showToast('El Instagram ya está asignado a "' + dupeByIG.nombre + '"', 'error'); return; }
+  if (dupeByYT) { showToast('El YouTube ya está asignado a "' + dupeByYT.nombre + '"', 'error'); return; }
+
   const data = {
     nombre, paises,
     foto: currentPhoto,
     ciudad: document.getElementById('f-ciudad').value.trim(),
     telefono: document.getElementById('f-telefono').value.trim(),
     email: document.getElementById('f-email').value.trim(),
-    tiktok: normalizeSocialUrl(document.getElementById('f-tiktok').value.trim(), 'tiktok') || '',
-    instagram: normalizeSocialUrl(document.getElementById('f-instagram').value.trim(), 'instagram') || '',
-    youtube: normalizeSocialUrl(document.getElementById('f-youtube').value.trim(), 'youtube') || '',
+    tiktok: tiktokVal,
+    instagram: instagramVal,
+    youtube: youtubeVal,
     valores: document.getElementById('f-valores').value.trim(),
     genero: (document.getElementById('f-genero') ? document.getElementById('f-genero').value : ''),
     keywords: (document.getElementById('f-keywords') ? document.getElementById('f-keywords').value.trim().toLowerCase() : ''),
