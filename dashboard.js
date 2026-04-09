@@ -49,6 +49,8 @@ let minFollowers = 0;
 let maxFollowers = Infinity;
 let followerNetwork = 'total'; // which network to filter on: tt, ig, yt, total
 let activeKeywords = []; // keywords filter
+let selectedGenders = new Set();
+let genderDropdownOpen = false;
 let currentPhoto = '';
 let filterDebounce = null;
 let currentSort = ''; // '' | 'az' | 'za' | 'tt-desc' | 'ig-desc' | 'yt-desc' | 'total-desc'
@@ -532,6 +534,8 @@ let FN_MAP = {
   toggleRosterFilterDropdown,
   clearFollowerFilter,
   clearKeywordsFilter,
+  toggleGenderDropdown,
+  clearGenderFilter,
   openManageCountriesModal,
   clearAllFilters,
   viewGrid:             () => setView('grid'),
@@ -684,6 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
   wireFormListeners();
   populateCountrySelects();
   populateCountryDropdown();
+  populateGenderDropdown();
   populateCatCheckboxes();
   loadTheme();
   loadApiKey();
@@ -729,6 +734,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if(rt) rt.classList.remove('open');
       rosterFilterDropdownOpen = false;
     }
+    // Close gender dropdown
+    const genderWrap = document.getElementById('gender-wrap');
+    if(genderWrap && !genderWrap.contains(e.target)) {
+      const gp = document.getElementById('gender-panel');
+      const gt = document.getElementById('gender-trigger');
+      if(gp) gp.classList.remove('open');
+      if(gt) gt.classList.remove('open');
+      genderDropdownOpen = false;
+    }
     // Close net update dropdown
     const netWrap = document.getElementById('net-update-wrap');
     if(netWrap && !netWrap.contains(e.target)) {
@@ -741,12 +755,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', (e) => {
     if(e.key === 'Escape') {
       document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
-      ['country-panel','cat-panel','sort-panel','pais-panel','roster-filter-panel','net-update-panel','roster-sort-panel'].forEach(id => {
+      ['country-panel','cat-panel','sort-panel','pais-panel','roster-filter-panel','net-update-panel','roster-sort-panel','gender-panel'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.classList.remove('open');
       });
       catDropdownOpen = false; paisDropdownOpen = false; sortDropdownOpen = false;
-      rosterFilterDropdownOpen = false; netDropdownOpen = false;
+      rosterFilterDropdownOpen = false; netDropdownOpen = false; genderDropdownOpen = false;
     }
   });
 });
@@ -1172,6 +1186,72 @@ function clearKeywordsFilter() {
   renderTalents();
 }
 
+// ===================== GENDER FILTER =====================
+const GENDERS = ['Mujer', 'Hombre', 'Otro'];
+
+function toggleGenderDropdown() {
+  const panel = document.getElementById('gender-panel');
+  const trigger = document.getElementById('gender-trigger');
+  panel.classList.toggle('open');
+  trigger.classList.toggle('open');
+  genderDropdownOpen = panel.classList.contains('open');
+}
+
+function populateGenderDropdown() {
+  const panel = document.getElementById('gender-panel');
+  if (!panel) return;
+  panel.innerHTML = '';
+  GENDERS.forEach(g => {
+    const el = document.createElement('div');
+    el.className = 'multi-select-opt' + (selectedGenders.has(g) ? ' selected' : '');
+    el.innerHTML = `<div class="ms-checkbox">${selectedGenders.has(g) ? '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : ''}</div>${escapeHtml(g)}`;
+    el.onclick = (e) => { e.stopPropagation(); toggleGender(g); };
+    panel.appendChild(el);
+  });
+}
+
+function toggleGender(g) {
+  if (selectedGenders.has(g)) selectedGenders.delete(g);
+  else selectedGenders.add(g);
+  populateGenderDropdown();
+  updateGenderTrigger();
+  updateGenderPills();
+  const clr = document.getElementById('clear-gender');
+  if (clr) clr.style.display = selectedGenders.size > 0 ? 'inline' : 'none';
+  renderTalents();
+}
+
+function updateGenderTrigger() {
+  const txt = document.getElementById('gender-trigger-text');
+  if (!txt) return;
+  if (selectedGenders.size === 0) txt.textContent = 'Todos los géneros';
+  else if (selectedGenders.size === 1) txt.textContent = [...selectedGenders][0];
+  else txt.textContent = selectedGenders.size + ' géneros';
+}
+
+function updateGenderPills() {
+  const row = document.getElementById('gender-pills-row');
+  if (!row) return;
+  row.innerHTML = '';
+  selectedGenders.forEach(g => {
+    const el = document.createElement('span');
+    el.className = 'country-pill';
+    el.innerHTML = escapeHtml(g) + ' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    el.addEventListener('click', () => toggleGender(g));
+    row.appendChild(el);
+  });
+}
+
+function clearGenderFilter() {
+  selectedGenders.clear();
+  const clr = document.getElementById('clear-gender');
+  if (clr) clr.style.display = 'none';
+  updateGenderTrigger();
+  updateGenderPills();
+  populateGenderDropdown();
+  renderTalents();
+}
+
 function clearAllFilters() {
   networkFilter = '';
   selectedCats.clear();
@@ -1188,7 +1268,11 @@ function clearAllFilters() {
   activeKeywords = [];
   var _kInp = document.getElementById('filter-keywords-input'); if(_kInp) _kInp.value='';
   var _kRow = document.getElementById('keywords-pills-row'); if(_kRow) _kRow.innerHTML='';
-  ['clear-platform','clear-cats','clear-countries','clear-followers','clear-roster','clear-keywords'].forEach(id => { var el=document.getElementById(id); if(el) el.style.display='none'; });
+  selectedGenders.clear();
+  updateGenderTrigger();
+  updateGenderPills();
+  populateGenderDropdown();
+  ['clear-platform','clear-cats','clear-countries','clear-followers','clear-roster','clear-keywords','clear-gender'].forEach(id => { var el=document.getElementById(id); if(el) el.style.display='none'; });
   populateCountryDropdown();
   updateCountryTrigger();
   updateCountryPills();
@@ -1205,7 +1289,11 @@ function getFilteredTalents() {
     if(search && !t.nombre.toLowerCase().includes(search) &&
        !(t.ciudad||'').toLowerCase().includes(search) &&
        !(t.paises||[]).some(p=>p.toLowerCase().includes(search)) &&
-       !(t.email||'').toLowerCase().includes(search)) return false;
+       !(t.email||'').toLowerCase().includes(search) &&
+       !(t.tiktok||'').toLowerCase().includes(search) &&
+       !(t.instagram||'').toLowerCase().includes(search) &&
+       !(t.youtube||'').toLowerCase().includes(search)) return false;
+    if(selectedGenders.size > 0 && !selectedGenders.has(t.genero || '')) return false;
     if(selectedCountries.size > 0 && !(t.paises||[]).some(p => selectedCountries.has(p))) return false;
     if(networkFilter === 'tt' && !t.tiktok) return false;
     if(networkFilter === 'ig' && !t.instagram) return false;

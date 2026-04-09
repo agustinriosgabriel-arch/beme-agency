@@ -965,7 +965,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
     <span class="search-icon">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     </span>
-    <input type="text" id="search-input" placeholder="Buscar talento...">
+    <input type="text" id="search-input" placeholder="Buscar por nombre, red social, email...">
   </div>
 
   <!-- Network update dropdown -->
@@ -1161,6 +1161,19 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
             style="flex:1;border:1.5px solid var(--border2);border-radius:7px;padding:5px 8px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;">
         </div>
       </div>
+    </div>
+
+    <!-- Gender filter -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Género <span class="sidebar-clear" id="clear-gender" data-fn="clearGenderFilter" style="display:none">Limpiar</span></div>
+      <div class="multi-select-wrap" id="gender-wrap">
+        <div class="multi-select-trigger" id="gender-trigger" data-fn="toggleGenderDropdown">
+          <span id="gender-trigger-text">Todos los géneros</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="multi-select-panel" id="gender-panel"></div>
+      </div>
+      <div class="country-pills" id="gender-pills-row"></div>
     </div>
 
     <!-- Keywords search filter -->
