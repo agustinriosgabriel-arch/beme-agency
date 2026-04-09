@@ -2630,7 +2630,7 @@ async function addSelectionToRoster(rosterId) {
   closeModal('add-to-roster-modal');
   updateStats();
   if(currentTab === 'rosters') renderRosters();
-  if(added === 0) { showToast('Todos los talentos ya están en el roster', 'info'); return; }
+  if(added === 0) { showToast('Todos los talentos ya están en el roster', 'info'); clearSelection(); return; }
   if(sb && currentUser) {
     const {error} = await sb.from('rosters')
       .update({ talent_ids: roster.talentIds })
@@ -2640,6 +2640,7 @@ async function addSelectionToRoster(rosterId) {
   } else {
     showToast(added + ' talento(s) agregados al roster "' + roster.name + '"', 'success');
   }
+  clearSelection();
 }
 
 let _pendingRosterTalentIds = null; // talent IDs to auto-add after roster creation
@@ -3911,7 +3912,8 @@ async function updateSelectedAll() {
     }
     if (ytOk > 0) showToast('YouTube: ' + ytOk + ' OK', 'success');
   }
-  renderTalents(); updateStats();
+  updateStats();
+  clearSelection();
 }
 
 // ── INDIVIDUAL TALENT UPDATE ─────────────────────────────────
