@@ -238,18 +238,34 @@ async function loadFromSupabase() {
       }
     }
 
-    // Load ALL talents using pagination (Supabase limits to 1000 per request)
+    // Load ALL talents with retry + pagination (Supabase free tier may sleep)
     let allTalents = [];
     let talentQueryError = false;
     const PAGE_SIZE = 1000;
-    let from = 0;
-    while (true) {
-      const { data: page, error: tErr } = await sb.from('talentos').select('*').order('nombre').range(from, from + PAGE_SIZE - 1);
-      if (tErr) { console.error('[Beme] Error loading talentos:', tErr); talentQueryError = true; break; }
-      if (!page || page.length === 0) break;
-      allTalents = allTalents.concat(page);
-      if (page.length < PAGE_SIZE) break; // last page
-      from += PAGE_SIZE;
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      allTalents = [];
+      talentQueryError = false;
+      let from = 0;
+      while (true) {
+        const { data: page, error: tErr } = await sb.from('talentos').select('*').order('nombre').range(from, from + PAGE_SIZE - 1);
+        if (tErr) {
+          console.error(`[Beme] Error loading talentos (attempt ${attempt}/${MAX_RETRIES}):`, tErr);
+          talentQueryError = true;
+          break;
+        }
+        if (!page || page.length === 0) break;
+        allTalents = allTalents.concat(page);
+        if (page.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+      }
+      if (!talentQueryError) break; // success (even if 0 rows)
+      if (attempt < MAX_RETRIES) {
+        console.log(`[Beme] Retrying talentos load in ${attempt * 2}s...`);
+        const msg = document.getElementById('app-load-msg');
+        if (msg) msg.textContent = `Reconectando... intento ${attempt + 1}/${MAX_RETRIES}`;
+        await new Promise(r => setTimeout(r, attempt * 2000));
+      }
     }
     talents = allTalents.map(t => ({
       ...t,
@@ -270,10 +286,10 @@ async function loadFromSupabase() {
       public_token: r.public_token || generateToken()
     }));
 
-    // Check if localStorage has data to migrate — only if query succeeded and returned 0
+    // Only migrate from localStorage if query succeeded and returned 0
     if (talents.length === 0 && !talentQueryError) tryMigrateFromLocalStorage();
     if (talents.length === 0 && talentQueryError) {
-      showToast('Error cargando talentos de la nube. Revisa tu conexión y recarga.', 'error');
+      showToast('Error cargando talentos de la nube. Reintentá recargando la página.', 'error');
     }
 
     // Safety: ensure next IDs are always higher than existing data
