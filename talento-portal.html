@@ -299,7 +299,7 @@ async function loadCampaigns() {
   const {data: cts, error} = await sb.from('campana_talentos').select(`
     *,
     talentos(id,nombre,foto),
-    contenidos(*,contenido_observaciones(*),contenido_scripts(*),contenido_borradores(*),contenido_historial(*)),
+    contenidos(*,contenido_observaciones(*),contenido_scripts(*),contenido_borradores(*),contenido_historial(*),contenido_briefs(*)),
     campanas(*, marcas(id,nombre,clientes(nombre)), campana_briefs(*))
   `).eq('talent_id', currentProfile.talent_id).order('created_at',{ascending:false});
 
@@ -365,6 +365,8 @@ function renderContenido(c, ct) {
   const scripts = (c.contenido_scripts||[]).sort((a,b)=>(b.version||1)-(a.version||1));
   const drafts = (c.contenido_borradores||[]).sort((a,b)=>(b.version||1)-(a.version||1));
   const briefs = ct.campanas?.campana_briefs || [];
+  const contBriefs = (c.contenido_briefs||[]).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  const allBriefs = [...briefs, ...contBriefs];
 
   // Steps with embedded file access
   const stepDefs = [
@@ -381,7 +383,7 @@ function renderContenido(c, ct) {
     const d = paso > s.n, cur = paso === s.n;
     let right = '';
     if (d || cur) {
-      if (s.n === 1 && briefs.length) right = briefs.map(f => `<a href="${esc(f.url)}" target="_blank" class="step-btn view">📄 ${esc((f.nombre||'Brief').substring(0,20))}</a>`).join('');
+      if (s.n === 1 && allBriefs.length) right = allBriefs.map(f => `<a href="${esc(f.url)}" target="_blank" class="step-btn view">${f.contenido_id ? '📋' : '📄'} ${esc((f.nombre||'Brief').substring(0,20))}</a>`).join('');
       if ((s.n===2||s.n===3) && scripts.length) right = scripts.map(sc => `<a href="${esc(sc.url_archivo)}" target="_blank" class="step-btn view">📝 Script v${sc.version||1}</a>`).join('');
       if ((s.n===2) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" multiple onchange="uploadScript(this,${c.id})">⬆ Subir script(s)</label>`;
       if ((s.n===4||s.n===5) && drafts.length) right = drafts.map(dr => `<a href="${esc(dr.url_archivo)}" target="_blank" class="step-btn view">🎬 ${esc((dr.nombre_archivo||'Borrador').substring(0,20))}</a>`).join('');

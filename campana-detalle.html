@@ -708,7 +708,7 @@ async function loadCampana() {
     campana_talentos(
       *,
       talentos(id,nombre,foto),
-      contenidos(*,contenido_observaciones(*),contenido_scripts(*),contenido_borradores(*),contenido_historial(*))
+      contenidos(*,contenido_observaciones(*),contenido_scripts(*),contenido_borradores(*),contenido_historial(*),contenido_briefs(*))
     )
   `).eq('id', campanaId).single();
   if (error) {
@@ -885,6 +885,40 @@ async function deleteBriefFile(id, url) {
   toast('Archivo eliminado','inf');
 }
 
+async function uploadContentBriefs(input, contId) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  toast('Subiendo brief(s) del contenido...','inf');
+  let uploaded = 0;
+  for (const file of files) {
+    try {
+      const path = `campana-${campanaId}/contenido-${contId}/brief-${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+      const {error} = await sb.storage.from('content-briefs').upload(path, file);
+      if (error) throw error;
+      const {data:{publicUrl}} = sb.storage.from('content-briefs').getPublicUrl(path);
+      await sb.from('contenido_briefs').insert({
+        contenido_id: contId, nombre: file.name,
+        url: publicUrl || path, size_bytes: file.size, uploaded_by: currentUser.id
+      });
+      uploaded++;
+    } catch(e) { toast('Error: '+e.message,'err'); }
+  }
+  input.value='';
+  if (uploaded > 0) {
+    await loadCampana(); renderAll();
+    toast(`${uploaded} brief${uploaded>1?'s':''} del contenido subido${uploaded>1?'s':''} ✓`,'ok');
+  }
+}
+
+async function deleteContentBrief(id, url, contId) {
+  if (!confirm('¿Eliminar este brief del contenido?')) return;
+  await sb.from('contenido_briefs').delete().eq('id', id);
+  const path = url.split('/content-briefs/')[1];
+  if (path) await sb.storage.from('content-briefs').remove([decodeURIComponent(path)]);
+  await loadCampana(); renderAll();
+  toast('Brief eliminado','inf');
+}
+
 // ════════════════════════════════════════════════
 // TALENTOS
 // ════════════════════════════════════════════════
@@ -991,6 +1025,7 @@ function renderContenido(c, ct) {
   const scripts = (c.contenido_scripts||[]).sort((a,b)=>(b.version||1)-(a.version||1));
   const drafts  = (c.contenido_borradores||[]).sort((a,b)=>(b.version||1)-(a.version||1));
   const briefs  = campana.campana_briefs || [];
+  const contBriefs = (c.contenido_briefs||[]).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
 
   // ── Simple step list (no inline files) ──
   const stepDefs = [
@@ -1013,11 +1048,19 @@ function renderContenido(c, ct) {
 
   // ── File access buttons (always visible, prominent) ──
   let fileButtonsHTML = '<div class="cont-file-buttons">';
-  // Brief
+  // Campaign briefs
   if (briefs.length) {
     fileButtonsHTML += briefs.slice(0,3).map(f =>
       `<a href="${esc(f.url)}" target="_blank" class="file-access-btn brief">📄 ${esc((f.nombre||'Brief').substring(0,25))}</a>`
     ).join('');
+  }
+  // Per-content briefs
+  if (contBriefs.length) {
+    fileButtonsHTML += contBriefs.map(f => {
+      const delBtn = isInternal()
+        ? `<button class="file-replace-btn" title="Eliminar" onclick="event.preventDefault();deleteContentBrief(${f.id},'${esc(f.url)}',${c.id})">✕</button>` : '';
+      return `<span class="file-access-wrap"><a href="${esc(f.url)}" target="_blank" class="file-access-btn brief" style="border-color:rgba(168,85,247,0.3);color:#a855f7">📋 ${esc((f.nombre||'Brief contenido').substring(0,25))}</a>${delBtn}</span>`;
+    }).join('');
   }
   // Scripts (show ALL, with replace button)
   if (scripts.length) {
@@ -1042,7 +1085,7 @@ function renderContenido(c, ct) {
   }
   fileButtonsHTML += '</div>';
   // Only show section if there are files
-  const hasFiles = briefs.length || scripts.length || drafts.length || c.url_publicacion;
+  const hasFiles = briefs.length || contBriefs.length || scripts.length || drafts.length || c.url_publicacion;
 
   // ── Back button (admin only) ──
   let backBtnHTML = '';
@@ -1146,6 +1189,20 @@ function buildActions(c, ct) {
   if (!canI && !canH && !canT) return '';
 
   let html = '';
+
+  // ── Brief por contenido (siempre visible para internal) ──
+  if (canI) {
+    html += `<div class="workflow-action-box" style="background:rgba(168,85,247,0.04);border-color:rgba(168,85,247,0.15)">
+      <div class="action-box-title" style="color:#a855f7">📋 Brief del contenido</div>
+      <div class="action-btns">
+        <label class="btn btn-primary btn-sm" style="cursor:pointer;background:#a855f7">
+          <input type="file" style="display:none" multiple onchange="uploadContentBriefs(this,${c.id})">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Subir brief específico
+        </label>
+      </div>
+    </div>`;
+  }
 
   // ── Paso 1: Brief ──
   if (paso === 1 && canI) {
