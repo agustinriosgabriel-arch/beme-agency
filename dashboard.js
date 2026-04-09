@@ -238,8 +238,20 @@ async function loadFromSupabase() {
       }
     }
 
-    const { data: talentsData } = await sb.from('talentos').select('*').order('nombre');
-    talents = (talentsData || []).map(t => ({
+    // Load ALL talents using pagination (Supabase limits to 1000 per request)
+    let allTalents = [];
+    let talentQueryError = false;
+    const PAGE_SIZE = 1000;
+    let from = 0;
+    while (true) {
+      const { data: page, error: tErr } = await sb.from('talentos').select('*').order('nombre').range(from, from + PAGE_SIZE - 1);
+      if (tErr) { console.error('[Beme] Error loading talentos:', tErr); talentQueryError = true; break; }
+      if (!page || page.length === 0) break;
+      allTalents = allTalents.concat(page);
+      if (page.length < PAGE_SIZE) break; // last page
+      from += PAGE_SIZE;
+    }
+    talents = allTalents.map(t => ({
       ...t,
       paises: t.paises || [],
       categorias: t.categorias || [],
@@ -247,8 +259,10 @@ async function loadFromSupabase() {
       genero: t.genero || '',
       keywords: t.keywords || ''
     }));
+    console.log('[Beme] Loaded', talents.length, 'talentos from Supabase');
 
-    const { data: rostersData } = await sb.from('rosters').select('*').order('created_at', {ascending:false});
+    const { data: rostersData, error: rErr } = await sb.from('rosters').select('*').order('created_at', {ascending:false});
+    if (rErr) console.error('[Beme] Error loading rosters:', rErr);
     rosters = (rostersData || []).map(r => ({
       ...r,
       talentIds: (r.talent_ids || []).map(id => parseInt(id)),
@@ -256,8 +270,11 @@ async function loadFromSupabase() {
       public_token: r.public_token || generateToken()
     }));
 
-    // Check if localStorage has data to migrate
-    if (talents.length === 0) tryMigrateFromLocalStorage();
+    // Check if localStorage has data to migrate — only if query succeeded and returned 0
+    if (talents.length === 0 && !talentQueryError) tryMigrateFromLocalStorage();
+    if (talents.length === 0 && talentQueryError) {
+      showToast('Error cargando talentos de la nube. Revisa tu conexión y recarga.', 'error');
+    }
 
     // Safety: ensure next IDs are always higher than existing data
     if(talents.length > 0) {
