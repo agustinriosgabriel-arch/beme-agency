@@ -62,6 +62,78 @@ talent_id   integer REFERENCES talentos(id)
 
 ---
 
+## Prospection Tables
+
+### `prospecciones`
+```sql
+id                serial PRIMARY KEY
+marca             text NOT NULL
+paises            text[] DEFAULT '{}'
+plataformas       text[] DEFAULT '{}'        -- ['TikTok','Instagram','YouTube']
+contenido         text DEFAULT ''
+categorias        text[] DEFAULT '{}'
+generos           text[] DEFAULT '{}'
+visualizaciones   text DEFAULT ''
+seguidores_min    integer DEFAULT 0
+seguidores_max    integer DEFAULT 0
+cantidad_talentos integer DEFAULT 0
+producto          text DEFAULT ''
+fecha             date
+notas             text DEFAULT ''
+email_draft       text DEFAULT ''
+estado            text DEFAULT 'activa'      -- activa|pausada|completada|cancelada
+created_at        timestamp DEFAULT now()
+updated_at        timestamp DEFAULT now()
+```
+
+### `prospeccion_contactos`
+```sql
+id                serial PRIMARY KEY
+prospeccion_id    integer REFERENCES prospecciones(id) ON DELETE CASCADE
+nombre            text NOT NULL
+paises            text[] DEFAULT '{}'
+ciudad            text DEFAULT ''
+telefono          text DEFAULT ''
+email             text DEFAULT ''
+tiktok            text DEFAULT ''
+instagram         text DEFAULT ''
+youtube           text DEFAULT ''
+seguidores        jsonb DEFAULT '{"tiktok":0,"instagram":0,"youtube":0}'
+categorias        text[] DEFAULT '{}'
+genero            text DEFAULT ''
+keywords          text DEFAULT ''
+foto              text DEFAULT ''
+valores           text DEFAULT ''
+etapa             text DEFAULT 'evaluacion'  -- evaluacion|contactar|esperando_respuesta|descartado|no_interesado|interesado
+medio_contacto    text DEFAULT ''            -- mail|whatsapp|dm
+notas             text DEFAULT ''
+talento_id        integer REFERENCES talentos(id)  -- set when graduated
+created_at        timestamp DEFAULT now()
+updated_at        timestamp DEFAULT now()
+```
+
+### `prospeccion_historial`
+```sql
+id                serial PRIMARY KEY
+contacto_id       integer REFERENCES prospeccion_contactos(id) ON DELETE CASCADE
+etapa_anterior    text NOT NULL
+etapa_nueva       text NOT NULL
+medio_contacto    text
+notas             text DEFAULT ''
+created_at        timestamp DEFAULT now()
+```
+
+### `prospeccion_email_templates`
+```sql
+id                serial PRIMARY KEY
+nombre            text NOT NULL
+asunto            text DEFAULT ''
+cuerpo            text NOT NULL
+created_at        timestamp DEFAULT now()
+```
+
+---
+
 ## Campaign Tables
 
 ### `clientes`
