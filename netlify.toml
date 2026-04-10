@@ -1,17 +1,9 @@
+[build]
+  environment = { NODE_VERSION = "18" }
+
 [functions]
   directory = "netlify/functions"
-
-# Let Netlify Functions pass through
-[[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
-# Redirects for single-page app behavior
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+  node_bundler = "esbuild"
 
 # Cache strategy
 [[headers]]
