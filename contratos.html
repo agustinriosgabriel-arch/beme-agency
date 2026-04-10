@@ -1166,51 +1166,28 @@ async function saveContractDraft() {
 }
 
 // ══════════════════════════════════════════════════════════
-// BACKGROUND AI — helper to call background function + poll
-// ══════════════════════════════════════════════════════════
-async function getAccessToken() {
-  const {data:{session}} = await sb.auth.getSession();
-  return session?.access_token || '';
-}
-
-async function callBackgroundAI(contractId, action, data, idioma, extra) {
-  const accessToken = await getAccessToken();
-  const body = { contractId, accessToken, action, data, idioma, ...extra };
-  try {
-    await fetch('/.netlify/functions/contract-agent-background', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(body),
-    });
-  } catch(e) { /* background returns 202, may not have body */ }
-}
-
-async function pollForResult(contractId, timeoutMs) {
-  const start = Date.now();
-  const interval = 3000;
-  while (Date.now() - start < (timeoutMs || 120000)) {
-    await new Promise(r => setTimeout(r, interval));
-    const {data} = await sb.from('contratos').select('contenido_html, updated_at').eq('id', contractId).single();
-    if (data?.contenido_html && data.contenido_html !== '') {
-      return data.contenido_html;
-    }
-  }
-  return null;
-}
-
-// ══════════════════════════════════════════════════════════
 // GENERATE CONTRACT WITH AI
 // ══════════════════════════════════════════════════════════
+async function callAI(action, data, idioma) {
+  const res = await fetch('/.netlify/functions/contract-agent', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ action, data, idioma }),
+  });
+  const result = await res.json();
+  if (!res.ok) throw new Error(result.error || 'Error del servidor');
+  return result.html;
+}
+
 async function generateContract() {
   const payload = collectFormData();
 
   // Save draft first
-  let contractId, savedData;
+  let contractId;
   try {
     const {data, error} = await sb.from('contratos').insert(payload).select().single();
     if (error) throw error;
     contractId = data.id;
-    savedData = data;
     contratos.unshift(data);
   } catch(e) {
     showToast('Error guardando: '+e.message, 'error');
@@ -1222,29 +1199,31 @@ async function generateContract() {
   // Show preview with loader
   previewContractId = contractId;
   document.getElementById('preview-title').textContent = 'Generando contrato con IA...';
-  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Generando contrato... esto puede tomar 20-40 segundos</span></div>';
+  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Generando contrato... esto puede tomar unos segundos</span></div>';
   document.getElementById('preview-estado').value = 'borrador';
   openModal('modal-preview');
 
-  // Fire background function
-  await callBackgroundAI(contractId, 'generate', savedData, payload.idioma);
+  try {
+    const html = await callAI('generate', payload, payload.idioma);
 
-  // Poll for result
-  const html = await pollForResult(contractId, 120000);
-  if (html) {
+    await sb.from('contratos').update({contenido_html: html}).eq('id', contractId);
     const idx = contratos.findIndex(c => c.id === contractId);
     if (idx >= 0) contratos[idx].contenido_html = html;
+
     document.getElementById('preview-title').textContent = 'Vista Previa del Contrato';
     document.getElementById('preview-content').innerHTML = html;
     renderContratos();
     renderStats();
     showToast('Contrato generado exitosamente', 'success');
-  } else {
-    document.getElementById('preview-title').textContent = 'Timeout';
+
+  } catch(e) {
+    document.getElementById('preview-title').textContent = 'Error';
     document.getElementById('preview-content').innerHTML = `<div style="padding:40px;text-align:center;color:#ff6b6b">
-      <p style="font-size:16px;font-weight:700;margin-bottom:8px">La generacion esta tardando mas de lo esperado</p>
-      <p>El contrato puede seguir generandose en segundo plano. Recarga la pagina en unos segundos.</p>
+      <p style="font-size:16px;font-weight:700;margin-bottom:8px">Error al generar el contrato</p>
+      <p>${escHtml(e.message)}</p>
+      <p style="margin-top:12px;font-size:12px;color:var(--text-dim)">El borrador fue guardado. Podes intentar de nuevo desde la vista previa.</p>
     </div>`;
+    showToast('Error generando contrato: '+e.message, 'error');
   }
 }
 
@@ -1273,24 +1252,22 @@ async function regenerateContract(id) {
   const c = contratos.find(x => x.id === id);
   if (!c) return;
 
-  // Clear existing HTML so poll can detect new one
-  await sb.from('contratos').update({contenido_html: '', updated_at: new Date().toISOString()}).eq('id', id);
-  const idx = contratos.findIndex(x => x.id === id);
-  if (idx >= 0) contratos[idx].contenido_html = '';
-
   document.getElementById('preview-title').textContent = 'Generando contrato con IA...';
-  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Generando contrato... 20-40 segundos</span></div>';
+  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Generando contrato...</span></div>';
 
-  await callBackgroundAI(id, 'generate', c, c.idioma);
+  try {
+    const html = await callAI('generate', c, c.idioma);
 
-  const html = await pollForResult(id, 120000);
-  if (html) {
+    await sb.from('contratos').update({contenido_html: html, updated_at: new Date().toISOString()}).eq('id', id);
+    const idx = contratos.findIndex(x => x.id === id);
     if (idx >= 0) contratos[idx].contenido_html = html;
+
     document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato}`;
     document.getElementById('preview-content').innerHTML = html;
     showToast('Contrato regenerado', 'success');
-  } else {
-    document.getElementById('preview-content').innerHTML = `<div style="padding:40px;text-align:center;color:#ff6b6b">Timeout. Recarga la pagina en unos segundos.</div>`;
+  } catch(e) {
+    document.getElementById('preview-content').innerHTML = `<div style="padding:40px;text-align:center;color:#ff6b6b">Error: ${escHtml(e.message)}</div>`;
+    showToast('Error: '+e.message, 'error');
   }
 }
 
@@ -1309,33 +1286,25 @@ async function applyCustomization() {
   const instrucciones = document.getElementById('ai-instructions').value.trim();
   if (!instrucciones) { showToast('Escribe las instrucciones', 'error'); return; }
 
-  const prevHtml = c.contenido_html;
   closeModal('modal-customize');
-
-  // Clear HTML for poll detection
-  await sb.from('contratos').update({contenido_html: '', updated_at: new Date().toISOString()}).eq('id', previewContractId);
-  const idx = contratos.findIndex(x => x.id === previewContractId);
-  if (idx >= 0) contratos[idx].contenido_html = '';
-
   document.getElementById('preview-title').textContent = 'Personalizando contrato...';
-  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Aplicando cambios... 20-40 segundos</span></div>';
+  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Aplicando cambios...</span></div>';
   openModal('modal-preview');
 
-  await callBackgroundAI(previewContractId, 'customize', { contenido_html: prevHtml, instrucciones }, c.idioma);
+  try {
+    const html = await callAI('customize', { contenido_html: c.contenido_html, instrucciones }, c.idioma);
 
-  const html = await pollForResult(previewContractId, 120000);
-  if (html) {
+    await sb.from('contratos').update({contenido_html: html, updated_at: new Date().toISOString()}).eq('id', previewContractId);
+    const idx = contratos.findIndex(x => x.id === previewContractId);
     if (idx >= 0) contratos[idx].contenido_html = html;
+
     document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato}`;
     document.getElementById('preview-content').innerHTML = html;
     showToast('Contrato personalizado', 'success');
-  } else {
-    // Restore previous
-    await sb.from('contratos').update({contenido_html: prevHtml}).eq('id', previewContractId);
-    if (idx >= 0) contratos[idx].contenido_html = prevHtml;
-    document.getElementById('preview-content').innerHTML = prevHtml;
+  } catch(e) {
+    document.getElementById('preview-content').innerHTML = c.contenido_html;
     document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato}`;
-    showToast('Timeout al personalizar', 'error');
+    showToast('Error: '+e.message, 'error');
   }
 }
 
@@ -1345,43 +1314,34 @@ async function translateContract() {
 
   const newLang = c.idioma === 'es' ? 'en' : 'es';
   document.getElementById('preview-title').textContent = `Traduciendo a ${newLang === 'es' ? 'Espanol' : 'English'}...`;
-  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Traduciendo contrato... 20-40 segundos</span></div>';
-
-  // Create new contract placeholder for translation
-  const newContract = { ...c };
-  delete newContract.id;
-  delete newContract.numero_contrato;
-  newContract.idioma = newLang;
-  newContract.contenido_html = '';
-  newContract.created_at = new Date().toISOString();
-  newContract.updated_at = new Date().toISOString();
+  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Traduciendo contrato...</span></div>';
 
   try {
+    const html = await callAI('translate', { contenido_html: c.contenido_html }, c.idioma);
+
+    // Save as new contract
+    const newContract = { ...c };
+    delete newContract.id;
+    delete newContract.numero_contrato;
+    newContract.idioma = newLang;
+    newContract.contenido_html = html;
+    newContract.created_at = new Date().toISOString();
+    newContract.updated_at = new Date().toISOString();
+
     const {data, error} = await sb.from('contratos').insert(newContract).select().single();
     if (error) throw error;
+
     contratos.unshift(data);
-
-    // Call background to translate and save into the NEW contract
-    await callBackgroundAI(data.id, 'translate', { contenido_html: c.contenido_html }, c.idioma);
-
-    const html = await pollForResult(data.id, 120000);
-    if (html) {
-      const idx = contratos.findIndex(x => x.id === data.id);
-      if (idx >= 0) contratos[idx].contenido_html = html;
-      previewContractId = data.id;
-      document.getElementById('preview-title').textContent = `Contrato #${data.numero_contrato} (${newLang.toUpperCase()})`;
-      document.getElementById('preview-content').innerHTML = html;
-      document.getElementById('preview-estado').value = data.estado;
-      renderContratos();
-      renderStats();
-      showToast(`Traducido a ${newLang === 'es' ? 'Espanol' : 'English'}`, 'success');
-    } else {
-      document.getElementById('preview-content').innerHTML = c.contenido_html;
-      document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato}`;
-      showToast('Timeout al traducir. Puede completarse en segundo plano.', 'error');
-    }
+    previewContractId = data.id;
+    document.getElementById('preview-title').textContent = `Contrato #${data.numero_contrato} (${newLang.toUpperCase()})`;
+    document.getElementById('preview-content').innerHTML = html;
+    document.getElementById('preview-estado').value = data.estado;
+    renderContratos();
+    renderStats();
+    showToast(`Traducido a ${newLang === 'es' ? 'Espanol' : 'English'} y guardado como nuevo contrato`, 'success');
   } catch(e) {
     document.getElementById('preview-content').innerHTML = c.contenido_html;
+    document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato}`;
     showToast('Error: '+e.message, 'error');
   }
 }
@@ -1397,7 +1357,7 @@ async function generateMirrorContract() {
   const mirrorData = { ...c };
   delete mirrorData.id;
   delete mirrorData.numero_contrato;
-  mirrorData.contenido_html = '';
+  delete mirrorData.contenido_html;
   mirrorData.tipo = mirrorTipo;
   mirrorData.created_at = new Date().toISOString();
   mirrorData.updated_at = new Date().toISOString();
@@ -1429,23 +1389,20 @@ async function generateMirrorContract() {
 
     previewContractId = data.id;
     document.getElementById('preview-title').textContent = 'Generando contrato espejo...';
-    document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Generando contrato espejo... 20-40 segundos</span></div>';
+    document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Generando contrato espejo...</span></div>';
 
-    await callBackgroundAI(data.id, 'generate', data, data.idioma);
+    const html = await callAI('generate', data, data.idioma);
 
-    const html = await pollForResult(data.id, 120000);
-    if (html) {
-      const idx = contratos.findIndex(x => x.id === data.id);
-      if (idx >= 0) contratos[idx].contenido_html = html;
-      document.getElementById('preview-title').textContent = `Contrato Espejo #${data.numero_contrato}`;
-      document.getElementById('preview-content').innerHTML = html;
-      document.getElementById('preview-estado').value = data.estado;
-      renderContratos();
-      renderStats();
-      showToast(`Contrato espejo (${mirrorTipo}) generado`, 'success');
-    } else {
-      document.getElementById('preview-content').innerHTML = `<div style="padding:40px;text-align:center;color:#ff6b6b">Timeout. Recarga en unos segundos.</div>`;
-    }
+    await sb.from('contratos').update({contenido_html: html}).eq('id', data.id);
+    const idx = contratos.findIndex(x => x.id === data.id);
+    if (idx >= 0) contratos[idx].contenido_html = html;
+
+    document.getElementById('preview-title').textContent = `Contrato Espejo #${data.numero_contrato}`;
+    document.getElementById('preview-content').innerHTML = html;
+    document.getElementById('preview-estado').value = data.estado;
+    renderContratos();
+    renderStats();
+    showToast(`Contrato espejo (${mirrorTipo}) generado`, 'success');
   } catch(e) {
     showToast('Error: '+e.message, 'error');
   }
