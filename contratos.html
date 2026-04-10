@@ -1286,26 +1286,60 @@ async function applyCustomization() {
   const instrucciones = document.getElementById('ai-instructions').value.trim();
   if (!instrucciones) { showToast('Escribe las instrucciones', 'error'); return; }
 
+  const prevHtml = c.contenido_html;
+  const prevUpdated = c.updated_at;
   closeModal('modal-customize');
   document.getElementById('preview-title').textContent = 'Personalizando contrato...';
-  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Aplicando cambios...</span></div>';
+  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Aplicando cambios con IA... puede tomar 15-30 segundos</span></div>';
   openModal('modal-preview');
 
+  // Get auth token for Supabase REST
+  const {data:{session}} = await sb.auth.getSession();
+  const accessToken = session?.access_token || '';
+
+  // Fire background function (returns 202 immediately)
   try {
-    const html = await callAI('customize', { contenido_html: c.contenido_html, instrucciones }, c.idioma);
+    await fetch('/.netlify/functions/contract-agent-background', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        contractId: previewContractId,
+        accessToken,
+        instrucciones,
+        contenido_html: prevHtml,
+      }),
+    });
+  } catch(e) { /* 202 may not parse */ }
 
-    await sb.from('contratos').update({contenido_html: html, updated_at: new Date().toISOString()}).eq('id', previewContractId);
-    const idx = contratos.findIndex(x => x.id === previewContractId);
-    if (idx >= 0) contratos[idx].contenido_html = html;
+  // Poll Supabase for the updated contract
+  const startTime = Date.now();
+  const pollInterval = 3000;
+  const maxWait = 120000;
 
-    document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato}`;
-    document.getElementById('preview-content').innerHTML = html;
-    showToast('Contrato personalizado', 'success');
-  } catch(e) {
-    document.getElementById('preview-content').innerHTML = c.contenido_html;
-    document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato}`;
-    showToast('Error: '+e.message, 'error');
+  while (Date.now() - startTime < maxWait) {
+    await new Promise(r => setTimeout(r, pollInterval));
+    const {data: row} = await sb.from('contratos').select('contenido_html, updated_at').eq('id', previewContractId).single();
+    if (row && row.updated_at !== prevUpdated && row.contenido_html && row.contenido_html !== prevHtml) {
+      // Check for error marker
+      if (row.contenido_html.includes('<!-- AI_ERROR')) {
+        document.getElementById('preview-content').innerHTML = prevHtml;
+        document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato}`;
+        showToast('Error de la IA al personalizar', 'error');
+        return;
+      }
+      const idx = contratos.findIndex(x => x.id === previewContractId);
+      if (idx >= 0) contratos[idx].contenido_html = row.contenido_html;
+      document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato}`;
+      document.getElementById('preview-content').innerHTML = row.contenido_html;
+      showToast('Contrato personalizado', 'success');
+      return;
+    }
   }
+
+  // Timeout
+  document.getElementById('preview-content').innerHTML = prevHtml;
+  document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato}`;
+  showToast('Timeout — recarga la pagina en unos segundos', 'error');
 }
 
 async function translateContract() {
