@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beme — Detalle Prospeccion</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f0f;--surface:#181818;--surface2:#202020;--surface3:#2a2a2a;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.13);
+  --primary:#b2005d;--primary-light:#ed568f;--primary-dark:#8a0048;
+  --purple:#9414E0;--purple-light:#b557f0;
+  --gradient:linear-gradient(135deg,#b2005d 0%,#9414E0 100%);
+  --gradient-h:linear-gradient(135deg,#c8006a 0%,#a718f5 100%);
+  --text:#f4f4f4;--text-muted:#7a7a8a;--text-dim:#444455;
+  --radius:12px;--radius-sm:8px;--radius-md:14px;--radius-lg:18px;
+  --shadow:0 4px 28px rgba(0,0,0,0.55);--shadow-p:0 4px 20px rgba(178,0,93,0.35);
+  --blue:#38bdf8;--green:#4ade80;--orange:#fbbf24;--red:#f87171;--violet:#a78bfa;--gray:#888;
+}
+body.light{
+  --bg:#f4f4f4;--surface:#ffffff;--surface2:#f0f0f0;--surface3:#e8e8e8;
+  --border:rgba(0,0,0,0.07);--border2:rgba(0,0,0,0.13);
+  --text:#1c1c1c;--text-muted:#5a5a6a;--text-dim:#aaaabd;
+  --shadow:0 4px 28px rgba(0,0,0,0.10);--shadow-p:0 4px 20px rgba(178,0,93,0.28);
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+h1,h2,h3{font-family:'Syne',sans-serif}
+a{color:inherit;text-decoration:none}
+body.light .topbar{background:rgba(244,244,244,0.95)}
+body.light .tab-nav{background:rgba(244,244,244,0.9)}
+body.light .modal{background:var(--surface)}
+body.light .modal-header,body.light .modal-footer{background:var(--surface)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:99px}
+
+/* ── Topbar ── */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(15,15,15,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;padding:0 24px;height:62px}
+.logo{display:flex;align-items:center;gap:2px;font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;white-space:nowrap;letter-spacing:-0.5px}
+.logo-be{font-weight:300;color:var(--text)}
+.logo-me{font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-dots{display:flex;gap:3px;margin-left:6px}
+.logo-dot{width:5px;height:5px;border-radius:50%}
+.logo-dot:nth-child(1){background:var(--primary)}
+.logo-dot:nth-child(2){background:var(--purple)}
+.logo-dot:nth-child(3){background:var(--primary-light)}
+.breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted);flex:1;min-width:0}
+.breadcrumb a{color:var(--text-muted);text-decoration:none;white-space:nowrap}
+.breadcrumb a:hover{color:var(--text)}
+.breadcrumb-sep{color:var(--text-dim);flex-shrink:0}
+.breadcrumb-current{color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.theme-toggle{width:36px;height:36px;border-radius:50%;border:1px solid var(--border2);background:var(--surface2);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0}
+.theme-toggle:hover{border-color:var(--primary);color:var(--primary)}
+
+/* ── Tab Nav ── */
+.tab-nav{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--border);padding:0 24px;background:rgba(15,15,15,0.7);backdrop-filter:blur(10px);position:sticky;top:62px;z-index:99}
+.tab-btn{display:flex;align-items:center;gap:7px;padding:12px 18px;font-size:13px;font-weight:600;color:var(--text-muted);border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;margin-bottom:-1px;font-family:'Plus Jakarta Sans',sans-serif}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.18s;font-family:inherit;white-space:nowrap}
+.btn-primary{background:var(--gradient);color:#fff;box-shadow:var(--shadow-p)}
+.btn-primary:hover{background:var(--gradient-h);box-shadow:0 6px 24px rgba(178,0,93,0.45)}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text-muted)}
+.btn-outline:hover{border-color:var(--primary);color:var(--primary)}
+.btn-ghost{background:transparent;color:var(--text-muted);padding:7px 12px}
+.btn-ghost:hover{color:var(--text)}
+.btn-danger{background:rgba(220,50,50,0.1);color:#ff6b6b;border:1px solid rgba(220,50,50,0.2)}
+.btn-danger:hover{background:rgba(220,50,50,0.2)}
+.btn-green{background:rgba(74,222,128,0.1);color:var(--green);border:1px solid rgba(74,222,128,0.2)}
+.btn-green:hover{background:rgba(74,222,128,0.18)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-xs{padding:4px 9px;font-size:11px;gap:4px}
+
+/* ── Main content ── */
+.main{padding:24px 28px;max-width:1400px;width:100%;margin:0 auto}
+
+/* ── Header card ── */
+.prosp-header{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px}
+.prosp-title-row{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.prosp-icon-lg{width:48px;height:48px;border-radius:50%;background:var(--surface2);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;color:var(--primary);flex-shrink:0}
+.prosp-title{font-size:20px;font-weight:800;letter-spacing:-0.3px;line-height:1.2}
+.prosp-sub{font-size:13px;color:var(--text-muted);margin-top:3px}
+.estado-wrap{margin-left:auto;flex-shrink:0}
+.estado-badge{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.3px}
+.es-activa{background:rgba(56,189,248,0.12);color:var(--blue)}
+.es-pausada{background:rgba(251,191,36,0.12);color:var(--orange)}
+.es-completada{background:rgba(74,222,128,0.12);color:var(--green)}
+.es-cancelada{background:rgba(248,113,113,0.12);color:var(--red)}
+.prosp-meta-strip{display:flex;gap:16px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--border)}
+.meta-item{display:flex;flex-direction:column;gap:1px}
+.meta-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim)}
+.meta-value{font-size:13px;font-weight:600}
+.prosp-tag{font-size:10px;padding:3px 8px;border-radius:20px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)}
+
+/* ── Stats strip (6 etapas) ── */
+.etapa-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px}
+.etapa-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;text-align:center;cursor:pointer;transition:all 0.15s;border-top:3px solid transparent}
+.etapa-stat:hover{border-color:var(--border2)}
+.etapa-stat.active{border-top-color:var(--primary);background:rgba(178,0,93,0.04)}
+.etapa-stat .e-count{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;line-height:1}
+.etapa-stat .e-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-top:4px}
+
+/* ── Kanban ── */
+.kanban-wrap{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;overflow-x:auto;padding-bottom:8px}
+.kanban-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;min-width:200px}
+.kanban-col-header{padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+.kanban-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.kanban-col-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+.kanban-count{font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--surface3);margin-left:auto}
+.kanban-items{padding:8px;display:flex;flex-direction:column;gap:8px;min-height:80px;max-height:calc(100vh - 400px);overflow-y:auto}
+
+/* ── Kanban card ── */
+.k-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;transition:all 0.15s;cursor:pointer}
+.k-card:hover{border-color:var(--border2);background:var(--surface2)}
+.k-card-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.k-avatar{width:32px;height:32px;border-radius:50%;background:var(--surface2);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--primary);overflow:hidden;flex-shrink:0}
+.k-avatar img{width:100%;height:100%;object-fit:cover}
+.k-name{font-size:13px;font-weight:700;line-height:1.3;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k-handle{font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k-meta{font-size:11px;color:var(--text-dim);margin-top:4px}
+.k-actions{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.k-medio{padding:3px 8px;border-radius:12px;font-size:10px;font-weight:700;background:var(--surface3);color:var(--text-muted)}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity 0.2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);width:100%;max-width:680px;max-height:90vh;overflow-y:auto;transform:scale(0.95) translateY(12px);transition:transform 0.2s}
+.modal-overlay.open .modal{transform:scale(1) translateY(0)}
+.modal-lg{max-width:880px}
+.modal-header{padding:22px 26px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1}
+.modal-title{font-size:19px;font-weight:700}
+.modal-close{width:32px;height:32px;border-radius:50%;border:none;background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted);transition:all 0.15s}
+.modal-close:hover{background:var(--surface3);color:var(--text)}
+.modal-body{padding:22px 26px}
+.modal-footer{padding:14px 26px 22px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--surface)}
+
+/* ── Form ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:11.5px;font-weight:600;color:var(--text-muted)}
+.form-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13.5px;font-family:inherit;outline:none;transition:border 0.2s;width:100%}
+.form-input:focus{border-color:var(--primary)}
+.form-input::placeholder{color:var(--text-dim)}
+textarea.form-input{resize:vertical;min-height:80px}
+select.form-input{cursor:pointer;-webkit-appearance:none}
+.form-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:4px;grid-column:1/-1}
+.form-hint{font-size:11px;color:var(--text-dim);margin-top:2px}
+
+/* ── Contact detail in modal ── */
+.detail-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);align-items:center}
+.detail-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);width:120px;flex-shrink:0}
+.detail-value{font-size:13px;flex:1}
+.detail-value a{color:var(--primary);text-decoration:none}
+.detail-value a:hover{text-decoration:underline}
+.historial-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.hist-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm)}
+.hist-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);flex-shrink:0}
+
+/* ── Toast ── */
+.toast-container{position:fixed;top:76px;right:20px;z-index:999;display:flex;flex-direction:column;gap:6px}
+.toast{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:11px 14px;font-size:13px;color:var(--text);box-shadow:var(--shadow);min-width:230px;animation:slideIn 0.3s ease;display:flex;align-items:center;gap:8px}
+.toast.success{border-left:3px solid var(--green)}
+.toast.error{border-left:3px solid #ff6b6b}
+.toast.info{border-left:3px solid var(--primary)}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── Loading ── */
+#load-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.loader-logo{font-family:'Plus Jakarta Sans',sans-serif;font-size:28px;display:flex;align-items:center;gap:2px}
+.loader-be{font-weight:300;color:var(--text)}
+.loader-me{font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.loader-bar{width:200px;height:3px;background:var(--surface3);border-radius:99px;overflow:hidden}
+.loader-fill{height:100%;width:0;background:var(--gradient);border-radius:99px;animation:loaderAnim 1.4s ease-in-out infinite}
+@keyframes loaderAnim{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
+#login-overlay{position:fixed;inset:0;background:rgba(15,15,15,0.97);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:9999}
+body.light #login-overlay{background:rgba(244,244,244,0.97)}
+.login-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:40px;width:100%;max-width:380px;box-shadow:var(--shadow)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo .logo{justify-content:center;font-size:28px}
+.login-logo p{font-size:13px;color:var(--text-muted);margin-top:8px}
+.login-error{display:none;background:rgba(220,50,50,0.1);border:1px solid rgba(220,50,50,0.2);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#ff6b6b;margin-bottom:14px}
+.login-fields{display:flex;flex-direction:column;gap:10px}
+
+/* ── Responsive ── */
+@media(max-width:1200px){.kanban-wrap{grid-template-columns:repeat(3,1fr)}.etapa-strip{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:768px){.kanban-wrap{grid-template-columns:1fr}.etapa-strip{grid-template-columns:repeat(2,1fr)}.main{padding:16px}.topbar{padding:0 16px}.tab-nav{padding:0 16px}}
+</style>
+</head>
+<body>
+
+<div id="load-overlay">
+  <div class="loader-logo"><span class="loader-be">Be</span><span class="loader-me">me</span></div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+  <p style="font-size:12px;color:var(--text-dim);margin-top:8px" id="load-msg">Conectando...</p>
+</div>
+
+<div id="login-overlay" style="display:none">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo"><span class="logo-be">Be</span><span class="logo-me">me</span><div class="logo-dots"><div class="logo-dot"></div><div class="logo-dot"></div><div class="logo-dot"></div></div></div>
+      <p>Prospeccion</p>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <div class="login-fields">
+      <input type="email" id="login-email" class="form-input" placeholder="Email" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="password" id="login-pass" class="form-input" placeholder="Contrasena" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="btn btn-primary" onclick="doLogin()" id="login-btn" style="width:100%;justify-content:center;margin-top:4px">Ingresar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<header class="topbar">
+  <a href="index.html" class="logo">
+    <span class="logo-be">Be</span><span class="logo-me">me</span>
+    <div class="logo-dots"><div class="logo-dot"></div><div class="logo-dot"></div><div class="logo-dot"></div></div>
+  </a>
+  <div class="breadcrumb">
+    <a href="prospecciones.html">Prospecciones</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current" id="breadcrumb-marca">Cargando...</span>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-outline btn-sm" onclick="openAddContacto()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      Agregar Contacto
+    </button>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema">
+      <svg id="theme-icon-dark" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <svg id="theme-icon-light" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</header>
+
+<nav class="tab-nav">
+  <a class="tab-btn" href="index.html" style="text-decoration:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Talentos
+  </a>
+  <a class="tab-btn" href="campanas.html" style="text-decoration:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Campanas
+  </a>
+  <a class="tab-btn active" href="prospecciones.html" style="text-decoration:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    Prospeccion
+  </a>
+</nav>
+
+<main class="main" id="app" style="display:none">
+  <!-- Header card -->
+  <div class="prosp-header" id="prosp-header"></div>
+
+  <!-- Etapa stats -->
+  <div class="etapa-strip" id="etapa-strip"></div>
+
+  <!-- Kanban -->
+  <div class="kanban-wrap" id="kanban-wrap"></div>
+</main>
+
+<!-- MODAL: Agregar / Editar Contacto -->
+<div class="modal-overlay" id="modal-contacto">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-contacto-title">Agregar Contacto</div>
+      <button class="modal-close" onclick="closeModal('modal-contacto')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-section-title">Datos del contacto</div>
+        <div class="form-group full">
+          <label class="form-label">Nombre *</label>
+          <input type="text" id="c-nombre" class="form-input" placeholder="Nombre completo">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Paises</label>
+          <input type="text" id="c-paises" class="form-input" placeholder="Argentina, Mexico...">
+          <div class="form-hint">Separados por coma</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ciudad</label>
+          <input type="text" id="c-ciudad" class="form-input" placeholder="Ciudad">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="c-email" class="form-input" placeholder="email@ejemplo.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Telefono</label>
+          <input type="text" id="c-telefono" class="form-input" placeholder="+54 11 ...">
+        </div>
+        <div class="form-section-title">Redes Sociales</div>
+        <div class="form-group">
+          <label class="form-label">TikTok</label>
+          <input type="text" id="c-tiktok" class="form-input" placeholder="URL o @usuario">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Instagram</label>
+          <input type="text" id="c-instagram" class="form-input" placeholder="URL o @usuario">
+        </div>
+        <div class="form-group">
+          <label class="form-label">YouTube</label>
+          <input type="text" id="c-youtube" class="form-input" placeholder="URL del canal">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Genero</label>
+          <select id="c-genero" class="form-input">
+            <option value="">--</option>
+            <option value="Femenino">Femenino</option>
+            <option value="Masculino">Masculino</option>
+            <option value="No binario">No binario</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Categorias</label>
+          <input type="text" id="c-categorias" class="form-input" placeholder="Belleza, Gaming...">
+          <div class="form-hint">Separados por coma</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Keywords</label>
+          <input type="text" id="c-keywords" class="form-input" placeholder="comedia, lifestyle...">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Notas</label>
+          <textarea id="c-notas" class="form-input" placeholder="Notas sobre este contacto..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-contacto')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-contacto" onclick="saveContacto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Detalle de contacto -->
+<div class="modal-overlay" id="modal-detalle">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-detalle-title">Contacto</div>
+      <button class="modal-close" onclick="closeModal('modal-detalle')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-detalle-body"></div>
+    <div class="modal-footer" id="modal-detalle-footer"></div>
+  </div>
+</div>
+
+<!-- MODAL: Seleccionar medio de contacto -->
+<div class="modal-overlay" id="modal-medio">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div class="modal-title">Medio de contacto</div>
+      <button class="modal-close" onclick="closeModal('modal-medio')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="text-align:center">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Selecciona por donde contactaste:</p>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-outline" onclick="setMedioAndAdvance('mail')">Mail</button>
+        <button class="btn btn-outline" onclick="setMedioAndAdvance('whatsapp')">WhatsApp</button>
+        <button class="btn btn-outline" onclick="setMedioAndAdvance('dm')">DM</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════
+const SB_URL = 'https://ngstqwbzvnpggpklifat.supabase.co';
+const SB_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+const prospId = parseInt(new URLSearchParams(location.search).get('id'))||0;
+
+const ETAPAS = [
+  {key:'evaluacion',          label:'Evaluacion',        color:'#38bdf8'},
+  {key:'contactar',           label:'Contactar',         color:'#fbbf24'},
+  {key:'esperando_respuesta', label:'Esperando',         color:'#a78bfa'},
+  {key:'descartado',          label:'Descartado',        color:'#888'},
+  {key:'no_interesado',       label:'No Interesado',     color:'#f87171'},
+  {key:'interesado',          label:'Interesado',        color:'#4ade80'},
+];
+
+let currentUser = null, currentProfile = null;
+let prospeccion = null, contactos = [], historial = [];
+let editingContactoId = null, pendingMedioContactoId = null;
+let isDark = false;
+
+// ══════════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════════
+async function doLogin() {
+  const email = (document.getElementById('login-email').value||'').trim();
+  const pass = document.getElementById('login-pass').value||'';
+  const btn = document.getElementById('login-btn');
+  if (!email||!pass) { showLoginErr('Completa email y contrasena.'); return; }
+  btn.textContent = 'Ingresando...'; btn.disabled = true;
+  document.getElementById('login-error').style.display = 'none';
+  try {
+    const {data, error} = await sb.auth.signInWithPassword({email, password:pass});
+    if (error) showLoginErr(error.message);
+    else { currentUser = data.user; await initApp(); }
+  } catch(e) { showLoginErr(e.message); }
+  btn.textContent = 'Ingresar'; btn.disabled = false;
+}
+function showLoginErr(m) { const d=document.getElementById('login-error'); d.textContent=m; d.style.display='block'; }
+async function checkAuth() {
+  const {data:{session}} = await sb.auth.getSession();
+  if (session) { currentUser = session.user; await initApp(); }
+  else { document.getElementById('load-overlay').style.display='none'; document.getElementById('login-overlay').style.display='flex'; }
+}
+async function doLogout() { await sb.auth.signOut(); location.reload(); }
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+async function initApp() {
+  if (!prospId) { location.href='prospecciones.html'; return; }
+  document.getElementById('load-msg').textContent = 'Cargando prospeccion...';
+  try {
+    const {data:profile} = await sb.from('user_profiles').select('*').eq('id', currentUser.id).single();
+    currentProfile = profile;
+    if (!currentProfile) { document.getElementById('load-overlay').style.display='none'; document.getElementById('login-overlay').style.display='flex'; showLoginErr('Sin perfil.'); return; }
+
+    await loadData();
+
+    document.getElementById('login-overlay').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('load-overlay').style.display='none';
+
+    renderHeader();
+    renderEtapaStrip();
+    renderKanban();
+  } catch(e) {
+    console.error('initApp:', e);
+    showToast('Error: '+e.message, 'error');
+    document.getElementById('load-overlay').style.display='none';
+  }
+}
+
+async function loadData() {
+  const {data:p, error} = await sb.from('prospecciones').select('*').eq('id', prospId).single();
+  if (error) throw error;
+  if (!p) { location.href='prospecciones.html'; return; }
+  prospeccion = p;
+
+  const {data:c} = await sb.from('prospeccion_contactos').select('*').eq('prospeccion_id', prospId).order('created_at', {ascending:false});
+  contactos = c || [];
+
+  const ids = contactos.map(x=>x.id);
+  if (ids.length) {
+    const {data:h} = await sb.from('prospeccion_historial').select('*').in('contacto_id', ids).order('created_at', {ascending:false});
+    historial = h || [];
+  } else { historial = []; }
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDER HEADER
+// ══════════════════════════════════════════════════════════
+function renderHeader() {
+  document.title = `Beme — ${prospeccion.marca}`;
+  document.getElementById('breadcrumb-marca').textContent = prospeccion.marca;
+  const plats = (prospeccion.plataformas||[]).join(', ');
+  const paises = (prospeccion.paises||[]).join(', ');
+  const cats = (prospeccion.categorias||[]);
+  document.getElementById('prosp-header').innerHTML = `
+    <div class="prosp-title-row">
+      <div class="prosp-icon-lg">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="prosp-title">${esc(prospeccion.marca)}</div>
+        <div class="prosp-sub">${paises?esc(paises):''}${plats?(paises?' &middot; ':'')+esc(plats):''}</div>
+      </div>
+      <div class="estado-wrap">
+        <span class="estado-badge es-${prospeccion.estado}">${({activa:'Activa',pausada:'Pausada',completada:'Completada',cancelada:'Cancelada'})[prospeccion.estado]||prospeccion.estado}</span>
+      </div>
+    </div>
+    <div class="prosp-meta-strip">
+      ${prospeccion.cantidad_talentos?`<div class="meta-item"><div class="meta-label">Meta</div><div class="meta-value">${prospeccion.cantidad_talentos} talentos</div></div>`:''}
+      ${prospeccion.seguidores_min||prospeccion.seguidores_max?`<div class="meta-item"><div class="meta-label">Seguidores</div><div class="meta-value">${fmtNum(prospeccion.seguidores_min)} - ${fmtNum(prospeccion.seguidores_max)}</div></div>`:''}
+      ${prospeccion.producto?`<div class="meta-item"><div class="meta-label">Producto</div><div class="meta-value">${esc(prospeccion.producto)}</div></div>`:''}
+      ${prospeccion.fecha?`<div class="meta-item"><div class="meta-label">Fecha</div><div class="meta-value">${formatDate(prospeccion.fecha)}</div></div>`:''}
+      ${cats.length?`<div class="meta-item"><div class="meta-label">Categorias</div><div class="meta-value">${cats.map(c=>`<span class="prosp-tag">${esc(c)}</span>`).join(' ')}</div></div>`:''}
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDER ETAPA STRIP
+// ══════════════════════════════════════════════════════════
+function renderEtapaStrip() {
+  document.getElementById('etapa-strip').innerHTML = ETAPAS.map(e => {
+    const count = contactos.filter(c=>c.etapa===e.key).length;
+    return `<div class="etapa-stat" style="border-top-color:${e.color}">
+      <div class="e-count" style="color:${e.color}">${count}</div>
+      <div class="e-label">${e.label}</div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDER KANBAN
+// ══════════════════════════════════════════════════════════
+function renderKanban() {
+  document.getElementById('kanban-wrap').innerHTML = ETAPAS.map(e => {
+    const items = contactos.filter(c=>c.etapa===e.key);
+    return `<div class="kanban-col">
+      <div class="kanban-col-header">
+        <div class="kanban-dot" style="background:${e.color}"></div>
+        <div class="kanban-col-title" style="color:${e.color}">${e.label}</div>
+        <div class="kanban-count">${items.length}</div>
+      </div>
+      <div class="kanban-items">
+        ${items.length ? items.map(c => renderKanbanCard(c, e.key)).join('') :
+        `<div style="font-size:11px;color:var(--text-dim);text-align:center;padding:20px">Sin contactos</div>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderKanbanCard(c, etapa) {
+  const handle = c.tiktok ? '@'+extractHandle(c.tiktok) : (c.instagram ? '@'+extractHandle(c.instagram) : '');
+  const segs = totalSeg(c.seguidores);
+  return `<div class="k-card" onclick="openDetalle(${c.id})">
+    <div class="k-card-top">
+      <div class="k-avatar">${c.foto?`<img src="${c.foto}" loading="lazy">`:initials(c.nombre)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="k-name">${esc(c.nombre)}</div>
+        ${handle?`<div class="k-handle">${esc(handle)}${segs?' &middot; '+fmtNum(segs):''}</div>`:''}
+      </div>
+    </div>
+    ${(c.paises||[]).length?`<div class="k-meta">${(c.paises||[]).join(', ')}</div>`:''}
+    ${c.medio_contacto?`<span class="k-medio">${c.medio_contacto.toUpperCase()}</span>`:''}
+    <div class="k-actions">
+      ${etapaButtons(c, etapa)}
+    </div>
+  </div>`;
+}
+
+function etapaButtons(c, etapa) {
+  switch(etapa) {
+    case 'evaluacion': return `
+      <button class="btn btn-green btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'contactar')">Contactar</button>
+      <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'descartado')">Descartar</button>`;
+    case 'contactar': return `
+      <button class="btn btn-primary btn-xs" onclick="event.stopPropagation();requestMedio(${c.id})">Enviar</button>`;
+    case 'esperando_respuesta': return `
+      <button class="btn btn-green btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'interesado')">Interesado</button>
+      <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'no_interesado')">No interesado</button>`;
+    case 'descartado': return `
+      <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'evaluacion')">Restaurar</button>`;
+    case 'no_interesado': return '';
+    case 'interesado': return `
+      <button class="btn btn-primary btn-xs" onclick="event.stopPropagation();showToast('Graduacion disponible en Fase 4','info')">Pasar a Talentos</button>`;
+    default: return '';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ETAPA TRANSITIONS
+// ══════════════════════════════════════════════════════════
+async function changeEtapa(contactoId, nuevaEtapa, medio) {
+  const c = contactos.find(x=>x.id===contactoId);
+  if (!c) return;
+  const anterior = c.etapa;
+  if (anterior === nuevaEtapa) return;
+
+  try {
+    const update = {etapa: nuevaEtapa, updated_at: new Date().toISOString()};
+    if (medio) update.medio_contacto = medio;
+    const {error} = await sb.from('prospeccion_contactos').update(update).eq('id', contactoId);
+    if (error) throw error;
+
+    await sb.from('prospeccion_historial').insert({
+      contacto_id: contactoId,
+      etapa_anterior: anterior,
+      etapa_nueva: nuevaEtapa,
+      medio_contacto: medio||null,
+    });
+
+    c.etapa = nuevaEtapa;
+    if (medio) c.medio_contacto = medio;
+    renderEtapaStrip();
+    renderKanban();
+    showToast(`${c.nombre} → ${ETAPAS.find(e=>e.key===nuevaEtapa)?.label||nuevaEtapa}`, 'success');
+  } catch(e) {
+    showToast('Error: '+e.message, 'error');
+  }
+}
+
+function requestMedio(contactoId) {
+  pendingMedioContactoId = contactoId;
+  openModal('modal-medio');
+}
+
+function setMedioAndAdvance(medio) {
+  closeModal('modal-medio');
+  if (pendingMedioContactoId) {
+    changeEtapa(pendingMedioContactoId, 'esperando_respuesta', medio);
+    pendingMedioContactoId = null;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// CONTACT CRUD
+// ══════════════════════════════════════════════════════════
+function openAddContacto() {
+  editingContactoId = null;
+  document.getElementById('modal-contacto-title').textContent = 'Agregar Contacto';
+  clearContactForm();
+  openModal('modal-contacto');
+}
+
+function openEditContacto(id) {
+  const c = contactos.find(x=>x.id===id);
+  if (!c) return;
+  editingContactoId = id;
+  document.getElementById('modal-contacto-title').textContent = 'Editar Contacto';
+  clearContactForm();
+  document.getElementById('c-nombre').value = c.nombre||'';
+  document.getElementById('c-paises').value = (c.paises||[]).join(', ');
+  document.getElementById('c-ciudad').value = c.ciudad||'';
+  document.getElementById('c-email').value = c.email||'';
+  document.getElementById('c-telefono').value = c.telefono||'';
+  document.getElementById('c-tiktok').value = c.tiktok||'';
+  document.getElementById('c-instagram').value = c.instagram||'';
+  document.getElementById('c-youtube').value = c.youtube||'';
+  document.getElementById('c-genero').value = c.genero||'';
+  document.getElementById('c-categorias').value = (c.categorias||[]).join(', ');
+  document.getElementById('c-keywords').value = c.keywords||'';
+  document.getElementById('c-notas').value = c.notas||'';
+  openModal('modal-contacto');
+}
+
+function clearContactForm() {
+  ['c-nombre','c-paises','c-ciudad','c-email','c-telefono','c-tiktok','c-instagram','c-youtube','c-categorias','c-keywords','c-notas'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('c-genero').value = '';
+}
+
+async function saveContacto() {
+  const nombre = document.getElementById('c-nombre').value.trim();
+  if (!nombre) { showToast('El nombre es obligatorio','error'); return; }
+  const parseCsv = v => v.split(',').map(s=>s.trim()).filter(Boolean);
+
+  const payload = {
+    prospeccion_id: prospId,
+    nombre,
+    paises: parseCsv(document.getElementById('c-paises').value),
+    ciudad: document.getElementById('c-ciudad').value.trim(),
+    email: document.getElementById('c-email').value.trim(),
+    telefono: document.getElementById('c-telefono').value.trim(),
+    tiktok: document.getElementById('c-tiktok').value.trim(),
+    instagram: document.getElementById('c-instagram').value.trim(),
+    youtube: document.getElementById('c-youtube').value.trim(),
+    genero: document.getElementById('c-genero').value,
+    categorias: parseCsv(document.getElementById('c-categorias').value),
+    keywords: document.getElementById('c-keywords').value.trim(),
+    notas: document.getElementById('c-notas').value.trim(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const btn = document.getElementById('btn-save-contacto');
+  btn.textContent = 'Guardando...'; btn.disabled = true;
+  try {
+    if (editingContactoId) {
+      const {error} = await sb.from('prospeccion_contactos').update(payload).eq('id', editingContactoId);
+      if (error) throw error;
+    } else {
+      payload.etapa = 'evaluacion';
+      const {error} = await sb.from('prospeccion_contactos').insert(payload);
+      if (error) throw error;
+    }
+    closeModal('modal-contacto');
+    await loadData();
+    renderEtapaStrip();
+    renderKanban();
+    showToast(editingContactoId ? 'Contacto actualizado' : 'Contacto agregado', 'success');
+  } catch(e) {
+    showToast('Error: '+e.message, 'error');
+  }
+  btn.textContent = 'Guardar'; btn.disabled = false;
+}
+
+// ══════════════════════════════════════════════════════════
+// CONTACT DETAIL MODAL
+// ══════════════════════════════════════════════════════════
+function openDetalle(id) {
+  const c = contactos.find(x=>x.id===id);
+  if (!c) return;
+  document.getElementById('modal-detalle-title').textContent = c.nombre;
+  const hist = historial.filter(h=>h.contacto_id===id);
+  const handle = c.tiktok||c.instagram||c.youtube;
+
+  document.getElementById('modal-detalle-body').innerHTML = `
+    ${c.paises?.length?`<div class="detail-row"><div class="detail-label">Paises</div><div class="detail-value">${(c.paises||[]).join(', ')}</div></div>`:''}
+    ${c.ciudad?`<div class="detail-row"><div class="detail-label">Ciudad</div><div class="detail-value">${esc(c.ciudad)}</div></div>`:''}
+    ${c.email?`<div class="detail-row"><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div></div>`:''}
+    ${c.telefono?`<div class="detail-row"><div class="detail-label">Telefono</div><div class="detail-value">${esc(c.telefono)}</div></div>`:''}
+    ${c.tiktok?`<div class="detail-row"><div class="detail-label">TikTok</div><div class="detail-value"><a href="${safeUrl(c.tiktok)}" target="_blank">${esc(c.tiktok)}</a></div></div>`:''}
+    ${c.instagram?`<div class="detail-row"><div class="detail-label">Instagram</div><div class="detail-value"><a href="${safeUrl(c.instagram)}" target="_blank">${esc(c.instagram)}</a></div></div>`:''}
+    ${c.youtube?`<div class="detail-row"><div class="detail-label">YouTube</div><div class="detail-value"><a href="${safeUrl(c.youtube)}" target="_blank">${esc(c.youtube)}</a></div></div>`:''}
+    ${c.genero?`<div class="detail-row"><div class="detail-label">Genero</div><div class="detail-value">${esc(c.genero)}</div></div>`:''}
+    ${c.categorias?.length?`<div class="detail-row"><div class="detail-label">Categorias</div><div class="detail-value">${c.categorias.map(x=>`<span class="prosp-tag">${esc(x)}</span>`).join(' ')}</div></div>`:''}
+    ${c.notas?`<div class="detail-row"><div class="detail-label">Notas</div><div class="detail-value">${esc(c.notas)}</div></div>`:''}
+    <div class="detail-row"><div class="detail-label">Etapa</div><div class="detail-value"><span class="estado-badge es-${c.etapa==='activa'?'activa':''}" style="background:${ETAPAS.find(e=>e.key===c.etapa)?.color||'#888'}22;color:${ETAPAS.find(e=>e.key===c.etapa)?.color||'#888'}">${ETAPAS.find(e=>e.key===c.etapa)?.label||c.etapa}</span></div></div>
+    ${c.medio_contacto?`<div class="detail-row"><div class="detail-label">Medio</div><div class="detail-value"><span class="k-medio">${c.medio_contacto.toUpperCase()}</span></div></div>`:''}
+    ${hist.length?`
+    <div style="margin-top:16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:8px">Historial</div>
+      <div class="historial-list">
+        ${hist.map(h=>`<div class="hist-item">
+          <div class="hist-dot"></div>
+          <span>${ETAPAS.find(e=>e.key===h.etapa_anterior)?.label||h.etapa_anterior} → ${ETAPAS.find(e=>e.key===h.etapa_nueva)?.label||h.etapa_nueva}</span>
+          ${h.medio_contacto?`<span class="k-medio">${h.medio_contacto}</span>`:''}
+          <span style="margin-left:auto;font-size:11px;color:var(--text-dim)">${formatDateTime(h.created_at)}</span>
+        </div>`).join('')}
+      </div>
+    </div>`:''}
+  `;
+
+  document.getElementById('modal-detalle-footer').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeModal('modal-detalle')">Cerrar</button>
+    ${prospeccion.email_draft && c.etapa==='contactar'?`<button class="btn btn-outline" onclick="copyEmail(${c.id})">Copiar Email</button>`:''}
+    <button class="btn btn-outline" onclick="closeModal('modal-detalle');openEditContacto(${c.id})">Editar</button>
+    <button class="btn btn-danger" onclick="deleteContacto(${c.id})">Eliminar</button>
+  `;
+  openModal('modal-detalle');
+}
+
+async function deleteContacto(id) {
+  if (!confirm('Eliminar este contacto?')) return;
+  try {
+    const {error} = await sb.from('prospeccion_contactos').delete().eq('id', id);
+    if (error) throw error;
+    closeModal('modal-detalle');
+    await loadData();
+    renderEtapaStrip();
+    renderKanban();
+    showToast('Contacto eliminado', 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+function copyEmail(contactoId) {
+  const c = contactos.find(x=>x.id===contactoId);
+  if (!c || !prospeccion.email_draft) return;
+  const text = prospeccion.email_draft.replace(/\{\{nombre\}\}/gi, c.nombre||'');
+  navigator.clipboard.writeText(text).then(()=>showToast('Email copiado al portapapeles', 'success'));
+}
+
+// ══════════════════════════════════════════════════════════
+// THEME
+// ══════════════════════════════════════════════════════════
+function toggleTheme() {
+  isDark = !isDark;
+  document.body.classList.toggle('light', !isDark);
+  document.getElementById('theme-icon-dark').style.display = isDark ? 'none' : 'block';
+  document.getElementById('theme-icon-light').style.display = isDark ? 'block' : 'none';
+  try { localStorage.setItem('beme_theme', isDark ? 'dark' : 'light'); } catch(e) {}
+}
+function loadTheme() {
+  try {
+    const t = localStorage.getItem('beme_theme');
+    if (t === 'dark') { isDark = true; document.body.classList.remove('light'); document.getElementById('theme-icon-dark').style.display='none'; document.getElementById('theme-icon-light').style.display='block'; }
+    else { isDark = false; document.body.classList.add('light'); document.getElementById('theme-icon-dark').style.display='block'; document.getElementById('theme-icon-light').style.display='none'; }
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════════════════
+// MODALS / TOAST / UTILS
+// ══════════════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id)?.classList.add('open'); }
+function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
+document.addEventListener('click', e => { if(e.target.classList.contains('modal-overlay')) e.target.classList.remove('open'); });
+document.addEventListener('keydown', e => { if(e.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); });
+
+function showToast(msg, type='info', dur=3000) {
+  const t = document.createElement('div'); t.className = `toast ${type}`;
+  t.innerHTML = `<span>${({success:'&#10003;',error:'&#10007;',info:'&#8505;'})[type]||'&bull;'}</span><span>${esc(msg)}</span>`;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(()=>t.remove(), dur);
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function formatDate(d) { if(!d) return ''; return new Date(d+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}); }
+function formatDateTime(d) { if(!d) return ''; return new Date(d).toLocaleString('es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
+function initials(name) { return (name||'?').split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase(); }
+function extractHandle(url) { return String(url||'').replace(/^https?:\/\/(www\.)?(tiktok\.com\/@?|instagram\.com\/|youtube\.com\/@?)/i,'').replace(/[/?#].*/,''); }
+function totalSeg(s) { if(!s) return 0; return (Number(s.tiktok)||0)+(Number(s.instagram)||0)+(Number(s.youtube)||0); }
+function fmtNum(n) { if(!n) return '0'; if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1e3) return (n/1e3).toFixed(1)+'K'; return String(n); }
+function safeUrl(u) { const s=String(u||''); return s.startsWith('http')?s:'https://'+s; }
+
+// ══════════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════════
+loadTheme();
+checkAuth();
+setTimeout(()=>{ const lo=document.getElementById('load-overlay'); if(lo&&lo.style.display!=='none') lo.style.display='none'; }, 15000);
+</script>
+</body>
+</html>
