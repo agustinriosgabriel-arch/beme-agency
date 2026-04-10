@@ -323,6 +323,54 @@ Steps back: paso 3→2, paso 5→4. Inserts observation and historial entry.
 | `content-drafts` | true | Video/image drafts |
 | `content-stats` | true | Statistics screenshots |
 | `brand-logos` | true | Brand logo images |
+| `contratos` | true | Contract PDFs (future use) |
+
+---
+
+## Contract Tables
+
+### `contratos`
+```sql
+id                  serial PRIMARY KEY
+campana_id          integer REFERENCES campanas(id)
+campana_talento_id  integer REFERENCES campana_talentos(id)
+tipo                text NOT NULL DEFAULT 'marca'        -- 'marca' (Marca↔Agencia) | 'talento' (Agencia↔Talento)
+idioma              text NOT NULL DEFAULT 'es'           -- 'es' | 'en'
+numero_contrato     text NOT NULL DEFAULT ''             -- auto-generated: MMYYNN
+estado              text NOT NULL DEFAULT 'borrador'     -- borrador | enviado | firmado | cancelado
+parte_a_nombre      text DEFAULT ''
+parte_a_rfc         text DEFAULT ''
+parte_a_domicilio   text DEFAULT ''
+parte_b_nombre      text DEFAULT ''
+parte_b_rfc         text DEFAULT ''
+parte_b_domicilio   text DEFAULT ''
+influencer_nombre   text DEFAULT ''
+servicios           text DEFAULT ''                      -- "1 reel + 1 historia"
+canales             text DEFAULT ''                      -- "Instagram, TikTok"
+hashtags            text DEFAULT 'A Definir en Brief'
+marca_producto      text DEFAULT ''
+tarifa_tipo         text DEFAULT 'pago'                  -- 'pago' | 'canje' | 'mixto'
+monto               numeric DEFAULT 0
+moneda              text DEFAULT 'MXN'
+monto_texto         text DEFAULT ''                      -- amount in words
+metodo_pago         text DEFAULT ''
+plazo_pago_dias     integer DEFAULT 45
+comentarios         text DEFAULT ''
+derechos_imagen     boolean DEFAULT false
+derechos_dias       integer
+derechos_valor      numeric
+derechos_desde      date
+fecha_contrato      date DEFAULT CURRENT_DATE
+ciudad_contrato     text DEFAULT 'Mexico City'
+contenido_html      text DEFAULT ''                      -- AI-generated contract HTML
+created_by          uuid
+created_at          timestamp DEFAULT now()
+updated_at          timestamp DEFAULT now()
+```
+
+Contract types are "mirror" contracts:
+- **marca**: Party A = Brand, Party B = BEME IMKT. Amount = fee_marca.
+- **talento**: Party A = BEME IMKT, Party B = Influencer. Amount = fee_talento.
 
 ---
 
@@ -338,7 +386,8 @@ CREATE POLICY "auth_all" ON <table> FOR ALL
 --   clientes, marcas, campanas, campana_talentos, contenidos,
 --   contenido_scripts, contenido_borradores, contenido_observaciones,
 --   contenido_historial, contenido_estadisticas, campana_briefs,
---   campana_mensajes, campana_managers, campana_handlers, user_profiles
+--   campana_mensajes, campana_managers, campana_handlers, user_profiles,
+--   contratos
 
 -- Storage: each bucket needs
 CREATE POLICY "auth_all_<bucket>" ON storage.objects 

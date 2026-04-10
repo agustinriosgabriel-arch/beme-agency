@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beme — Contratos</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Tokens (Dark default, matching prospecciones.html) ──── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f0f;--surface:#181818;--surface2:#202020;--surface3:#2a2a2a;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.13);
+  --primary:#b2005d;--primary-light:#ed568f;--primary-dark:#8a0048;
+  --purple:#9414E0;--purple-light:#b557f0;
+  --gradient:linear-gradient(135deg,#b2005d 0%,#9414E0 100%);
+  --gradient-h:linear-gradient(135deg,#c8006a 0%,#a718f5 100%);
+  --text:#f4f4f4;--text-muted:#7a7a8a;--text-dim:#444455;
+  --radius:12px;--radius-sm:8px;--radius-md:14px;--radius-lg:18px;
+  --shadow:0 4px 28px rgba(0,0,0,0.55);--shadow-p:0 4px 20px rgba(178,0,93,0.35);
+}
+body.light{
+  --bg:#f4f4f4;--surface:#ffffff;--surface2:#f0f0f0;--surface3:#e8e8e8;
+  --border:rgba(0,0,0,0.07);--border2:rgba(0,0,0,0.13);
+  --text:#1c1c1c;--text-muted:#5a5a6a;--text-dim:#aaaabd;
+  --shadow:0 4px 28px rgba(0,0,0,0.10);--shadow-p:0 4px 20px rgba(178,0,93,0.28);
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+h1,h2,h3{font-family:'Syne',sans-serif}
+a{color:inherit;text-decoration:none}
+
+body.light .topbar{background:rgba(244,244,244,0.95)}
+body.light .tab-nav{background:rgba(244,244,244,0.9)}
+body.light .modal{background:var(--surface)}
+body.light .modal-header,body.light .modal-footer{background:var(--surface)}
+
+/* ── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:99px}
+
+/* ── Topbar ─────────────────────────────────────────────── */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(15,15,15,0.92);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:16px;
+  padding:0 24px;height:62px;
+}
+.logo{display:flex;align-items:center;gap:2px;font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;white-space:nowrap;letter-spacing:-0.5px}
+.logo-be{font-weight:300;color:var(--text)}
+.logo-me{font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-dots{display:flex;gap:3px;margin-left:6px}
+.logo-dot{width:5px;height:5px;border-radius:50%}
+.logo-dot:nth-child(1){background:var(--primary)}
+.logo-dot:nth-child(2){background:var(--purple)}
+.logo-dot:nth-child(3){background:var(--primary-light)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.theme-toggle{width:36px;height:36px;border-radius:50%;border:1px solid var(--border2);background:var(--surface2);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0}
+.theme-toggle:hover{border-color:var(--primary);color:var(--primary)}
+
+/* ── Tab Nav ──────────────────────────────────────────── */
+.tab-nav{
+  display:flex;align-items:center;gap:0;
+  border-bottom:1px solid var(--border);
+  padding:0 24px;background:rgba(15,15,15,0.7);
+  backdrop-filter:blur(10px);
+  position:sticky;top:62px;z-index:99;
+}
+body.light .tab-nav{background:rgba(244,244,244,0.9)}
+.tab-btn{
+  display:flex;align-items:center;gap:7px;
+  padding:12px 18px;font-size:13px;font-weight:600;
+  color:var(--text-muted);border:none;background:transparent;
+  cursor:pointer;border-bottom:2px solid transparent;
+  transition:all 0.2s;margin-bottom:-1px;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
+
+/* ── Buttons ──────────────────────────────────────────── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 16px;border-radius:24px;font-size:13px;font-weight:600;
+  cursor:pointer;border:none;transition:all 0.18s;
+  font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;
+}
+.btn-primary{background:var(--gradient);color:#fff;box-shadow:var(--shadow-p)}
+.btn-primary:hover{background:var(--gradient-h);box-shadow:0 6px 24px rgba(178,0,93,0.45)}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text-muted)}
+.btn-outline:hover{border-color:var(--primary);color:var(--primary)}
+.btn-ghost{background:transparent;color:var(--text-muted);padding:7px 12px}
+.btn-ghost:hover{color:var(--text)}
+.btn-danger{background:rgba(220,50,50,0.1);color:#ff6b6b;border:1px solid rgba(220,50,50,0.2)}
+.btn-danger:hover{background:rgba(220,50,50,0.2)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-success{background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.2)}
+.btn-success:hover{background:rgba(34,197,94,0.2)}
+
+/* ── Main content ──────────────────────────────────────── */
+.main{padding:24px 28px;max-width:1400px;width:100%;margin:0 auto}
+
+/* ── Page header ───────────────────────────────────────── */
+.page-header{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.page-header h1{font-size:24px;font-weight:800;letter-spacing:-0.5px}
+.page-header p{font-size:13px;color:var(--text-muted);margin-top:2px}
+.page-header-actions{margin-left:auto;display:flex;gap:10px;align-items:center}
+
+/* ── Stats strip ───────────────────────────────────────── */
+.stats-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+.stat-card .label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim)}
+.stat-card .value{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;margin-top:4px;line-height:1}
+.stat-card .sub{font-size:11px;color:var(--text-muted);margin-top:4px}
+.stat-card.highlight{background:linear-gradient(135deg,rgba(178,0,93,0.06),rgba(148,20,224,0.06));border-color:rgba(178,0,93,0.15)}
+
+/* ── Toolbar ───────────────────────────────────────────── */
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px;max-width:360px}
+.search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-dim);pointer-events:none}
+.search-input{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);border-radius:24px;padding:8px 14px 8px 36px;
+  font-size:13px;font-family:inherit;outline:none;transition:border 0.2s;
+}
+.search-input:focus{border-color:var(--primary)}
+.search-input::placeholder{color:var(--text-dim)}
+.filter-select{background:var(--surface2);border:1px solid var(--border);border-radius:24px;padding:8px 14px;font-size:13px;font-family:inherit;color:var(--text);outline:none;cursor:pointer;appearance:none}
+.filter-select:focus{border-color:var(--primary)}
+
+/* ── Contratos Grid ────────────────────────────────────── */
+.contratos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.contrato-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:20px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;
+}
+.contrato-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gradient);opacity:0;transition:opacity 0.2s}
+.contrato-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:var(--shadow)}
+.contrato-card:hover::before{opacity:1}
+.contrato-card-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.contrato-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid var(--border2)}
+.contrato-icon.marca{background:rgba(14,165,233,0.1);color:#38bdf8}
+.contrato-icon.talento{background:rgba(148,20,224,0.1);color:var(--purple-light)}
+.contrato-card-meta{flex:1;min-width:0}
+.contrato-nombre{font-size:15px;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.contrato-info{font-size:12px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.estado-badge{flex-shrink:0;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.3px;white-space:nowrap}
+.estado-borrador{background:rgba(85,85,85,0.15);color:#888}
+.estado-enviado{background:rgba(14,165,233,0.12);color:#38bdf8}
+.estado-firmado{background:rgba(34,197,94,0.12);color:#4ade80}
+.estado-cancelado{background:rgba(239,68,68,0.12);color:#ef4444}
+
+.contrato-card-body{display:flex;flex-direction:column;gap:8px}
+.contrato-tags{display:flex;flex-wrap:wrap;gap:4px}
+.contrato-tag{font-size:10px;padding:3px 8px;border-radius:20px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)}
+.contrato-monto{font-size:14px;font-weight:700}
+.contrato-footer{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.contrato-fecha{font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:4px}
+.contrato-actions{margin-left:auto;display:flex;gap:4px}
+.contrato-num{font-size:11px;font-weight:700;color:var(--primary);font-family:monospace}
+
+/* ── Empty state ───────────────────────────────────────── */
+.empty-state{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-muted)}
+.empty-state svg{opacity:0.2;margin-bottom:16px}
+.empty-state h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
+.empty-state p{font-size:13px}
+
+/* ── Modal ─────────────────────────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity 0.2s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{
+  background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);
+  width:100%;max-width:680px;max-height:90vh;overflow-y:auto;
+  transform:scale(0.95) translateY(12px);transition:transform 0.2s;
+}
+.modal-overlay.open .modal{transform:scale(1) translateY(0)}
+.modal-lg{max-width:880px}
+.modal-xl{max-width:1100px}
+.modal-header{
+  padding:22px 26px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;background:var(--surface);z-index:1;
+}
+.modal-title{font-size:19px;font-weight:700}
+.modal-close{width:32px;height:32px;border-radius:50%;border:none;background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted);transition:all 0.15s}
+.modal-close:hover{background:var(--surface3);color:var(--text)}
+.modal-body{padding:22px 26px}
+.modal-footer{padding:14px 26px 22px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--surface)}
+
+/* ── Form ──────────────────────────────────────────────── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-grid.cols-3{grid-template-columns:1fr 1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:11.5px;font-weight:600;color:var(--text-muted)}
+.form-input{
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:var(--radius-sm);padding:9px 12px;font-size:13.5px;
+  font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border 0.2s;width:100%;
+}
+.form-input:focus{border-color:var(--primary)}
+.form-input::placeholder{color:var(--text-dim)}
+textarea.form-input{resize:vertical;min-height:80px}
+select.form-input{cursor:pointer;-webkit-appearance:none}
+.form-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:4px;grid-column:1/-1}
+.form-hint{font-size:11px;color:var(--text-dim);margin-top:2px}
+
+/* ── Contract Preview ──────────────────────────────────── */
+.contract-preview{
+  background:#fff;color:#111;border-radius:var(--radius);
+  padding:40px 50px;max-height:70vh;overflow-y:auto;
+  font-family:'Times New Roman',serif;font-size:14px;line-height:1.6;
+  border:1px solid var(--border2);
+}
+.contract-preview h1{font-family:'Times New Roman',serif;font-size:20px;text-align:center;margin-bottom:20px;font-weight:700}
+.contract-preview h2{font-family:'Times New Roman',serif;font-size:16px;margin:24px 0 12px;font-weight:700}
+.contract-preview p{margin-bottom:10px;text-align:justify}
+.contract-preview ol{margin-left:20px;margin-bottom:12px}
+.contract-preview li{margin-bottom:8px;text-align:justify}
+.contract-preview strong{font-weight:700}
+.contract-preview em{font-style:italic}
+
+/* ── AI Loader ─────────────────────────────────────────── */
+.ai-loader{display:flex;align-items:center;justify-content:center;gap:12px;padding:40px;color:var(--text-muted)}
+.ai-loader .spinner{width:24px;height:24px;border:3px solid var(--surface3);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Campaign selector ─────────────────────────────────── */
+.campaign-option{padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;margin-bottom:8px}
+.campaign-option:hover{border-color:var(--primary);background:rgba(178,0,93,0.05)}
+.campaign-option.selected{border-color:var(--primary);background:rgba(178,0,93,0.08)}
+.campaign-option-name{font-size:14px;font-weight:600}
+.campaign-option-meta{font-size:12px;color:var(--text-muted);margin-top:2px}
+
+.talent-option{padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.talent-option:hover{border-color:var(--primary);background:rgba(178,0,93,0.05)}
+.talent-option.selected{border-color:var(--primary);background:rgba(178,0,93,0.08)}
+.talent-avatar{width:32px;height:32px;border-radius:50%;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text-muted);overflow:hidden;flex-shrink:0}
+.talent-avatar img{width:100%;height:100%;object-fit:cover}
+.talent-option-info{flex:1;min-width:0}
+.talent-option-name{font-size:13px;font-weight:600}
+.talent-option-fee{font-size:12px;color:var(--text-muted)}
+
+/* ── Toast ─────────────────────────────────────────────── */
+.toast-container{position:fixed;top:76px;right:20px;z-index:999;display:flex;flex-direction:column;gap:6px}
+.toast{
+  background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);
+  padding:11px 14px;font-size:13px;color:var(--text);box-shadow:var(--shadow);
+  min-width:230px;animation:slideIn 0.3s ease;display:flex;align-items:center;gap:8px;
+}
+.toast.success{border-left:3px solid #4ade80}
+.toast.error{border-left:3px solid #ff6b6b}
+.toast.info{border-left:3px solid var(--primary)}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── Loading overlay ───────────────────────────────────── */
+#load-overlay{
+  position:fixed;inset:0;z-index:9999;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+}
+.loader-logo{font-family:'Plus Jakarta Sans',sans-serif;font-size:28px;display:flex;align-items:center;gap:2px}
+.loader-be{font-weight:300;color:var(--text)}
+.loader-me{font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.loader-bar{width:200px;height:3px;background:var(--surface3);border-radius:99px;overflow:hidden}
+.loader-fill{height:100%;width:0;background:var(--gradient);border-radius:99px;animation:loaderAnim 1.4s ease-in-out infinite}
+@keyframes loaderAnim{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
+
+/* ── Login overlay ─────────────────────────────────────── */
+#login-overlay{position:fixed;inset:0;background:rgba(15,15,15,0.97);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:9999}
+body.light #login-overlay{background:rgba(244,244,244,0.97)}
+.login-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:40px;width:100%;max-width:380px;box-shadow:var(--shadow)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo .logo{justify-content:center;font-size:28px}
+.login-logo p{font-size:13px;color:var(--text-muted);margin-top:8px}
+.login-error{display:none;background:rgba(220,50,50,0.1);border:1px solid rgba(220,50,50,0.2);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#ff6b6b;margin-bottom:14px}
+.login-fields{display:flex;flex-direction:column;gap:10px}
+
+/* ── Responsive ────────────────────────────────────────── */
+@media(max-width:900px){
+  .stats-strip{grid-template-columns:repeat(2,1fr)}
+  .contratos-grid{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+  .contract-preview{padding:20px 24px}
+}
+@media(max-width:600px){
+  .main{padding:16px}
+  .topbar{padding:0 16px}
+  .tab-nav{overflow-x:auto}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div id="load-overlay">
+  <div class="loader-logo">
+    <span class="loader-be">Be</span><span class="loader-me">me</span>
+  </div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+  <p style="font-size:12px;color:var(--text-dim);margin-top:8px" id="load-msg">Conectando...</p>
+</div>
+
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay" style="display:none">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo" style="justify-content:center;font-size:28px">
+        <span class="logo-be">Be</span><span class="logo-me">me</span>
+      </div>
+      <p>Contratos</p>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <div class="login-fields">
+      <input type="email" id="login-email" class="form-input" placeholder="Email">
+      <input type="password" id="login-pass" class="form-input" placeholder="Contrasena" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:6px" id="login-btn" onclick="doLogin()">Ingresar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <a href="index.html" class="logo">
+    <span class="logo-be">Be</span><span class="logo-me">me</span>
+    <div class="logo-dots"><div class="logo-dot"></div><div class="logo-dot"></div><div class="logo-dot"></div></div>
+  </a>
+  <div class="topbar-right">
+    <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema">
+      <svg id="theme-icon-dark" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <svg id="theme-icon-light" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+    <button class="theme-toggle" onclick="doLogout()" title="Cerrar sesion">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- TAB NAV -->
+<nav class="tab-nav">
+  <a class="tab-btn" href="index.html" style="text-decoration:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Talentos
+  </a>
+  <a class="tab-btn" href="campanas.html" style="text-decoration:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Campanas
+  </a>
+  <a class="tab-btn" href="prospecciones.html" style="text-decoration:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    Prospeccion
+  </a>
+  <a class="tab-btn active" href="contratos.html" style="text-decoration:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Contratos
+  </a>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="main" id="app" style="display:none">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div>
+      <h1>Contratos</h1>
+      <p id="subtitle-count">Cargando...</p>
+    </div>
+    <div class="page-header-actions">
+      <button class="btn btn-primary" onclick="openNuevoContrato()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Nuevo Contrato
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="stats-strip">
+    <div class="stat-card highlight">
+      <div class="label">Total</div>
+      <div class="value" id="stat-total">0</div>
+      <div class="sub">contratos</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Borradores</div>
+      <div class="value" id="stat-borradores" style="color:#888">0</div>
+      <div class="sub">pendientes</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Enviados</div>
+      <div class="value" id="stat-enviados" style="color:#38bdf8">0</div>
+      <div class="sub">por firmar</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Firmados</div>
+      <div class="value" id="stat-firmados" style="color:#4ade80">0</div>
+      <div class="sub">activos</div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" class="search-input" id="search-input" placeholder="Buscar marca, talento, numero..." oninput="renderContratos()">
+    </div>
+    <select class="filter-select" id="filter-tipo" onchange="renderContratos()">
+      <option value="">Todos los tipos</option>
+      <option value="marca">Marca</option>
+      <option value="talento">Talento</option>
+    </select>
+    <select class="filter-select" id="filter-estado" onchange="renderContratos()">
+      <option value="">Todos los estados</option>
+      <option value="borrador">Borrador</option>
+      <option value="enviado">Enviado</option>
+      <option value="firmado">Firmado</option>
+      <option value="cancelado">Cancelado</option>
+    </select>
+  </div>
+
+  <!-- Grid container -->
+  <div id="contratos-container"></div>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Nuevo Contrato — Step 1: Select Campaign
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-select-campaign">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">Paso 1: Seleccionar Campana</div>
+      <button class="modal-close" onclick="closeModal('modal-select-campaign')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="search-wrap" style="max-width:100%;margin-bottom:16px">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" class="search-input" id="campaign-search" placeholder="Buscar campana..." oninput="renderCampaignOptions()">
+      </div>
+      <div id="campaign-list" style="max-height:400px;overflow-y:auto"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-select-campaign')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-next-talent" onclick="goToSelectTalent()" disabled>Siguiente</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Nuevo Contrato — Step 2: Select Talent + Type
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-select-talent">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">Paso 2: Talento y Tipo de Contrato</div>
+      <button class="modal-close" onclick="closeModal('modal-select-talent')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="margin-bottom:20px">
+        <div class="form-group">
+          <label class="form-label">Tipo de Contrato</label>
+          <select id="c-tipo" class="form-input" onchange="updateTipoPreview()">
+            <option value="marca">Marca ↔ Agencia</option>
+            <option value="talento">Agencia ↔ Talento</option>
+          </select>
+          <div class="form-hint" id="tipo-hint">La Marca como Parte A, BEME como Parte B</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Idioma</label>
+          <select id="c-idioma" class="form-input">
+            <option value="es">Espanol</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+      </div>
+      <label class="form-label" style="margin-bottom:10px;display:block">Selecciona el talento</label>
+      <div id="talent-list" style="max-height:300px;overflow-y:auto"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-select-talent');openModal('modal-select-campaign')">Atras</button>
+      <button class="btn btn-primary" id="btn-next-details" onclick="goToContractDetails()" disabled>Siguiente</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Nuevo Contrato — Step 3: Contract Details
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-contract-details">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <div class="modal-title">Paso 3: Detalles del Contrato</div>
+      <button class="modal-close" onclick="closeModal('modal-contract-details')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-section-title">Datos Generales</div>
+        <div class="form-group">
+          <label class="form-label">Ciudad</label>
+          <input type="text" id="c-ciudad" class="form-input" value="Mexico City">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha del Contrato</label>
+          <input type="date" id="c-fecha" class="form-input">
+        </div>
+
+        <div class="form-section-title">Parte A</div>
+        <div class="form-group">
+          <label class="form-label">Nombre</label>
+          <input type="text" id="c-pa-nombre" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">RFC / Tax ID</label>
+          <input type="text" id="c-pa-rfc" class="form-input">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Domicilio</label>
+          <input type="text" id="c-pa-domicilio" class="form-input">
+        </div>
+
+        <div class="form-section-title">Parte B</div>
+        <div class="form-group">
+          <label class="form-label">Nombre</label>
+          <input type="text" id="c-pb-nombre" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">RFC / Tax ID</label>
+          <input type="text" id="c-pb-rfc" class="form-input">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Domicilio</label>
+          <input type="text" id="c-pb-domicilio" class="form-input">
+        </div>
+
+        <div class="form-section-title">Servicios y Pago</div>
+        <div class="form-group">
+          <label class="form-label">Influencer</label>
+          <input type="text" id="c-influencer" class="form-input" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Marca / Producto</label>
+          <input type="text" id="c-marca-producto" class="form-input">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Servicios (entregables)</label>
+          <input type="text" id="c-servicios" class="form-input" placeholder="1 reel + 1 historia. Incluye derecho de imagen">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Canales</label>
+          <input type="text" id="c-canales" class="form-input" placeholder="Instagram, TikTok">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hashtags</label>
+          <input type="text" id="c-hashtags" class="form-input" value="A Definir en Brief">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo de Tarifa</label>
+          <select id="c-tarifa-tipo" class="form-input">
+            <option value="pago">Pago</option>
+            <option value="canje">Canje</option>
+            <option value="mixto">Mixto</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Moneda</label>
+          <select id="c-moneda" class="form-input">
+            <option value="MXN">MXN</option>
+            <option value="USD">USD</option>
+            <option value="ARS">ARS</option>
+            <option value="COP">COP</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monto</label>
+          <input type="number" id="c-monto" class="form-input" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monto en Letra</label>
+          <input type="text" id="c-monto-texto" class="form-input" placeholder="Cuarenta y tres mil pesos mexicanos">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Metodo de Pago</label>
+          <input type="text" id="c-metodo-pago" class="form-input" placeholder="Transferencia bancaria">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Plazo de Pago (dias)</label>
+          <input type="number" id="c-plazo-dias" class="form-input" value="45">
+        </div>
+
+        <div class="form-section-title">Derechos de Imagen</div>
+        <div class="form-group">
+          <label class="form-label">Incluir Derechos de Imagen</label>
+          <select id="c-derechos" class="form-input" onchange="toggleDerechos()">
+            <option value="no">No (incluido en tarifa)</option>
+            <option value="si">Si (separado)</option>
+          </select>
+        </div>
+        <div class="form-group" id="derechos-dias-group" style="display:none">
+          <label class="form-label">Dias</label>
+          <input type="number" id="c-derechos-dias" class="form-input" placeholder="30">
+        </div>
+        <div class="form-group" id="derechos-valor-group" style="display:none">
+          <label class="form-label">Valor</label>
+          <input type="number" id="c-derechos-valor" class="form-input" placeholder="0">
+        </div>
+        <div class="form-group" id="derechos-desde-group" style="display:none">
+          <label class="form-label">Desde</label>
+          <input type="date" id="c-derechos-desde" class="form-input">
+        </div>
+
+        <div class="form-section-title">Comentarios Adicionales</div>
+        <div class="form-group full">
+          <label class="form-label">Comentarios (se incluiran en el contrato)</label>
+          <textarea id="c-comentarios" class="form-input" style="min-height:100px" placeholder="En todas las publicaciones se debera colocar los hashtags y mencion a marca..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-contract-details');openModal('modal-select-talent')">Atras</button>
+      <button class="btn btn-outline" onclick="saveContractDraft()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Guardar Borrador
+      </button>
+      <button class="btn btn-primary" onclick="generateContract()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        Generar con IA
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Contract Preview
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-preview">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <div class="modal-title" id="preview-title">Vista Previa del Contrato</div>
+      <button class="modal-close" onclick="closeModal('modal-preview')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="padding:16px 26px">
+      <div id="preview-content" class="contract-preview"></div>
+    </div>
+    <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-preview')">Cerrar</button>
+      <button class="btn btn-outline" onclick="openCustomizeModal()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        Personalizar con IA
+      </button>
+      <button class="btn btn-outline" onclick="translateContract()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        Traducir
+      </button>
+      <button class="btn btn-outline" onclick="generateMirrorContract()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        Generar Espejo
+      </button>
+      <button class="btn btn-success" onclick="printContract()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Imprimir / PDF
+      </button>
+      <select id="preview-estado" class="form-input" style="width:auto;padding:7px 12px;font-size:12px;border-radius:24px" onchange="updateContractEstado()">
+        <option value="borrador">Borrador</option>
+        <option value="enviado">Enviado</option>
+        <option value="firmado">Firmado</option>
+        <option value="cancelado">Cancelado</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: AI Customize
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-customize">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Personalizar con IA</div>
+      <button class="modal-close" onclick="closeModal('modal-customize')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Instrucciones para la IA</label>
+        <textarea id="ai-instructions" class="form-input" style="min-height:120px" placeholder="Ej: Agrega una clausula de exclusividad por 3 meses. Cambia el plazo de pago a 30 dias. Agrega penalidad por retraso..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-customize')">Cancelar</button>
+      <button class="btn btn-primary" onclick="applyCustomization()">Aplicar Cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Confirm Delete
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-confirm-delete">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title">Eliminar Contrato</div>
+      <button class="modal-close" onclick="closeModal('modal-confirm-delete')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="text-align:center;padding:24px">
+      <p style="margin-bottom:16px">Estas seguro? Esta accion no se puede deshacer.</p>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button class="btn btn-ghost" onclick="closeModal('modal-confirm-delete')">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmDelete()">Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ══════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://ngstqwbzvnpggpklifat.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const BEME_DATA = {
+  nombre: 'BEME IMKT SAS de CV',
+  rfc: 'BIM2412116G7',
+  domicilio: 'Popocatepetl 233, int 808, Santa Cruz Atoyac, Benito Juarez, 03310, Ciudad de Mexico, Mexico'
+};
+
+// ── State ──────────────────────────────────────────────
+let currentUser = null;
+let currentProfile = null;
+let contratos = [];
+let campanas = [];
+let campanasTalentos = {};  // campana_id -> [{ct, talento}]
+let marcas = {};            // id -> {nombre, logo_url}
+let selectedCampaignId = null;
+let selectedTalentCT = null; // campana_talento row
+let previewContractId = null;
+let deletingId = null;
+let isDark = false;
+
+// ══════════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════════
+async function doLogin() {
+  const email = (document.getElementById('login-email').value||'').trim();
+  const pass  = document.getElementById('login-pass').value||'';
+  const btn   = document.getElementById('login-btn');
+  const errDiv= document.getElementById('login-error');
+  if (!email||!pass) { showLoginErr('Completa el email y la contrasena.'); return; }
+  btn.textContent = 'Ingresando...'; btn.disabled = true;
+  errDiv.style.display = 'none';
+  try {
+    const {data, error} = await sb.auth.signInWithPassword({email, password:pass});
+    if (error) { showLoginErr(error.message); }
+    else { currentUser = data.user; await initApp(); }
+  } catch(e) { showLoginErr('Error inesperado: '+e.message); }
+  btn.textContent = 'Ingresar'; btn.disabled = false;
+}
+function showLoginErr(msg) {
+  const d = document.getElementById('login-error');
+  d.textContent = msg; d.style.display = 'block';
+}
+async function checkAuth() {
+  const {data:{session}} = await sb.auth.getSession();
+  if (session) { currentUser = session.user; await initApp(); }
+  else { showLogin(); }
+}
+function showLogin() {
+  document.getElementById('load-overlay').style.display='none';
+  document.getElementById('login-overlay').style.display = 'flex';
+}
+async function doLogout() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+async function initApp() {
+  document.getElementById('load-msg').textContent = 'Cargando datos...';
+  try {
+    const {data: profile} = await sb.from('user_profiles').select('*').eq('id', currentUser.id).single();
+    currentProfile = profile;
+    if (!currentProfile) {
+      showLogin();
+      showLoginErr('Tu usuario no tiene perfil configurado. Contacta al administrador.');
+      return;
+    }
+
+    await loadData();
+
+    document.getElementById('login-overlay').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('load-overlay').style.display='none';
+
+    renderContratos();
+    renderStats();
+  } catch(e) {
+    console.error('initApp error:', e);
+    showToast('Error al cargar: '+e.message, 'error');
+    document.getElementById('load-overlay').style.display='none';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// LOAD DATA
+// ══════════════════════════════════════════════════════════
+async function loadData() {
+  // Load contratos
+  const {data: cData, error: cErr} = await sb.from('contratos').select('*').order('created_at', {ascending:false});
+  if (cErr) throw cErr;
+  contratos = cData || [];
+
+  // Load campanas with marca
+  const {data: campData} = await sb.from('campanas').select('*').order('created_at', {ascending:false});
+  campanas = campData || [];
+
+  // Load marcas
+  const {data: mData} = await sb.from('marcas').select('*');
+  (mData||[]).forEach(m => { marcas[m.id] = m; });
+
+  // Load campana_talentos with talent info
+  const {data: ctData} = await sb.from('campana_talentos').select('*, talentos(id,nombre,foto,email,telefono)');
+  campanasTalentos = {};
+  (ctData||[]).forEach(ct => {
+    if (!campanasTalentos[ct.campana_id]) campanasTalentos[ct.campana_id] = [];
+    campanasTalentos[ct.campana_id].push(ct);
+  });
+
+  // Load contenidos to build service descriptions
+  const {data: contData} = await sb.from('contenidos').select('campana_talento_id, tipo');
+  const contenidosByCT = {};
+  (contData||[]).forEach(c => {
+    if (!contenidosByCT[c.campana_talento_id]) contenidosByCT[c.campana_talento_id] = [];
+    contenidosByCT[c.campana_talento_id].push(c.tipo);
+  });
+  // Attach to campana_talentos
+  Object.values(campanasTalentos).flat().forEach(ct => {
+    ct._contenidos = contenidosByCT[ct.id] || [];
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDER CONTRATOS
+// ══════════════════════════════════════════════════════════
+function getFilteredContratos() {
+  const q = (document.getElementById('search-input')?.value||'').toLowerCase().trim();
+  const tipo = document.getElementById('filter-tipo')?.value||'';
+  const estado = document.getElementById('filter-estado')?.value||'';
+
+  return contratos.filter(c => {
+    if (tipo && c.tipo !== tipo) return false;
+    if (estado && c.estado !== estado) return false;
+    if (q) {
+      const searchStr = [c.parte_a_nombre, c.parte_b_nombre, c.influencer_nombre, c.marca_producto, c.numero_contrato].join(' ').toLowerCase();
+      if (!searchStr.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderContratos() {
+  const filtered = getFilteredContratos();
+  const container = document.getElementById('contratos-container');
+  container.className = 'contratos-grid';
+  document.getElementById('subtitle-count').textContent = `${filtered.length} contrato${filtered.length!==1?'s':''}`;
+
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty-state">
+      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <h3>No hay contratos</h3>
+      <p>${document.getElementById('search-input')?.value ? 'Proba con otra busqueda' : 'Crea tu primer contrato'}</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(c => {
+    const tipoLabel = c.tipo === 'marca' ? 'Marca ↔ Agencia' : 'Agencia ↔ Talento';
+    const estadoLabels = {borrador:'Borrador',enviado:'Enviado',firmado:'Firmado',cancelado:'Cancelado'};
+    const monedaSymbol = {MXN:'$',USD:'US$',ARS:'AR$',COP:'CO$',EUR:'EUR'}[c.moneda]||'$';
+    return `<div class="contrato-card" onclick="openPreview(${c.id})">
+      <div class="contrato-card-header">
+        <div class="contrato-icon ${c.tipo}">
+          ${c.tipo === 'marca'
+            ? '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/></svg>'
+            : '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+          }
+        </div>
+        <div class="contrato-card-meta">
+          <div class="contrato-nombre">${escHtml(c.influencer_nombre || c.parte_b_nombre)}</div>
+          <div class="contrato-info">${escHtml(tipoLabel)} &middot; ${escHtml(c.marca_producto||'')}</div>
+        </div>
+        <span class="estado-badge estado-${c.estado}">${estadoLabels[c.estado]||c.estado}</span>
+      </div>
+      <div class="contrato-card-body">
+        <div class="contrato-tags">
+          <span class="contrato-tag">${c.idioma==='en'?'EN':'ES'}</span>
+          ${c.canales ? c.canales.split(',').map(ch=>`<span class="contrato-tag">${escHtml(ch.trim())}</span>`).join('') : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="contrato-monto">${monedaSymbol}${fmtNum(c.monto||0)}</span>
+          <span style="font-size:12px;color:var(--text-dim)">${escHtml(c.servicios||'').substring(0,40)}</span>
+        </div>
+      </div>
+      <div class="contrato-footer">
+        <span class="contrato-num">#${escHtml(c.numero_contrato)}</span>
+        ${c.fecha_contrato ? `<span class="contrato-fecha">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          ${formatDate(c.fecha_contrato)}
+        </span>` : ''}
+        <div class="contrato-actions">
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openDeleteModal(${c.id})" title="Eliminar">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderStats() {
+  document.getElementById('stat-total').textContent = contratos.length;
+  document.getElementById('stat-borradores').textContent = contratos.filter(c=>c.estado==='borrador').length;
+  document.getElementById('stat-enviados').textContent = contratos.filter(c=>c.estado==='enviado').length;
+  document.getElementById('stat-firmados').textContent = contratos.filter(c=>c.estado==='firmado').length;
+}
+
+// ══════════════════════════════════════════════════════════
+// NUEVO CONTRATO — Step 1: Select Campaign
+// ══════════════════════════════════════════════════════════
+function openNuevoContrato() {
+  selectedCampaignId = null;
+  selectedTalentCT = null;
+  renderCampaignOptions();
+  openModal('modal-select-campaign');
+}
+
+function renderCampaignOptions() {
+  const q = (document.getElementById('campaign-search')?.value||'').toLowerCase().trim();
+  const container = document.getElementById('campaign-list');
+  const filtered = campanas.filter(c => {
+    if (q) {
+      const marca = marcas[c.marca_id];
+      const str = [c.nombre, marca?.nombre||''].join(' ').toLowerCase();
+      return str.includes(q);
+    }
+    return true;
+  });
+
+  container.innerHTML = filtered.map(c => {
+    const marca = marcas[c.marca_id];
+    const talentCount = (campanasTalentos[c.id]||[]).length;
+    const sel = c.id === selectedCampaignId ? 'selected' : '';
+    return `<div class="campaign-option ${sel}" onclick="selectCampaign(${c.id})">
+      <div class="campaign-option-name">${escHtml(c.nombre)}</div>
+      <div class="campaign-option-meta">${escHtml(marca?.nombre||'Sin marca')} &middot; ${talentCount} talento${talentCount!==1?'s':''} &middot; ${escHtml(c.estado)}</div>
+    </div>`;
+  }).join('');
+
+  if (!filtered.length) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim)">No se encontraron campanas</div>';
+  }
+
+  document.getElementById('btn-next-talent').disabled = !selectedCampaignId;
+}
+
+function selectCampaign(id) {
+  selectedCampaignId = id;
+  renderCampaignOptions();
+}
+
+// ══════════════════════════════════════════════════════════
+// NUEVO CONTRATO — Step 2: Select Talent + Type
+// ══════════════════════════════════════════════════════════
+function goToSelectTalent() {
+  closeModal('modal-select-campaign');
+  selectedTalentCT = null;
+  renderTalentOptions();
+  updateTipoPreview();
+  openModal('modal-select-talent');
+}
+
+function renderTalentOptions() {
+  const talents = campanasTalentos[selectedCampaignId] || [];
+  const container = document.getElementById('talent-list');
+
+  container.innerHTML = talents.map(ct => {
+    const t = ct.talentos || {};
+    const initials = (t.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    const sel = selectedTalentCT?.id === ct.id ? 'selected' : '';
+    const mon = ct.moneda||'USD';
+    const tipoContrato = document.getElementById('c-tipo').value;
+    const fee = tipoContrato === 'marca' ? ct.fee_marca : ct.fee_talento;
+    const services = (ct._contenidos||[]).map(formatContentType).join(' + ') || 'Sin contenidos';
+    return `<div class="talent-option ${sel}" onclick="selectTalent(${ct.id})">
+      <div class="talent-avatar">${t.foto ? `<img src="${escHtml(t.foto)}">` : initials}</div>
+      <div class="talent-option-info">
+        <div class="talent-option-name">${escHtml(t.nombre||'—')}</div>
+        <div class="talent-option-fee">${fmtMoney(fee||0,mon)} &middot; ${escHtml(services)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  if (!talents.length) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim)">Esta campana no tiene talentos asignados</div>';
+  }
+
+  document.getElementById('btn-next-details').disabled = !selectedTalentCT;
+}
+
+function selectTalent(ctId) {
+  const talents = campanasTalentos[selectedCampaignId] || [];
+  selectedTalentCT = talents.find(ct => ct.id === ctId) || null;
+  renderTalentOptions();
+}
+
+function updateTipoPreview() {
+  const tipo = document.getElementById('c-tipo').value;
+  document.getElementById('tipo-hint').textContent = tipo === 'marca'
+    ? 'La Marca como Parte A, BEME como Parte B'
+    : 'BEME como Parte A, el Talento como Parte B';
+  renderTalentOptions();
+}
+
+// ══════════════════════════════════════════════════════════
+// NUEVO CONTRATO — Step 3: Fill Details
+// ══════════════════════════════════════════════════════════
+function goToContractDetails() {
+  closeModal('modal-select-talent');
+
+  const campana = campanas.find(c => c.id === selectedCampaignId);
+  const marca = marcas[campana?.marca_id];
+  const ct = selectedTalentCT;
+  const talento = ct?.talentos || {};
+  const tipo = document.getElementById('c-tipo').value;
+  const contenidos = (ct?._contenidos||[]).map(formatContentType);
+
+  // Set date
+  document.getElementById('c-fecha').value = new Date().toISOString().split('T')[0];
+
+  // Fill parties based on type
+  if (tipo === 'marca') {
+    document.getElementById('c-pa-nombre').value = marca?.nombre || '';
+    document.getElementById('c-pa-rfc').value = '';
+    document.getElementById('c-pa-domicilio').value = '';
+    document.getElementById('c-pb-nombre').value = BEME_DATA.nombre;
+    document.getElementById('c-pb-rfc').value = BEME_DATA.rfc;
+    document.getElementById('c-pb-domicilio').value = BEME_DATA.domicilio;
+    document.getElementById('c-monto').value = ct?.fee_marca || 0;
+  } else {
+    document.getElementById('c-pa-nombre').value = BEME_DATA.nombre;
+    document.getElementById('c-pa-rfc').value = BEME_DATA.rfc;
+    document.getElementById('c-pa-domicilio').value = BEME_DATA.domicilio;
+    document.getElementById('c-pb-nombre').value = talento.nombre || '';
+    document.getElementById('c-pb-rfc').value = '';
+    document.getElementById('c-pb-domicilio').value = '';
+    document.getElementById('c-monto').value = ct?.fee_talento || 0;
+  }
+
+  // Fill service details
+  document.getElementById('c-influencer').value = talento.nombre || '';
+  document.getElementById('c-marca-producto').value = marca?.nombre || '';
+  document.getElementById('c-servicios').value = contenidos.join(' + ') + (ct?.derechos_imagen_dias ? '. Incluye derecho de imagen' : '');
+  document.getElementById('c-moneda').value = ct?.moneda || 'MXN';
+  document.getElementById('c-metodo-pago').value = ct?.metodo_pago || campana?.metodo_pago_marca || '';
+
+  // Canales from content types
+  const channels = new Set();
+  (ct?._contenidos||[]).forEach(t => {
+    if (t.includes('ig_') || t.includes('reel')) channels.add('Instagram');
+    if (t.includes('tiktok')) channels.add('TikTok');
+    if (t.includes('youtube')) channels.add('YouTube');
+  });
+  document.getElementById('c-canales').value = [...channels].join(', ');
+
+  // Derechos de imagen
+  if (ct?.derechos_imagen_dias) {
+    document.getElementById('c-derechos').value = 'si';
+    document.getElementById('c-derechos-dias').value = ct.derechos_imagen_dias;
+    document.getElementById('c-derechos-valor').value = ct.derechos_imagen_valor || 0;
+    document.getElementById('c-derechos-desde').value = ct.derechos_imagen_desde || '';
+    toggleDerechos();
+  }
+
+  openModal('modal-contract-details');
+}
+
+function toggleDerechos() {
+  const show = document.getElementById('c-derechos').value === 'si';
+  document.getElementById('derechos-dias-group').style.display = show ? '' : 'none';
+  document.getElementById('derechos-valor-group').style.display = show ? '' : 'none';
+  document.getElementById('derechos-desde-group').style.display = show ? '' : 'none';
+}
+
+// ══════════════════════════════════════════════════════════
+// SAVE DRAFT
+// ══════════════════════════════════════════════════════════
+function collectFormData() {
+  return {
+    campana_id: selectedCampaignId,
+    campana_talento_id: selectedTalentCT?.id || null,
+    tipo: document.getElementById('c-tipo').value,
+    idioma: document.getElementById('c-idioma').value,
+    estado: 'borrador',
+    ciudad_contrato: document.getElementById('c-ciudad').value.trim(),
+    fecha_contrato: document.getElementById('c-fecha').value || null,
+    parte_a_nombre: document.getElementById('c-pa-nombre').value.trim(),
+    parte_a_rfc: document.getElementById('c-pa-rfc').value.trim(),
+    parte_a_domicilio: document.getElementById('c-pa-domicilio').value.trim(),
+    parte_b_nombre: document.getElementById('c-pb-nombre').value.trim(),
+    parte_b_rfc: document.getElementById('c-pb-rfc').value.trim(),
+    parte_b_domicilio: document.getElementById('c-pb-domicilio').value.trim(),
+    influencer_nombre: document.getElementById('c-influencer').value.trim(),
+    servicios: document.getElementById('c-servicios').value.trim(),
+    canales: document.getElementById('c-canales').value.trim(),
+    hashtags: document.getElementById('c-hashtags').value.trim(),
+    marca_producto: document.getElementById('c-marca-producto').value.trim(),
+    tarifa_tipo: document.getElementById('c-tarifa-tipo').value,
+    monto: parseFloat(document.getElementById('c-monto').value) || 0,
+    moneda: document.getElementById('c-moneda').value,
+    monto_texto: document.getElementById('c-monto-texto').value.trim(),
+    metodo_pago: document.getElementById('c-metodo-pago').value.trim(),
+    plazo_pago_dias: parseInt(document.getElementById('c-plazo-dias').value) || 45,
+    derechos_imagen: document.getElementById('c-derechos').value === 'si',
+    derechos_dias: parseInt(document.getElementById('c-derechos-dias').value) || null,
+    derechos_valor: parseFloat(document.getElementById('c-derechos-valor').value) || null,
+    derechos_desde: document.getElementById('c-derechos-desde').value || null,
+    comentarios: document.getElementById('c-comentarios').value.trim(),
+    created_by: currentUser.id,
+  };
+}
+
+async function saveContractDraft() {
+  const payload = collectFormData();
+  try {
+    const {data, error} = await sb.from('contratos').insert(payload).select().single();
+    if (error) throw error;
+    contratos.unshift(data);
+    renderContratos();
+    renderStats();
+    closeModal('modal-contract-details');
+    showToast('Borrador guardado', 'success');
+  } catch(e) {
+    showToast('Error: '+e.message, 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// GENERATE CONTRACT WITH AI
+// ══════════════════════════════════════════════════════════
+async function generateContract() {
+  const payload = collectFormData();
+
+  // Save draft first
+  let contractId;
+  try {
+    const {data, error} = await sb.from('contratos').insert(payload).select().single();
+    if (error) throw error;
+    contractId = data.id;
+    contratos.unshift(data);
+  } catch(e) {
+    showToast('Error guardando: '+e.message, 'error');
+    return;
+  }
+
+  closeModal('modal-contract-details');
+
+  // Show preview with loader
+  previewContractId = contractId;
+  document.getElementById('preview-title').textContent = 'Generando contrato con IA...';
+  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Generando contrato... esto puede tomar unos segundos</span></div>';
+  document.getElementById('preview-estado').value = 'borrador';
+  openModal('modal-preview');
+
+  try {
+    const res = await fetch('/.netlify/functions/contract-agent', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        action: 'generate',
+        idioma: payload.idioma,
+        data: payload,
+      }),
+    });
+
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || 'Error del servidor');
+
+    // Save generated HTML
+    await sb.from('contratos').update({contenido_html: result.html}).eq('id', contractId);
+    const idx = contratos.findIndex(c => c.id === contractId);
+    if (idx >= 0) contratos[idx].contenido_html = result.html;
+
+    document.getElementById('preview-title').textContent = 'Vista Previa del Contrato';
+    document.getElementById('preview-content').innerHTML = result.html;
+    renderContratos();
+    renderStats();
+    showToast('Contrato generado exitosamente', 'success');
+
+  } catch(e) {
+    document.getElementById('preview-title').textContent = 'Error';
+    document.getElementById('preview-content').innerHTML = `<div style="padding:40px;text-align:center;color:#ff6b6b">
+      <p style="font-size:16px;font-weight:700;margin-bottom:8px">Error al generar el contrato</p>
+      <p>${escHtml(e.message)}</p>
+      <p style="margin-top:12px;font-size:12px;color:var(--text-dim)">El borrador fue guardado. Podes intentar de nuevo desde la vista previa.</p>
+    </div>`;
+    showToast('Error generando contrato: '+e.message, 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// PREVIEW
+// ══════════════════════════════════════════════════════════
+function openPreview(id) {
+  const c = contratos.find(x => x.id === id);
+  if (!c) return;
+  previewContractId = id;
+  document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato} — ${c.influencer_nombre||c.parte_b_nombre}`;
+  document.getElementById('preview-estado').value = c.estado;
+
+  if (c.contenido_html) {
+    document.getElementById('preview-content').innerHTML = c.contenido_html;
+  } else {
+    document.getElementById('preview-content').innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-dim)">
+      <p>Este contrato es un borrador sin contenido generado.</p>
+      <button class="btn btn-primary" onclick="regenerateContract(${id})" style="margin-top:12px">Generar con IA</button>
+    </div>`;
+  }
+  openModal('modal-preview');
+}
+
+async function regenerateContract(id) {
+  const c = contratos.find(x => x.id === id);
+  if (!c) return;
+
+  document.getElementById('preview-title').textContent = 'Generando contrato con IA...';
+  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Generando contrato...</span></div>';
+
+  try {
+    const res = await fetch('/.netlify/functions/contract-agent', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'generate', idioma: c.idioma, data: c }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error);
+
+    await sb.from('contratos').update({contenido_html: result.html, updated_at: new Date().toISOString()}).eq('id', id);
+    const idx = contratos.findIndex(x => x.id === id);
+    if (idx >= 0) contratos[idx].contenido_html = result.html;
+
+    document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato}`;
+    document.getElementById('preview-content').innerHTML = result.html;
+    showToast('Contrato regenerado', 'success');
+  } catch(e) {
+    document.getElementById('preview-content').innerHTML = `<div style="padding:40px;text-align:center;color:#ff6b6b">Error: ${escHtml(e.message)}</div>`;
+    showToast('Error: '+e.message, 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// AI ACTIONS
+// ══════════════════════════════════════════════════════════
+function openCustomizeModal() {
+  document.getElementById('ai-instructions').value = '';
+  closeModal('modal-preview');
+  openModal('modal-customize');
+}
+
+async function applyCustomization() {
+  const c = contratos.find(x => x.id === previewContractId);
+  if (!c || !c.contenido_html) { showToast('No hay contrato para personalizar', 'error'); return; }
+  const instrucciones = document.getElementById('ai-instructions').value.trim();
+  if (!instrucciones) { showToast('Escribe las instrucciones', 'error'); return; }
+
+  closeModal('modal-customize');
+  document.getElementById('preview-title').textContent = 'Personalizando contrato...';
+  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Aplicando cambios...</span></div>';
+  openModal('modal-preview');
+
+  try {
+    const res = await fetch('/.netlify/functions/contract-agent', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        action: 'customize',
+        idioma: c.idioma,
+        data: { contenido_html: c.contenido_html, instrucciones },
+      }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error);
+
+    await sb.from('contratos').update({contenido_html: result.html, updated_at: new Date().toISOString()}).eq('id', previewContractId);
+    const idx = contratos.findIndex(x => x.id === previewContractId);
+    if (idx >= 0) contratos[idx].contenido_html = result.html;
+
+    document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato}`;
+    document.getElementById('preview-content').innerHTML = result.html;
+    showToast('Contrato personalizado', 'success');
+  } catch(e) {
+    document.getElementById('preview-content').innerHTML = c.contenido_html;
+    document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato}`;
+    showToast('Error: '+e.message, 'error');
+  }
+}
+
+async function translateContract() {
+  const c = contratos.find(x => x.id === previewContractId);
+  if (!c || !c.contenido_html) { showToast('No hay contrato para traducir', 'error'); return; }
+
+  const newLang = c.idioma === 'es' ? 'en' : 'es';
+  document.getElementById('preview-title').textContent = `Traduciendo a ${newLang === 'es' ? 'Espanol' : 'English'}...`;
+  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Traduciendo contrato...</span></div>';
+
+  try {
+    const res = await fetch('/.netlify/functions/contract-agent', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        action: 'translate',
+        idioma: c.idioma,
+        data: { contenido_html: c.contenido_html },
+      }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error);
+
+    // Save as new contract
+    const newContract = { ...c };
+    delete newContract.id;
+    delete newContract.numero_contrato;
+    newContract.idioma = newLang;
+    newContract.contenido_html = result.html;
+    newContract.created_at = new Date().toISOString();
+    newContract.updated_at = new Date().toISOString();
+
+    const {data, error} = await sb.from('contratos').insert(newContract).select().single();
+    if (error) throw error;
+
+    contratos.unshift(data);
+    previewContractId = data.id;
+    document.getElementById('preview-title').textContent = `Contrato #${data.numero_contrato} (${newLang.toUpperCase()})`;
+    document.getElementById('preview-content').innerHTML = result.html;
+    document.getElementById('preview-estado').value = data.estado;
+    renderContratos();
+    renderStats();
+    showToast(`Traducido a ${newLang === 'es' ? 'Espanol' : 'English'} y guardado como nuevo contrato`, 'success');
+  } catch(e) {
+    document.getElementById('preview-content').innerHTML = c.contenido_html;
+    document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato}`;
+    showToast('Error: '+e.message, 'error');
+  }
+}
+
+async function generateMirrorContract() {
+  const c = contratos.find(x => x.id === previewContractId);
+  if (!c) return;
+
+  const mirrorTipo = c.tipo === 'marca' ? 'talento' : 'marca';
+  const ct = selectedTalentCT || (c.campana_talento_id ? Object.values(campanasTalentos).flat().find(x => x.id === c.campana_talento_id) : null);
+
+  // Build mirror data
+  const mirrorData = { ...c };
+  delete mirrorData.id;
+  delete mirrorData.numero_contrato;
+  delete mirrorData.contenido_html;
+  mirrorData.tipo = mirrorTipo;
+  mirrorData.created_at = new Date().toISOString();
+  mirrorData.updated_at = new Date().toISOString();
+
+  if (mirrorTipo === 'talento') {
+    // Was marca->agencia, now agencia->talento
+    mirrorData.parte_a_nombre = BEME_DATA.nombre;
+    mirrorData.parte_a_rfc = BEME_DATA.rfc;
+    mirrorData.parte_a_domicilio = BEME_DATA.domicilio;
+    mirrorData.parte_b_nombre = c.influencer_nombre || '';
+    mirrorData.parte_b_rfc = '';
+    mirrorData.parte_b_domicilio = '';
+    mirrorData.monto = ct?.fee_talento || 0;
+  } else {
+    // Was agencia->talento, now marca->agencia
+    const campana = campanas.find(x => x.id === c.campana_id);
+    const marca = marcas[campana?.marca_id];
+    mirrorData.parte_a_nombre = marca?.nombre || '';
+    mirrorData.parte_a_rfc = '';
+    mirrorData.parte_a_domicilio = '';
+    mirrorData.parte_b_nombre = BEME_DATA.nombre;
+    mirrorData.parte_b_rfc = BEME_DATA.rfc;
+    mirrorData.parte_b_domicilio = BEME_DATA.domicilio;
+    mirrorData.monto = ct?.fee_marca || 0;
+  }
+
+  // Save mirror draft
+  try {
+    const {data, error} = await sb.from('contratos').insert(mirrorData).select().single();
+    if (error) throw error;
+    contratos.unshift(data);
+
+    // Generate with AI
+    previewContractId = data.id;
+    document.getElementById('preview-title').textContent = 'Generando contrato espejo...';
+    document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Generando contrato espejo...</span></div>';
+
+    const res = await fetch('/.netlify/functions/contract-agent', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'generate', idioma: data.idioma, data }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error);
+
+    await sb.from('contratos').update({contenido_html: result.html}).eq('id', data.id);
+    const idx = contratos.findIndex(x => x.id === data.id);
+    if (idx >= 0) contratos[idx].contenido_html = result.html;
+
+    document.getElementById('preview-title').textContent = `Contrato Espejo #${data.numero_contrato}`;
+    document.getElementById('preview-content').innerHTML = result.html;
+    document.getElementById('preview-estado').value = data.estado;
+    renderContratos();
+    renderStats();
+    showToast(`Contrato espejo (${mirrorTipo}) generado`, 'success');
+  } catch(e) {
+    showToast('Error: '+e.message, 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// UPDATE ESTADO
+// ══════════════════════════════════════════════════════════
+async function updateContractEstado() {
+  const estado = document.getElementById('preview-estado').value;
+  try {
+    await sb.from('contratos').update({estado, updated_at: new Date().toISOString()}).eq('id', previewContractId);
+    const idx = contratos.findIndex(c => c.id === previewContractId);
+    if (idx >= 0) contratos[idx].estado = estado;
+    renderContratos();
+    renderStats();
+    showToast('Estado actualizado', 'success');
+  } catch(e) {
+    showToast('Error: '+e.message, 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// DELETE
+// ══════════════════════════════════════════════════════════
+function openDeleteModal(id) {
+  deletingId = id;
+  openModal('modal-confirm-delete');
+}
+
+async function confirmDelete() {
+  if (!deletingId) return;
+  try {
+    const {error} = await sb.from('contratos').delete().eq('id', deletingId);
+    if (error) throw error;
+    contratos = contratos.filter(c => c.id !== deletingId);
+    renderContratos();
+    renderStats();
+    closeModal('modal-confirm-delete');
+    showToast('Contrato eliminado', 'success');
+  } catch(e) {
+    showToast('Error: '+e.message, 'error');
+  }
+  deletingId = null;
+}
+
+// ══════════════════════════════════════════════════════════
+// PRINT
+// ══════════════════════════════════════════════════════════
+function printContract() {
+  const content = document.getElementById('preview-content').innerHTML;
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Contrato BEME</title>
+    <style>
+      body{font-family:'Times New Roman',serif;font-size:14px;line-height:1.6;color:#111;max-width:800px;margin:0 auto;padding:40px}
+      h1{font-size:20px;text-align:center;margin-bottom:20px}
+      h2{font-size:16px;margin:24px 0 12px}
+      p{margin-bottom:10px;text-align:justify}
+      ol{margin-left:20px;margin-bottom:12px}
+      li{margin-bottom:8px;text-align:justify}
+      @media print{body{padding:20px}@page{margin:2cm}}
+    </style></head><body>${content}</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 500);
+}
+
+// ══════════════════════════════════════════════════════════
+// THEME
+// ══════════════════════════════════════════════════════════
+function toggleTheme() {
+  isDark = !isDark;
+  document.body.classList.toggle('light', !isDark);
+  document.getElementById('theme-icon-dark').style.display = isDark ? 'none' : 'block';
+  document.getElementById('theme-icon-light').style.display = isDark ? 'block' : 'none';
+  try { localStorage.setItem('beme_theme', isDark ? 'dark' : 'light'); } catch(e) {}
+}
+function loadTheme() {
+  try {
+    const t = localStorage.getItem('beme_theme');
+    if (t === 'dark') {
+      isDark = true;
+      document.body.classList.remove('light');
+      document.getElementById('theme-icon-dark').style.display = 'none';
+      document.getElementById('theme-icon-light').style.display = 'block';
+    } else {
+      isDark = false;
+      document.body.classList.add('light');
+      document.getElementById('theme-icon-dark').style.display = 'block';
+      document.getElementById('theme-icon-light').style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id)?.classList.add('open'); }
+function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
+});
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));
+});
+
+// ══════════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════════
+function showToast(msg, type='info', duration=3000) {
+  const container = document.getElementById('toast-container');
+  const icons = {success:'&#10003;',error:'&#10007;',info:'&#8505;'};
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span>${icons[type]||'&bull;'}</span><span>${escHtml(msg)}</span>`;
+  container.appendChild(toast);
+  setTimeout(()=>toast.remove(), duration);
+}
+
+// ══════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'});
+}
+function fmtNum(n) {
+  return Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:0, maximumFractionDigits:0});
+}
+function fmtMoney(n, cur) {
+  const symbols = {MXN:'$',USD:'US$',ARS:'AR$',COP:'CO$',EUR:'EUR'};
+  return (symbols[cur]||'$') + fmtNum(n);
+}
+function formatContentType(t) {
+  const map = {
+    tiktok_video:'TikTok Video', reel:'Reel', ig_story:'IG Story',
+    youtube_video:'YouTube Video', youtube_short:'YouTube Short'
+  };
+  return map[t] || t;
+}
+
+// ══════════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════════
+loadTheme();
+checkAuth();
+setTimeout(function(){ var lo=document.getElementById('load-overlay'); if(lo && lo.style.display!=='none'){lo.style.display='none';} }, 15000);
+</script>
+</body>
+</html>
