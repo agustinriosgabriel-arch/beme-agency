@@ -211,37 +211,50 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ html }) };
     }
 
-    // ── CUSTOMIZE: AI-powered ──
+    // ── CUSTOMIZE: AI returns search/replace pairs, applied locally ──
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return { statusCode: 500, headers, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }) };
     }
 
-    let userMessage = '';
-    if (action === 'customize') {
-      userMessage = `Modify this contract HTML based on these instructions. Return ONLY the full modified HTML, nothing else.\n\nInstructions: ${data.instrucciones}\n\nContract:\n${data.contenido_html}`;
-    } else {
+    if (action !== 'customize') {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid action' }) };
     }
+
+    const userMessage = `You are modifying a legal contract. The user wants these changes:
+
+"${data.instrucciones}"
+
+Return a JSON array of search/replace operations to apply. Each item has "search" (exact text to find) and "replace" (new text). Keep it minimal — only change what's needed.
+
+Example response:
+[{"search":"cuatro (4) meses para los posts","replace":"doce (12) meses para los posts"},{"search":"45 dias","replace":"30 dias"}]
+
+Return ONLY the JSON array, no explanation, no markdown.`;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 24000);
 
-    const response = await fetch(ANTHROPIC_API_URL, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 6000,
-        system: AI_SYSTEM,
-        messages: [{ role: 'user', content: userMessage }],
-      }),
-    });
+    let response;
+    try {
+      response = await fetch(ANTHROPIC_API_URL, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: userMessage }],
+        }),
+      });
+    } catch(e) {
+      clearTimeout(timeout);
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Timeout: ' + e.message }) };
+    }
     clearTimeout(timeout);
 
     if (!response.ok) {
@@ -250,9 +263,22 @@ exports.handler = async (event) => {
     }
 
     const result = await response.json();
-    let html = result.content?.[0]?.text || '';
-    const htmlMatch = html.match(/```html\n?([\s\S]*?)```/);
-    if (htmlMatch) html = htmlMatch[1].trim();
+    let aiText = result.content?.[0]?.text || '[]';
+    // Clean any markdown wrapping
+    const jsonMatch = aiText.match(/```(?:json)?\n?([\s\S]*?)```/);
+    if (jsonMatch) aiText = jsonMatch[1].trim();
+
+    let html = data.contenido_html;
+    try {
+      const replacements = JSON.parse(aiText);
+      for (const r of replacements) {
+        if (r.search && r.replace) {
+          html = html.split(r.search).join(r.replace);
+        }
+      }
+    } catch(e) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'AI returned invalid JSON: ' + aiText.substring(0, 100) }) };
+    }
 
     return { statusCode: 200, headers, body: JSON.stringify({ html }) };
 
