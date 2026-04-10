@@ -174,28 +174,43 @@ Generate the full HTML contract including the Confirmation Sheet and Annex I wit
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid action. Use: generate, customize, translate' }) };
     }
 
-    const response = await fetch(ANTHROPIC_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 6000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userMessage }],
-      }),
-    });
+    console.log('Calling Anthropic API, action:', action, 'key starts with:', apiKey.substring(0, 10));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 22000);
 
+    let response;
+    try {
+      response = await fetch(ANTHROPIC_API_URL, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userMessage }],
+        }),
+      });
+    } catch(fetchErr) {
+      clearTimeout(timeout);
+      console.error('Fetch error:', fetchErr.message);
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Timeout o error de conexion con Anthropic API: ' + fetchErr.message }) };
+    }
+    clearTimeout(timeout);
+
+    console.log('Anthropic response status:', response.status);
     if (!response.ok) {
       const errText = await response.text();
-      console.error('Anthropic API error:', errText);
-      return { statusCode: response.status, headers, body: JSON.stringify({ error: 'API error: ' + response.status }) };
+      console.error('Anthropic API error:', response.status, errText);
+      return { statusCode: response.status, headers, body: JSON.stringify({ error: 'API error ' + response.status + ': ' + errText.substring(0, 200) }) };
     }
 
     const result = await response.json();
+    console.log('Anthropic response received, usage:', JSON.stringify(result.usage));
     const content = result.content?.[0]?.text || '';
 
     // Extract HTML from response (might be wrapped in ```html blocks)
