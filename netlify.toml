@@ -1,6 +1,12 @@
 [functions]
   directory = "netlify/functions"
 
+# Let Netlify Functions pass through
+[[redirects]]
+  from = "/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
 # Redirects for single-page app behavior
 [[redirects]]
   from = "/*"
