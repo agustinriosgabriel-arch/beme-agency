@@ -204,7 +204,14 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ html }) };
     }
 
-    // ── CUSTOMIZE / TRANSLATE: AI-powered ──
+    // ── TRANSLATE: template-based, instant ──
+    if (action === 'translate') {
+      const newLang = lang === 'es' ? 'en' : 'es';
+      const html = newLang === 'en' ? generateContractEN(data) : generateContractES(data);
+      return { statusCode: 200, headers, body: JSON.stringify({ html }) };
+    }
+
+    // ── CUSTOMIZE: AI-powered ──
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return { statusCode: 500, headers, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }) };
@@ -213,9 +220,6 @@ exports.handler = async (event) => {
     let userMessage = '';
     if (action === 'customize') {
       userMessage = `Modify this contract HTML based on these instructions. Return ONLY the full modified HTML, nothing else.\n\nInstructions: ${data.instrucciones}\n\nContract:\n${data.contenido_html}`;
-    } else if (action === 'translate') {
-      const target = lang === 'es' ? 'English' : 'Spanish';
-      userMessage = `Translate this contract to ${target}. Return ONLY the translated HTML, nothing else.\n\n${data.contenido_html}`;
     } else {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid action' }) };
     }

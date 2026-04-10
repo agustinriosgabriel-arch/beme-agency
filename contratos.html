@@ -1317,7 +1317,7 @@ async function translateContract() {
   document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Traduciendo contrato...</span></div>';
 
   try {
-    const html = await callAI('translate', { contenido_html: c.contenido_html }, c.idioma);
+    const html = await callAI('translate', c, c.idioma);
 
     // Save as new contract
     const newContract = { ...c };
