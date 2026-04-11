@@ -213,6 +213,35 @@ select.form-input{cursor:pointer;-webkit-appearance:none}
 .form-check{display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text-muted)}
 .form-check input{accent-color:var(--primary)}
 
+/* ── Multi-select dropdown ─────────────────────────────── */
+.ms-wrap{position:relative}
+.ms-trigger{
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:8px 12px;font-size:13px;color:var(--text);cursor:pointer;width:100%;
+  display:flex;flex-wrap:wrap;gap:4px;min-height:38px;align-items:center;transition:border 0.2s;
+}
+.ms-trigger:focus-within{border-color:var(--primary)}
+.ms-trigger .ms-chip{
+  display:inline-flex;align-items:center;gap:4px;padding:2px 8px;
+  background:var(--surface3);border-radius:20px;font-size:11px;font-weight:600;
+}
+.ms-chip-x{cursor:pointer;color:var(--text-dim);font-size:14px;line-height:1}
+.ms-chip-x:hover{color:var(--text)}
+.ms-placeholder{color:var(--text-dim);font-size:13px}
+.ms-panel{
+  position:absolute;top:100%;left:0;right:0;z-index:50;margin-top:4px;
+  background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);
+  box-shadow:var(--shadow);max-height:220px;overflow-y:auto;display:none;
+}
+.ms-panel.open{display:block}
+.ms-search{width:100%;padding:8px 12px;border:none;border-bottom:1px solid var(--border);background:transparent;font-size:12px;font-family:inherit;color:var(--text);outline:none}
+.ms-search::placeholder{color:var(--text-dim)}
+.ms-opt{padding:7px 12px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.1s}
+.ms-opt:hover{background:var(--surface2)}
+.ms-opt.selected{background:rgba(178,0,93,0.08);color:var(--primary)}
+.ms-opt .ms-check{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px}
+.ms-opt.selected .ms-check{background:var(--primary);border-color:var(--primary);color:#fff}
+
 /* ── Toast ─────────────────────────────────────────────── */
 .toast-container{position:fixed;top:76px;right:20px;z-index:999;display:flex;flex-direction:column;gap:6px}
 .toast{
@@ -418,8 +447,15 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
 
         <div class="form-group">
           <label class="form-label">Paises</label>
-          <input type="text" id="p-paises" class="form-input" placeholder="Argentina, Mexico, Colombia...">
-          <div class="form-hint">Separados por coma</div>
+          <div class="ms-wrap" id="ms-paises-wrap">
+            <div class="ms-trigger" onclick="toggleMsPanel('ms-paises')">
+              <span class="ms-placeholder" id="ms-paises-ph">Seleccionar paises...</span>
+            </div>
+            <div class="ms-panel" id="ms-paises">
+              <input type="text" class="ms-search" placeholder="Buscar pais..." oninput="filterMsOptions('ms-paises',this.value)">
+              <div class="ms-options" id="ms-paises-options"></div>
+            </div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -438,8 +474,15 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
 
         <div class="form-group">
           <label class="form-label">Categorias</label>
-          <input type="text" id="p-categorias" class="form-input" placeholder="Belleza, Moda, Gaming...">
-          <div class="form-hint">Separados por coma</div>
+          <div class="ms-wrap" id="ms-categorias-wrap">
+            <div class="ms-trigger" onclick="toggleMsPanel('ms-categorias')">
+              <span class="ms-placeholder" id="ms-categorias-ph">Seleccionar categorias...</span>
+            </div>
+            <div class="ms-panel" id="ms-categorias">
+              <input type="text" class="ms-search" placeholder="Buscar categoria..." oninput="filterMsOptions('ms-categorias',this.value)">
+              <div class="ms-options" id="ms-categorias-options"></div>
+            </div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -551,6 +594,23 @@ let editingId = null;
 let deletingId = null;
 let isDark = false;
 
+// Multi-select state
+let selectedPaises = [];
+let selectedCategorias = [];
+
+// Data from app_config
+let COUNTRIES = [
+  "Argentina","Bolivia","Brasil","Chile","Colombia","Costa Rica","Cuba",
+  "Ecuador","El Salvador","Espana","Estados Unidos","Guatemala","Honduras",
+  "Mexico","Nicaragua","Panama","Paraguay","Peru","Puerto Rico",
+  "Republica Dominicana","Uruguay","Venezuela"
+];
+let CATEGORIES = [
+  "Musica","Moda","Belleza","Fitness","Gastronomia","Viajes","Gaming",
+  "Comedia","Lifestyle","Negocios","Deportes","Arte & Diseno",
+  "Familia / Maternidad","Tecnologia","Entretenimiento","Educacion","Mascotas","Salud"
+];
+
 // ══════════════════════════════════════════════════════════
 // AUTH
 // ══════════════════════════════════════════════════════════
@@ -603,12 +663,15 @@ async function initApp() {
       return;
     }
 
+    await loadAppConfig();
     await loadProspecciones();
 
     document.getElementById('login-overlay').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     const _lo=document.getElementById('load-overlay'); _lo.style.display='none';
 
+    populateMsOptions('ms-paises', COUNTRIES);
+    populateMsOptions('ms-categorias', CATEGORIES);
     renderProspecciones();
     renderStats();
 
@@ -622,6 +685,18 @@ async function initApp() {
 // ══════════════════════════════════════════════════════════
 // LOAD DATA
 // ══════════════════════════════════════════════════════════
+async function loadAppConfig() {
+  const {data} = await sb.from('app_config').select('*');
+  if (data) {
+    for (const row of data) {
+      if (row.key === 'categories' && Array.isArray(row.value)) { CATEGORIES = row.value; }
+      if (row.key === 'countries' && Array.isArray(row.value)) {
+        COUNTRIES = row.value.map(c => typeof c === 'string' ? c : c.name).filter(Boolean);
+      }
+    }
+  }
+}
+
 async function loadProspecciones() {
   const {data, error} = await sb.from('prospecciones').select('*').order('created_at', {ascending:false});
   if (error) throw error;
@@ -752,12 +827,14 @@ function editProspeccion(id) {
   clearForm();
 
   document.getElementById('p-marca').value = p.marca||'';
-  document.getElementById('p-paises').value = (p.paises||[]).join(', ');
+  selectedPaises = [...(p.paises||[])];
+  renderMsChips('ms-paises', selectedPaises, 'selectedPaises');
   document.getElementById('p-plat-tiktok').checked = (p.plataformas||[]).includes('TikTok');
   document.getElementById('p-plat-ig').checked = (p.plataformas||[]).includes('Instagram');
   document.getElementById('p-plat-yt').checked = (p.plataformas||[]).includes('YouTube');
   document.getElementById('p-contenido').value = p.contenido||'';
-  document.getElementById('p-categorias').value = (p.categorias||[]).join(', ');
+  selectedCategorias = [...(p.categorias||[])];
+  renderMsChips('ms-categorias', selectedCategorias, 'selectedCategorias');
   document.getElementById('p-gen-f').checked = (p.generos||[]).includes('Femenino');
   document.getElementById('p-gen-m').checked = (p.generos||[]).includes('Masculino');
   document.getElementById('p-gen-nb').checked = (p.generos||[]).includes('No binario');
@@ -775,7 +852,11 @@ function editProspeccion(id) {
 }
 
 function clearForm() {
-  ['p-marca','p-paises','p-contenido','p-categorias','p-visualizaciones',
+  selectedPaises = [];
+  selectedCategorias = [];
+  renderMsChips('ms-paises', selectedPaises, 'selectedPaises');
+  renderMsChips('ms-categorias', selectedCategorias, 'selectedCategorias');
+  ['p-marca','p-contenido','p-visualizaciones',
    'p-seg-min','p-seg-max','p-cantidad','p-producto','p-fecha','p-notas','p-email-draft'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value='';
   });
@@ -799,14 +880,12 @@ async function saveProspeccion() {
   if (document.getElementById('p-gen-m').checked) generos.push('Masculino');
   if (document.getElementById('p-gen-nb').checked) generos.push('No binario');
 
-  const parseCsv = (val) => val.split(',').map(s=>s.trim()).filter(Boolean);
-
   const payload = {
     marca,
-    paises: parseCsv(document.getElementById('p-paises').value),
+    paises: [...selectedPaises],
     plataformas,
     contenido: document.getElementById('p-contenido').value.trim(),
-    categorias: parseCsv(document.getElementById('p-categorias').value),
+    categorias: [...selectedCategorias],
     generos,
     visualizaciones: document.getElementById('p-visualizaciones').value.trim(),
     seguidores_min: parseInt(document.getElementById('p-seg-min').value)||0,
@@ -933,6 +1012,88 @@ function formatDate(d) {
   const dt = new Date(d+'T00:00:00');
   return dt.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'});
 }
+
+// ══════════════════════════════════════════════════════════
+// MULTI-SELECT DROPDOWNS
+// ══════════════════════════════════════════════════════════
+function populateMsOptions(panelId, items) {
+  const container = document.getElementById(panelId+'-options');
+  if (!container) return;
+  container.innerHTML = items.map(item =>
+    `<div class="ms-opt" data-value="${escHtml(item)}" onclick="toggleMsOption('${panelId}','${escHtml(item)}')">`+
+    `<span class="ms-check"></span>${escHtml(item)}</div>`
+  ).join('');
+}
+
+function toggleMsPanel(panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  const isOpen = panel.classList.contains('open');
+  // Close all other panels first
+  document.querySelectorAll('.ms-panel.open').forEach(p => p.classList.remove('open'));
+  if (!isOpen) {
+    panel.classList.add('open');
+    const search = panel.querySelector('.ms-search');
+    if (search) { search.value = ''; filterMsOptions(panelId, ''); setTimeout(()=>search.focus(), 50); }
+    updateMsOptStates(panelId);
+  }
+}
+
+function filterMsOptions(panelId, q) {
+  const opts = document.querySelectorAll(`#${panelId}-options .ms-opt`);
+  const lower = q.toLowerCase();
+  opts.forEach(opt => { opt.style.display = opt.dataset.value.toLowerCase().includes(lower) ? '' : 'none'; });
+}
+
+function toggleMsOption(panelId, value) {
+  const arrName = panelId === 'ms-paises' ? 'selectedPaises' : 'selectedCategorias';
+  const arr = panelId === 'ms-paises' ? selectedPaises : selectedCategorias;
+  const idx = arr.indexOf(value);
+  if (idx >= 0) arr.splice(idx, 1); else arr.push(value);
+  renderMsChips(panelId, arr, arrName);
+  updateMsOptStates(panelId);
+}
+
+function updateMsOptStates(panelId) {
+  const arr = panelId === 'ms-paises' ? selectedPaises : selectedCategorias;
+  document.querySelectorAll(`#${panelId}-options .ms-opt`).forEach(opt => {
+    opt.classList.toggle('selected', arr.includes(opt.dataset.value));
+    opt.querySelector('.ms-check').textContent = arr.includes(opt.dataset.value) ? '✓' : '';
+  });
+}
+
+function renderMsChips(panelId, arr, arrName) {
+  const trigger = document.querySelector(`#${panelId}-wrap .ms-trigger`);
+  if (!trigger) return;
+  // Remove old chips
+  trigger.querySelectorAll('.ms-chip').forEach(c=>c.remove());
+  const ph = trigger.querySelector('.ms-placeholder');
+  if (arr.length === 0) {
+    if (ph) ph.style.display = '';
+  } else {
+    if (ph) ph.style.display = 'none';
+    arr.forEach(val => {
+      const chip = document.createElement('span');
+      chip.className = 'ms-chip';
+      chip.innerHTML = `${escHtml(val)}<span class="ms-chip-x" onclick="event.stopPropagation();removeMsChip('${panelId}','${escHtml(val)}','${arrName}')">&times;</span>`;
+      trigger.insertBefore(chip, ph);
+    });
+  }
+}
+
+function removeMsChip(panelId, value, arrName) {
+  const arr = panelId === 'ms-paises' ? selectedPaises : selectedCategorias;
+  const idx = arr.indexOf(value);
+  if (idx >= 0) arr.splice(idx, 1);
+  renderMsChips(panelId, arr, arrName);
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.ms-wrap')) {
+    document.querySelectorAll('.ms-panel.open').forEach(p => p.classList.remove('open'));
+  }
+});
 
 // ══════════════════════════════════════════════════════════
 // BOOT

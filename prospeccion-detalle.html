@@ -98,6 +98,24 @@ body.light .modal-header,body.light .modal-footer{background:var(--surface)}
 .meta-value{font-size:13px;font-weight:600}
 .prosp-tag{font-size:10px;padding:3px 8px;border-radius:20px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)}
 
+/* ── Multi-select dropdown ── */
+.ms-wrap{position:relative}
+.ms-trigger{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;color:var(--text);cursor:pointer;width:100%;display:flex;flex-wrap:wrap;gap:4px;min-height:38px;align-items:center;transition:border 0.2s}
+.ms-trigger:focus-within{border-color:var(--primary)}
+.ms-trigger .ms-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:var(--surface3);border-radius:20px;font-size:11px;font-weight:600}
+.ms-chip-x{cursor:pointer;color:var(--text-dim);font-size:14px;line-height:1}
+.ms-chip-x:hover{color:var(--text)}
+.ms-placeholder{color:var(--text-dim);font-size:13px}
+.ms-panel{position:absolute;top:100%;left:0;right:0;z-index:50;margin-top:4px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:var(--shadow);max-height:220px;overflow-y:auto;display:none}
+.ms-panel.open{display:block}
+.ms-search{width:100%;padding:8px 12px;border:none;border-bottom:1px solid var(--border);background:transparent;font-size:12px;font-family:inherit;color:var(--text);outline:none}
+.ms-search::placeholder{color:var(--text-dim)}
+.ms-opt{padding:7px 12px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.1s}
+.ms-opt:hover{background:var(--surface2)}
+.ms-opt.selected{background:rgba(178,0,93,0.08);color:var(--primary)}
+.ms-opt .ms-check{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px}
+.ms-opt.selected .ms-check{background:var(--primary);border-color:var(--primary);color:#fff}
+
 /* ── Stats strip (6 etapas) ── */
 .etapa-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px}
 .etapa-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;text-align:center;cursor:pointer;transition:all 0.15s;border-top:3px solid transparent}
@@ -284,8 +302,15 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
         </div>
         <div class="form-group">
           <label class="form-label">Paises</label>
-          <input type="text" id="c-paises" class="form-input" placeholder="Argentina, Mexico...">
-          <div class="form-hint">Separados por coma</div>
+          <div class="ms-wrap" id="ms-cpaises-wrap">
+            <div class="ms-trigger" onclick="toggleMsPanel('ms-cpaises')">
+              <span class="ms-placeholder" id="ms-cpaises-ph">Seleccionar paises...</span>
+            </div>
+            <div class="ms-panel" id="ms-cpaises">
+              <input type="text" class="ms-search" placeholder="Buscar pais..." oninput="filterMsOptions('ms-cpaises',this.value)">
+              <div class="ms-options" id="ms-cpaises-options"></div>
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Ciudad</label>
@@ -323,8 +348,15 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
         </div>
         <div class="form-group">
           <label class="form-label">Categorias</label>
-          <input type="text" id="c-categorias" class="form-input" placeholder="Belleza, Gaming...">
-          <div class="form-hint">Separados por coma</div>
+          <div class="ms-wrap" id="ms-ccats-wrap">
+            <div class="ms-trigger" onclick="toggleMsPanel('ms-ccats')">
+              <span class="ms-placeholder" id="ms-ccats-ph">Seleccionar categorias...</span>
+            </div>
+            <div class="ms-panel" id="ms-ccats">
+              <input type="text" class="ms-search" placeholder="Buscar categoria..." oninput="filterMsOptions('ms-ccats',this.value)">
+              <div class="ms-options" id="ms-ccats-options"></div>
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Keywords</label>
@@ -367,12 +399,13 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       </button>
     </div>
     <div class="modal-body" style="text-align:center">
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Selecciona por donde contactaste:</p>
-      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        <button class="btn btn-outline" onclick="setMedioAndAdvance('mail')">Mail</button>
-        <button class="btn btn-outline" onclick="setMedioAndAdvance('whatsapp')">WhatsApp</button>
-        <button class="btn btn-outline" onclick="setMedioAndAdvance('dm')">DM</button>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px" id="modal-medio-msg">Selecciona por donde contactaste (puede ser mas de 1):</p>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">
+        <button class="btn btn-outline" id="medio-btn-mail" onclick="toggleMedio('mail')">Mail</button>
+        <button class="btn btn-outline" id="medio-btn-whatsapp" onclick="toggleMedio('whatsapp')">WhatsApp</button>
+        <button class="btn btn-outline" id="medio-btn-dm" onclick="toggleMedio('dm')">DM</button>
       </div>
+      <button class="btn btn-primary" onclick="confirmMedioAndAdvance()" id="btn-confirm-medio">Confirmar</button>
     </div>
   </div>
 </div>
@@ -397,8 +430,25 @@ const ETAPAS = [
 
 let currentUser = null, currentProfile = null;
 let prospeccion = null, contactos = [], historial = [];
-let editingContactoId = null, pendingMedioContactoId = null;
+let editingContactoId = null, pendingMedioContactoId = null, pendingMedioNextEtapa = null;
+let selectedMedios = [];
 let isDark = false;
+
+// Multi-select state for contact form
+let selectedCPaises = [];
+let selectedCCats = [];
+
+let COUNTRIES = [
+  "Argentina","Bolivia","Brasil","Chile","Colombia","Costa Rica","Cuba",
+  "Ecuador","El Salvador","Espana","Estados Unidos","Guatemala","Honduras",
+  "Mexico","Nicaragua","Panama","Paraguay","Peru","Puerto Rico",
+  "Republica Dominicana","Uruguay","Venezuela"
+];
+let CATEGORIES = [
+  "Musica","Moda","Belleza","Fitness","Gastronomia","Viajes","Gaming",
+  "Comedia","Lifestyle","Negocios","Deportes","Arte & Diseno",
+  "Familia / Maternidad","Tecnologia","Entretenimiento","Educacion","Mascotas","Salud"
+];
 
 // ══════════════════════════════════════════════════════════
 // AUTH
@@ -436,12 +486,15 @@ async function initApp() {
     currentProfile = profile;
     if (!currentProfile) { document.getElementById('load-overlay').style.display='none'; document.getElementById('login-overlay').style.display='flex'; showLoginErr('Sin perfil.'); return; }
 
+    await loadAppConfig();
     await loadData();
 
     document.getElementById('login-overlay').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('load-overlay').style.display='none';
 
+    populateMsOptions('ms-cpaises', COUNTRIES);
+    populateMsOptions('ms-ccats', CATEGORIES);
     renderHeader();
     renderEtapaStrip();
     renderKanban();
@@ -449,6 +502,17 @@ async function initApp() {
     console.error('initApp:', e);
     showToast('Error: '+e.message, 'error');
     document.getElementById('load-overlay').style.display='none';
+  }
+}
+
+async function loadAppConfig() {
+  const {data} = await sb.from('app_config').select('*');
+  if (data) {
+    for (const row of data) {
+      if (row.key === 'categories' && Array.isArray(row.value)) CATEGORIES = row.value;
+      if (row.key === 'countries' && Array.isArray(row.value))
+        COUNTRIES = row.value.map(c => typeof c === 'string' ? c : c.name).filter(Boolean);
+    }
   }
 }
 
@@ -558,15 +622,19 @@ function etapaButtons(c, etapa) {
       <button class="btn btn-green btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'contactar')">Contactar</button>
       <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'descartado')">Descartar</button>`;
     case 'contactar': return `
-      <button class="btn btn-primary btn-xs" onclick="event.stopPropagation();requestMedio(${c.id})">Enviar</button>`;
+      <button class="btn btn-primary btn-xs" onclick="event.stopPropagation();requestMedio(${c.id},'esperando_respuesta')">Contactado</button>
+      <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'evaluacion')" title="Volver">&larr;</button>`;
     case 'esperando_respuesta': return `
-      <button class="btn btn-green btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'interesado')">Interesado</button>
-      <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'no_interesado')">No interesado</button>`;
+      <button class="btn btn-green btn-xs" onclick="event.stopPropagation();requestMedio(${c.id},'interesado')">Interesado</button>
+      <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'no_interesado')">No interesado</button>
+      <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'contactar')" title="Volver">&larr;</button>`;
     case 'descartado': return `
       <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'evaluacion')">Restaurar</button>`;
-    case 'no_interesado': return '';
+    case 'no_interesado': return `
+      <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'esperando_respuesta')">Restaurar</button>`;
     case 'interesado': return `
-      <button class="btn btn-primary btn-xs" onclick="event.stopPropagation();showToast('Graduacion disponible en Fase 4','info')">Pasar a Talentos</button>`;
+      <button class="btn btn-primary btn-xs" onclick="event.stopPropagation();showToast('Graduacion disponible en Fase 4','info')">Pasar a Talentos</button>
+      <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'esperando_respuesta')" title="Volver">&larr;</button>`;
     default: return '';
   }
 }
@@ -603,16 +671,46 @@ async function changeEtapa(contactoId, nuevaEtapa, medio) {
   }
 }
 
-function requestMedio(contactoId) {
+function requestMedio(contactoId, nextEtapa) {
   pendingMedioContactoId = contactoId;
+  pendingMedioNextEtapa = nextEtapa || 'esperando_respuesta';
+  selectedMedios = [];
+  ['mail','whatsapp','dm'].forEach(m => {
+    const btn = document.getElementById('medio-btn-'+m);
+    if (btn) { btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = ''; }
+  });
+  const msg = nextEtapa === 'interesado'
+    ? 'Por que medio respondio? (puede ser mas de 1):'
+    : 'Por donde contactaste? (puede ser mas de 1):';
+  document.getElementById('modal-medio-msg').textContent = msg;
   openModal('modal-medio');
 }
 
-function setMedioAndAdvance(medio) {
+function toggleMedio(medio) {
+  const idx = selectedMedios.indexOf(medio);
+  if (idx >= 0) selectedMedios.splice(idx, 1); else selectedMedios.push(medio);
+  ['mail','whatsapp','dm'].forEach(m => {
+    const btn = document.getElementById('medio-btn-'+m);
+    if (!btn) return;
+    if (selectedMedios.includes(m)) {
+      btn.style.background = 'rgba(178,0,93,0.12)';
+      btn.style.color = 'var(--primary)';
+      btn.style.borderColor = 'var(--primary)';
+    } else {
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }
+  });
+}
+
+function confirmMedioAndAdvance() {
+  if (!selectedMedios.length) { showToast('Selecciona al menos un medio','error'); return; }
   closeModal('modal-medio');
   if (pendingMedioContactoId) {
-    changeEtapa(pendingMedioContactoId, 'esperando_respuesta', medio);
+    changeEtapa(pendingMedioContactoId, pendingMedioNextEtapa, selectedMedios.join(', '));
     pendingMedioContactoId = null;
+    pendingMedioNextEtapa = null;
   }
 }
 
@@ -633,7 +731,8 @@ function openEditContacto(id) {
   document.getElementById('modal-contacto-title').textContent = 'Editar Contacto';
   clearContactForm();
   document.getElementById('c-nombre').value = c.nombre||'';
-  document.getElementById('c-paises').value = (c.paises||[]).join(', ');
+  selectedCPaises = [...(c.paises||[])];
+  renderMsChips('ms-cpaises', selectedCPaises, 'selectedCPaises');
   document.getElementById('c-ciudad').value = c.ciudad||'';
   document.getElementById('c-email').value = c.email||'';
   document.getElementById('c-telefono').value = c.telefono||'';
@@ -641,36 +740,50 @@ function openEditContacto(id) {
   document.getElementById('c-instagram').value = c.instagram||'';
   document.getElementById('c-youtube').value = c.youtube||'';
   document.getElementById('c-genero').value = c.genero||'';
-  document.getElementById('c-categorias').value = (c.categorias||[]).join(', ');
+  selectedCCats = [...(c.categorias||[])];
+  renderMsChips('ms-ccats', selectedCCats, 'selectedCCats');
   document.getElementById('c-keywords').value = c.keywords||'';
   document.getElementById('c-notas').value = c.notas||'';
   openModal('modal-contacto');
 }
 
 function clearContactForm() {
-  ['c-nombre','c-paises','c-ciudad','c-email','c-telefono','c-tiktok','c-instagram','c-youtube','c-categorias','c-keywords','c-notas'].forEach(id=>{
+  ['c-nombre','c-ciudad','c-email','c-telefono','c-tiktok','c-instagram','c-youtube','c-keywords','c-notas'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('c-genero').value = '';
+  selectedCPaises = [];
+  selectedCCats = [];
+  renderMsChips('ms-cpaises', selectedCPaises, 'selectedCPaises');
+  renderMsChips('ms-ccats', selectedCCats, 'selectedCCats');
 }
 
 async function saveContacto() {
   const nombre = document.getElementById('c-nombre').value.trim();
   if (!nombre) { showToast('El nombre es obligatorio','error'); return; }
-  const parseCsv = v => v.split(',').map(s=>s.trim()).filter(Boolean);
+
+  const tiktok = document.getElementById('c-tiktok').value.trim();
+  const instagram = document.getElementById('c-instagram').value.trim();
+  const youtube = document.getElementById('c-youtube').value.trim();
+
+  // Duplicate check (skip if editing)
+  if (!editingContactoId) {
+    const dupes = await checkDuplicates(tiktok, instagram, youtube);
+    if (dupes.length && !confirm(dupes.join('\n') + '\n\nAgregar de todas formas?')) return;
+  }
 
   const payload = {
     prospeccion_id: prospId,
     nombre,
-    paises: parseCsv(document.getElementById('c-paises').value),
+    paises: [...selectedCPaises],
     ciudad: document.getElementById('c-ciudad').value.trim(),
     email: document.getElementById('c-email').value.trim(),
     telefono: document.getElementById('c-telefono').value.trim(),
-    tiktok: document.getElementById('c-tiktok').value.trim(),
-    instagram: document.getElementById('c-instagram').value.trim(),
-    youtube: document.getElementById('c-youtube').value.trim(),
+    tiktok,
+    instagram,
+    youtube,
     genero: document.getElementById('c-genero').value,
-    categorias: parseCsv(document.getElementById('c-categorias').value),
+    categorias: [...selectedCCats],
     keywords: document.getElementById('c-keywords').value.trim(),
     notas: document.getElementById('c-notas').value.trim(),
     updated_at: new Date().toISOString(),
@@ -805,6 +918,99 @@ function extractHandle(url) { return String(url||'').replace(/^https?:\/\/(www\.
 function totalSeg(s) { if(!s) return 0; return (Number(s.tiktok)||0)+(Number(s.instagram)||0)+(Number(s.youtube)||0); }
 function fmtNum(n) { if(!n) return '0'; if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1e3) return (n/1e3).toFixed(1)+'K'; return String(n); }
 function safeUrl(u) { const s=String(u||''); return s.startsWith('http')?s:'https://'+s; }
+
+// ══════════════════════════════════════════════════════════
+// MULTI-SELECT DROPDOWNS
+// ══════════════════════════════════════════════════════════
+function populateMsOptions(panelId, items) {
+  const c = document.getElementById(panelId+'-options');
+  if (!c) return;
+  c.innerHTML = items.map(item =>
+    `<div class="ms-opt" data-value="${esc(item)}" onclick="toggleMsOption('${panelId}','${esc(item)}')">`+
+    `<span class="ms-check"></span>${esc(item)}</div>`
+  ).join('');
+}
+function toggleMsPanel(panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  const isOpen = panel.classList.contains('open');
+  document.querySelectorAll('.ms-panel.open').forEach(p => p.classList.remove('open'));
+  if (!isOpen) { panel.classList.add('open'); const s=panel.querySelector('.ms-search'); if(s){s.value='';filterMsOptions(panelId,'');setTimeout(()=>s.focus(),50);} updateMsOptStates(panelId); }
+}
+function filterMsOptions(panelId, q) {
+  document.querySelectorAll(`#${panelId}-options .ms-opt`).forEach(o => { o.style.display = o.dataset.value.toLowerCase().includes(q.toLowerCase()) ? '' : 'none'; });
+}
+function toggleMsOption(panelId, value) {
+  const arr = panelId==='ms-cpaises'?selectedCPaises:selectedCCats;
+  const arrName = panelId==='ms-cpaises'?'selectedCPaises':'selectedCCats';
+  const idx = arr.indexOf(value);
+  if (idx>=0) arr.splice(idx,1); else arr.push(value);
+  renderMsChips(panelId, arr, arrName);
+  updateMsOptStates(panelId);
+}
+function updateMsOptStates(panelId) {
+  const arr = panelId==='ms-cpaises'?selectedCPaises:selectedCCats;
+  document.querySelectorAll(`#${panelId}-options .ms-opt`).forEach(o => {
+    const sel = arr.includes(o.dataset.value);
+    o.classList.toggle('selected', sel);
+    o.querySelector('.ms-check').textContent = sel ? '✓' : '';
+  });
+}
+function renderMsChips(panelId, arr, arrName) {
+  const trigger = document.querySelector(`#${panelId}-wrap .ms-trigger`);
+  if (!trigger) return;
+  trigger.querySelectorAll('.ms-chip').forEach(c=>c.remove());
+  const ph = trigger.querySelector('.ms-placeholder');
+  if (!arr.length) { if(ph) ph.style.display=''; }
+  else {
+    if(ph) ph.style.display='none';
+    arr.forEach(val => {
+      const chip = document.createElement('span');
+      chip.className = 'ms-chip';
+      chip.innerHTML = `${esc(val)}<span class="ms-chip-x" onclick="event.stopPropagation();removeMsChip('${panelId}','${esc(val)}','${arrName}')">&times;</span>`;
+      trigger.insertBefore(chip, ph);
+    });
+  }
+}
+function removeMsChip(panelId, value, arrName) {
+  const arr = panelId==='ms-cpaises'?selectedCPaises:selectedCCats;
+  const idx = arr.indexOf(value);
+  if (idx>=0) arr.splice(idx,1);
+  renderMsChips(panelId, arr, arrName);
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.ms-wrap')) document.querySelectorAll('.ms-panel.open').forEach(p => p.classList.remove('open'));
+});
+
+// ══════════════════════════════════════════════════════════
+// DUPLICATE CHECK
+// ══════════════════════════════════════════════════════════
+async function checkDuplicates(tiktok, instagram, youtube) {
+  const warnings = [];
+  const normalize = u => String(u||'').toLowerCase().replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'').trim();
+  const nTT = normalize(tiktok), nIG = normalize(instagram), nYT = normalize(youtube);
+  if (!nTT && !nIG && !nYT) return warnings;
+
+  // Check within this prospeccion
+  contactos.forEach(c => {
+    if (c.id === editingContactoId) return;
+    if (nTT && normalize(c.tiktok) === nTT) warnings.push(`Duplicado en prospeccion: ${c.nombre} (TikTok)`);
+    if (nIG && normalize(c.instagram) === nIG) warnings.push(`Duplicado en prospeccion: ${c.nombre} (Instagram)`);
+    if (nYT && normalize(c.youtube) === nYT) warnings.push(`Duplicado en prospeccion: ${c.nombre} (YouTube)`);
+  });
+
+  // Check against talentos table
+  try {
+    const {data: talentos} = await sb.from('talentos').select('id, nombre, tiktok, instagram, youtube');
+    (talentos||[]).forEach(t => {
+      if (nTT && normalize(t.tiktok) === nTT) warnings.push(`Ya existe en Talentos: ${t.nombre} (TikTok)`);
+      if (nIG && normalize(t.instagram) === nIG) warnings.push(`Ya existe en Talentos: ${t.nombre} (Instagram)`);
+      if (nYT && normalize(t.youtube) === nYT) warnings.push(`Ya existe en Talentos: ${t.nombre} (YouTube)`);
+    });
+  } catch(e) { console.warn('Duplicate check against talentos failed:', e); }
+
+  return warnings;
+}
 
 // ══════════════════════════════════════════════════════════
 // BOOT
