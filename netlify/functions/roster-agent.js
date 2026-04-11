@@ -31,7 +31,7 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing campaign or talents data' }) };
     }
 
-    const cantidad = campaign.cantidad || 10;
+    const cantidad = campaign.cantidad || 0;
 
     // Build compact talent descriptions to minimize tokens
     const talentDescriptions = talents.map(t => {
@@ -71,13 +71,13 @@ Genero: ${(campaign.generos||[]).join(', ')}
 Paises: ${(campaign.paises||[]).join(', ')}
 Plataformas: ${(campaign.plataformas||[]).join(', ')}
 Seguidores min: ${campaign.seguidores_min||0} max: ${campaign.seguidores_max||0}
-Cantidad deseada: ${cantidad}
+Cantidad deseada: ${cantidad > 0 ? cantidad : 'Todos los relevantes (sin limite)'}
 Notas: ${campaign.notas || 'ninguna'}
 
 TALENTOS DISPONIBLES (${talents.length}):
 ${talentDescriptions}
 
-Analiza TODOS los talentos y devuelve los TOP ${cantidad} mas relevantes.
+Analiza TODOS los talentos y devuelve ${cantidad > 0 ? 'los TOP ' + cantidad : 'TODOS los que tengan score >= 40'}, rankeados de mayor a menor score.
 Responde con este formato JSON exacto:
 {
   "summary": "Resumen breve del analisis (2-3 oraciones en espanol)",

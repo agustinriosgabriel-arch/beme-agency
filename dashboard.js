@@ -678,6 +678,8 @@ let FN_MAP = {
   generateAIRoster,
   showAIForm,
   createRosterFromAI,
+  toggleAISelect,
+  toggleAllAISelect,
 };
 
 let ACTION_MAP = {
@@ -4740,6 +4742,7 @@ async function executeUndo() {
 
 // ===================== AI ROSTER AGENT =====================
 let _aiRosterResults = [];
+let _aiSelectedIds = new Set();
 
 function openAIRosterModal() {
   document.getElementById('ai-roster-form').style.display = 'block';
@@ -4752,7 +4755,7 @@ function openAIRosterModal() {
   document.getElementById('air-genero').value = '';
   document.getElementById('air-seg-min').value = '';
   document.getElementById('air-seg-max').value = '';
-  document.getElementById('air-cantidad').value = '10';
+  document.getElementById('air-cantidad').value = '';
   ['air-tt','air-ig'].forEach(id => { const el=document.getElementById(id); if(el) el.checked=true; });
   const yt = document.getElementById('air-yt'); if(yt) yt.checked = false;
   openModal('ai-roster-modal');
@@ -4862,7 +4865,6 @@ async function generateAIRoster() {
 function renderAIRosterResults(summary, roster, campaign) {
   document.getElementById('ai-roster-loading').style.display = 'none';
   document.getElementById('ai-roster-results').style.display = 'block';
-
   const resultsDiv = document.getElementById('ai-roster-results');
 
   if (!roster.length) {
@@ -4873,9 +4875,16 @@ function renderAIRosterResults(summary, roster, campaign) {
     return;
   }
 
-  const tipoLabels = {tiktok_video:'TikTok',reel:'Reel',ig_story:'Story',youtube_video:'YouTube',youtube_short:'YT Short'};
+  // Select all by default
+  _aiSelectedIds = new Set(roster.map(r => r.id));
+  renderAICards(summary, roster);
+}
 
-  const cards = roster.map((r, i) => {
+function renderAICards(summary, roster) {
+  const resultsDiv = document.getElementById('ai-roster-results');
+  const selectedCount = _aiSelectedIds.size;
+
+  const cards = (roster || _aiRosterResults).map((r) => {
     const t = talents.find(x => x.id === r.id);
     if (!t) return '';
     const safeFoto = t.foto && (t.foto.startsWith('data:') || t.foto.startsWith('https://')) ? t.foto : '';
@@ -4883,16 +4892,19 @@ function renderAIRosterResults(summary, roster, campaign) {
     const hist = talentCampaigns.filter(tc => tc.talent_id === t.id);
     const marcasHist = hist.map(h => h.marca).filter(Boolean).join(', ');
     const scoreColor = r.score >= 80 ? 'var(--green)' : r.score >= 60 ? 'var(--orange)' : 'var(--text-muted)';
+    const isSelected = _aiSelectedIds.has(r.id);
+    const dimStyle = !isSelected ? 'opacity:0.4;' : '';
 
-    return `<div style="display:flex;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;align-items:flex-start;background:var(--surface)">
-      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:${scoreColor};min-width:32px;text-align:center">${r.score}</div>
-      <div style="width:32px;height:32px;border-radius:50%;background:var(--surface2);border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--primary);overflow:hidden;flex-shrink:0">
+    return `<div style="display:flex;gap:10px;padding:10px 12px;border:1px solid ${isSelected?'var(--border2)':'var(--border)'};border-radius:var(--radius-sm);margin-bottom:6px;align-items:flex-start;background:var(--surface);${dimStyle}transition:opacity 0.15s">
+      <input type="checkbox" ${isSelected?'checked':''} onchange="toggleAISelect(${r.id})" onclick="event.stopPropagation()" style="accent-color:var(--primary);margin-top:4px;cursor:pointer;flex-shrink:0">
+      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:${scoreColor};min-width:28px;text-align:center">${r.score}</div>
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--surface2);border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--primary);overflow:hidden;flex-shrink:0;cursor:pointer" onclick="event.stopPropagation();openEditModal(${r.id})">
         ${safeFoto ? `<img src="${safeFoto}" style="width:100%;height:100%;object-fit:cover">` : getInitials(t.nombre)}
       </div>
-      <div style="flex:1;min-width:0">
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="event.stopPropagation();openEditModal(${r.id})">
         <div style="font-size:13px;font-weight:700">${escapeHtml(t.nombre)}</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${escapeHtml(r.reason)}</div>
-        <div style="display:flex;gap:8px;margin-top:4px;font-size:10px;color:var(--text-dim)">
+        <div style="display:flex;gap:8px;margin-top:4px;font-size:10px;color:var(--text-dim);flex-wrap:wrap">
           ${segs.tiktok ? `<span>TT: ${formatFollowers(segs.tiktok)}</span>` : ''}
           ${segs.instagram ? `<span>IG: ${formatFollowers(segs.instagram)}</span>` : ''}
           ${segs.youtube ? `<span>YT: ${formatFollowers(segs.youtube)}</span>` : ''}
@@ -4903,18 +4915,38 @@ function renderAIRosterResults(summary, roster, campaign) {
   }).join('');
 
   resultsDiv.innerHTML = `
-    <div style="background:linear-gradient(135deg,rgba(106,13,158,0.06),rgba(148,20,224,0.06));border:1px solid rgba(148,20,224,0.15);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px">
-      <div style="font-size:13px;color:var(--text)">${escapeHtml(summary)}</div>
+    <div style="background:linear-gradient(135deg,rgba(106,13,158,0.06),rgba(148,20,224,0.06));border:1px solid rgba(148,20,224,0.15);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:13px;color:var(--text)">${escapeHtml(summary || '')}</div>
     </div>
-    ${cards}
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px">
+      <span style="color:var(--text-muted)">${_aiRosterResults.length} talentos rankeados</span>
+      <span style="color:var(--text-dim)">·</span>
+      <span style="font-weight:700;color:var(--primary)">${selectedCount} seleccionados</span>
+      <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;margin-left:auto" onclick="toggleAllAISelect(true)">Todos</button>
+      <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px" onclick="toggleAllAISelect(false)">Ninguno</button>
+    </div>
+    <div style="max-height:400px;overflow-y:auto">${cards}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;align-items:center">
+      <span style="font-size:11px;color:var(--text-dim)">Click en nombre o foto para ver perfil</span>
       <button class="btn btn-ghost" data-fn="showAIForm">Ajustar y regenerar</button>
-      <button class="btn btn-primary" data-fn="createRosterFromAI">
+      <button class="btn btn-primary" data-fn="createRosterFromAI" ${selectedCount===0?'disabled':''}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-        Crear Roster (${roster.length} talentos)
+        Crear Roster (${selectedCount})
       </button>
     </div>
   `;
+}
+
+function toggleAISelect(id) {
+  if (_aiSelectedIds.has(id)) _aiSelectedIds.delete(id);
+  else _aiSelectedIds.add(id);
+  renderAICards(null, _aiRosterResults);
+}
+
+function toggleAllAISelect(selectAll) {
+  if (selectAll) _aiSelectedIds = new Set(_aiRosterResults.map(r => r.id));
+  else _aiSelectedIds.clear();
+  renderAICards(null, _aiRosterResults);
 }
 
 function showAIForm() {
@@ -4924,9 +4956,10 @@ function showAIForm() {
 }
 
 async function createRosterFromAI() {
-  if (!_aiRosterResults.length) return;
+  if (!_aiSelectedIds.size) { showToast('Selecciona al menos un talento', 'error'); return; }
   const marca = document.getElementById('air-marca').value.trim();
-  const ids = _aiRosterResults.map(r => r.id);
+  // IDs in relevance order (same order as AI ranking)
+  const ids = _aiRosterResults.filter(r => _aiSelectedIds.has(r.id)).map(r => r.id);
 
   // Create roster
   const name = `AI: ${marca} (${ids.length})`;
