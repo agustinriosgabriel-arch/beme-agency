@@ -95,7 +95,7 @@ Responde con este formato JSON exacto:
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5-20241022',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 4096,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
