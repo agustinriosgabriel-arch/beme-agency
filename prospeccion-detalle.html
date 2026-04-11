@@ -271,6 +271,11 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
     <span class="breadcrumb-current" id="breadcrumb-marca">Cargando...</span>
   </div>
   <div class="topbar-right">
+    <input type="file" id="csv-file-input" accept=".csv" style="display:none" onchange="handleCSVFile(this)">
+    <button class="btn btn-outline btn-sm" onclick="document.getElementById('csv-file-input').click()" title="Importar CSV">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Importar CSV
+    </button>
     <button class="btn btn-ghost btn-sm" onclick="openTemplatesModal()" title="Plantillas de email">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
       Plantillas
@@ -498,6 +503,29 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CSV Preview -->
+<div class="modal-overlay" id="modal-csv">
+  <div class="modal" style="max-width:960px">
+    <div class="modal-header">
+      <div class="modal-title" id="csv-modal-title">Preview de importacion</div>
+      <button class="modal-close" onclick="closeModal('modal-csv')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="padding:16px;overflow-x:auto">
+      <div id="csv-summary" style="margin-bottom:12px;font-size:13px;color:var(--text-muted)"></div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px" id="csv-table">
+        <thead id="csv-thead"></thead>
+        <tbody id="csv-tbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-csv')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-csv-import" onclick="confirmCSVImport()">Importar</button>
     </div>
   </div>
 </div>
@@ -1514,6 +1542,215 @@ async function deleteTemplate(id) {
     renderTemplatesList();
     showToast('Plantilla eliminada', 'success');
   } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════
+// FASE 3: CSV IMPORT
+// ══════════════════════════════════════════════════════════
+let _csvParsedRows = [];
+
+function splitCSV(str) {
+  var rows=[], cols=[], cur='', inQ=false, i=0, c, n;
+  while(i<=str.length) {
+    c = i<str.length ? str.charCodeAt(i) : -1;
+    if(c===34) { n=str.charCodeAt(i+1); if(inQ&&n===34){cur+='"';i+=2;continue;} inQ=!inQ; i++; continue; }
+    if(c===44&&!inQ) { cols.push(cur); cur=''; i++; continue; }
+    if(!inQ&&(c===10||(c===13&&str.charCodeAt(i+1)===10))) { if(c===13) i++; cols.push(cur); cur=''; if(cols.length>0) rows.push(cols); cols=[]; i++; continue; }
+    if(c===-1) { cols.push(cur); if(cols.some(Boolean)) rows.push(cols); break; }
+    cur+=str[i]; i++;
+  }
+  return rows;
+}
+
+function normalizeSocialUrl(raw, platform) {
+  let u = String(raw||'').trim();
+  if (!u) return '';
+  if (!u.match(/^https?:\/\//i)) {
+    u = u.replace(/^@/, '');
+    if (platform === 'tiktok') u = 'https://www.tiktok.com/@' + u;
+    else if (platform === 'instagram') u = 'https://www.instagram.com/' + u;
+    else if (platform === 'youtube') u = 'https://www.youtube.com/@' + u;
+    else u = 'https://' + u;
+  }
+  return u;
+}
+
+function handleCSVFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) { parseCSVForProspeccion(e.target.result); };
+  reader.readAsText(file, 'UTF-8');
+  input.value = '';
+}
+
+async function parseCSVForProspeccion(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const allRows = splitCSV(text);
+  if (allRows.length < 2) { showToast('CSV vacio o invalido', 'error'); return; }
+
+  const headers = allRows[0].map(h => (h||'').trim().toLowerCase()
+    .replace(/[áàä]/g,'a').replace(/[éèë]/g,'e').replace(/[íìï]/g,'i')
+    .replace(/[óòö]/g,'o').replace(/[úùü]/g,'u').replace(/[ñ]/g,'n'));
+
+  // Build existing URLs for duplicate detection
+  const normalize = u => String(u||'').toLowerCase().replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'').trim();
+  const existingTT = new Set(contactos.map(c=>normalize(c.tiktok)).filter(Boolean));
+  const existingIG = new Set(contactos.map(c=>normalize(c.instagram)).filter(Boolean));
+  const existingYT = new Set(contactos.map(c=>normalize(c.youtube)).filter(Boolean));
+
+  // Also check against talentos
+  let talentosTT = new Set(), talentosIG = new Set(), talentosYT = new Set();
+  try {
+    const {data:talentos} = await sb.from('talentos').select('tiktok,instagram,youtube');
+    (talentos||[]).forEach(t => {
+      if (t.tiktok) talentosTT.add(normalize(t.tiktok));
+      if (t.instagram) talentosIG.add(normalize(t.instagram));
+      if (t.youtube) talentosYT.add(normalize(t.youtube));
+    });
+  } catch(e) {}
+
+  const rows = [];
+  let skippedEmpty = 0;
+  const csvTT = new Set(), csvIG = new Set();
+
+  for (let i = 1; i < allRows.length; i++) {
+    const vals = allRows[i];
+    const row = {};
+    headers.forEach((h, idx) => { row[h] = (vals[idx]||'').trim(); });
+
+    const nombre = row['nombre'] || row['name'] || '';
+    if (!nombre) { skippedEmpty++; continue; }
+
+    const ttRaw = row['tiktok'] || row['tt'] || '';
+    const igRaw = row['instagram'] || row['ig'] || '';
+    const ytRaw = row['youtube'] || row['yt'] || '';
+    const tt = normalizeSocialUrl(ttRaw, 'tiktok');
+    const ig = normalizeSocialUrl(igRaw, 'instagram');
+    const yt = normalizeSocialUrl(ytRaw, 'youtube');
+
+    // Determine badge status
+    let badge = 'nuevo', badgeColor = '#4ade80';
+    const nTT = normalize(tt), nIG = normalize(ig), nYT = normalize(yt);
+
+    // Duplicate within CSV
+    if ((nTT && csvTT.has(nTT)) || (nIG && csvIG.has(nIG))) {
+      badge = 'duplicado_csv'; badgeColor = '#f87171';
+    }
+    // Duplicate within this prospeccion
+    else if ((nTT && existingTT.has(nTT)) || (nIG && existingIG.has(nIG)) || (nYT && existingYT.has(nYT))) {
+      badge = 'ya_en_prospeccion'; badgeColor = '#f87171';
+    }
+    // Already in talentos
+    else if ((nTT && talentosTT.has(nTT)) || (nIG && talentosIG.has(nIG)) || (nYT && talentosYT.has(nYT))) {
+      badge = 'ya_en_talentos'; badgeColor = '#fbbf24';
+    }
+
+    if (nTT) csvTT.add(nTT);
+    if (nIG) csvIG.add(nIG);
+
+    const paisRaw = row['paises'] || row['pais'] || row['country'] || '';
+    const paises = paisRaw ? paisRaw.split(/[;,]/).map(x=>x.trim()).filter(Boolean) : [];
+
+    rows.push({
+      nombre,
+      paises,
+      ciudad: row['ciudad'] || row['city'] || '',
+      telefono: row['telefono'] || row['phone'] || '',
+      email: row['email'] || '',
+      tiktok: tt, instagram: ig, youtube: yt,
+      genero: row['genero'] || row['gender'] || '',
+      categorias: (row['categorias'] || row['categories'] || '').split(/[;,]/).map(c=>c.trim()).filter(Boolean),
+      keywords: row['keywords'] || '',
+      notas: row['notas'] || row['notes'] || '',
+      badge, badgeColor,
+    });
+  }
+
+  if (rows.length === 0) { showToast('No hay contactos para importar', 'info'); return; }
+
+  _csvParsedRows = rows;
+  showCSVPreview(rows, skippedEmpty);
+}
+
+function showCSVPreview(rows, skippedEmpty) {
+  const badgeLabels = {nuevo:'Nuevo', duplicado_csv:'Dup. CSV', ya_en_prospeccion:'Ya en prospeccion', ya_en_talentos:'Ya en Talentos'};
+  const nuevos = rows.filter(r=>r.badge==='nuevo').length;
+  const yaEnTalentos = rows.filter(r=>r.badge==='ya_en_talentos').length;
+  const dupes = rows.filter(r=>r.badge==='duplicado_csv'||r.badge==='ya_en_prospeccion').length;
+
+  document.getElementById('csv-summary').innerHTML =
+    `<strong>${rows.length}</strong> contactos encontrados: <span style="color:#4ade80">${nuevos} nuevos</span>` +
+    (yaEnTalentos ? `, <span style="color:#fbbf24">${yaEnTalentos} ya en Talentos</span>` : '') +
+    (dupes ? `, <span style="color:#f87171">${dupes} duplicados (se excluyen)</span>` : '') +
+    (skippedEmpty ? `, ${skippedEmpty} filas vacias omitidas` : '');
+
+  const thStyle = 'padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--text-dim);border-bottom:1px solid var(--border);white-space:nowrap';
+  document.getElementById('csv-thead').innerHTML = `<tr>
+    <th style="${thStyle}">#</th><th style="${thStyle}">Estado</th>
+    <th style="${thStyle}">Nombre</th><th style="${thStyle}">TikTok</th>
+    <th style="${thStyle}">Instagram</th><th style="${thStyle}">YouTube</th>
+    <th style="${thStyle}">Paises</th></tr>`;
+
+  const tdStyle = 'padding:5px 8px;font-size:12px;border-bottom:1px solid var(--border);white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis';
+  document.getElementById('csv-tbody').innerHTML = rows.map((r, i) =>
+    `<tr style="${r.badge!=='nuevo'&&r.badge!=='ya_en_talentos'?'opacity:0.4':''}">
+      <td style="${tdStyle}">${i+1}</td>
+      <td style="${tdStyle}"><span style="padding:2px 6px;border-radius:12px;font-size:10px;font-weight:700;background:${r.badgeColor}22;color:${r.badgeColor}">${badgeLabels[r.badge]}</span></td>
+      <td style="${tdStyle}">${esc(r.nombre)}</td>
+      <td style="${tdStyle}">${esc(r.tiktok?extractHandle(r.tiktok):'')}</td>
+      <td style="${tdStyle}">${esc(r.instagram?extractHandle(r.instagram):'')}</td>
+      <td style="${tdStyle}">${esc(r.youtube?extractHandle(r.youtube):'')}</td>
+      <td style="${tdStyle}">${esc((r.paises||[]).join(', '))}</td>
+    </tr>`
+  ).join('');
+
+  document.getElementById('csv-modal-title').textContent = `Preview: ${rows.length} contactos`;
+  openModal('modal-csv');
+}
+
+async function confirmCSVImport() {
+  // Only import "nuevo" and "ya_en_talentos" (skip duplicates)
+  const toImport = _csvParsedRows.filter(r => r.badge === 'nuevo' || r.badge === 'ya_en_talentos');
+  if (!toImport.length) { showToast('No hay contactos nuevos para importar', 'info'); closeModal('modal-csv'); return; }
+
+  const btn = document.getElementById('btn-csv-import');
+  btn.textContent = 'Importando...'; btn.disabled = true;
+
+  try {
+    const CHUNK = 50;
+    for (let i = 0; i < toImport.length; i += CHUNK) {
+      const chunk = toImport.slice(i, i + CHUNK).map(r => ({
+        prospeccion_id: prospId,
+        nombre: r.nombre,
+        paises: r.paises || [],
+        ciudad: r.ciudad || '',
+        telefono: r.telefono || '',
+        email: r.email || '',
+        tiktok: r.tiktok || '',
+        instagram: r.instagram || '',
+        youtube: r.youtube || '',
+        genero: r.genero || '',
+        categorias: r.categorias || [],
+        keywords: r.keywords || '',
+        notas: r.notas || '',
+        etapa: 'evaluacion',
+        seguidores: {tiktok:0, instagram:0, youtube:0},
+      }));
+      const {error} = await sb.from('prospeccion_contactos').insert(chunk);
+      if (error) throw error;
+    }
+
+    closeModal('modal-csv');
+    await loadData();
+    renderEtapaStrip();
+    renderKanban();
+    showToast(`${toImport.length} contactos importados`, 'success');
+  } catch(e) {
+    showToast('Error al importar: ' + e.message, 'error');
+  }
+  btn.textContent = 'Importar'; btn.disabled = false;
+  _csvParsedRows = [];
 }
 
 // ══════════════════════════════════════════════════════════
