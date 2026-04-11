@@ -673,6 +673,11 @@ let FN_MAP = {
   undoLastAction: function(){executeUndo();},
   setRosterViewTable,
   setRosterViewCards,
+  openAIRosterModal,
+  closeAIRosterModal,
+  generateAIRoster,
+  showAIForm,
+  createRosterFromAI,
 };
 
 let ACTION_MAP = {
