@@ -4784,31 +4784,35 @@ async function generateAIRoster() {
     notas: document.getElementById('air-notas').value.trim(),
   };
 
-  // Pre-filter talents
+  // Pre-filter: only hard filters (platform + min followers). Let Claude handle the rest.
   let filtered = talents.filter(t => {
-    // Gender filter
-    if (campaign.generos.length && !campaign.generos.includes(t.genero)) return false;
-    // Country filter
-    if (campaign.paises.length && !(t.paises||[]).some(p => campaign.paises.some(cp => p.toLowerCase().includes(cp.toLowerCase())))) return false;
-    // Platform filter: must have at least one of the requested platforms
-    if (campaign.plataformas.length) {
-      const hasPlatform = campaign.plataformas.some(p => {
-        if (p === 'TikTok') return !!t.tiktok;
-        if (p === 'Instagram') return !!t.instagram;
-        if (p === 'YouTube') return !!t.youtube;
-        return false;
-      });
-      if (!hasPlatform) return false;
+    // Must have at least one social network
+    if (!t.tiktok && !t.instagram && !t.youtube) return false;
+    // Follower minimum (only if specified)
+    if (campaign.seguidores_min) {
+      const totalSeg = (t.seguidores?.tiktok||0) + (t.seguidores?.instagram||0) + (t.seguidores?.youtube||0);
+      if (totalSeg < campaign.seguidores_min) return false;
     }
-    // Follower range
-    const totalSeg = (t.seguidores?.tiktok||0) + (t.seguidores?.instagram||0) + (t.seguidores?.youtube||0);
-    if (campaign.seguidores_min && totalSeg < campaign.seguidores_min) return false;
-    if (campaign.seguidores_max && totalSeg > campaign.seguidores_max) return false;
     return true;
   });
 
+  // If too many talents, apply soft filters to reduce to ~300 max for token efficiency
+  if (filtered.length > 300) {
+    // Apply gender filter if specified
+    if (campaign.generos.length) {
+      const gFiltered = filtered.filter(t => campaign.generos.includes(t.genero));
+      if (gFiltered.length >= 20) filtered = gFiltered;
+    }
+    // Apply country filter if specified
+    if (campaign.paises.length && filtered.length > 300) {
+      const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const cFiltered = filtered.filter(t => (t.paises||[]).some(p => campaign.paises.some(cp => norm(p).includes(norm(cp)))));
+      if (cFiltered.length >= 20) filtered = cFiltered;
+    }
+  }
+
   if (filtered.length === 0) {
-    showToast('No hay talentos que cumplan los filtros basicos. Intenta con criterios mas amplios.', 'error');
+    showToast('No hay talentos con redes sociales cargadas', 'error');
     return;
   }
 
