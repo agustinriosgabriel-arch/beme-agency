@@ -496,8 +496,8 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
           </div>
           <div class="form-group">
             <label class="form-label">Cuerpo *</label>
-            <textarea id="tpl-cuerpo" class="form-input" style="min-height:150px" placeholder="Hola {{nombre}}, ..."></textarea>
-            <div class="form-hint">Usa {{nombre}} para insertar el nombre del contacto</div>
+            <textarea id="tpl-cuerpo" class="form-input" style="min-height:150px" placeholder="Hola {{nombre}}, te contactamos de parte de {{marca}} para..."></textarea>
+            <div class="form-hint">Variables: {{nombre}}, {{nombreprospeccion}}, {{marca}}, {{producto}}, {{paises}}, {{plataformas}}, {{email}}, {{telefono}}, {{tiktok}}, {{instagram}}</div>
           </div>
           <div style="display:flex;gap:8px;justify-content:flex-end">
             <button class="btn btn-ghost" onclick="cancelTemplate()">Cancelar</button>
@@ -1038,7 +1038,17 @@ async function deleteContacto(id) {
 function copyEmail(contactoId) {
   const c = contactos.find(x=>x.id===contactoId);
   if (!c || !prospeccion.email_draft) return;
-  const text = prospeccion.email_draft.replace(/\{\{nombre\}\}/gi, c.nombre||'');
+  let text = prospeccion.email_draft;
+  text = text.replace(/\{\{nombre\}\}/gi, c.nombre||'');
+  text = text.replace(/\{\{nombreprospeccion\}\}/gi, prospeccion.marca||'');
+  text = text.replace(/\{\{marca\}\}/gi, prospeccion.marca||'');
+  text = text.replace(/\{\{producto\}\}/gi, prospeccion.producto||'');
+  text = text.replace(/\{\{paises\}\}/gi, (prospeccion.paises||[]).join(', '));
+  text = text.replace(/\{\{plataformas\}\}/gi, (prospeccion.plataformas||[]).join(', '));
+  text = text.replace(/\{\{email\}\}/gi, c.email||'');
+  text = text.replace(/\{\{telefono\}\}/gi, c.telefono||'');
+  text = text.replace(/\{\{tiktok\}\}/gi, c.tiktok||'');
+  text = text.replace(/\{\{instagram\}\}/gi, c.instagram||'');
   navigator.clipboard.writeText(text).then(()=>showToast('Email copiado al portapapeles', 'success'));
 }
 
