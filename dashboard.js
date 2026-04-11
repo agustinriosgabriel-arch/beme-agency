@@ -32,6 +32,7 @@ let CATEGORIES = [...BASE_CATEGORIES];
 let talents = [];
 let rosters = [];
 let talentCampaigns = []; // campaign history per talent
+let rosterBrandEdits = {}; // roster_id → count of brand edits
 let nextTalentId = 1000;
 let nextRosterId = 100;
 let editingId = null;
@@ -343,6 +344,7 @@ async function loadFromSupabase() {
     populateCountryDropdown();
     updateApiKeyUI();
     loadGeneralRosters();
+    loadRosterBrandEdits();
 
     // Subscribe to realtime changes so all users see updates instantly
     setupRealtimeSubscription();
@@ -714,6 +716,7 @@ let ACTION_MAP = {
   'delete-general-roster':(id) => deleteGeneralRoster(id),
   'copy-general-roster-url':(id) => copyGeneralRosterUrl(id),
   'ai-descs-roster': (id) => openAIDescsModal(parseInt(id)),
+  'clear-brand-edits': (id) => clearRosterBrandEdits(parseInt(id)),
 };
 
 document.addEventListener('click', (e) => {
@@ -2409,8 +2412,9 @@ function renderRosterCard(r, isArchived) {
     ? '<button class="btn btn-outline btn-sm" data-action="unarchive-roster" data-id="'+r.id+'" title="Desarchivar"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></button>'
     : '<button class="btn btn-outline btn-sm" data-action="archive-roster" data-id="'+r.id+'" title="Archivar"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></button>';
 
+  const brandEditCount = rosterBrandEdits[r.id] || 0;
   card.innerHTML = '\
-      <div class="roster-name">'+escapeHtml(r.name)+'</div>\
+      <div class="roster-name" style="display:flex;align-items:center;gap:8px">'+escapeHtml(r.name)+(brandEditCount ? '<span style="background:linear-gradient(135deg,#b2005d,#9414E0);color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px;white-space:nowrap" title="'+brandEditCount+' cambios de la marca">'+brandEditCount+' nuevo'+(brandEditCount!==1?'s':'')+'</span>' : '')+'</div>\
       '+(r.description ? '<div class="roster-desc">'+escapeHtml(r.description)+'</div>' : '')+'\
       <div class="roster-meta">\
         <span class="roster-talent-count">\
@@ -2422,6 +2426,7 @@ function renderRosterCard(r, isArchived) {
       '+(rosterTalents.length > 0 ? '<div style="display:flex;margin-left:6px;margin-bottom:12px">'+avatarsPrev+(rosterTalents.length>3?'<div style="width:24px;height:24px;border-radius:50%;background:var(--surface2);border:2px solid var(--surface);display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);margin-left:-6px">+'+(rosterTalents.length-3)+'</div>':'')+'</div>' : '')+'\
       <div class="roster-actions">\
         <button class="btn btn-outline btn-sm" style="flex:1" data-action="view-roster" data-id="'+r.id+'">Ver</button>\
+        '+(brandEditCount ? '<button class="btn btn-outline btn-sm" data-action="clear-brand-edits" data-id="'+r.id+'" title="Marcar leido" style="color:#b2005d;border-color:rgba(178,0,93,0.4);font-size:10px">✓ Leido</button>' : '')+'\
         <button class="btn btn-outline btn-sm" data-action="ai-descs-roster" data-id="'+r.id+'" title="Generar descripciones AI" style="color:#9414E0;border-color:rgba(148,20,224,0.4);font-weight:700;">AI</button>\
         <button class="btn btn-outline btn-sm" data-action="edit-roster" data-id="'+r.id+'" title="Editar nombre"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>\
         <button class="btn btn-outline btn-sm" data-action="copy-url" data-id="'+r.id+'" title="Copiar URL" style="color:#b2005d;border-color:rgba(178,0,93,0.4);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>\
@@ -3073,6 +3078,28 @@ async function deleteGeneralRoster(id) {
     await sb.from('rosters_generales').delete().eq('id', id);
   }
   showToast('Roster general eliminado', 'success');
+}
+
+async function loadRosterBrandEdits() {
+  if (!sb || !currentUser) return;
+  try {
+    const {data} = await sb.from('roster_selecciones').select('roster_id, last_brand_edit').not('last_brand_edit', 'is', null);
+    rosterBrandEdits = {};
+    (data||[]).forEach(s => {
+      if (!rosterBrandEdits[s.roster_id]) rosterBrandEdits[s.roster_id] = 0;
+      rosterBrandEdits[s.roster_id]++;
+    });
+    renderRosters();
+  } catch(e) { console.warn('loadRosterBrandEdits:', e); }
+}
+
+async function clearRosterBrandEdits(rosterId) {
+  try {
+    await sb.from('roster_selecciones').update({last_brand_edit: null}).eq('roster_id', rosterId).not('last_brand_edit', 'is', null);
+    delete rosterBrandEdits[rosterId];
+    renderRosters();
+    showToast('Notificaciones marcadas como leidas', 'success');
+  } catch(e) { console.warn(e); }
 }
 
 async function loadGeneralRosters() {

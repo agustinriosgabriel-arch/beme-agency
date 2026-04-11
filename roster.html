@@ -257,7 +257,7 @@ function render() {
         <div style="display:flex;align-items:center;gap:4px;">
           <span style="font-size:14px;color:#b2005d;font-weight:700;">$</span>
           <input type="text" inputmode="numeric" pattern="[0-9]*" class="price-input" data-id="${t.id}" placeholder="0"
-            style="width:80px;border:1px solid #e0e0e0;border-radius:6px;padding:6px 8px;font-size:13px;font-family:inherit;color:#111;outline:none;">
+            style="width:80px;border:1px solid #e0e0e0;border-radius:6px;padding:6px 8px;font-size:13px;font-family:inherit;color:#111;outline:none;${IS_INTERNAL?'':'background:#f8f8f8;color:#888'}" ${IS_INTERNAL?'':'readonly'}>
         </div>
       </td>` : ''}
       ${showPriceComments ? `<td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;min-width:160px;">
@@ -317,7 +317,7 @@ function render() {
             <div style="display:flex;align-items:center;gap:5px;">
               <span style="font-size:16px;color:#b2005d;font-weight:800;">$</span>
               <input type="text" inputmode="numeric" pattern="[0-9]*" class="price-input" data-id="${t.id}" placeholder="0"
-                style="flex:1;border:1.5px solid #e8e0f0;border-radius:8px;padding:8px 10px;font-size:15px;font-family:inherit;color:#111;outline:none;background:#fff;">
+                style="flex:1;border:1.5px solid #e8e0f0;border-radius:8px;padding:8px 10px;font-size:15px;font-family:inherit;color:${IS_INTERNAL?'#111':'#888'};outline:none;background:${IS_INTERNAL?'#fff':'#f8f8f8'};" ${IS_INTERNAL?'':'readonly'}>
             </div>
           </div>
           <div style="flex:1;min-width:120px">
@@ -484,6 +484,10 @@ async function saveSelection(talentId) {
     updated_at: new Date().toISOString()
   };
   if (contraEl) row.contraoferta = contraEl.value.trim();
+  // Track who edited: brand edits trigger notification for admin
+  if (!IS_INTERNAL) {
+    row.last_brand_edit = new Date().toISOString();
+  }
   SELS[id] = row;
 
   const badge = document.getElementById('save-badge');
