@@ -2032,6 +2032,35 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   Deshacer: <span class="undo-label"></span>
 </button>
 
+<!-- AI DESCRIPTIONS MODAL -->
+<div class="modal-overlay" id="ai-descs-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header" style="background:linear-gradient(135deg,rgba(106,13,158,0.08),rgba(148,20,224,0.08))">
+      <h2 class="modal-title" style="display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9414E0" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg>
+        Generar Descripciones AI
+      </h2>
+      <button class="modal-close-btn" data-fn="closeAIDescsModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Completa la info de la campana para que el agente genere una descripcion personalizada de cada talento del roster.</p>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-group"><label class="field-label">Marca *</label><input type="text" id="aid-marca" class="field-input" placeholder="Ej: L'Oreal"></div>
+        <div class="form-group"><label class="field-label">Producto</label><input type="text" id="aid-producto" class="field-input" placeholder="Ej: Shampoo anti-caida"></div>
+        <div class="form-group"><label class="field-label">Categorias</label><input type="text" id="aid-categorias" class="field-input" placeholder="Belleza, Lifestyle..."></div>
+        <div class="form-group"><label class="field-label">Que busca la marca?</label><textarea id="aid-notas" class="field-input" style="min-height:80px;resize:vertical" placeholder="Describi que tipo de talento busca, estilo de contenido, audiencia objetivo, keywords relevantes..."></textarea></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+        <button class="btn btn-ghost" data-fn="closeAIDescsModal">Cancelar</button>
+        <button class="btn btn-purple" id="aid-btn-generate" data-fn="confirmAIDescs">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg>
+          Generar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- AI ROSTER MODAL -->
 <div class="modal-overlay" id="ai-roster-modal">
   <div class="modal" style="max-width:780px">

@@ -681,7 +681,9 @@ let FN_MAP = {
   toggleAISelect,
   toggleAllAISelect,
   toggleAIDescs,
-  generateAIDescsForRoster,
+  openAIDescsModal,
+  closeAIDescsModal,
+  confirmAIDescs,
 };
 
 let ACTION_MAP = {
@@ -711,6 +713,7 @@ let ACTION_MAP = {
   'edit-general-roster':  (id) => openCreateGeneralRosterModal(parseInt(id)),
   'delete-general-roster':(id) => deleteGeneralRoster(id),
   'copy-general-roster-url':(id) => copyGeneralRosterUrl(id),
+  'ai-descs-roster': (id) => openAIDescsModal(parseInt(id)),
 };
 
 document.addEventListener('click', (e) => {
@@ -2425,6 +2428,7 @@ function renderRosterCard(r, isArchived) {
         <button class="btn btn-outline btn-sm" data-action="manage-roster" data-id="'+r.id+'" title="Editar talentos"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>\
         <button class="btn btn-outline btn-sm" data-action="duplicate-roster" data-id="'+r.id+'" title="Duplicar"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>\
         '+archiveBtn+'\
+        <button class="btn btn-outline btn-sm" data-action="ai-descs-roster" data-id="'+r.id+'" title="Descripciones AI" style="color:#9414E0;border-color:rgba(148,20,224,0.4);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg></button>\
         <button class="btn btn-danger btn-sm" data-action="delete-roster" data-id="'+r.id+'" title="Eliminar"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>\
       </div>';
   return card;
@@ -3158,7 +3162,7 @@ function generateRosterCardsHTML(roster, rosterTalents, today) {
             <input type="checkbox" ${roster.show_ai_descriptions?'checked':''} onchange="toggleAIDescs(${roster.id},this.checked)" style="accent-color:#9414E0"> Mostrar AI
           </label>
         </div>` : `<div style="margin-top:6px">
-          <button style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid rgba(148,20,224,0.3);background:rgba(148,20,224,0.06);color:#9414E0;cursor:pointer;font-weight:600;font-family:inherit" onclick="generateAIDescsForRoster(${roster.id})">Generar AI</button>
+          <button style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid rgba(148,20,224,0.3);background:rgba(148,20,224,0.06);color:#9414E0;cursor:pointer;font-weight:600;font-family:inherit" onclick="openAIDescsModal(${roster.id})">Generar AI</button>
         </div>`}
       </div>
     </div>
@@ -5031,31 +5035,55 @@ async function toggleAIDescs(rosterId, show) {
   viewRoster(rosterId);
 }
 
-async function generateAIDescsForRoster(rosterId) {
+let _aiDescsRosterId = null;
+
+function openAIDescsModal(rosterId) {
+  _aiDescsRosterId = rosterId;
+  const roster = rosters.find(r => r.id === rosterId);
+  if (!roster) return;
+  // Pre-fill from existing context if available
+  document.getElementById('aid-marca').value = roster.ai_campaign_context ? roster.ai_campaign_context.split(' - ')[0] || '' : '';
+  document.getElementById('aid-producto').value = '';
+  document.getElementById('aid-categorias').value = '';
+  document.getElementById('aid-notas').value = '';
+  openModal('ai-descs-modal');
+}
+
+function closeAIDescsModal() {
+  closeModal('ai-descs-modal');
+}
+
+async function confirmAIDescs() {
+  const rosterId = _aiDescsRosterId;
   const roster = rosters.find(r => r.id === rosterId);
   if (!roster) return;
 
-  const context = prompt('Describe la campana para generar descripciones AI:\n(Ej: L\'Oreal - Shampoo, mujeres, belleza, Mexico, TikTok)');
-  if (!context) return;
+  const marca = document.getElementById('aid-marca').value.trim();
+  if (!marca) { showToast('La marca es obligatoria', 'error'); return; }
+  const producto = document.getElementById('aid-producto').value.trim();
+  const categorias = document.getElementById('aid-categorias').value.trim();
+  const notas = document.getElementById('aid-notas').value.trim();
 
   const rosterTalents = roster.talentIds.map(tid => talents.find(t => t.id === tid)).filter(Boolean);
   if (!rosterTalents.length) { showToast('El roster no tiene talentos', 'error'); return; }
 
-  showToast('Generando descripciones AI...', 'info', 10000);
+  const btn = document.getElementById('aid-btn-generate');
+  btn.textContent = 'Generando...'; btn.disabled = true;
 
   const talentData = rosterTalents.map(t => ({
-    id: t.id,
-    nombre: t.nombre,
-    paises: t.paises || [],
-    genero: t.genero || '',
-    categorias: t.categorias || [],
-    keywords: t.keywords || '',
-    valores: t.valores || '',
+    id: t.id, nombre: t.nombre, paises: t.paises || [], genero: t.genero || '',
+    categorias: t.categorias || [], keywords: t.keywords || '', valores: t.valores || '',
     seguidores: t.seguidores || {},
     historial: talentCampaigns.filter(tc => tc.talent_id === t.id).map(tc => ({ marca: tc.marca, acciones: tc.acciones })),
   }));
 
-  const campaign = { marca: context, producto: '', categorias: [], generos: [], paises: [], plataformas: [], notas: context, cantidad: rosterTalents.length };
+  const campaign = {
+    marca, producto, categorias: categorias.split(',').map(s=>s.trim()).filter(Boolean),
+    generos: [], paises: [], plataformas: [],
+    notas: notas || `Campana para ${marca}${producto ? ' - ' + producto : ''}`,
+    cantidad: rosterTalents.length,
+  };
+  const context = `${marca}${producto ? ' - ' + producto : ''}${categorias ? ' | ' + categorias : ''}`;
 
   try {
     const resp = await fetch('/.netlify/functions/roster-agent', {
@@ -5077,9 +5105,12 @@ async function generateAIDescsForRoster(rosterId) {
       await sb.from('rosters').update({ ai_descriptions: aiDescs, ai_campaign_context: context, show_ai_descriptions: true }).eq('id', rosterId);
     }
 
+    closeModal('ai-descs-modal');
     viewRoster(rosterId);
     showToast('Descripciones AI generadas', 'success');
   } catch(e) {
     showToast('Error: ' + e.message, 'error');
   }
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg> Generar';
+  btn.disabled = false;
 }
