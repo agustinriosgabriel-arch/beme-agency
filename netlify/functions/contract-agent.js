@@ -22,15 +22,30 @@ function generateContractES(d) {
   const derechos = d.derechos_imagen
     ? `<p><strong>DERECHOS DE IMAGEN:</strong> ${d.derechos_dias || 0} dias por $${d.derechos_valor || 0} ${d.moneda} desde ${d.derechos_desde || 'la publicacion'}.</p>` : '';
 
-  return `<h1>HOJA DE CONFIRMACION</h1>
-<p><em>${d.ciudad_contrato || 'Mexico City'}, ${fecha}</em></p>
-<p>De una parte, <strong>${d.parte_a_nombre}</strong>${d.parte_a_rfc ? ' con RFC ' + d.parte_a_rfc : ''}${d.parte_a_domicilio ? ' y domiciliado en ' + d.parte_a_domicilio : ''}. Y, de otra, <strong>${d.parte_b_nombre}</strong>${d.parte_b_rfc ? ' con RFC ' + d.parte_b_rfc : ''}${d.parte_b_domicilio ? ', domiciliado en ' + d.parte_b_domicilio : ''}. <strong>NUMERO DE CONTRATO: ${d.numero_contrato || 'Pendiente'}</strong></p>
-<p><strong>INFLUENCER/S:</strong> ${d.influencer_nombre}</p>
-<p><strong>SERVICIOS:</strong> ${d.servicios}</p>
-<p><strong>CANALES:</strong> ${d.canales}</p>
-<p><strong>HASHTAGS:</strong> ${d.hashtags || 'A Definir en Brief'}</p>
-<p><strong>MARCA/PRODUCTO:</strong> ${d.marca_producto}</p>
-<p><strong>TARIFA:</strong> ${d.tarifa_tipo === 'canje' ? 'Canje' : d.tarifa_tipo === 'mixto' ? 'Mixto' : 'Pago'}</p>
+  return `<div class="contract-header">
+  <img src="/assets/brand/logos/Beme1Color.png" alt="Beme">
+  <div class="contract-header-info">
+    <div class="contract-num">${d.numero_contrato || 'Pendiente'}</div>
+    <div>${d.ciudad_contrato || 'Mexico City'}, ${fecha}</div>
+  </div>
+</div>
+<div class="contract-body">
+<div class="contract-title">Hoja de Confirmacion</div>
+<div class="contract-subtitle">Contrato de Servicios de Influencer Marketing</div>
+
+<div class="contract-summary">
+  <dt>Parte A</dt><dd>${d.parte_a_nombre}${d.parte_a_rfc ? ' &mdash; RFC: ' + d.parte_a_rfc : ''}</dd>
+  <dt>Parte B</dt><dd>${d.parte_b_nombre}${d.parte_b_rfc ? ' &mdash; RFC: ' + d.parte_b_rfc : ''}</dd>
+  <dt>Influencer(s)</dt><dd>${d.influencer_nombre}</dd>
+  <dt>Marca / Producto</dt><dd>${d.marca_producto}</dd>
+  <dt>Servicios</dt><dd>${d.servicios}</dd>
+  <dt>Canales</dt><dd>${d.canales}</dd>
+  <dt>Hashtags</dt><dd>${d.hashtags || 'A Definir en Brief'}</dd>
+  <dt>Tarifa</dt><dd>${d.tarifa_tipo === 'canje' ? 'Canje' : d.tarifa_tipo === 'mixto' ? 'Mixto' : 'Pago'} &mdash; <strong>$${Number(d.monto||0).toLocaleString()} ${d.moneda}</strong></dd>
+</div>
+
+${d.parte_a_domicilio ? `<p>De una parte, <strong>${d.parte_a_nombre}</strong>${d.parte_a_domicilio ? ', domiciliado en ' + d.parte_a_domicilio : ''}. Y, de otra, <strong>${d.parte_b_nombre}</strong>${d.parte_b_domicilio ? ', domiciliado en ' + d.parte_b_domicilio : ''}.</p>` : ''}
+
 <p><strong>METODO DE PAGO:</strong> Como contraprestacion por la totalidad de los servicios prestados por el INFLUENCER, ${d.tipo === 'marca' ? d.parte_a_nombre : 'BEME IMKT'} pagara la cantidad de <strong>$${Number(d.monto||0).toLocaleString()} ${d.moneda}</strong>${d.monto_texto ? ' (' + d.monto_texto + ')' : ''}, que se efectuara mediante ${d.metodo_pago || 'transferencia bancaria'}, dentro del plazo de ${d.plazo_pago_dias || 45} dias una vez publicada la campana.</p>
 ${derechos}
 <p><strong>COMENTARIOS ADICIONALES:</strong> ${d.comentarios || 'En todas las publicaciones se debera colocar los hashtags y mencion a marca, en caso de no ser asi no se pagara dicha publicacion. Todo el contenido generado debera enviarse para aprobacion con 48 hrs de antelacion para que la marca pueda validar y realizar los ajustes pertinentes. No se podra publicar contenido sin validar por la marca. Deberas enviar las metricas completas correspondientes de cada contenido, asi como los testigos de lo contrario no se podra hacer el pago de la publicacion. No mostrar otros productos o marcas dentro de las Publicaciones.'}</p>
@@ -60,7 +75,26 @@ ${derechos}
 <li>Las partes aceptan que todo lo no previsto en este acuerdo se regira por las disposiciones en la materia, ya de indole local de la Ciudad de Mexico o federal segun corresponda. En caso de que las Partes no puedan resolver alguna Controversia, se resolvera por la jurisdiccion de los Tribunales Federales con sede en la Ciudad de Mexico. Renunciando las partes a cualquier otra jurisdiccion que les corresponda por su domicilio o nacionalidad.</li>
 <li>Las Partes de ninguna manera seran responsables por el rechazo o falta de cumplimiento a las obligaciones que asume en el presente Contrato, cuando estos deriven de caso fortuito o causas de fuerza mayor dentro de su empresa o imputable a sus proveedores.</li>
 </ol>
-<p>Todos los avisos y notificaciones entre las Partes deberan realizarse por escrito y ser entregados ya sea personalmente, por mensajeria especializada o por correo electronico y confirmado por el mismo medio, a los domicilios o direccion de correo electronico, senalados en la caratula de este acuerdo a no ser que las Partes notifiquen su cambio de domicilio o correo electronico en los terminos anteriores.</p>`;
+<p>Todos los avisos y notificaciones entre las Partes deberan realizarse por escrito y ser entregados ya sea personalmente, por mensajeria especializada o por correo electronico y confirmado por el mismo medio, a los domicilios o direccion de correo electronico, senalados en la caratula de este acuerdo a no ser que las Partes notifiquen su cambio de domicilio o correo electronico en los terminos anteriores.</p>
+
+<div class="contract-footer">
+  <div class="signature-block">
+    <div class="signature-line"></div>
+    <div class="signature-label">Por ${d.tipo === 'marca' ? d.parte_a_nombre : 'BEME IMKT'}</div>
+    <div class="signature-name">${d.parte_a_nombre}</div>
+  </div>
+  <div class="signature-block">
+    <div class="signature-line"></div>
+    <div class="signature-label">Por ${d.parte_b_nombre}</div>
+    <div class="signature-name">${d.influencer_nombre}</div>
+  </div>
+</div>
+
+<div class="contract-legal-footer">
+  BEME IMKT &mdash; Influencer Marketing Agency<br>
+  Este documento es confidencial y esta protegido por las leyes de propiedad intelectual aplicables.
+</div>
+</div>`;
 }
 
 function generateContractEN(d) {
@@ -68,15 +102,30 @@ function generateContractEN(d) {
   const derechos = d.derechos_imagen
     ? `<p><strong>IMAGE RIGHTS:</strong> ${d.derechos_dias || 0} days for $${d.derechos_valor || 0} ${d.moneda} from ${d.derechos_desde || 'publication date'}.</p>` : '';
 
-  return `<h1>CONFIRMATION SHEET</h1>
-<p><em>${d.ciudad_contrato || 'Mexico City'}, ${fecha}</em></p>
-<p>On one part, <strong>${d.parte_a_nombre}</strong>${d.parte_a_rfc ? ' with Tax ID ' + d.parte_a_rfc : ''}${d.parte_a_domicilio ? ', domiciled at ' + d.parte_a_domicilio : ''}. And, on the other, <strong>${d.parte_b_nombre}</strong>${d.parte_b_rfc ? ' with Tax ID ' + d.parte_b_rfc : ''}${d.parte_b_domicilio ? ', domiciled at ' + d.parte_b_domicilio : ''}. <strong>CONTRACT NUMBER: ${d.numero_contrato || 'Pending'}</strong></p>
-<p><strong>INFLUENCER(S):</strong> ${d.influencer_nombre}</p>
-<p><strong>SERVICES:</strong> ${d.servicios}</p>
-<p><strong>CHANNELS:</strong> ${d.canales}</p>
-<p><strong>HASHTAGS:</strong> ${d.hashtags || 'To be defined in Brief'}</p>
-<p><strong>BRAND/PRODUCT:</strong> ${d.marca_producto}</p>
-<p><strong>RATE:</strong> ${d.tarifa_tipo === 'canje' ? 'Trade/Barter' : d.tarifa_tipo === 'mixto' ? 'Mixed' : 'Payment'}</p>
+  return `<div class="contract-header">
+  <img src="/assets/brand/logos/Beme1Color.png" alt="Beme">
+  <div class="contract-header-info">
+    <div class="contract-num">${d.numero_contrato || 'Pending'}</div>
+    <div>${d.ciudad_contrato || 'Mexico City'}, ${fecha}</div>
+  </div>
+</div>
+<div class="contract-body">
+<div class="contract-title">Confirmation Sheet</div>
+<div class="contract-subtitle">Influencer Marketing Services Agreement</div>
+
+<div class="contract-summary">
+  <dt>Party A</dt><dd>${d.parte_a_nombre}${d.parte_a_rfc ? ' &mdash; Tax ID: ' + d.parte_a_rfc : ''}</dd>
+  <dt>Party B</dt><dd>${d.parte_b_nombre}${d.parte_b_rfc ? ' &mdash; Tax ID: ' + d.parte_b_rfc : ''}</dd>
+  <dt>Influencer(s)</dt><dd>${d.influencer_nombre}</dd>
+  <dt>Brand / Product</dt><dd>${d.marca_producto}</dd>
+  <dt>Services</dt><dd>${d.servicios}</dd>
+  <dt>Channels</dt><dd>${d.canales}</dd>
+  <dt>Hashtags</dt><dd>${d.hashtags || 'To be defined in Brief'}</dd>
+  <dt>Rate</dt><dd>${d.tarifa_tipo === 'canje' ? 'Trade/Barter' : d.tarifa_tipo === 'mixto' ? 'Mixed' : 'Payment'} &mdash; <strong>$${Number(d.monto||0).toLocaleString()} ${d.moneda}</strong></dd>
+</div>
+
+${d.parte_a_domicilio ? `<p>On one part, <strong>${d.parte_a_nombre}</strong>${d.parte_a_domicilio ? ', domiciled at ' + d.parte_a_domicilio : ''}. And, on the other, <strong>${d.parte_b_nombre}</strong>${d.parte_b_domicilio ? ', domiciled at ' + d.parte_b_domicilio : ''}.</p>` : ''}
+
 <p><strong>PAYMENT METHOD:</strong> As compensation for all services rendered by the INFLUENCER, ${d.tipo === 'marca' ? d.parte_a_nombre : 'BEME IMKT'} shall pay the amount of <strong>$${Number(d.monto||0).toLocaleString()} ${d.moneda}</strong>${d.monto_texto ? ' (' + d.monto_texto + ')' : ''}, to be made via ${d.metodo_pago || 'bank transfer'}, within ${d.plazo_pago_dias || 45} days after the campaign is published.</p>
 ${derechos}
 <p><strong>ADDITIONAL COMMENTS:</strong> ${d.comentarios || 'All publications must include the designated hashtags and brand mention; failure to do so will result in non-payment. All content must be submitted for approval at least 48 hours in advance. Content may not be published without brand validation. Complete metrics must be submitted. No other products or brands may be shown within the Publications.'}</p>
@@ -106,7 +155,26 @@ ${derechos}
 <li>Disputes shall be resolved under the jurisdiction of Federal Courts in Mexico City. The parties waive any other jurisdiction.</li>
 <li>Neither Party shall be liable for non-compliance resulting from force majeure.</li>
 </ol>
-<p>All notices must be in writing, delivered personally, by courier, or by email to the addresses indicated in this agreement.</p>`;
+<p>All notices must be in writing, delivered personally, by courier, or by email to the addresses indicated in this agreement.</p>
+
+<div class="contract-footer">
+  <div class="signature-block">
+    <div class="signature-line"></div>
+    <div class="signature-label">For ${d.tipo === 'marca' ? d.parte_a_nombre : 'BEME IMKT'}</div>
+    <div class="signature-name">${d.parte_a_nombre}</div>
+  </div>
+  <div class="signature-block">
+    <div class="signature-line"></div>
+    <div class="signature-label">For ${d.parte_b_nombre}</div>
+    <div class="signature-name">${d.influencer_nombre}</div>
+  </div>
+</div>
+
+<div class="contract-legal-footer">
+  BEME IMKT &mdash; Influencer Marketing Agency<br>
+  This document is confidential and protected by applicable intellectual property laws.
+</div>
+</div>`;
 }
 
 // ══════════════════════════════════════════════════════════
