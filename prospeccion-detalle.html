@@ -271,6 +271,10 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
     <span class="breadcrumb-current" id="breadcrumb-marca">Cargando...</span>
   </div>
   <div class="topbar-right">
+    <button class="btn btn-ghost btn-sm" onclick="openTemplatesModal()" title="Plantillas de email">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      Plantillas
+    </button>
     <button class="btn btn-outline btn-sm" onclick="openAddContacto()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
       Agregar Contacto
@@ -442,6 +446,62 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
   </div>
 </div>
 
+<!-- MODAL: Seleccionar roster para agregar -->
+<div class="modal-overlay" id="modal-roster">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">Agregar a Roster</div>
+      <button class="modal-close" onclick="closeModal('modal-roster')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px" id="roster-modal-msg">Selecciona un roster:</p>
+      <div id="roster-list" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Plantillas de email -->
+<div class="modal-overlay" id="modal-templates">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">Plantillas de Email</div>
+      <button class="modal-close" onclick="closeModal('modal-templates')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn btn-primary btn-sm" onclick="openNewTemplate()">+ Nueva Plantilla</button>
+      </div>
+      <div id="templates-list"></div>
+      <!-- New/Edit template form (hidden by default) -->
+      <div id="template-form" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+        <div class="form-grid" style="grid-template-columns:1fr">
+          <div class="form-group">
+            <label class="form-label">Nombre de la plantilla *</label>
+            <input type="text" id="tpl-nombre" class="form-input" placeholder="Ej: Propuesta inicial">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Asunto</label>
+            <input type="text" id="tpl-asunto" class="form-input" placeholder="Asunto del email">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cuerpo *</label>
+            <textarea id="tpl-cuerpo" class="form-input" style="min-height:150px" placeholder="Hola {{nombre}}, ..."></textarea>
+            <div class="form-hint">Usa {{nombre}} para insertar el nombre del contacto</div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="cancelTemplate()">Cancelar</button>
+            <button class="btn btn-primary" onclick="saveTemplate()">Guardar Plantilla</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════════
 // CONFIG
@@ -466,6 +526,10 @@ let editingContactoId = null, pendingMedioContactoId = null, pendingMedioNextEta
 let selectedMedios = [];
 let isDark = false;
 let bulkSelected = new Set();
+let rosters = [];
+let emailTemplates = [];
+let editingTemplateId = null;
+let nextTalentId = 1000;
 
 // Multi-select state for contact form
 let selectedCPaises = [];
@@ -545,6 +609,7 @@ async function loadAppConfig() {
       if (row.key === 'categories' && Array.isArray(row.value)) CATEGORIES = row.value;
       if (row.key === 'countries' && Array.isArray(row.value))
         COUNTRIES = row.value.map(c => typeof c === 'string' ? c : c.name).filter(Boolean);
+      if (row.key === 'next_talent_id' && typeof row.value === 'number') nextTalentId = row.value;
     }
   }
 }
@@ -563,6 +628,14 @@ async function loadData() {
     const {data:h} = await sb.from('prospeccion_historial').select('*').in('contacto_id', ids).order('created_at', {ascending:false});
     historial = h || [];
   } else { historial = []; }
+
+  // Load rosters for "Agregar a Roster"
+  const {data:r} = await sb.from('rosters').select('*').order('created_at', {ascending:false});
+  rosters = (r||[]).map(x => ({...x, talentIds: (x.talent_ids||[]).map(id=>parseInt(id))}));
+
+  // Load email templates
+  const {data:tpl} = await sb.from('prospeccion_email_templates').select('*').order('created_at', {ascending:false});
+  emailTemplates = tpl || [];
 }
 
 // ══════════════════════════════════════════════════════════
@@ -669,7 +742,8 @@ function etapaButtons(c, etapa) {
     case 'no_interesado': return `
       <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'esperando_respuesta')">Restaurar</button>`;
     case 'interesado': return `
-      <button class="btn btn-primary btn-xs" onclick="event.stopPropagation();showToast('Graduacion disponible en Fase 4','info')">Pasar a Talentos</button>
+      <button class="btn btn-primary btn-xs" onclick="event.stopPropagation();graduarATalento(${c.id})">Pasar a Talentos</button>
+      ${c.talento_id?`<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();openRosterModal([${c.talento_id}])">+ Roster</button>`:''}
       <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'esperando_respuesta')" title="Volver">&larr;</button>`;
     default: return '';
   }
@@ -1124,7 +1198,7 @@ function updateBulkUI() {
     btns += `<button class="btn btn-primary btn-sm" onclick="bulkRequestMedio('esperando_respuesta')">Contactado</button>`;
   }
   if (etapas.has('interesado') && etapas.size === 1) {
-    btns += `<button class="btn btn-primary btn-sm" onclick="showToast('Graduacion en bloque disponible en Fase 4','info')">Pasar a Talentos</button>`;
+    btns += `<button class="btn btn-primary btn-sm" onclick="bulkGraduarATalento()">Pasar a Talentos</button>`;
   }
   // Mixed selection
   if (etapas.size > 1) {
@@ -1164,6 +1238,282 @@ function bulkRequestMedio(nextEtapa) {
   });
   document.getElementById('modal-medio-msg').textContent = `Por donde contactaste a los ${bulkSelected.size} contactos?`;
   openModal('modal-medio');
+}
+
+// ══════════════════════════════════════════════════════════
+// FASE 4: GRADUACION A TALENTOS
+// ══════════════════════════════════════════════════════════
+async function graduarATalento(contactoId) {
+  const c = contactos.find(x=>x.id===contactoId);
+  if (!c) return;
+  if (c.talento_id) { showToast('Este contacto ya fue graduado a Talento', 'info'); return; }
+
+  // Validation: must have phone or email + at least one social network
+  if (!c.email && !c.telefono) {
+    showToast('El contacto necesita email o telefono para ser graduado', 'error');
+    return;
+  }
+  if (!c.tiktok && !c.instagram && !c.youtube) {
+    showToast('El contacto necesita al menos una red social para ser graduado', 'error');
+    return;
+  }
+
+  // Check duplicates in talentos by social URLs
+  const normalize = u => String(u||'').toLowerCase().replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'').trim();
+  try {
+    const {data: talentos} = await sb.from('talentos').select('id,nombre,tiktok,instagram,youtube');
+    const nTT = normalize(c.tiktok), nIG = normalize(c.instagram), nYT = normalize(c.youtube);
+    let existingTalent = null;
+    (talentos||[]).forEach(t => {
+      if (nTT && normalize(t.tiktok) === nTT) existingTalent = t;
+      if (nIG && normalize(t.instagram) === nIG) existingTalent = t;
+      if (nYT && normalize(t.youtube) === nYT) existingTalent = t;
+    });
+
+    if (existingTalent) {
+      if (confirm(`Este contacto ya existe como talento: "${existingTalent.nombre}" (ID: ${existingTalent.id}).\n\nVincular al talento existente?`)) {
+        await sb.from('prospeccion_contactos').update({talento_id: existingTalent.id, updated_at: new Date().toISOString()}).eq('id', contactoId);
+        c.talento_id = existingTalent.id;
+        renderKanban();
+        showToast(`Vinculado a talento existente: ${existingTalent.nombre}`, 'success');
+        // Ask about roster
+        if (confirm('Agregar a un Roster?')) openRosterModal([existingTalent.id]);
+        return;
+      } else return;
+    }
+
+    // Create new talent
+    const talentRow = {
+      id: nextTalentId,
+      nombre: c.nombre||'', paises: c.paises||[],
+      ciudad: c.ciudad||'', telefono: c.telefono||'', email: c.email||'',
+      tiktok: c.tiktok||'', instagram: c.instagram||'', youtube: c.youtube||'',
+      categorias: c.categorias||[], foto: c.foto||'',
+      seguidores: c.seguidores||{tiktok:0,instagram:0,youtube:0},
+      genero: c.genero||'', keywords: c.keywords||'', valores: c.valores||'',
+      updated: new Date().toISOString().split('T')[0]
+    };
+    const {error} = await sb.from('talentos').insert([talentRow]);
+    if (error) throw error;
+
+    const newId = nextTalentId;
+    nextTalentId++;
+    await sb.from('app_config').upsert({key:'next_talent_id', value: nextTalentId});
+
+    // Link contact to talent
+    await sb.from('prospeccion_contactos').update({talento_id: newId, updated_at: new Date().toISOString()}).eq('id', contactoId);
+    c.talento_id = newId;
+    renderKanban();
+    showToast(`"${c.nombre}" graduado a Talento`, 'success');
+
+    // Ask about roster
+    if (confirm('Agregar a un Roster?')) openRosterModal([newId]);
+
+  } catch(e) {
+    console.error('graduarATalento:', e);
+    showToast('Error al graduar: '+e.message, 'error');
+  }
+}
+
+async function bulkGraduarATalento() {
+  const ids = [...bulkSelected];
+  let graduated = 0, skipped = 0;
+  const talentIds = [];
+  try {
+    const {data: talentos} = await sb.from('talentos').select('id,nombre,tiktok,instagram,youtube');
+    const normalize = u => String(u||'').toLowerCase().replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'').trim();
+
+    for (const id of ids) {
+      const c = contactos.find(x=>x.id===id);
+      if (!c) continue;
+      if (c.talento_id) { skipped++; talentIds.push(c.talento_id); continue; }
+      if ((!c.email && !c.telefono) || (!c.tiktok && !c.instagram && !c.youtube)) { skipped++; continue; }
+
+      // Check duplicate
+      const nTT = normalize(c.tiktok), nIG = normalize(c.instagram), nYT = normalize(c.youtube);
+      let existing = null;
+      (talentos||[]).forEach(t => {
+        if (nTT && normalize(t.tiktok) === nTT) existing = t;
+        if (nIG && normalize(t.instagram) === nIG) existing = t;
+        if (nYT && normalize(t.youtube) === nYT) existing = t;
+      });
+
+      if (existing) {
+        await sb.from('prospeccion_contactos').update({talento_id: existing.id}).eq('id', id);
+        c.talento_id = existing.id;
+        talentIds.push(existing.id);
+        graduated++;
+        continue;
+      }
+
+      const talentRow = {
+        id: nextTalentId, nombre: c.nombre||'', paises: c.paises||[],
+        ciudad: c.ciudad||'', telefono: c.telefono||'', email: c.email||'',
+        tiktok: c.tiktok||'', instagram: c.instagram||'', youtube: c.youtube||'',
+        categorias: c.categorias||[], foto: c.foto||'',
+        seguidores: c.seguidores||{tiktok:0,instagram:0,youtube:0},
+        genero: c.genero||'', keywords: c.keywords||'', valores: c.valores||'',
+        updated: new Date().toISOString().split('T')[0]
+      };
+      await sb.from('talentos').insert([talentRow]);
+      const newId = nextTalentId;
+      nextTalentId++;
+      await sb.from('prospeccion_contactos').update({talento_id: newId}).eq('id', id);
+      c.talento_id = newId;
+      talentIds.push(newId);
+      graduated++;
+    }
+    await sb.from('app_config').upsert({key:'next_talent_id', value: nextTalentId});
+    bulkSelected.clear();
+    renderEtapaStrip();
+    renderKanban();
+    updateBulkUI();
+    showToast(`${graduated} graduados, ${skipped} omitidos (sin datos o ya graduados)`, 'success');
+
+    // Ask about roster
+    if (talentIds.length && confirm(`Agregar ${talentIds.length} talentos a un Roster?`)) {
+      openRosterModal(talentIds);
+    }
+  } catch(e) {
+    showToast('Error: '+e.message, 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ROSTER
+// ══════════════════════════════════════════════════════════
+function openRosterModal(talentIdsToAdd) {
+  window._pendingRosterTalentIds = talentIdsToAdd;
+  const list = document.getElementById('roster-list');
+  if (!rosters.length) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--text-muted);text-align:center;padding:16px">No hay rosters creados.</p>';
+  } else {
+    list.innerHTML = rosters.map(r => {
+      const count = r.talentIds.filter(id => id > 0).length;
+      return `<button class="btn btn-outline" style="width:100%;justify-content:flex-start;gap:10px;text-align:left" onclick="addToRoster(${r.id})">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        <span style="flex:1">${esc(r.name||r.nombre||'')}</span>
+        <span style="font-size:11px;color:var(--text-dim)">${count} talentos</span>
+      </button>`;
+    }).join('');
+  }
+  document.getElementById('roster-modal-msg').textContent =
+    `Agregar ${talentIdsToAdd.length} talento${talentIdsToAdd.length!==1?'s':''} a un roster:`;
+  openModal('modal-roster');
+}
+
+async function addToRoster(rosterId) {
+  const roster = rosters.find(r=>r.id===rosterId);
+  if (!roster || !window._pendingRosterTalentIds) return;
+  let added = 0;
+  window._pendingRosterTalentIds.forEach(id => {
+    if (!roster.talentIds.includes(id)) { roster.talentIds.push(id); added++; }
+  });
+  try {
+    await sb.from('rosters').update({talent_ids: roster.talentIds}).eq('id', rosterId);
+    closeModal('modal-roster');
+    showToast(`${added} talento${added!==1?'s':''} agregado${added!==1?'s':''} al roster "${roster.name||roster.nombre||''}"`, 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+  window._pendingRosterTalentIds = null;
+}
+
+// ══════════════════════════════════════════════════════════
+// FASE 5: PLANTILLAS DE EMAIL
+// ══════════════════════════════════════════════════════════
+function openTemplatesModal() {
+  renderTemplatesList();
+  document.getElementById('template-form').style.display = 'none';
+  openModal('modal-templates');
+}
+
+function renderTemplatesList() {
+  const list = document.getElementById('templates-list');
+  if (!emailTemplates.length) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--text-muted);text-align:center;padding:16px">No hay plantillas. Crea una nueva.</p>';
+    return;
+  }
+  list.innerHTML = emailTemplates.map(t => `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <strong style="flex:1;font-size:14px">${esc(t.nombre)}</strong>
+        <button class="btn btn-ghost btn-xs" onclick="useTemplate(${t.id})">Usar</button>
+        <button class="btn btn-ghost btn-xs" onclick="editTemplate(${t.id})">Editar</button>
+        <button class="btn btn-ghost btn-xs" style="color:#ff6b6b" onclick="deleteTemplate(${t.id})">Eliminar</button>
+      </div>
+      ${t.asunto?`<div style="font-size:11px;color:var(--text-muted)">Asunto: ${esc(t.asunto)}</div>`:''}
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px;white-space:pre-wrap;max-height:60px;overflow:hidden">${esc(t.cuerpo).substring(0,150)}${t.cuerpo.length>150?'...':''}</div>
+    </div>
+  `).join('');
+}
+
+function useTemplate(id) {
+  const t = emailTemplates.find(x=>x.id===id);
+  if (!t || !prospeccion) return;
+  // Update prospeccion email_draft
+  prospeccion.email_draft = t.cuerpo;
+  sb.from('prospecciones').update({email_draft: t.cuerpo, updated_at: new Date().toISOString()}).eq('id', prospId);
+  closeModal('modal-templates');
+  showToast('Plantilla aplicada al email draft', 'success');
+}
+
+function openNewTemplate() {
+  editingTemplateId = null;
+  document.getElementById('tpl-nombre').value = '';
+  document.getElementById('tpl-asunto').value = '';
+  document.getElementById('tpl-cuerpo').value = '';
+  document.getElementById('template-form').style.display = 'block';
+}
+
+function editTemplate(id) {
+  const t = emailTemplates.find(x=>x.id===id);
+  if (!t) return;
+  editingTemplateId = id;
+  document.getElementById('tpl-nombre').value = t.nombre||'';
+  document.getElementById('tpl-asunto').value = t.asunto||'';
+  document.getElementById('tpl-cuerpo').value = t.cuerpo||'';
+  document.getElementById('template-form').style.display = 'block';
+}
+
+function cancelTemplate() {
+  document.getElementById('template-form').style.display = 'none';
+  editingTemplateId = null;
+}
+
+async function saveTemplate() {
+  const nombre = document.getElementById('tpl-nombre').value.trim();
+  const cuerpo = document.getElementById('tpl-cuerpo').value.trim();
+  if (!nombre || !cuerpo) { showToast('Nombre y cuerpo son obligatorios', 'error'); return; }
+
+  const payload = {
+    nombre,
+    asunto: document.getElementById('tpl-asunto').value.trim(),
+    cuerpo,
+  };
+
+  try {
+    if (editingTemplateId) {
+      await sb.from('prospeccion_email_templates').update(payload).eq('id', editingTemplateId);
+    } else {
+      await sb.from('prospeccion_email_templates').insert(payload);
+    }
+    // Reload templates
+    const {data} = await sb.from('prospeccion_email_templates').select('*').order('created_at', {ascending:false});
+    emailTemplates = data || [];
+    renderTemplatesList();
+    document.getElementById('template-form').style.display = 'none';
+    editingTemplateId = null;
+    showToast(editingTemplateId ? 'Plantilla actualizada' : 'Plantilla creada', 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+async function deleteTemplate(id) {
+  if (!confirm('Eliminar esta plantilla?')) return;
+  try {
+    await sb.from('prospeccion_email_templates').delete().eq('id', id);
+    emailTemplates = emailTemplates.filter(t=>t.id!==id);
+    renderTemplatesList();
+    showToast('Plantilla eliminada', 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
 
 // ══════════════════════════════════════════════════════════
