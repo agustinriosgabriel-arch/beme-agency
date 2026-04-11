@@ -1090,8 +1090,39 @@ function doCopyEmail(templateId) {
   closeModal('modal-roster');
   const asunto = replaceVars(t.asunto||'', c);
   const cuerpo = replaceVars(t.cuerpo, c);
-  const full = asunto ? `Asunto: ${asunto}\n\n${cuerpo}` : cuerpo;
-  navigator.clipboard.writeText(full).then(()=>showToast('Email copiado al portapapeles', 'success'));
+
+  // Show result with copy buttons for each field
+  const body = document.getElementById('modal-detalle-body');
+  document.getElementById('modal-detalle-title').textContent = 'Email para ' + c.nombre;
+  body.innerHTML = `
+    ${asunto ? `
+    <div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span class="form-label">Asunto</span>
+        <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(${JSON.stringify(asunto).replace(/'/g,'\\\'')});showToast('Asunto copiado','success')">Copiar Asunto</button>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px">${esc(asunto)}</div>
+    </div>` : ''}
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span class="form-label">Cuerpo</span>
+        <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(${JSON.stringify(cuerpo).replace(/'/g,'\\\'')});showToast('Cuerpo copiado','success')">Copiar Cuerpo</button>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;white-space:pre-wrap">${esc(cuerpo)}</div>
+    </div>
+  `;
+  // Store for sending
+  window._pendingEmail = { to: c.email, subject: asunto, body: cuerpo, contactId: c.id };
+
+  document.getElementById('modal-detalle-footer').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeModal('modal-detalle')">Cerrar</button>
+    <button class="btn btn-outline" onclick="navigator.clipboard.writeText(${JSON.stringify((asunto?'Asunto: '+asunto+'\n\n':'')+cuerpo).replace(/'/g,'\\\'')});showToast('Todo copiado','success')">Copiar Todo</button>
+    ${c.email ? `<button class="btn btn-primary" onclick="sendEmail()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      Enviar a ${esc(c.email)}
+    </button>` : `<span style="font-size:12px;color:var(--text-dim)">Sin email para enviar</span>`}
+  `;
+  openModal('modal-detalle');
 }
 
 function doCopyEmailDraft() {
@@ -1810,6 +1841,45 @@ async function confirmCSVImport() {
   }
   btn.textContent = 'Importar'; btn.disabled = false;
   _csvParsedRows = [];
+}
+
+// ══════════════════════════════════════════════════════════
+// SEND EMAIL VIA SMTP
+// ══════════════════════════════════════════════════════════
+async function sendEmail() {
+  const e = window._pendingEmail;
+  if (!e || !e.to) { showToast('No hay email de destino', 'error'); return; }
+
+  // Find the send button and disable it
+  const btns = document.querySelectorAll('#modal-detalle-footer .btn-primary');
+  btns.forEach(b => { b.textContent = 'Enviando...'; b.disabled = true; });
+
+  try {
+    const resp = await fetch('/.netlify/functions/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: e.to,
+        subject: e.subject,
+        body: e.body,
+      }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Error del servidor');
+
+    closeModal('modal-detalle');
+    showToast(`Email enviado a ${e.to}`, 'success');
+
+    // Auto-advance to esperando_respuesta if in contactar stage
+    const c = contactos.find(x => x.id === e.contactId);
+    if (c && c.etapa === 'contactar') {
+      await changeEtapa(c.id, 'esperando_respuesta', 'mail');
+    }
+  } catch (err) {
+    console.error('sendEmail error:', err);
+    showToast('Error al enviar: ' + err.message, 'error');
+    btns.forEach(b => { b.textContent = 'Reintentar'; b.disabled = false; });
+  }
 }
 
 // ══════════════════════════════════════════════════════════
