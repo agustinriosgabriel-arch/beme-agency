@@ -31,6 +31,7 @@ const BASE_CATEGORIES = [
 let CATEGORIES = [...BASE_CATEGORIES];
 let talents = [];
 let rosters = [];
+let talentCampaigns = []; // campaign history per talent
 let nextTalentId = 1000;
 let nextRosterId = 100;
 let editingId = null;
@@ -318,6 +319,20 @@ async function loadFromSupabase() {
       const maxRosterId = rosters.reduce((m,r)=>r.id>m?r.id:m,0);
       if(nextRosterId <= maxRosterId) { nextRosterId = maxRosterId + 1; console.warn('[Beme] Fixed nextRosterId →', nextRosterId); }
     }
+
+    // Load campaign history for talents
+    try {
+      const {data: tcData} = await sb.from('campana_talentos').select('talent_id, fee_marca, fee_talento, moneda, campanas(id, nombre, marcas(nombre)), contenidos(tipo)').order('created_at', {ascending:false});
+      talentCampaigns = (tcData||[]).map(ct => ({
+        talent_id: ct.talent_id,
+        campana: ct.campanas?.nombre||'',
+        marca: ct.campanas?.marcas?.nombre||'',
+        fee_marca: ct.fee_marca||0,
+        fee_talento: ct.fee_talento||0,
+        moneda: ct.moneda||'USD',
+        acciones: (ct.contenidos||[]).map(c => c.tipo).filter(Boolean),
+      }));
+    } catch(e) { console.warn('Campaign history load:', e); talentCampaigns = []; }
 
     renderTalents();
     renderRosters();
@@ -1499,7 +1514,30 @@ function renderCard(t) {
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
       </button>` : ''}
     </div>
+    ${renderCampaignHistory(t.id)}
   </div>`;
+}
+
+function renderCampaignHistory(talentId) {
+  const history = talentCampaigns.filter(c => c.talent_id === talentId);
+  if (!history.length) return '';
+  const tipoLabels = {tiktok_video:'TikTok',reel:'Reel',ig_story:'Story',youtube_video:'YouTube',youtube_short:'YT Short'};
+  return `<div class="card-history">
+    <div class="card-history-title">Historial de Campanas</div>
+    ${history.map(h => {
+      const acciones = h.acciones.map(a => tipoLabels[a]||a).join(', ');
+      return `<div class="card-history-row">
+        <div class="ch-marca">${escapeHtml(h.marca)}</div>
+        <div class="ch-acciones">${escapeHtml(acciones||'—')}</div>
+        <div class="ch-fees">${formatMoney(h.fee_marca,h.moneda)} / ${formatMoney(h.fee_talento,h.moneda)}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function formatMoney(n,cur) {
+  try { return new Intl.NumberFormat('en-US',{style:'currency',currency:cur||'USD',minimumFractionDigits:0,maximumFractionDigits:0}).format(n||0); }
+  catch(e) { return '$'+(n||0); }
 }
 
 function renderListRow(t) {
