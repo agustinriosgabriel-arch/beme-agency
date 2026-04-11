@@ -1313,9 +1313,8 @@ async function graduarATalento(contactoId) {
       } else return;
     }
 
-    // Create new talent
+    // Create new talent (let Postgres serial auto-generate the ID)
     const talentRow = {
-      id: nextTalentId,
       nombre: c.nombre||'', paises: c.paises||[],
       ciudad: c.ciudad||'', telefono: c.telefono||'', email: c.email||'',
       tiktok: c.tiktok||'', instagram: c.instagram||'', youtube: c.youtube||'',
@@ -1324,12 +1323,10 @@ async function graduarATalento(contactoId) {
       genero: c.genero||'', keywords: c.keywords||'', valores: c.valores||'',
       updated: new Date().toISOString().split('T')[0]
     };
-    const {error} = await sb.from('talentos').insert([talentRow]);
+    const {data: inserted, error} = await sb.from('talentos').insert([talentRow]).select('id').single();
     if (error) throw error;
 
-    const newId = nextTalentId;
-    nextTalentId++;
-    await sb.from('app_config').upsert({key:'next_talent_id', value: nextTalentId});
+    const newId = inserted.id;
 
     // Link contact to talent
     await sb.from('prospeccion_contactos').update({talento_id: newId, updated_at: new Date().toISOString()}).eq('id', contactoId);
@@ -1378,7 +1375,7 @@ async function bulkGraduarATalento() {
       }
 
       const talentRow = {
-        id: nextTalentId, nombre: c.nombre||'', paises: c.paises||[],
+        nombre: c.nombre||'', paises: c.paises||[],
         ciudad: c.ciudad||'', telefono: c.telefono||'', email: c.email||'',
         tiktok: c.tiktok||'', instagram: c.instagram||'', youtube: c.youtube||'',
         categorias: c.categorias||[], foto: c.foto||'',
@@ -1386,15 +1383,14 @@ async function bulkGraduarATalento() {
         genero: c.genero||'', keywords: c.keywords||'', valores: c.valores||'',
         updated: new Date().toISOString().split('T')[0]
       };
-      await sb.from('talentos').insert([talentRow]);
-      const newId = nextTalentId;
-      nextTalentId++;
+      const {data:ins, error:insErr} = await sb.from('talentos').insert([talentRow]).select('id').single();
+      if (insErr) { console.error('Insert talent error:', insErr); skipped++; continue; }
+      const newId = ins.id;
       await sb.from('prospeccion_contactos').update({talento_id: newId}).eq('id', id);
       c.talento_id = newId;
       talentIds.push(newId);
       graduated++;
     }
-    await sb.from('app_config').upsert({key:'next_talent_id', value: nextTalentId});
     bulkSelected.clear();
     renderEtapaStrip();
     renderKanban();
