@@ -1356,7 +1356,14 @@ function updateBulkUI() {
   if (etapas.size > 1) {
     btns += `<span style="font-size:12px;color:var(--text-muted)">Selecciona contactos de una misma etapa para mover</span>`;
   }
-  // Delete always available
+  // Email + Delete always available
+  const withEmail = [...bulkSelected].filter(id => { const c=contactos.find(x=>x.id===id); return c && c.email; }).length;
+  if (withEmail > 0) {
+    btns += `<button class="btn btn-outline btn-sm" onclick="bulkSendEmail()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      Enviar Email (${withEmail})
+    </button>`;
+  }
   btns += `<button class="btn btn-danger btn-sm" onclick="bulkDelete()">Eliminar (${count})</button>`;
   document.getElementById('bulk-actions').innerHTML = btns;
 }
@@ -1897,6 +1904,109 @@ async function bulkDelete() {
   } catch(e) {
     showToast('Error al eliminar: '+e.message, 'error');
   }
+}
+
+// ══════════════════════════════════════════════════════════
+// BULK SEND EMAIL
+// ══════════════════════════════════════════════════════════
+function bulkSendEmail() {
+  const ids = [...bulkSelected];
+  const withEmail = ids.map(id => contactos.find(x=>x.id===id)).filter(c => c && c.email);
+  const withoutEmail = ids.length - withEmail.length;
+
+  if (!withEmail.length) { showToast('Ningun contacto seleccionado tiene email', 'error'); return; }
+  if (!emailTemplates.length && !prospeccion.email_draft) { showToast('Crea una plantilla primero', 'error'); return; }
+
+  // Show template picker for bulk
+  window._bulkEmailContacts = withEmail;
+  const list = document.getElementById('roster-list');
+  document.getElementById('roster-modal-msg').innerHTML =
+    `Enviar email a <strong>${withEmail.length}</strong> contacto${withEmail.length!==1?'s':''}` +
+    (withoutEmail ? ` <span style="color:var(--text-dim)">(${withoutEmail} sin email, se omiten)</span>` : '') +
+    `<br><span style="font-size:12px;color:var(--text-muted)">Selecciona la plantilla:</span>`;
+
+  list.innerHTML = emailTemplates.map(t => `
+    <button class="btn btn-outline" style="width:100%;justify-content:flex-start;gap:10px;text-align:left;flex-direction:column;align-items:flex-start;padding:12px" onclick="confirmBulkSendEmail(${t.id})">
+      <div style="font-weight:700;font-size:13px">${esc(t.nombre)}</div>
+      ${t.asunto?`<div style="font-size:11px;color:var(--text-muted)">Asunto: ${esc(t.asunto)}</div>`:''}
+      <div style="font-size:11px;color:var(--text-dim)">${esc(t.cuerpo.substring(0,80))}...</div>
+    </button>
+  `).join('');
+
+  if (prospeccion.email_draft && prospeccion.email_draft.length > 3) {
+    list.innerHTML += `<button class="btn btn-ghost" style="width:100%;justify-content:flex-start;margin-top:8px;font-size:12px" onclick="confirmBulkSendEmail('draft')">
+      Usar email draft de la prospeccion
+    </button>`;
+  }
+
+  openModal('modal-roster');
+}
+
+async function confirmBulkSendEmail(templateIdOrDraft) {
+  const contacts = window._bulkEmailContacts;
+  if (!contacts || !contacts.length) return;
+  closeModal('modal-roster');
+
+  let templateBody, templateSubject;
+  if (templateIdOrDraft === 'draft') {
+    templateBody = prospeccion.email_draft;
+    templateSubject = '';
+  } else {
+    const t = emailTemplates.find(x => x.id === templateIdOrDraft);
+    if (!t) return;
+    templateBody = t.cuerpo;
+    templateSubject = t.asunto || '';
+  }
+
+  const total = contacts.length;
+  if (!confirm(`Enviar email a ${total} contacto${total!==1?'s':''}?\n\nDesde: contacto@bemeagency.com`)) return;
+
+  showToast(`Enviando ${total} emails...`, 'info', 5000);
+  let sent = 0, failed = 0;
+
+  for (const c of contacts) {
+    const subject = replaceVars(templateSubject, c);
+    const body = replaceVars(templateBody, c);
+
+    try {
+      const resp = await fetch('/.netlify/functions/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: c.email, subject, body }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error);
+      sent++;
+
+      // Auto-advance from contactar to esperando_respuesta
+      if (c.etapa === 'contactar' || c.etapa === 'evaluacion') {
+        const anterior = c.etapa;
+        const existing = (c.medio_contacto||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+        if (!existing.includes('mail')) existing.push('mail');
+        const medio = existing.join(', ');
+        await sb.from('prospeccion_contactos').update({etapa:'esperando_respuesta', medio_contacto:medio, updated_at:new Date().toISOString()}).eq('id', c.id);
+        await sb.from('prospeccion_historial').insert({contacto_id:c.id, etapa_anterior:anterior, etapa_nueva:'esperando_respuesta', medio_contacto:'mail'});
+        c.etapa = 'esperando_respuesta';
+        c.medio_contacto = medio;
+      }
+    } catch(e) {
+      console.error(`Email failed for ${c.email}:`, e);
+      failed++;
+    }
+  }
+
+  bulkSelected.clear();
+  await loadData();
+  renderEtapaStrip();
+  renderKanban();
+  updateBulkUI();
+
+  if (failed === 0) {
+    showToast(`${sent} email${sent!==1?'s':''} enviado${sent!==1?'s':''} exitosamente`, 'success');
+  } else {
+    showToast(`${sent} enviados, ${failed} fallaron`, failed > 0 ? 'error' : 'success');
+  }
+  window._bulkEmailContacts = null;
 }
 
 // ══════════════════════════════════════════════════════════
