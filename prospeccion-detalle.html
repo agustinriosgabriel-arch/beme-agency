@@ -136,6 +136,8 @@ body.light .modal-header,body.light .modal-footer{background:var(--surface)}
 /* ── Kanban card ── */
 .k-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;transition:all 0.15s;cursor:pointer}
 .k-card:hover{border-color:var(--border2);background:var(--surface2)}
+.k-card.graduated{border-color:rgba(74,222,128,0.3);background:rgba(74,222,128,0.04)}
+.k-card.graduated::after{content:'Talento';position:absolute;top:8px;left:8px;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:rgba(74,222,128,0.15);color:#4ade80;letter-spacing:0.3px}
 .k-card-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .k-avatar{width:32px;height:32px;border-radius:50%;background:var(--surface2);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--primary);overflow:hidden;flex-shrink:0}
 .k-avatar img{width:100%;height:100%;object-fit:cover}
@@ -716,7 +718,7 @@ function renderEtapaStrip() {
 // ══════════════════════════════════════════════════════════
 function renderKanban() {
   document.getElementById('kanban-wrap').innerHTML = ETAPAS.map(e => {
-    const items = contactos.filter(c=>c.etapa===e.key);
+    const items = contactos.filter(c=>c.etapa===e.key).sort((a,b) => (a.talento_id?1:0) - (b.talento_id?1:0));
     return `<div class="kanban-col">
       <div class="kanban-col-header">
         <div class="kanban-dot" style="background:${e.color}"></div>
@@ -736,7 +738,8 @@ function renderKanbanCard(c, etapa) {
   const segs = totalSeg(c.seguidores);
   const selectable = ['evaluacion','contactar','interesado'].includes(etapa);
   const isSelected = bulkSelected.has(c.id);
-  return `<div class="k-card${isSelected?' selected':''}" onclick="openDetalle(${c.id})" data-id="${c.id}">
+  const isGrad = !!c.talento_id;
+  return `<div class="k-card${isSelected?' selected':''}${isGrad?' graduated':''}" onclick="openDetalle(${c.id})" data-id="${c.id}">
     ${selectable?`<div class="k-card-select" onclick="event.stopPropagation();toggleBulkSelect(${c.id})">${isSelected?'&#10003;':''}</div>`:''}
     <div class="k-card-top">
       <div class="k-avatar">${c.foto?`<img src="${c.foto}" loading="lazy">`:initials(c.nombre)}</div>
