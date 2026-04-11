@@ -206,6 +206,30 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
 .login-error{display:none;background:rgba(220,50,50,0.1);border:1px solid rgba(220,50,50,0.2);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#ff6b6b;margin-bottom:14px}
 .login-fields{display:flex;flex-direction:column;gap:10px}
 
+/* ── Bulk selection ── */
+.k-card-select{
+  position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;
+  border:1.5px solid var(--border2);background:var(--surface2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all 0.15s;
+  font-size:10px;color:transparent;z-index:2;
+}
+.k-card-select:hover{border-color:var(--primary)}
+.k-card.selected .k-card-select{background:var(--primary);border-color:var(--primary);color:#fff}
+.k-card.selected{border-color:var(--primary);background:rgba(178,0,93,0.04)}
+.k-card{position:relative}
+.bulk-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:150;
+  background:rgba(15,15,15,0.95);backdrop-filter:blur(16px);
+  border-top:1px solid var(--border);
+  padding:12px 28px;display:flex;align-items:center;gap:12px;
+  transform:translateY(100%);opacity:0;transition:all 0.3s;
+}
+body.light .bulk-bar{background:rgba(244,244,244,0.97)}
+.bulk-bar.visible{transform:translateY(0);opacity:1}
+.bulk-bar-count{font-size:14px;font-weight:700;color:var(--primary)}
+.bulk-bar-sep{width:1px;height:24px;background:var(--border2)}
+.bulk-bar-actions{display:flex;gap:6px;flex-wrap:wrap}
+
 /* ── Responsive ── */
 @media(max-width:1200px){.kanban-wrap{grid-template-columns:repeat(3,1fr)}.etapa-strip{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:768px){.kanban-wrap{grid-template-columns:1fr}.etapa-strip{grid-template-columns:repeat(2,1fr)}.main{padding:16px}.topbar{padding:0 16px}.tab-nav{padding:0 16px}}
@@ -283,6 +307,14 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   <!-- Kanban -->
   <div class="kanban-wrap" id="kanban-wrap"></div>
 </main>
+
+<!-- Bulk action bar -->
+<div class="bulk-bar" id="bulk-bar">
+  <span class="bulk-bar-count" id="bulk-count">0 seleccionados</span>
+  <button class="btn btn-ghost btn-sm" onclick="clearSelection()">Deseleccionar</button>
+  <div class="bulk-bar-sep"></div>
+  <div class="bulk-bar-actions" id="bulk-actions"></div>
+</div>
 
 <!-- MODAL: Agregar / Editar Contacto -->
 <div class="modal-overlay" id="modal-contacto">
@@ -433,6 +465,7 @@ let prospeccion = null, contactos = [], historial = [];
 let editingContactoId = null, pendingMedioContactoId = null, pendingMedioNextEtapa = null;
 let selectedMedios = [];
 let isDark = false;
+let bulkSelected = new Set();
 
 // Multi-select state for contact form
 let selectedCPaises = [];
@@ -600,7 +633,10 @@ function renderKanban() {
 function renderKanbanCard(c, etapa) {
   const handle = c.tiktok ? '@'+extractHandle(c.tiktok) : (c.instagram ? '@'+extractHandle(c.instagram) : '');
   const segs = totalSeg(c.seguidores);
-  return `<div class="k-card" onclick="openDetalle(${c.id})">
+  const selectable = ['evaluacion','contactar','interesado'].includes(etapa);
+  const isSelected = bulkSelected.has(c.id);
+  return `<div class="k-card${isSelected?' selected':''}" onclick="openDetalle(${c.id})" data-id="${c.id}">
+    ${selectable?`<div class="k-card-select" onclick="event.stopPropagation();toggleBulkSelect(${c.id})">${isSelected?'&#10003;':''}</div>`:''}
     <div class="k-card-top">
       <div class="k-avatar">${c.foto?`<img src="${c.foto}" loading="lazy">`:initials(c.nombre)}</div>
       <div style="flex:1;min-width:0">
@@ -704,11 +740,35 @@ function toggleMedio(medio) {
   });
 }
 
-function confirmMedioAndAdvance() {
+async function confirmMedioAndAdvance() {
   if (!selectedMedios.length) { showToast('Selecciona al menos un medio','error'); return; }
   closeModal('modal-medio');
-  if (pendingMedioContactoId) {
-    changeEtapa(pendingMedioContactoId, pendingMedioNextEtapa, selectedMedios.join(', '));
+  const medio = selectedMedios.join(', ');
+  if (pendingMedioContactoId === 'bulk') {
+    // Bulk mode
+    const ids = [...bulkSelected];
+    const now = new Date().toISOString();
+    const nextEtapa = pendingMedioNextEtapa;
+    try {
+      for (const id of ids) {
+        const c = contactos.find(x=>x.id===id);
+        if (!c || c.etapa === nextEtapa) continue;
+        const anterior = c.etapa;
+        await sb.from('prospeccion_contactos').update({etapa: nextEtapa, medio_contacto: medio, updated_at: now}).eq('id', id);
+        await sb.from('prospeccion_historial').insert({contacto_id:id, etapa_anterior:anterior, etapa_nueva:nextEtapa, medio_contacto:medio});
+        c.etapa = nextEtapa;
+        c.medio_contacto = medio;
+      }
+      bulkSelected.clear();
+      renderEtapaStrip();
+      renderKanban();
+      updateBulkUI();
+      showToast(`${ids.length} contactos → ${ETAPAS.find(e=>e.key===nextEtapa)?.label||nextEtapa}`, 'success');
+    } catch(e) { showToast('Error: '+e.message, 'error'); }
+    pendingMedioContactoId = null;
+    pendingMedioNextEtapa = null;
+  } else if (pendingMedioContactoId) {
+    changeEtapa(pendingMedioContactoId, pendingMedioNextEtapa, medio);
     pendingMedioContactoId = null;
     pendingMedioNextEtapa = null;
   }
@@ -1010,6 +1070,100 @@ async function checkDuplicates(tiktok, instagram, youtube) {
   } catch(e) { console.warn('Duplicate check against talentos failed:', e); }
 
   return warnings;
+}
+
+// ══════════════════════════════════════════════════════════
+// BULK SELECTION
+// ══════════════════════════════════════════════════════════
+function toggleBulkSelect(id) {
+  if (bulkSelected.has(id)) bulkSelected.delete(id);
+  else bulkSelected.add(id);
+  updateBulkUI();
+  // Update card visual without full re-render
+  const card = document.querySelector(`.k-card[data-id="${id}"]`);
+  if (card) {
+    card.classList.toggle('selected', bulkSelected.has(id));
+    const check = card.querySelector('.k-card-select');
+    if (check) check.innerHTML = bulkSelected.has(id) ? '&#10003;' : '';
+  }
+}
+
+function clearSelection() {
+  bulkSelected.clear();
+  document.querySelectorAll('.k-card.selected').forEach(c => {
+    c.classList.remove('selected');
+    const check = c.querySelector('.k-card-select');
+    if (check) check.innerHTML = '';
+  });
+  updateBulkUI();
+}
+
+function updateBulkUI() {
+  const bar = document.getElementById('bulk-bar');
+  const count = bulkSelected.size;
+  if (count === 0) {
+    bar.classList.remove('visible');
+    return;
+  }
+  bar.classList.add('visible');
+  document.getElementById('bulk-count').textContent = `${count} seleccionado${count!==1?'s':''}`;
+
+  // Determine which etapas the selected contacts are in
+  const etapas = new Set();
+  bulkSelected.forEach(id => {
+    const c = contactos.find(x=>x.id===id);
+    if (c) etapas.add(c.etapa);
+  });
+
+  let btns = '';
+  if (etapas.has('evaluacion') && etapas.size === 1) {
+    btns += `<button class="btn btn-green btn-sm" onclick="bulkChangeEtapa('contactar')">Contactar</button>`;
+    btns += `<button class="btn btn-danger btn-sm" onclick="bulkChangeEtapa('descartado')">Descartar</button>`;
+  }
+  if (etapas.has('contactar') && etapas.size === 1) {
+    btns += `<button class="btn btn-primary btn-sm" onclick="bulkRequestMedio('esperando_respuesta')">Contactado</button>`;
+  }
+  if (etapas.has('interesado') && etapas.size === 1) {
+    btns += `<button class="btn btn-primary btn-sm" onclick="showToast('Graduacion en bloque disponible en Fase 4','info')">Pasar a Talentos</button>`;
+  }
+  // Mixed selection
+  if (etapas.size > 1) {
+    btns += `<span style="font-size:12px;color:var(--text-muted)">Selecciona contactos de una misma etapa</span>`;
+  }
+  document.getElementById('bulk-actions').innerHTML = btns;
+}
+
+async function bulkChangeEtapa(nuevaEtapa) {
+  const ids = [...bulkSelected];
+  const now = new Date().toISOString();
+  try {
+    for (const id of ids) {
+      const c = contactos.find(x=>x.id===id);
+      if (!c || c.etapa === nuevaEtapa) continue;
+      const anterior = c.etapa;
+      await sb.from('prospeccion_contactos').update({etapa: nuevaEtapa, updated_at: now}).eq('id', id);
+      await sb.from('prospeccion_historial').insert({contacto_id:id, etapa_anterior:anterior, etapa_nueva:nuevaEtapa});
+      c.etapa = nuevaEtapa;
+    }
+    bulkSelected.clear();
+    renderEtapaStrip();
+    renderKanban();
+    updateBulkUI();
+    showToast(`${ids.length} contactos → ${ETAPAS.find(e=>e.key===nuevaEtapa)?.label||nuevaEtapa}`, 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+function bulkRequestMedio(nextEtapa) {
+  // Use the medio modal but for bulk
+  pendingMedioContactoId = 'bulk';
+  pendingMedioNextEtapa = nextEtapa;
+  selectedMedios = [];
+  ['mail','whatsapp','dm'].forEach(m => {
+    const btn = document.getElementById('medio-btn-'+m);
+    if (btn) { btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; }
+  });
+  document.getElementById('modal-medio-msg').textContent = `Por donde contactaste a los ${bulkSelected.size} contactos?`;
+  openModal('modal-medio');
 }
 
 // ══════════════════════════════════════════════════════════
