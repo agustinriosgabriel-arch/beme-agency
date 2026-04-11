@@ -104,7 +104,7 @@ let ROSTER = null;
 let TALENTS = [];
 let SELS = {}; // talent_id → {selected, accion, precio, contraoferta}
 const COMPACT_MODE = new URLSearchParams(window.location.search).get('compact') === '1';
-let rosterViewMode = 'table'; // table | cards
+let rosterViewMode = 'cards'; // table | cards
 let showAI = null; // null = use ROSTER.show_ai_descriptions
 
 // ── Helpers ──────────────────────────────────────────────────
