@@ -16,13 +16,29 @@ beme_v10/
 ├── index.html              → Talent dashboard (list/grid/manage talents)
 ├── dashboard.js            → All JS logic for index.html (~4100 lines)
 ├── roster.html             → Public roster view
+├── roster-general.html     → General public roster with filters
 ├── campanas.html           → Campaign management panel (list/grid/kanban)
 ├── campana-detalle.html    → Single campaign detail + 9-step workflow
+├── contratos.html          → Contract management (generate/translate/customize)
+├── prospecciones.html      → Brand prospection listing
+├── prospeccion-detalle.html→ Prospection detail with kanban pipeline
 ├── talento-portal.html     → Talent-facing portal (separate login)
-├── netlify.toml            → Netlify config (redirects)
-└── netlify/functions/
-    ├── apify-scraper.js    → Netlify function: TikTok/IG scraping via Apify
-    └── fetch-profile-photo.js → Netlify function: profile photo fetcher
+├── CLAUDE.md               → This file (project instructions)
+├── netlify.toml            → Netlify config
+├── docs/                   → Project documentation
+│   ├── DATABASE.md         → Full Supabase schema reference
+│   ├── ARCHITECTURE.md     → System architecture
+│   ├── DEPLOYMENT.md       → Deploy instructions
+│   ├── HANDOFF.md          → Handoff notes
+│   └── README.md           → Project readme
+├── sql/                    → Database migration scripts
+│   └── contratos.sql       → Contratos table + RLS + triggers
+├── agents/                 → AI agents and skills (by module)
+│   └── contratos/          → Contract agent config
+└── netlify/functions/      → Serverless functions
+    ├── apify-scraper.js    → TikTok/IG scraping via Apify
+    ├── contract-agent.js   → Contract generation + AI customization
+    └── fetch-profile-photo.js → Profile photo fetcher
 ```
 
 ## Critical Rules
@@ -42,7 +58,7 @@ const sb = supabase.createClient(SB_URL, SB_KEY);
 The frontend uses the anon/publishable key. `sb.auth.admin.*` does NOT work. User creation uses `sb.auth.signUp()` + session save/restore.
 
 ### 4. RLS is on everywhere
-All tables have Row Level Security enabled. If a query returns empty when data exists, it's almost certainly a missing RLS policy. Check DATABASE.md.
+All tables have Row Level Security enabled. If a query returns empty when data exists, it's almost certainly a missing RLS policy. Check docs/DATABASE.md.
 
 ### 5. Storage buckets
 Buckets must exist AND be `public: true` for file URLs to work. Current buckets: `campaign-briefs`, `content-scripts`, `content-drafts`, `content-stats`, `brand-logos`.
