@@ -126,17 +126,39 @@ async function init() {
     document.title = 'Roster — ' + roster.name;
 
     const talentIds = (roster.talent_ids || []).map(id => parseInt(id)).filter(Boolean);
-    if (talentIds.length > 0) {
-      document.getElementById('load-msg').textContent = 'Cargando talentos...';
-      const { data: talentsData } = await sb.from('talentos').select('*').in('id', talentIds);
-      // Preserve order from talent_ids
-      TALENTS = talentIds.map(id => (talentsData || []).find(t => t.id === id)).filter(Boolean);
-    }
+    document.getElementById('load-msg').textContent = 'Cargando talentos...';
 
-    // Load existing selections
-    document.getElementById('load-msg').textContent = 'Cargando selecciones previas...';
-    const { data: selData } = await sb.from('roster_selecciones').select('*').eq('roster_id', roster.id);
-    (selData || []).forEach(s => { SELS[s.talent_id] = s; });
+    // Load talents and selections in parallel, only essential fields (no foto initially)
+    const [talentsRes, selRes] = await Promise.all([
+      talentIds.length > 0
+        ? sb.from('talentos').select('id,nombre,paises,ciudad,tiktok,instagram,youtube,categorias,seguidores,genero,keywords').in('id', talentIds)
+        : {data:[]},
+      sb.from('roster_selecciones').select('*').eq('roster_id', roster.id),
+    ]);
+
+    // Preserve order from talent_ids
+    TALENTS = talentIds.map(id => (talentsRes.data || []).find(t => t.id === id)).filter(Boolean);
+    (selRes.data || []).forEach(s => { SELS[s.talent_id] = s; });
+
+    // Load photos in background after render (they're heavy, especially base64)
+    setTimeout(async () => {
+      if (!talentIds.length) return;
+      const {data: photoData} = await sb.from('talentos').select('id,foto').in('id', talentIds);
+      if (photoData) {
+        photoData.forEach(p => {
+          const t = TALENTS.find(x => x.id === p.id);
+          if (t && p.foto) {
+            t.foto = p.foto;
+            // Update visible avatars
+            document.querySelectorAll(`[data-avatar-id="${p.id}"]`).forEach(el => {
+              if (p.foto.startsWith('data:') || p.foto.startsWith('https://')) {
+                el.innerHTML = `<img src="${p.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+              }
+            });
+          }
+        });
+      }
+    }, 100);
 
     render();
     document.getElementById('loading-screen').style.display = 'none';
@@ -193,9 +215,7 @@ function render() {
   </tr>`;
 
   const tableRows = TALENTS.map((t, i) => {
-    const av = t.foto
-      ? `<img src="${t.foto}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;margin-right:8px;flex-shrink:0;">`
-      : `<span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:#f0e0e8;color:#b2005d;font-weight:800;font-size:13px;margin-right:8px;flex-shrink:0;">${ini(t.nombre)}</span>`;
+    const av = `<span data-avatar-id="${t.id}" style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:#f0e0e8;color:#b2005d;font-weight:800;font-size:13px;margin-right:8px;flex-shrink:0;overflow:hidden">${t.foto ? `<img src="${t.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : ini(t.nombre)}</span>`;
     const ctries = countries(t).join('<br>');
     const ttCell = !showTT?'':t.tiktok?`<div style="display:flex;align-items:center;gap:4px;">${ttSVG}<a href="${t.tiktok}" target="_blank" style="color:#ff0050;font-size:12px;font-weight:600;">${extractH(t.tiktok)}</a></div><div style="font-size:11px;color:#777;padding-left:15px;">${fmtF(t.seguidores?.tiktok)}</div>`:'<span style="color:#ccc;">—</span>';
     const igCell = !showIG?'':t.instagram?`<div style="display:flex;align-items:center;gap:4px;">${igSVG}<a href="${t.instagram}" target="_blank" style="color:#e1306c;font-size:12px;font-weight:600;">${extractH(t.instagram)}</a></div><div style="font-size:11px;color:#777;padding-left:15px;">${fmtF(t.seguidores?.instagram)}</div>`:'<span style="color:#ccc;">—</span>';
@@ -237,9 +257,7 @@ function render() {
 
   // Mobile cards
   const mobileCards = TALENTS.map(t => {
-    const av = t.foto
-      ? `<img src="${t.foto}" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid rgba(178,0,93,0.3);">`
-      : `<div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#f0e0e8,#e8d0e0);color:#b2005d;font-weight:800;font-size:18px;display:flex;align-items:center;justify-content:center;border:2px solid rgba(178,0,93,0.2);">${ini(t.nombre)}</div>`;
+    const av = `<div data-avatar-id="${t.id}" style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#f0e0e8,#e8d0e0);color:#b2005d;font-weight:800;font-size:18px;display:flex;align-items:center;justify-content:center;border:2px solid rgba(178,0,93,0.2);overflow:hidden;flex-shrink:0">${t.foto ? `<img src="${t.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : ini(t.nombre)}</div>`;
     const ctries = countries(t).join(' · ');
     const nets = [
       showTT && t.tiktok ? `<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f5f5f5;">${ttSVG}<a href="${t.tiktok}" target="_blank" style="color:#ff0050;font-weight:700;font-size:13px;flex:1;">${extractH(t.tiktok)}</a><span style="color:#333;font-weight:700;font-size:13px;">${fmtF(t.seguidores?.tiktok)}</span></div>` : '',
