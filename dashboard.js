@@ -201,7 +201,7 @@ function hideAppLoadingOverlay() {
   }
 }
 
-// Safety: force-remove loading overlay after 12s
+// Safety: force-remove loading overlay after 20s (allows time for Supabase cold-start retries)
 setTimeout(function() {
   var lo = document.getElementById('app-loading-overlay');
   if(lo && !lo.classList.contains('hidden')) {
@@ -209,16 +209,60 @@ setTimeout(function() {
     lo.classList.add('hidden');
     setTimeout(function(){ if(lo.parentNode) lo.parentNode.removeChild(lo); }, 350);
   }
-}, 12000);
+}, 20000);
 
 // wireLoginUI → replaced by doLogin/doSignup onclick
 
+
+// ── Load helpers ─────────────────────────────────────
+async function loadTalentosWithRetry(columns) {
+  const PAGE_SIZE = 1000;
+  const MAX_RETRIES = 3;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    let allTalents = [];
+    let queryError = null;
+    let from = 0;
+    while (true) {
+      const { data: page, error: tErr } = await sb.from('talentos').select(columns).order('nombre').range(from, from + PAGE_SIZE - 1);
+      if (tErr) {
+        console.error(`[Beme] Error loading talentos (attempt ${attempt}/${MAX_RETRIES}):`, tErr);
+        queryError = tErr;
+        break;
+      }
+      if (!page || page.length === 0) break;
+      allTalents = allTalents.concat(page);
+      if (page.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+    if (!queryError) return { data: allTalents, error: null };
+    if (attempt < MAX_RETRIES) {
+      console.log(`[Beme] Retrying talentos load in ${attempt * 2}s...`);
+      const msg = document.getElementById('app-load-msg');
+      if (msg) msg.textContent = `Reconectando... intento ${attempt + 1}/${MAX_RETRIES}`;
+      await new Promise(r => setTimeout(r, attempt * 2000));
+    }
+  }
+  return { data: [], error: true };
+}
 
 // ── Load from Supabase ─────────────────────────────────────
 async function loadFromSupabase() {
   try {
 
-    const { data: configRows } = await sb.from('app_config').select('*');
+    // Wake up Supabase (free tier sleeps after inactivity) with a lightweight ping
+    // This runs first so the DB is ready for the real queries
+    try { await sb.from('app_config').select('key').limit(1); } catch(e) { /* ignore wake-up error */ }
+
+    // Load all data in parallel for speed
+    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,foto,seguidores,genero,keywords,valores,updated,telefono';
+    const [configResult, talentResult, rosterResult] = await Promise.all([
+      sb.from('app_config').select('*'),
+      loadTalentosWithRetry(TALENT_COLS),
+      sb.from('rosters').select('*').order('created_at', {ascending:false})
+    ]);
+
+    // Process config
+    const configRows = configResult.data;
     if (configRows) {
       for (const row of configRows) {
         if (row.key === 'categories' && Array.isArray(row.value)) { CATEGORIES.length=0; row.value.forEach(c=>CATEGORIES.push(c)); }
@@ -238,36 +282,9 @@ async function loadFromSupabase() {
       }
     }
 
-    // Load ALL talents with retry + pagination (Supabase free tier may sleep)
-    let allTalents = [];
-    let talentQueryError = false;
-    const PAGE_SIZE = 1000;
-    const MAX_RETRIES = 3;
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      allTalents = [];
-      talentQueryError = false;
-      let from = 0;
-      while (true) {
-        const { data: page, error: tErr } = await sb.from('talentos').select('*').order('nombre').range(from, from + PAGE_SIZE - 1);
-        if (tErr) {
-          console.error(`[Beme] Error loading talentos (attempt ${attempt}/${MAX_RETRIES}):`, tErr);
-          talentQueryError = true;
-          break;
-        }
-        if (!page || page.length === 0) break;
-        allTalents = allTalents.concat(page);
-        if (page.length < PAGE_SIZE) break;
-        from += PAGE_SIZE;
-      }
-      if (!talentQueryError) break; // success (even if 0 rows)
-      if (attempt < MAX_RETRIES) {
-        console.log(`[Beme] Retrying talentos load in ${attempt * 2}s...`);
-        const msg = document.getElementById('app-load-msg');
-        if (msg) msg.textContent = `Reconectando... intento ${attempt + 1}/${MAX_RETRIES}`;
-        await new Promise(r => setTimeout(r, attempt * 2000));
-      }
-    }
-    talents = allTalents.map(t => ({
+    // Process talents
+    const { data: allTalents, error: talentQueryError } = talentResult;
+    talents = (allTalents || []).map(t => ({
       ...t,
       paises: t.paises || [],
       categorias: t.categorias || [],
@@ -277,9 +294,9 @@ async function loadFromSupabase() {
     }));
     console.log('[Beme] Loaded', talents.length, 'talentos from Supabase');
 
-    const { data: rostersData, error: rErr } = await sb.from('rosters').select('*').order('created_at', {ascending:false});
-    if (rErr) console.error('[Beme] Error loading rosters:', rErr);
-    rosters = (rostersData || []).map(r => ({
+    // Process rosters
+    if (rosterResult.error) console.error('[Beme] Error loading rosters:', rosterResult.error);
+    rosters = (rosterResult.data || []).map(r => ({
       ...r,
       talentIds: (r.talent_ids || []).map(id => parseInt(id)),
       platforms: r.platforms || {tt:true,ig:true,yt:true},
