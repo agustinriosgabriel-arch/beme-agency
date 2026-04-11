@@ -214,64 +214,18 @@ select.form-input{cursor:pointer;-webkit-appearance:none}
 
 /* ── Contract Preview ──────────────────────────────────── */
 .contract-preview{
-  background:#fff;color:#1c1c1c;border-radius:var(--radius);
-  padding:0;max-height:70vh;overflow-y:auto;
-  font-family:'Plus Jakarta Sans','Helvetica Neue',Arial,sans-serif;font-size:13.5px;line-height:1.7;
+  background:#fff;color:#111;border-radius:var(--radius);
+  padding:40px 50px;max-height:70vh;overflow-y:auto;
+  font-family:'Times New Roman',serif;font-size:14px;line-height:1.6;
   border:1px solid var(--border2);
 }
-.contract-preview .contract-header{
-  padding:32px 48px 24px;border-bottom:3px solid #b2005d;
-  display:flex;align-items:center;justify-content:space-between;gap:20px;
-}
-.contract-preview .contract-header img{height:52px;width:auto}
-.contract-preview .contract-header-info{text-align:right;font-size:12px;color:#666}
-.contract-preview .contract-header-info .contract-num{font-size:14px;font-weight:700;color:#b2005d}
-.contract-preview .contract-body{padding:32px 48px 24px}
-.contract-preview .contract-title{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;
-  text-align:center;margin:0 0 4px;color:#b2005d;letter-spacing:0.5px;text-transform:uppercase;
-}
-.contract-preview .contract-subtitle{text-align:center;font-size:13px;color:#666;margin-bottom:28px;font-style:italic}
-.contract-preview .contract-summary{
-  display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;
-  background:#faf5f8;border:1px solid #f0dce6;border-radius:10px;
-  padding:18px 22px;margin-bottom:28px;font-size:13px;
-}
-.contract-preview .contract-summary dt{font-weight:700;color:#b2005d;font-size:11.5px;text-transform:uppercase;letter-spacing:0.3px}
-.contract-preview .contract-summary dd{margin:0 0 8px;color:#333}
-.contract-preview h2{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:700;
-  margin:28px 0 14px;color:#b2005d;padding-bottom:6px;
-  border-bottom:1.5px solid #f0dce6;text-transform:uppercase;letter-spacing:0.3px;
-}
-.contract-preview p{margin-bottom:10px;text-align:justify;color:#333}
-.contract-preview ol{margin-left:0;margin-bottom:16px;padding-left:0;counter-reset:clause}
-.contract-preview li{
-  margin-bottom:10px;text-align:justify;color:#333;
-  counter-increment:clause;list-style:none;padding-left:36px;position:relative;
-}
-.contract-preview li::before{
-  content:counter(clause);position:absolute;left:0;top:1px;
-  width:24px;height:24px;background:#b2005d;color:#fff;
-  border-radius:50%;font-size:11px;font-weight:700;
-  display:flex;align-items:center;justify-content:center;
-}
-.contract-preview strong{font-weight:700;color:#1c1c1c}
-.contract-preview em{font-style:italic;color:#555}
-.contract-preview .contract-footer{
-  margin-top:40px;padding-top:24px;border-top:1.5px solid #f0dce6;
-  display:grid;grid-template-columns:1fr 1fr;gap:40px;
-}
-.contract-preview .signature-block{text-align:center}
-.contract-preview .signature-line{
-  border-top:1.5px solid #999;margin:60px auto 8px;width:80%;
-}
-.contract-preview .signature-label{font-size:12px;color:#666;font-weight:600}
-.contract-preview .signature-name{font-size:13px;font-weight:700;color:#1c1c1c;margin-top:2px}
-.contract-preview .contract-legal-footer{
-  text-align:center;margin-top:32px;padding-top:16px;
-  border-top:1px solid #eee;font-size:10.5px;color:#999;
-}
+.contract-preview h1{font-family:'Times New Roman',serif;font-size:20px;text-align:center;margin-bottom:20px;font-weight:700}
+.contract-preview h2{font-family:'Times New Roman',serif;font-size:16px;margin:24px 0 12px;font-weight:700}
+.contract-preview p{margin-bottom:10px;text-align:justify}
+.contract-preview ol{margin-left:20px;margin-bottom:12px}
+.contract-preview li{margin-bottom:8px;text-align:justify}
+.contract-preview strong{font-weight:700}
+.contract-preview em{font-style:italic}
 
 /* ── AI Loader ─────────────────────────────────────────── */
 .ai-loader{display:flex;align-items:center;justify-content:center;gap:12px;padding:40px;color:var(--text-muted)}
@@ -333,10 +287,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   .stats-strip{grid-template-columns:repeat(2,1fr)}
   .contratos-grid{grid-template-columns:1fr}
   .form-grid{grid-template-columns:1fr}
-  .contract-preview .contract-header{padding:20px 24px 16px}
-  .contract-preview .contract-body{padding:20px 24px}
-  .contract-preview .contract-summary{grid-template-columns:1fr}
-  .contract-preview .contract-header img{height:40px}
+  .contract-preview{padding:20px 24px}
 }
 @media(max-width:600px){
   .main{padding:16px}
@@ -1506,43 +1457,14 @@ function printContract() {
   const content = document.getElementById('preview-content').innerHTML;
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html><head><title>Contrato BEME</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-      *{box-sizing:border-box;margin:0;padding:0}
-      body{font-family:'Plus Jakarta Sans','Helvetica Neue',Arial,sans-serif;font-size:13.5px;line-height:1.7;color:#1c1c1c;max-width:800px;margin:0 auto;padding:0}
-      .contract-header{padding:32px 40px 24px;border-bottom:3px solid #b2005d;display:flex;align-items:center;justify-content:space-between;gap:20px}
-      .contract-header img{height:52px;width:auto}
-      .contract-header-info{text-align:right;font-size:12px;color:#666}
-      .contract-header-info .contract-num{font-size:14px;font-weight:700;color:#b2005d}
-      .contract-body{padding:32px 40px 24px}
-      .contract-title{font-size:22px;font-weight:800;text-align:center;margin:0 0 4px;color:#b2005d;letter-spacing:0.5px;text-transform:uppercase}
-      .contract-subtitle{text-align:center;font-size:13px;color:#666;margin-bottom:28px;font-style:italic}
-      .contract-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;background:#faf5f8;border:1px solid #f0dce6;border-radius:10px;padding:18px 22px;margin-bottom:28px;font-size:13px}
-      .contract-summary dt{font-weight:700;color:#b2005d;font-size:11.5px;text-transform:uppercase;letter-spacing:0.3px}
-      .contract-summary dd{margin:0 0 8px;color:#333}
-      h2{font-size:15px;font-weight:700;margin:28px 0 14px;color:#b2005d;padding-bottom:6px;border-bottom:1.5px solid #f0dce6;text-transform:uppercase;letter-spacing:0.3px}
-      p{margin-bottom:10px;text-align:justify;color:#333}
-      ol{margin-left:0;margin-bottom:16px;padding-left:0;counter-reset:clause}
-      li{margin-bottom:10px;text-align:justify;color:#333;counter-increment:clause;list-style:none;padding-left:36px;position:relative}
-      li::before{content:counter(clause);position:absolute;left:0;top:1px;width:24px;height:24px;background:#b2005d;color:#fff;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
-      strong{font-weight:700;color:#1c1c1c}
-      em{font-style:italic;color:#555}
-      .contract-footer{margin-top:40px;padding-top:24px;border-top:1.5px solid #f0dce6;display:grid;grid-template-columns:1fr 1fr;gap:40px}
-      .signature-block{text-align:center}
-      .signature-line{border-top:1.5px solid #999;margin:60px auto 8px;width:80%}
-      .signature-label{font-size:12px;color:#666;font-weight:600}
-      .signature-name{font-size:13px;font-weight:700;color:#1c1c1c;margin-top:2px}
-      .contract-legal-footer{text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid #eee;font-size:10.5px;color:#999}
-      @media print{
-        body{padding:0}
-        @page{margin:1.5cm 2cm}
-        .contract-header{padding:20px 0 16px}
-        .contract-body{padding:20px 0}
-        li::before{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#b2005d !important;color:#fff !important}
-        .contract-summary{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#faf5f8 !important}
-        .contract-title,.contract-summary dt,h2{-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#b2005d !important}
-        .contract-header{border-bottom:3px solid #b2005d !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      }
+      body{font-family:'Times New Roman',serif;font-size:14px;line-height:1.6;color:#111;max-width:800px;margin:0 auto;padding:40px}
+      h1{font-size:20px;text-align:center;margin-bottom:20px}
+      h2{font-size:16px;margin:24px 0 12px}
+      p{margin-bottom:10px;text-align:justify}
+      ol{margin-left:20px;margin-bottom:12px}
+      li{margin-bottom:8px;text-align:justify}
+      @media print{body{padding:20px}@page{margin:2cm}}
     </style></head><body>${content}</body></html>`);
   win.document.close();
   win.focus();
