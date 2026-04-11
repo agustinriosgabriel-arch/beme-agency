@@ -1575,6 +1575,36 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
           <input type="text" id="f-keywords" class="form-input" placeholder="ej. fitness, lifestyle, mamá, CEO, vegano...">
           <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Separadas por coma. Se usan para búsqueda.</div>
         </div>
+        <div class="form-group">
+          <label class="form-label">Tipo de Contenido</label>
+          <input type="text" id="f-tipo-contenido" class="form-input" placeholder="vlogs, unboxings, tutoriales, challenges...">
+          <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Separados por coma</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Calidad del Creador</label>
+          <select id="f-calidad" class="form-input">
+            <option value="">Sin clasificar</option>
+            <option value="A">A</option>
+            <option value="AA">AA</option>
+            <option value="AAA">AAA</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Marcas con las que ha trabajado</label>
+          <input type="text" id="f-marcas-previas" class="form-input" placeholder="Nike, Coca-Cola, Samsung...">
+          <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Separadas por coma</div>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Notas Internas</label>
+          <textarea id="f-notas-internas" class="form-input" placeholder="Experiencia trabajando con este talento, tiempos de entrega, actitud..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tiene Manager</label>
+          <select id="f-tiene-manager" class="form-input">
+            <option value="false">No - Talento directo</option>
+            <option value="true">Si - Tiene manager</option>
+          </select>
+        </div>
         <div class="form-group full">
           <label class="form-label">Categorías *</label>
           <div class="cat-grid" id="cat-checkboxes"></div>

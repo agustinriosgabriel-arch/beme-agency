@@ -42,7 +42,8 @@ exports.handler = async (event) => {
       if (segs.instagram) platforms.push(`IG:${formatNum(segs.instagram)}`);
       if (segs.youtube) platforms.push(`YT:${formatNum(segs.youtube)}`);
       const hist = (t.historial||[]).map(h => h.marca).filter(Boolean).join(', ');
-      return `[${t.id}] ${t.nombre} | ${(t.paises||[]).join(',')} | ${t.genero||'?'} | ${platforms.join(' ')} | cats:${(t.categorias||[]).join(',')} | kw:${t.keywords||''} | vals:${t.valores||''} ${hist ? '| marcas:'+hist : ''}`;
+      const allBrands = [t.marcas_previas, hist].filter(Boolean).join(', ');
+      return `[${t.id}] ${t.nombre} | ${(t.paises||[]).join(',')} | ${t.genero||'?'} | ${platforms.join(' ')} | cats:${(t.categorias||[]).join(',')} | kw:${t.keywords||''} | tipo:${t.tipo_contenido||''} | calidad:${t.calidad||'?'} | vals:${t.valores||''} ${allBrands ? '| marcas:'+allBrands : ''} ${t.tiene_manager ? '| MANAGER' : '| DIRECTO'}`;
     }).join('\n');
 
     const systemPrompt = `Eres un agente experto en influencer marketing para la agencia BEME. Tu trabajo es analizar talentos y recomendar los mejores para una campana.
@@ -50,9 +51,12 @@ exports.handler = async (event) => {
 CRITERIOS DE RANKING (en orden de importancia):
 1. KEYWORDS MATCH: Si el producto/marca tiene relacion directa con las keywords del talento, es prioridad MAXIMA. Ej: campana de Fortnite + talento con keyword "fortnite" = score alto.
 2. CATEGORIAS MATCH: Match de categorias entre lo que pide la marca y las del talento.
-3. HISTORIAL DE MARCAS SIMILARES: Si el talento ya trabajo con marcas del mismo rubro/industria, sube el score.
-4. COHERENCIA MARCA-TALENTO: Analisis semantico - el perfil del talento (valores, keywords, categorias) debe ser coherente con la marca y producto.
-5. SEGUIDORES EN PLATAFORMA RELEVANTE: Mas seguidores en la plataforma que pide la marca = bonus.
+3. HISTORIAL DE MARCAS SIMILARES: Si el talento ya trabajo con marcas del mismo rubro/industria (campo "marcas"), sube el score.
+4. TIPO DE CONTENIDO: Si el talento hace el tipo de contenido que necesita la marca (vlogs, unboxings, tutoriales, challenges, etc).
+5. CALIDAD DEL CREADOR: AAA es top tier, AA es muy bueno, A es bueno. Priorizar calidad superior.
+6. COHERENCIA MARCA-TALENTO: Analisis semantico - el perfil del talento (valores, keywords, categorias, tipo de contenido) debe ser coherente con la marca y producto.
+7. SEGUIDORES EN PLATAFORMA RELEVANTE: Mas seguidores en la plataforma que pide la marca = bonus.
+8. MANAGER: Los talentos con MANAGER suelen ser mas caros y dificiles de cerrar. Mencionar esto en la razon si aplica. Los talentos DIRECTO son mas faciles de negociar.
 
 IMPORTANTE:
 - Se especifico en las razones. No uses frases genericas.

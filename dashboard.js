@@ -1737,6 +1737,11 @@ function clearForm() {
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   var _fg = document.getElementById('f-genero'); if(_fg) _fg.value = '';
   var _fk = document.getElementById('f-keywords'); if(_fk) _fk.value = '';
+  var _ftc = document.getElementById('f-tipo-contenido'); if(_ftc) _ftc.value = '';
+  var _fcal = document.getElementById('f-calidad'); if(_fcal) _fcal.value = '';
+  var _fmp = document.getElementById('f-marcas-previas'); if(_fmp) _fmp.value = '';
+  var _fni = document.getElementById('f-notas-internas'); if(_fni) _fni.value = '';
+  var _ftm = document.getElementById('f-tiene-manager'); if(_ftm) _ftm.value = 'false';
   formSelectedPaises = [];
   updatePaisTrigger();
   updatePaisPills();
@@ -1760,6 +1765,11 @@ function fillForm(t) {
   document.getElementById('f-valores').value = t.valores||'';
   var _fg = document.getElementById('f-genero'); if(_fg) _fg.value = t.genero||'';
   var _fk = document.getElementById('f-keywords'); if(_fk) _fk.value = t.keywords||'';
+  var _ftc = document.getElementById('f-tipo-contenido'); if(_ftc) _ftc.value = t.tipo_contenido||'';
+  var _fcal = document.getElementById('f-calidad'); if(_fcal) _fcal.value = t.calidad||'';
+  var _fmp = document.getElementById('f-marcas-previas'); if(_fmp) _fmp.value = t.marcas_previas||'';
+  var _fni = document.getElementById('f-notas-internas'); if(_fni) _fni.value = t.notas_internas||'';
+  var _ftm = document.getElementById('f-tiene-manager'); if(_ftm) _ftm.value = t.tiene_manager ? 'true' : 'false';
   document.getElementById('f-seg-tiktok').value = t.seguidores?.tiktok || 0;
   document.getElementById('f-seg-instagram').value = t.seguidores?.instagram || 0;
   document.getElementById('f-seg-youtube').value = t.seguidores?.youtube || 0;
@@ -1970,6 +1980,11 @@ async function saveTalent() {
     valores: document.getElementById('f-valores').value.trim(),
     genero: (document.getElementById('f-genero') ? document.getElementById('f-genero').value : ''),
     keywords: (document.getElementById('f-keywords') ? document.getElementById('f-keywords').value.trim().toLowerCase() : ''),
+    tipo_contenido: (document.getElementById('f-tipo-contenido') ? document.getElementById('f-tipo-contenido').value.trim() : ''),
+    calidad: (document.getElementById('f-calidad') ? document.getElementById('f-calidad').value : ''),
+    marcas_previas: (document.getElementById('f-marcas-previas') ? document.getElementById('f-marcas-previas').value.trim() : ''),
+    notas_internas: (document.getElementById('f-notas-internas') ? document.getElementById('f-notas-internas').value.trim() : ''),
+    tiene_manager: (document.getElementById('f-tiene-manager') ? document.getElementById('f-tiene-manager').value === 'true' : false),
     categorias: cats,
     updated: new Date().toISOString().split('T')[0]
   };
@@ -2001,7 +2016,10 @@ async function saveTalent() {
       tiktok: savedTalent.tiktok||'', instagram: savedTalent.instagram||'', youtube: savedTalent.youtube||'',
       valores: savedTalent.valores||'', categorias: savedTalent.categorias||[], foto: savedTalent.foto||'',
       seguidores: savedTalent.seguidores||{tiktok:0,instagram:0,youtube:0}, updated: savedTalent.updated||null,
-      genero: savedTalent.genero||'', keywords: savedTalent.keywords||''
+      genero: savedTalent.genero||'', keywords: savedTalent.keywords||'',
+      tipo_contenido: savedTalent.tipo_contenido||'', calidad: savedTalent.calidad||'',
+      marcas_previas: savedTalent.marcas_previas||'', notas_internas: savedTalent.notas_internas||'',
+      tiene_manager: savedTalent.tiene_manager||false
     };
     sb.from('talentos').upsert([row], {onConflict:'id'})
       .then(({error}) => {
@@ -4887,18 +4905,12 @@ async function generateAIRoster() {
 
   // Prepare talent data for AI (compact)
   const talentData = filtered.map(t => ({
-    id: t.id,
-    nombre: t.nombre,
-    paises: t.paises || [],
-    genero: t.genero || '',
-    categorias: t.categorias || [],
-    keywords: t.keywords || '',
-    valores: t.valores || '',
+    id: t.id, nombre: t.nombre, paises: t.paises || [], genero: t.genero || '',
+    categorias: t.categorias || [], keywords: t.keywords || '', valores: t.valores || '',
+    tipo_contenido: t.tipo_contenido || '', calidad: t.calidad || '',
+    marcas_previas: t.marcas_previas || '', tiene_manager: t.tiene_manager || false,
     seguidores: t.seguidores || {},
-    historial: talentCampaigns.filter(tc => tc.talent_id === t.id).map(tc => ({
-      marca: tc.marca,
-      acciones: tc.acciones,
-    })),
+    historial: talentCampaigns.filter(tc => tc.talent_id === t.id).map(tc => ({ marca: tc.marca, acciones: tc.acciones })),
   }));
 
   // Show loading
@@ -5123,6 +5135,8 @@ async function confirmAIDescs() {
   const talentData = rosterTalents.map(t => ({
     id: t.id, nombre: t.nombre, paises: t.paises || [], genero: t.genero || '',
     categorias: t.categorias || [], keywords: t.keywords || '', valores: t.valores || '',
+    tipo_contenido: t.tipo_contenido || '', calidad: t.calidad || '',
+    marcas_previas: t.marcas_previas || '', tiene_manager: t.tiene_manager || false,
     seguidores: t.seguidores || {},
     historial: talentCampaigns.filter(tc => tc.talent_id === t.id).map(tc => ({ marca: tc.marca, acciones: tc.acciones })),
   }));
