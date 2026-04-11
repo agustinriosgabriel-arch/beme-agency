@@ -767,6 +767,7 @@ function etapaButtons(c, etapa) {
     case 'esperando_respuesta': return `
       <button class="btn btn-green btn-xs" onclick="event.stopPropagation();requestMedio(${c.id},'interesado')">Interesado</button>
       <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'no_interesado')">No interesado</button>
+      <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();addMedio(${c.id})" title="Agregar otro medio de contacto">+ Medio</button>
       <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'contactar')" title="Volver">&larr;</button>`;
     case 'descartado': return `
       <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'evaluacion')">Restaurar</button>`;
@@ -812,6 +813,18 @@ async function changeEtapa(contactoId, nuevaEtapa, medio) {
   }
 }
 
+function addMedio(contactoId) {
+  pendingMedioContactoId = contactoId;
+  pendingMedioNextEtapa = '_add_medio'; // special flag: don't change etapa
+  selectedMedios = [];
+  ['mail','whatsapp','dm'].forEach(m => {
+    const btn = document.getElementById('medio-btn-'+m);
+    if (btn) { btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; }
+  });
+  document.getElementById('modal-medio-msg').textContent = 'Agregar medio de contacto:';
+  openModal('modal-medio');
+}
+
 function requestMedio(contactoId, nextEtapa) {
   pendingMedioContactoId = contactoId;
   pendingMedioNextEtapa = nextEtapa || 'esperando_respuesta';
@@ -849,6 +862,27 @@ async function confirmMedioAndAdvance() {
   if (!selectedMedios.length) { showToast('Selecciona al menos un medio','error'); return; }
   closeModal('modal-medio');
   const medio = selectedMedios.join(', ');
+
+  // Special case: just adding medio without changing etapa
+  if (pendingMedioNextEtapa === '_add_medio' && pendingMedioContactoId && pendingMedioContactoId !== 'bulk') {
+    const c = contactos.find(x=>x.id===pendingMedioContactoId);
+    if (c) {
+      // Append new medios to existing, avoiding duplicates
+      const existing = (c.medio_contacto||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+      selectedMedios.forEach(m => { if (!existing.includes(m)) existing.push(m); });
+      const updated = existing.join(', ');
+      try {
+        await sb.from('prospeccion_contactos').update({medio_contacto: updated, updated_at: new Date().toISOString()}).eq('id', c.id);
+        c.medio_contacto = updated;
+        renderKanban();
+        showToast(`Medios actualizados: ${updated}`, 'success');
+      } catch(e) { showToast('Error: '+e.message, 'error'); }
+    }
+    pendingMedioContactoId = null;
+    pendingMedioNextEtapa = null;
+    return;
+  }
+
   if (pendingMedioContactoId === 'bulk') {
     // Bulk mode
     const ids = [...bulkSelected];
