@@ -108,7 +108,7 @@ const COMPACT_MODE = new URLSearchParams(window.location.search).get('compact') 
 // ── Helpers ──────────────────────────────────────────────────
 function fmtF(n){if(!n||n===0)return'—';if(n>=1e6)return(n/1e6).toFixed(1).replace('.0','')+'M';if(n>=1000)return Math.floor(n/1000)+'K';return String(n);}
 function ini(name){return name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();}
-function extractH(url){if(!url)return'';const m=url.match(/@([^/?#&]+)/);return m?'@'+m[1]:url.replace(/https?:\/\/(www\.)?[^/]+\//,'').split('/')[0];}
+function extractH(url){if(!url)return'';const m=url.match(/@([^/?#&]+)/);if(m)return'@'+m[1];let u=url.replace(/https?:\/\/(www\.)?(tiktok\.com|instagram\.com|youtube\.com)\/?/i,'').split(/[/?#&]/)[0];u=u.replace(/^@/,'');return u?'@'+u:url;}
 function countries(t){return(t.paises||[t.pais||'']).filter(Boolean).map(c=>(FLAG_MAP[c]||'')+' '+c);}
 
 // ── Init ─────────────────────────────────────────────────────
@@ -198,9 +198,7 @@ function render() {
       ${showTT?`<td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;">${ttCell}</td>`:''}
       ${showIG?`<td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;">${igCell}</td>`:''}
       ${showYT?`<td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;">${ytCell}</td>`:''}
-      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;"><div style="display:flex;flex-wrap:wrap;gap:2px;">${cats}</div>
-        ${ROSTER.show_ai_descriptions && ROSTER.ai_descriptions?.[t.id] ? `<div style="background:linear-gradient(135deg,rgba(148,20,224,0.04),rgba(178,0,93,0.04));border:1px solid rgba(148,20,224,0.12);border-radius:6px;padding:6px 8px;margin-top:6px;font-size:10px;color:#666;line-height:1.4"><span style="font-weight:700;color:#9414E0;font-size:9px">AI</span> ${ROSTER.ai_descriptions[t.id].reason||''}</div>` : ''}
-      </td>
+      <td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;"><div style="display:flex;flex-wrap:wrap;gap:2px;">${cats}</div></td>
       ${showPriceComments ? `<td style="padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;min-width:155px;">
         <textarea class="accion-input" data-id="${t.id}" placeholder="Ej. Post + story..."
           style="width:100%;min-height:52px;border:1px solid #e0e0e0;border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;color:#111;outline:none;resize:vertical;"></textarea>
@@ -216,7 +214,10 @@ function render() {
         <textarea class="counter-input" data-id="${t.id}" placeholder="Comentarios..."
           style="width:100%;min-height:52px;border:1px solid #e0e0e0;border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;color:#111;outline:none;resize:vertical;line-height:1.4;"></textarea>
       </td>` : ''}
-    </tr>`;
+    </tr>
+    ${ROSTER.show_ai_descriptions && ROSTER.ai_descriptions?.[t.id] ? `<tr style="background:${rowBg}"><td colspan="20" style="padding:4px 14px 12px;border-bottom:1px solid #f0f0f0;">
+      <div style="background:linear-gradient(135deg,rgba(148,20,224,0.03),rgba(178,0,93,0.03));border:1px solid rgba(148,20,224,0.1);border-radius:8px;padding:8px 12px;font-size:11px;color:#555;line-height:1.5;max-width:100%"><span style="font-weight:700;color:#9414E0;font-size:10px;margin-right:4px">AI</span>${ROSTER.ai_descriptions[t.id].reason||''}</div>
+    </td></tr>` : ''}`;
   }).join('');
 
   // Mobile cards
