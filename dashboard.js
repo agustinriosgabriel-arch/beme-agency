@@ -241,7 +241,7 @@ async function loadTalentosWithRetry(columns) {
       console.log(`[Beme] Retrying talentos load in ${attempt * 2}s...`);
       const msg = document.getElementById('app-load-msg');
       if (msg) msg.textContent = `Reconectando... intento ${attempt + 1}/${MAX_RETRIES}`;
-      await new Promise(r => setTimeout(r, attempt * 2000));
+      await new Promise(r => setTimeout(r, attempt * 3000));
     }
   }
   return { data: [], error: true };
@@ -256,7 +256,8 @@ async function loadFromSupabase() {
     try { await sb.from('app_config').select('key').limit(1); } catch(e) { /* ignore wake-up error */ }
 
     // Load all data in parallel for speed
-    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,foto,seguidores,genero,keywords,valores,updated,telefono';
+    // Load WITHOUT foto first (base64 photos are huge, loaded in background after render)
+    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,genero,keywords,valores,updated,telefono';
     const [configResult, talentResult, rosterResult] = await Promise.all([
       sb.from('app_config').select('*'),
       loadTalentosWithRetry(TALENT_COLS),
@@ -349,11 +350,33 @@ async function loadFromSupabase() {
     // Subscribe to realtime changes so all users see updates instantly
     setupRealtimeSubscription();
     hideAppLoadingOverlay();
+
+    // Load photos in background (base64 photos are heavy, skip for initial render)
+    loadTalentPhotos();
   } catch(e) {
     console.error('loadFromSupabase error:', e);
     hideAppLoadingOverlay();
     showToast('Error cargando datos: ' + e.message, 'error');
   }
+}
+
+async function loadTalentPhotos() {
+  try {
+    const PAGE = 200;
+    for (let i = 0; i < talents.length; i += PAGE) {
+      const batch = talents.slice(i, i + PAGE);
+      const ids = batch.map(t => t.id);
+      const {data} = await sb.from('talentos').select('id,foto').in('id', ids);
+      if (data) {
+        data.forEach(p => {
+          if (!p.foto) return;
+          const t = talents.find(x => x.id === p.id);
+          if (t) t.foto = p.foto;
+        });
+        renderTalents();
+      }
+    }
+  } catch(e) { console.warn('[Beme] Photo load error:', e); }
 }
 
 let _realtimeChannel = null;
