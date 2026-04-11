@@ -680,6 +680,8 @@ let FN_MAP = {
   createRosterFromAI,
   toggleAISelect,
   toggleAllAISelect,
+  toggleAIDescs,
+  generateAIDescsForRoster,
 };
 
 let ACTION_MAP = {
@@ -3133,6 +3135,9 @@ function generateRosterCardsHTML(roster, rosterTalents, today) {
       </div>
       <div style="padding:13px 15px;">
         ${nets}
+        ${roster.show_ai_descriptions && roster.ai_descriptions?.[t.id] ? `<div style="background:linear-gradient(135deg,rgba(148,20,224,0.04),rgba(178,0,93,0.04));border:1px solid rgba(148,20,224,0.12);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:#555;line-height:1.4">
+          <span style="font-weight:700;color:#9414E0;font-size:10px">AI</span> ${escapeHtml(roster.ai_descriptions[t.id].reason||'')}
+        </div>` : ''}
         <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0;">${cats}</div>
       </div>
     </div>`;
@@ -3148,6 +3153,13 @@ function generateRosterCardsHTML(roster, rosterTalents, today) {
       <div style="text-align:right;font-size:12px;color:#888;line-height:1.7;">
         <div style="font-weight:700;color:#111;">${rosterTalents.length} talento${rosterTalents.length!==1?'s':''}</div>
         <div>Generado el ${today}</div>
+        ${roster.ai_descriptions && Object.keys(roster.ai_descriptions).length ? `<div style="margin-top:6px">
+          <label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;cursor:pointer">
+            <input type="checkbox" ${roster.show_ai_descriptions?'checked':''} onchange="toggleAIDescs(${roster.id},this.checked)" style="accent-color:#9414E0"> Mostrar AI
+          </label>
+        </div>` : `<div style="margin-top:6px">
+          <button style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid rgba(148,20,224,0.3);background:rgba(148,20,224,0.06);color:#9414E0;cursor:pointer;font-weight:600;font-family:inherit" onclick="generateAIDescsForRoster(${roster.id})">Generar AI</button>
+        </div>`}
       </div>
     </div>
     ${rosterTalents.length === 0
@@ -4961,6 +4973,13 @@ async function createRosterFromAI() {
   // IDs in relevance order (same order as AI ranking)
   const ids = _aiRosterResults.filter(r => _aiSelectedIds.has(r.id)).map(r => r.id);
 
+  // Build AI descriptions from results
+  const aiDescs = {};
+  _aiRosterResults.filter(r => _aiSelectedIds.has(r.id)).forEach(r => {
+    aiDescs[r.id] = { score: r.score, reason: r.reason };
+  });
+  const campaignContext = `${marca} - ${document.getElementById('air-producto').value.trim()} | ${document.getElementById('air-categorias').value.trim()} | ${document.getElementById('air-notas').value.trim()}`;
+
   // Create roster
   const name = `AI: ${marca} (${ids.length})`;
   const newRoster = {
@@ -4971,6 +4990,9 @@ async function createRosterFromAI() {
     platforms: {tt:true, ig:true, yt:true},
     public_token: generateToken(),
     created: new Date().toISOString(),
+    ai_descriptions: aiDescs,
+    ai_campaign_context: campaignContext,
+    show_ai_descriptions: true,
   };
   rosters.push(newRoster);
 
@@ -4983,6 +5005,9 @@ async function createRosterFromAI() {
         talent_ids: ids,
         platforms: newRoster.platforms,
         public_token: newRoster.public_token,
+        ai_descriptions: aiDescs,
+        ai_campaign_context: campaignContext,
+        show_ai_descriptions: true,
       });
       if (error) console.error('Roster insert error:', error);
       await sb.from('app_config').upsert({key:'next_roster_id', value: nextRosterId});
@@ -4993,4 +5018,68 @@ async function createRosterFromAI() {
   renderRosters();
   updateStats();
   showToast(`Roster "${name}" creado con ${ids.length} talentos`, 'success');
+}
+
+// ===================== AI DESCRIPTIONS FOR ROSTERS =====================
+async function toggleAIDescs(rosterId, show) {
+  const roster = rosters.find(r => r.id === rosterId);
+  if (!roster) return;
+  roster.show_ai_descriptions = show;
+  if (sb && currentUser) {
+    await sb.from('rosters').update({ show_ai_descriptions: show }).eq('id', rosterId);
+  }
+  viewRoster(rosterId);
+}
+
+async function generateAIDescsForRoster(rosterId) {
+  const roster = rosters.find(r => r.id === rosterId);
+  if (!roster) return;
+
+  const context = prompt('Describe la campana para generar descripciones AI:\n(Ej: L\'Oreal - Shampoo, mujeres, belleza, Mexico, TikTok)');
+  if (!context) return;
+
+  const rosterTalents = roster.talentIds.map(tid => talents.find(t => t.id === tid)).filter(Boolean);
+  if (!rosterTalents.length) { showToast('El roster no tiene talentos', 'error'); return; }
+
+  showToast('Generando descripciones AI...', 'info', 10000);
+
+  const talentData = rosterTalents.map(t => ({
+    id: t.id,
+    nombre: t.nombre,
+    paises: t.paises || [],
+    genero: t.genero || '',
+    categorias: t.categorias || [],
+    keywords: t.keywords || '',
+    valores: t.valores || '',
+    seguidores: t.seguidores || {},
+    historial: talentCampaigns.filter(tc => tc.talent_id === t.id).map(tc => ({ marca: tc.marca, acciones: tc.acciones })),
+  }));
+
+  const campaign = { marca: context, producto: '', categorias: [], generos: [], paises: [], plataformas: [], notas: context, cantidad: rosterTalents.length };
+
+  try {
+    const resp = await fetch('/.netlify/functions/roster-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campaign, talents: talentData }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Error del servidor');
+
+    const aiDescs = {};
+    (data.roster || []).forEach(r => { aiDescs[r.id] = { score: r.score, reason: r.reason }; });
+
+    roster.ai_descriptions = aiDescs;
+    roster.ai_campaign_context = context;
+    roster.show_ai_descriptions = true;
+
+    if (sb && currentUser) {
+      await sb.from('rosters').update({ ai_descriptions: aiDescs, ai_campaign_context: context, show_ai_descriptions: true }).eq('id', rosterId);
+    }
+
+    viewRoster(rosterId);
+    showToast('Descripciones AI generadas', 'success');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
 }
