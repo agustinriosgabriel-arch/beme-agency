@@ -104,6 +104,8 @@ let ROSTER = null;
 let TALENTS = [];
 let SELS = {}; // talent_id → {selected, accion, precio, contraoferta}
 const COMPACT_MODE = new URLSearchParams(window.location.search).get('compact') === '1';
+let rosterViewMode = 'table'; // table | cards
+let showAI = null; // null = use ROSTER.show_ai_descriptions
 
 // ── Helpers ──────────────────────────────────────────────────
 function fmtF(n){if(!n||n===0)return'—';if(n>=1e6)return(n/1e6).toFixed(1).replace('.0','')+'M';if(n>=1000)return Math.floor(n/1000)+'K';return String(n);}
@@ -152,12 +154,25 @@ function showError(msg) {
 }
 
 // ── Render ────────────────────────────────────────────────────
+function setRosterView(mode) {
+  rosterViewMode = mode;
+  render();
+  restoreSelections();
+}
+function toggleAIView(show) {
+  showAI = show;
+  render();
+  restoreSelections();
+}
+
 function render() {
   const showTT = ROSTER.platforms?.tt !== false;
   const showIG = ROSTER.platforms?.ig !== false;
   const showYT = ROSTER.platforms?.yt !== false;
   const showPriceComments = !COMPACT_MODE;
   const today = new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'});
+  const hasAIDescs = ROSTER.ai_descriptions && Object.keys(ROSTER.ai_descriptions).length > 0;
+  const aiVisible = showAI !== null ? showAI : (ROSTER.show_ai_descriptions && hasAIDescs);
 
   const ttSVG  = '<svg width="13" height="13" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg>';
   const igSVG  = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg>';
@@ -215,7 +230,7 @@ function render() {
           style="width:100%;min-height:52px;border:1px solid #e0e0e0;border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;color:#111;outline:none;resize:vertical;line-height:1.4;"></textarea>
       </td>` : ''}
     </tr>
-    ${ROSTER.show_ai_descriptions && ROSTER.ai_descriptions?.[t.id] ? `<tr style="background:${rowBg}"><td colspan="20" style="padding:4px 14px 12px;border-bottom:1px solid #f0f0f0;">
+    ${aiVisible && ROSTER.ai_descriptions?.[t.id] ? `<tr style="background:${rowBg}"><td colspan="20" style="padding:4px 14px 12px;border-bottom:1px solid #f0f0f0;">
       <div style="background:linear-gradient(135deg,rgba(148,20,224,0.03),rgba(178,0,93,0.03));border:1px solid rgba(148,20,224,0.1);border-radius:8px;padding:8px 12px;font-size:11px;color:#555;line-height:1.5;max-width:100%"><span style="font-weight:700;color:#9414E0;font-size:10px;margin-right:4px">AI</span>${ROSTER.ai_descriptions[t.id].reason||''}</div>
     </td></tr>` : ''}`;
   }).join('');
@@ -243,7 +258,7 @@ function render() {
       </div>
       ${nets?`<div style="padding:0 18px;">${nets}</div>`:''}
       ${cats?`<div style="padding:10px 18px;border-top:1px solid #f5f5f5;display:flex;flex-wrap:wrap;gap:5px;">${cats}</div>`:''}
-      ${ROSTER.show_ai_descriptions && ROSTER.ai_descriptions?.[t.id] ? `<div style="padding:8px 18px;border-top:1px solid #f5f5f5"><div style="background:linear-gradient(135deg,rgba(148,20,224,0.04),rgba(178,0,93,0.04));border:1px solid rgba(148,20,224,0.12);border-radius:8px;padding:8px 10px;font-size:11px;color:#666;line-height:1.4"><span style="font-weight:700;color:#9414E0;font-size:10px">AI</span> ${ROSTER.ai_descriptions[t.id].reason||''}</div></div>` : ''}
+      ${aiVisible && ROSTER.ai_descriptions?.[t.id] ? `<div style="padding:8px 18px;border-top:1px solid #f5f5f5"><div style="background:linear-gradient(135deg,rgba(148,20,224,0.04),rgba(178,0,93,0.04));border:1px solid rgba(148,20,224,0.12);border-radius:8px;padding:8px 10px;font-size:11px;color:#666;line-height:1.4"><span style="font-weight:700;color:#9414E0;font-size:10px">AI</span> ${ROSTER.ai_descriptions[t.id].reason||''}</div></div>` : ''}
       ${showPriceComments ? `<div style="padding:12px 18px 16px;background:#fdfbfe;border-top:1px solid #f0eaf5;">
         <div style="margin-bottom:10px;">
           <label style="font-size:11px;font-weight:700;color:#b2005d;letter-spacing:0.5px;text-transform:uppercase;display:block;margin-bottom:5px;">Acciones</label>
@@ -281,13 +296,26 @@ function render() {
           <div style="font-weight:700;color:#111;">${TALENTS.length} talento${TALENTS.length!==1?'s':''}</div>
           <div>${today}</div>
         </div>
-        <div style="margin-top:8px;font-size:12px;padding:5px 12px;background:#fdf4f8;border:1px solid #f0ccd9;border-radius:10px;color:#b2005d;font-weight:600;">☑ Marcá los talentos de tu interés</div>
+        <div style="margin-top:8px;font-size:12px;padding:5px 12px;background:#fdf4f8;border:1px solid #f0ccd9;border-radius:10px;color:#b2005d;font-weight:600;">Marca los talentos de tu interes</div>
+        <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;align-items:center">
+          ${hasAIDescs ? `<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#888;cursor:pointer"><input type="checkbox" ${aiVisible?'checked':''} onchange="toggleAIView(this.checked)" style="accent-color:#9414E0"> AI</label>` : ''}
+          <button onclick="setRosterView('table')" style="width:30px;height:30px;border-radius:6px;border:1px solid ${rosterViewMode==='table'?'#b2005d':'#ddd'};background:${rosterViewMode==='table'?'#fdf4f8':'#fff'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="Tabla">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${rosterViewMode==='table'?'#b2005d':'#888'}" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+          </button>
+          <button onclick="setRosterView('cards')" style="width:30px;height:30px;border-radius:6px;border:1px solid ${rosterViewMode==='cards'?'#b2005d':'#ddd'};background:${rosterViewMode==='cards'?'#fdf4f8':'#fff'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="Tarjetas">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${rosterViewMode==='cards'?'#b2005d':'#888'}" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          </button>
+        </div>
       </div>
     </div>`;
 
-  document.getElementById('page-content').innerHTML = header + (TALENTS.length === 0
-    ? '<p style="text-align:center;color:#999;padding:40px;">Este roster no tiene talentos todavía.</p>'
-    : `
+  let content = '';
+  if (TALENTS.length === 0) {
+    content = '<p style="text-align:center;color:#999;padding:40px;">Este roster no tiene talentos todavia.</p>';
+  } else if (rosterViewMode === 'cards') {
+    content = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">${mobileCards}</div>`;
+  } else {
+    content = `
     <div class="desktop-view"><div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;box-shadow:0 2px 16px rgba(0,0,0,0.06);">
         <thead>${tableHeader}</thead><tbody>${tableRows}</tbody>
@@ -296,8 +324,9 @@ function render() {
     <div class="mobile-view">
       <div style="margin-bottom:14px;font-size:13px;color:#888;">${TALENTS.length} talentos</div>
       ${mobileCards}
-    </div>`
-  );
+    </div>`;
+  }
+  document.getElementById('page-content').innerHTML = header + content;
 }
 
 // ── Restore previous selections ───────────────────────────────
