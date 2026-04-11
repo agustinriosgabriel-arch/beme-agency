@@ -8,6 +8,9 @@
 [functions."contract-agent"]
   timeout = 26
 
+[functions."roster-agent"]
+  timeout = 30
+
 # Cache strategy
 [[headers]]
   for = "/*"

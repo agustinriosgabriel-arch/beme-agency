@@ -4732,3 +4732,223 @@ async function executeUndo() {
 
   renderTalents(); renderRosters(); updateStats(); updatePlatformCounts();
 }
+
+// ===================== AI ROSTER AGENT =====================
+let _aiRosterResults = [];
+
+function openAIRosterModal() {
+  document.getElementById('ai-roster-form').style.display = 'block';
+  document.getElementById('ai-roster-loading').style.display = 'none';
+  document.getElementById('ai-roster-results').style.display = 'none';
+  // Clear form
+  ['air-marca','air-producto','air-categorias','air-paises','air-notas'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  document.getElementById('air-genero').value = '';
+  document.getElementById('air-seg-min').value = '';
+  document.getElementById('air-seg-max').value = '';
+  document.getElementById('air-cantidad').value = '10';
+  ['air-tt','air-ig'].forEach(id => { const el=document.getElementById(id); if(el) el.checked=true; });
+  const yt = document.getElementById('air-yt'); if(yt) yt.checked = false;
+  openModal('ai-roster-modal');
+}
+
+function closeAIRosterModal() {
+  closeModal('ai-roster-modal');
+}
+
+async function generateAIRoster() {
+  const marca = document.getElementById('air-marca').value.trim();
+  if (!marca) { showToast('La marca es obligatoria', 'error'); return; }
+
+  const parseCsv = v => (v||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const campaign = {
+    marca,
+    producto: document.getElementById('air-producto').value.trim(),
+    categorias: parseCsv(document.getElementById('air-categorias').value),
+    generos: document.getElementById('air-genero').value ? [document.getElementById('air-genero').value] : [],
+    paises: parseCsv(document.getElementById('air-paises').value),
+    plataformas: [
+      document.getElementById('air-tt')?.checked ? 'TikTok' : '',
+      document.getElementById('air-ig')?.checked ? 'Instagram' : '',
+      document.getElementById('air-yt')?.checked ? 'YouTube' : '',
+    ].filter(Boolean),
+    seguidores_min: parseInt(document.getElementById('air-seg-min').value) || 0,
+    seguidores_max: parseInt(document.getElementById('air-seg-max').value) || 0,
+    cantidad: parseInt(document.getElementById('air-cantidad').value) || 10,
+    notas: document.getElementById('air-notas').value.trim(),
+  };
+
+  // Pre-filter talents
+  let filtered = talents.filter(t => {
+    // Gender filter
+    if (campaign.generos.length && !campaign.generos.includes(t.genero)) return false;
+    // Country filter
+    if (campaign.paises.length && !(t.paises||[]).some(p => campaign.paises.some(cp => p.toLowerCase().includes(cp.toLowerCase())))) return false;
+    // Platform filter: must have at least one of the requested platforms
+    if (campaign.plataformas.length) {
+      const hasPlatform = campaign.plataformas.some(p => {
+        if (p === 'TikTok') return !!t.tiktok;
+        if (p === 'Instagram') return !!t.instagram;
+        if (p === 'YouTube') return !!t.youtube;
+        return false;
+      });
+      if (!hasPlatform) return false;
+    }
+    // Follower range
+    const totalSeg = (t.seguidores?.tiktok||0) + (t.seguidores?.instagram||0) + (t.seguidores?.youtube||0);
+    if (campaign.seguidores_min && totalSeg < campaign.seguidores_min) return false;
+    if (campaign.seguidores_max && totalSeg > campaign.seguidores_max) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    showToast('No hay talentos que cumplan los filtros basicos. Intenta con criterios mas amplios.', 'error');
+    return;
+  }
+
+  // Prepare talent data for AI (compact)
+  const talentData = filtered.map(t => ({
+    id: t.id,
+    nombre: t.nombre,
+    paises: t.paises || [],
+    genero: t.genero || '',
+    categorias: t.categorias || [],
+    keywords: t.keywords || '',
+    valores: t.valores || '',
+    seguidores: t.seguidores || {},
+    historial: talentCampaigns.filter(tc => tc.talent_id === t.id).map(tc => ({
+      marca: tc.marca,
+      acciones: tc.acciones,
+    })),
+  }));
+
+  // Show loading
+  document.getElementById('ai-roster-form').style.display = 'none';
+  document.getElementById('ai-roster-loading').style.display = 'block';
+  document.getElementById('ai-roster-results').style.display = 'none';
+  document.getElementById('air-loading-msg').textContent = `Analizando ${filtered.length} talentos...`;
+  document.getElementById('air-loading-sub').textContent = `Buscando los mejores para ${marca}`;
+
+  try {
+    const resp = await fetch('/.netlify/functions/roster-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campaign, talents: talentData }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Error del servidor');
+
+    _aiRosterResults = data.roster || [];
+    renderAIRosterResults(data.summary, _aiRosterResults, campaign);
+
+  } catch(e) {
+    console.error('AI Roster error:', e);
+    document.getElementById('ai-roster-loading').style.display = 'none';
+    document.getElementById('ai-roster-form').style.display = 'block';
+    showToast('Error del agente: ' + e.message, 'error');
+  }
+}
+
+function renderAIRosterResults(summary, roster, campaign) {
+  document.getElementById('ai-roster-loading').style.display = 'none';
+  document.getElementById('ai-roster-results').style.display = 'block';
+
+  const resultsDiv = document.getElementById('ai-roster-results');
+
+  if (!roster.length) {
+    resultsDiv.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text-muted)">
+      <p>El agente no encontro talentos que coincidan. Intenta con otros criterios.</p>
+      <button class="btn btn-outline" style="margin-top:12px" data-fn="showAIForm">Volver al formulario</button>
+    </div>`;
+    return;
+  }
+
+  const tipoLabels = {tiktok_video:'TikTok',reel:'Reel',ig_story:'Story',youtube_video:'YouTube',youtube_short:'YT Short'};
+
+  const cards = roster.map((r, i) => {
+    const t = talents.find(x => x.id === r.id);
+    if (!t) return '';
+    const safeFoto = t.foto && (t.foto.startsWith('data:') || t.foto.startsWith('https://')) ? t.foto : '';
+    const segs = t.seguidores || {};
+    const hist = talentCampaigns.filter(tc => tc.talent_id === t.id);
+    const marcasHist = hist.map(h => h.marca).filter(Boolean).join(', ');
+    const scoreColor = r.score >= 80 ? 'var(--green)' : r.score >= 60 ? 'var(--orange)' : 'var(--text-muted)';
+
+    return `<div style="display:flex;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;align-items:flex-start;background:var(--surface)">
+      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:${scoreColor};min-width:32px;text-align:center">${r.score}</div>
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--surface2);border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--primary);overflow:hidden;flex-shrink:0">
+        ${safeFoto ? `<img src="${safeFoto}" style="width:100%;height:100%;object-fit:cover">` : getInitials(t.nombre)}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700">${escapeHtml(t.nombre)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${escapeHtml(r.reason)}</div>
+        <div style="display:flex;gap:8px;margin-top:4px;font-size:10px;color:var(--text-dim)">
+          ${segs.tiktok ? `<span>TT: ${formatFollowers(segs.tiktok)}</span>` : ''}
+          ${segs.instagram ? `<span>IG: ${formatFollowers(segs.instagram)}</span>` : ''}
+          ${segs.youtube ? `<span>YT: ${formatFollowers(segs.youtube)}</span>` : ''}
+          ${marcasHist ? `<span style="color:var(--primary)">Marcas: ${escapeHtml(marcasHist)}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  resultsDiv.innerHTML = `
+    <div style="background:linear-gradient(135deg,rgba(106,13,158,0.06),rgba(148,20,224,0.06));border:1px solid rgba(148,20,224,0.15);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px">
+      <div style="font-size:13px;color:var(--text)">${escapeHtml(summary)}</div>
+    </div>
+    ${cards}
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-ghost" data-fn="showAIForm">Ajustar y regenerar</button>
+      <button class="btn btn-primary" data-fn="createRosterFromAI">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        Crear Roster (${roster.length} talentos)
+      </button>
+    </div>
+  `;
+}
+
+function showAIForm() {
+  document.getElementById('ai-roster-form').style.display = 'block';
+  document.getElementById('ai-roster-results').style.display = 'none';
+  document.getElementById('ai-roster-loading').style.display = 'none';
+}
+
+async function createRosterFromAI() {
+  if (!_aiRosterResults.length) return;
+  const marca = document.getElementById('air-marca').value.trim();
+  const ids = _aiRosterResults.map(r => r.id);
+
+  // Create roster
+  const name = `AI: ${marca} (${ids.length})`;
+  const newRoster = {
+    id: nextRosterId++,
+    name,
+    description: `Generado por AI Roster Agent para ${marca}`,
+    talentIds: ids,
+    platforms: {tt:true, ig:true, yt:true},
+    public_token: generateToken(),
+    created: new Date().toISOString(),
+  };
+  rosters.push(newRoster);
+
+  if (sb && currentUser) {
+    try {
+      const {error} = await sb.from('rosters').insert({
+        id: newRoster.id,
+        name: newRoster.name,
+        description: newRoster.description,
+        talent_ids: ids,
+        platforms: newRoster.platforms,
+        public_token: newRoster.public_token,
+      });
+      if (error) console.error('Roster insert error:', error);
+      await sb.from('app_config').upsert({key:'next_roster_id', value: nextRosterId});
+    } catch(e) { console.error('Save roster error:', e); }
+  }
+
+  closeModal('ai-roster-modal');
+  renderRosters();
+  updateStats();
+  showToast(`Roster "${name}" creado con ${ids.length} talentos`, 'success');
+}

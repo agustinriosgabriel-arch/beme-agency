@@ -1076,6 +1076,10 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
     <svg id="theme-icon-dark" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
     <svg id="theme-icon-light" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
   </button>
+  <button class="btn btn-purple" data-fn="openAIRosterModal" title="Generar roster con IA">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg>
+    AI Roster
+  </button>
   <button class="btn btn-primary" data-fn="openAddModal">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
     Agregar Talento
@@ -2027,6 +2031,62 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
   Deshacer: <span class="undo-label"></span>
 </button>
+
+<!-- AI ROSTER MODAL -->
+<div class="modal-overlay" id="ai-roster-modal">
+  <div class="modal" style="max-width:780px">
+    <div class="modal-header" style="background:linear-gradient(135deg,rgba(106,13,158,0.08),rgba(148,20,224,0.08))">
+      <h2 class="modal-title" style="display:flex;align-items:center;gap:8px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9414E0" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg>
+        AI Roster Agent
+      </h2>
+      <button class="modal-close-btn" data-fn="closeAIRosterModal">&times;</button>
+    </div>
+    <div class="modal-body" id="ai-roster-body">
+      <!-- Form -->
+      <div id="ai-roster-form">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="form-group"><label class="field-label">Marca *</label><input type="text" id="air-marca" class="field-input" placeholder="Ej: L'Oreal"></div>
+          <div class="form-group"><label class="field-label">Producto</label><input type="text" id="air-producto" class="field-input" placeholder="Ej: Shampoo anti-caida"></div>
+          <div class="form-group"><label class="field-label">Categorias</label><input type="text" id="air-categorias" class="field-input" placeholder="Belleza, Lifestyle... (separar con coma)"></div>
+          <div class="form-group"><label class="field-label">Genero</label>
+            <select id="air-genero" class="field-input"><option value="">Todos</option><option value="Femenino">Femenino</option><option value="Masculino">Masculino</option><option value="No binario">No binario</option></select>
+          </div>
+          <div class="form-group"><label class="field-label">Paises</label><input type="text" id="air-paises" class="field-input" placeholder="Mexico, Argentina... (separar con coma)"></div>
+          <div class="form-group"><label class="field-label">Plataformas</label>
+            <div style="display:flex;gap:12px;margin-top:6px">
+              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" id="air-tt" checked style="accent-color:var(--primary)"> TikTok</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" id="air-ig" checked style="accent-color:var(--primary)"> Instagram</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" id="air-yt" style="accent-color:var(--primary)"> YouTube</label>
+            </div>
+          </div>
+          <div class="form-group"><label class="field-label">Seguidores min</label><input type="number" id="air-seg-min" class="field-input" placeholder="0"></div>
+          <div class="form-group"><label class="field-label">Seguidores max</label><input type="number" id="air-seg-max" class="field-input" placeholder="Sin limite"></div>
+          <div class="form-group"><label class="field-label">Cantidad de talentos</label><input type="number" id="air-cantidad" class="field-input" value="10" min="1" max="50"></div>
+          <div class="form-group" style="grid-column:1/-1"><label class="field-label">Notas adicionales</label><textarea id="air-notas" class="field-input" style="min-height:60px;resize:vertical" placeholder="Contexto extra: tipo de contenido, audiencia deseada, marcas similares que hayan trabajado..."></textarea></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:16px;gap:8px">
+          <button class="btn btn-ghost" data-fn="closeAIRosterModal">Cancelar</button>
+          <button class="btn btn-purple" id="air-btn-generate" data-fn="generateAIRoster">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg>
+            Generar Recomendacion
+          </button>
+        </div>
+      </div>
+      <!-- Loading -->
+      <div id="ai-roster-loading" style="display:none;text-align:center;padding:40px 0">
+        <div style="font-size:28px;margin-bottom:12px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9414E0" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        </div>
+        <div style="font-size:14px;font-weight:600;color:var(--text)" id="air-loading-msg">Analizando talentos...</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px" id="air-loading-sub"></div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+      </div>
+      <!-- Results -->
+      <div id="ai-roster-results" style="display:none"></div>
+    </div>
+  </div>
+</div>
 
 <script src="dashboard.js?v=3"></script>
 </body>
