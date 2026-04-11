@@ -736,7 +736,7 @@ function renderKanban() {
 function renderKanbanCard(c, etapa) {
   const handle = c.tiktok ? '@'+extractHandle(c.tiktok) : (c.instagram ? '@'+extractHandle(c.instagram) : '');
   const segs = totalSeg(c.seguidores);
-  const selectable = ['evaluacion','contactar','interesado'].includes(etapa);
+  const selectable = true;
   const isSelected = bulkSelected.has(c.id);
   const isGrad = !!c.talento_id;
   return `<div class="k-card${isSelected?' selected':''}${isGrad?' graduated':''}" onclick="openDetalle(${c.id})" data-id="${c.id}">
@@ -1358,8 +1358,10 @@ function updateBulkUI() {
   }
   // Mixed selection
   if (etapas.size > 1) {
-    btns += `<span style="font-size:12px;color:var(--text-muted)">Selecciona contactos de una misma etapa</span>`;
+    btns += `<span style="font-size:12px;color:var(--text-muted)">Selecciona contactos de una misma etapa para mover</span>`;
   }
+  // Delete always available
+  btns += `<button class="btn btn-danger btn-sm" onclick="bulkDelete()">Eliminar (${count})</button>`;
   document.getElementById('bulk-actions').innerHTML = btns;
 }
 
@@ -1875,6 +1877,30 @@ async function confirmCSVImport() {
   }
   btn.textContent = 'Importar'; btn.disabled = false;
   _csvParsedRows = [];
+}
+
+// ══════════════════════════════════════════════════════════
+// BULK DELETE
+// ══════════════════════════════════════════════════════════
+async function bulkDelete() {
+  const count = bulkSelected.size;
+  if (!count) return;
+  if (!confirm(`Eliminar ${count} contacto${count!==1?'s':''}? Esta accion no se puede deshacer.`)) return;
+
+  const ids = [...bulkSelected];
+  try {
+    for (const id of ids) {
+      await sb.from('prospeccion_contactos').delete().eq('id', id);
+    }
+    bulkSelected.clear();
+    await loadData();
+    renderEtapaStrip();
+    renderKanban();
+    updateBulkUI();
+    showToast(`${count} contacto${count!==1?'s':''} eliminado${count!==1?'s':''}`, 'success');
+  } catch(e) {
+    showToast('Error al eliminar: '+e.message, 'error');
+  }
 }
 
 // ══════════════════════════════════════════════════════════
