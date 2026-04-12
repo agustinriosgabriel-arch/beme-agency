@@ -946,6 +946,26 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   .talent-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));}
   .roster-talent-grid{grid-template-columns:repeat(2,1fr);}
 }
+/* ── Mobile hamburger menu ── */
+.mob-menu-btn{display:none;width:36px;height:36px;border:none;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text-muted);cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;}
+.mob-menu-btn:hover{background:var(--surface3);color:var(--text);}
+.mob-menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;}
+.mob-menu-overlay.open{display:block;}
+.mob-menu-panel{position:fixed;top:0;right:-280px;width:280px;height:100%;background:var(--surface);border-left:1px solid var(--border);z-index:301;transition:right 0.25s ease;overflow-y:auto;padding:16px;}
+.mob-menu-panel.open{right:0;}
+.mob-menu-close{width:32px;height:32px;border:none;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-bottom:16px;margin-left:auto;}
+.mob-menu-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:inherit;transition:all 0.15s;}
+.mob-menu-item:hover{background:var(--surface2);color:var(--text);}
+.mob-menu-item svg{flex-shrink:0;width:16px;height:16px;}
+.mob-menu-sep{height:1px;background:var(--border);margin:8px 0;}
+/* ── Mobile filter panel ── */
+.mob-filter-btn{display:none;align-items:center;gap:5px;padding:8px 14px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-family:inherit;}
+.mob-filter-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;}
+.mob-filter-overlay.open{display:block;}
+.mob-filter-panel{position:fixed;top:0;left:-300px;width:300px;height:100%;background:var(--surface);border-right:1px solid var(--border);z-index:301;transition:left 0.25s ease;overflow-y:auto;padding:20px 16px;}
+.mob-filter-panel.open{left:0;}
+.mob-filter-close{width:32px;height:32px;border:none;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-bottom:12px;margin-left:auto;}
+
 @media(max-width:768px){
   .sidebar{display:none;}
   .form-grid{grid-template-columns:1fr;}
@@ -956,6 +976,12 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   .logo{font-size:19px;}
   .logo-dots{display:none;}
   .nav-tabs{display:none;}
+  /* Hide topbar action buttons — they go in hamburger */
+  .topbar .btn,.topbar .theme-toggle,.topbar #logout-btn,.net-update-wrap{display:none!important;}
+  .mob-menu-btn{display:flex;}
+  .mob-filter-btn{display:flex;}
+  .topbar-search{flex:1;}
+  .topbar-search input{font-size:14px;padding:10px 14px 10px 36px;}
   /* Tab nav → bottom nav */
   .tab-nav{
     position:fixed;bottom:0;left:0;right:0;top:auto;
@@ -972,17 +998,13 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   }
   .tab-btn.active{border-bottom:none;border-top-color:var(--primary);}
   .tab-badge{font-size:9px;padding:0 5px;}
-  /* Action buttons → icon only */
-  .topbar .btn{font-size:0;padding:9px;line-height:0;gap:0;}
-  .topbar .btn svg{width:16px;height:16px;}
-  .topbar .theme-toggle{width:36px;height:36px;}
-  /* Main actions toolbar: icon-only buttons */
+  /* Main actions — hide text, keep icon */
   .main-header{flex-wrap:wrap;gap:8px;}
   .main-actions{flex-wrap:wrap;gap:6px;}
   .main-actions .btn{font-size:0;padding:8px;line-height:0;gap:0;}
   .main-actions .btn svg{width:14px;height:14px;}
   .view-toggle{display:none;}
-  /* Roster headers: icon-only buttons */
+  /* Roster headers */
   .roster-manager-header{flex-wrap:wrap;gap:8px;}
   .roster-manager-header .btn{font-size:0;padding:8px;line-height:0;gap:0;}
   .roster-manager-header .btn svg{width:14px;height:14px;}
@@ -1010,6 +1032,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   .modal{max-width:calc(100% - 16px);margin:8px;}
   .tab-btn{padding:6px 2px 5px;font-size:8px;}
   .tab-btn svg{width:12px;height:12px;}
+  .mob-filter-panel{width:260px;}
 }
 
 /* ====== SCROLLBAR ====== */
@@ -1147,7 +1170,59 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
     Agregar Talento
   </button>
+  <!-- Mobile hamburger button -->
+  <button class="mob-menu-btn" onclick="toggleMobMenu()" title="Menú">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
 </header>
+
+<!-- Mobile hamburger menu panel -->
+<div class="mob-menu-overlay" id="mob-menu-overlay" onclick="toggleMobMenu()"></div>
+<div class="mob-menu-panel" id="mob-menu-panel">
+  <button class="mob-menu-close" onclick="toggleMobMenu()">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <button class="mob-menu-item" data-fn="openAddModal" onclick="toggleMobMenu()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    Agregar Talento
+  </button>
+  <button class="mob-menu-item" data-fn="openAIRosterModal" onclick="toggleMobMenu()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg>
+    AI Roster
+  </button>
+  <div class="mob-menu-sep"></div>
+  <button class="mob-menu-item" data-fn="triggerCSVImport" onclick="toggleMobMenu()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" transform="rotate(180,12,9)"/></svg>
+    Importar CSV
+  </button>
+  <button class="mob-menu-item" data-fn="exportCSV" onclick="toggleMobMenu()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Exportar CSV
+  </button>
+  <div class="mob-menu-sep"></div>
+  <button class="mob-menu-item" id="mob-net-update" data-fn="toggleNetUpdateDropdown" onclick="toggleMobMenu()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+    Actualizar Seguidores
+  </button>
+  <div class="mob-menu-sep"></div>
+  <button class="mob-menu-item" data-fn="toggleTheme" onclick="toggleMobMenu()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    Cambiar Tema
+  </button>
+  <button class="mob-menu-item" data-fn="doLogout" onclick="toggleMobMenu()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    Cerrar Sesión
+  </button>
+</div>
+
+<!-- Mobile filter panel -->
+<div class="mob-filter-overlay" id="mob-filter-overlay" onclick="toggleMobFilter()"></div>
+<div class="mob-filter-panel" id="mob-filter-panel">
+  <button class="mob-filter-close" onclick="toggleMobFilter()">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <div id="mob-filter-content"><!-- Sidebar content cloned here by JS --></div>
+</div>
 
 <!-- TABS -->
 <nav class="tab-nav">
@@ -1346,6 +1421,11 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
           <div class="main-sub" id="result-count">0 talentos</div>
         </div>
         <div class="main-actions">
+          <!-- Mobile filter button -->
+          <button class="mob-filter-btn" onclick="toggleMobFilter()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+            Filtros
+          </button>
           <!-- Select all -->
           <button class="btn btn-outline btn-sm" id="select-all-btn" data-fn="toggleSelectAll" title="Seleccionar todos los visibles">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/></svg>
@@ -2211,5 +2291,35 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
 </div>
 
 <script src="dashboard.js?v=3"></script>
+<script>
+// Mobile menu & filter panel
+function toggleMobMenu() {
+  document.getElementById('mob-menu-overlay').classList.toggle('open');
+  document.getElementById('mob-menu-panel').classList.toggle('open');
+}
+function toggleMobFilter() {
+  const overlay = document.getElementById('mob-filter-overlay');
+  const panel = document.getElementById('mob-filter-panel');
+  const isOpen = panel.classList.contains('open');
+  if (!isOpen) {
+    // Clone sidebar content into filter panel
+    const sidebar = document.querySelector('.sidebar');
+    const target = document.getElementById('mob-filter-content');
+    if (sidebar && target && !target.children.length) {
+      target.innerHTML = sidebar.innerHTML;
+      // Re-bind click handlers by copying data-fn attributes
+      target.querySelectorAll('[data-fn]').forEach(el => {
+        const fn = el.getAttribute('data-fn');
+        if (typeof window[fn] === 'function') el.onclick = () => window[fn](el);
+      });
+      target.querySelectorAll('[onclick]').forEach(el => {
+        // onclick already works, no need to rebind
+      });
+    }
+  }
+  overlay.classList.toggle('open');
+  panel.classList.toggle('open');
+}
+</script>
 </body>
 </html>
