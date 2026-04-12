@@ -1561,7 +1561,7 @@ function buildActions(c, ct) {
 // ════════════════════════════════════════════════
 // WORKFLOW ACTIONS
 // ════════════════════════════════════════════════
-async function notifyPasoCambio(contId, pasoNuevo, pasoAnterior) {
+async function notifyPasoCambio(contId, pasoNuevo, pasoAnterior, observacion) {
   try {
     await fetch('/.netlify/functions/campaign-notifications', {
       method: 'POST',
@@ -1571,7 +1571,9 @@ async function notifyPasoCambio(contId, pasoNuevo, pasoAnterior) {
         contenido_id: contId,
         paso_nuevo: pasoNuevo,
         paso_anterior: pasoAnterior,
-        autor_nombre: currentProfile.nombre
+        autor_nombre: currentProfile.nombre,
+        rechazado: !!observacion,
+        observacion: observacion || ''
       })
     });
   } catch(e) { /* silent — notifications are best-effort */ }
@@ -1663,7 +1665,7 @@ async function rechazarPaso(contId, paso, obsId) {
 
     // Notify talent that their content was rejected (goes back to upload step)
     const pasoNuevo = paso === 3 ? 2 : paso === 5 ? 4 : paso - 1;
-    notifyPasoCambio(contId, pasoNuevo, paso).catch(()=>{});
+    notifyPasoCambio(contId, pasoNuevo, paso, obs).catch(()=>{});
   } catch(e) { toast('Error: '+e.message,'err'); }
 }
 

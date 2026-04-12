@@ -96,7 +96,7 @@ function emailWrap(title, body) {
 // ══════════════════════════════════════════════════════════════
 
 async function handlePasoCambio(payload) {
-  const { contenido_id, paso_nuevo, paso_anterior, autor_nombre } = payload;
+  const { contenido_id, paso_nuevo, paso_anterior, autor_nombre, rechazado, observacion } = payload;
   if (!contenido_id || !paso_nuevo) return { sent: 0, reason: 'missing params' };
 
   // Step 1: Get the contenido
@@ -167,21 +167,34 @@ async function handlePasoCambio(payload) {
   let sent = 0;
   for (const r of unique) {
     const accion = PASO_ACCIONES[paso_nuevo] || `Nuevo estado: ${pasoLabel}`;
+    const headerText = rechazado
+      ? `${autor_nombre || 'Alguien'} rechazó contenido en <strong>${campanaName}</strong>`
+      : `${autor_nombre || 'Alguien'} avanzó un contenido en <strong>${campanaName}</strong>`;
+    const rejectionBox = rechazado && observacion
+      ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px;margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.5px">Motivo del rechazo</div>
+          <div style="font-size:13px;color:#111;margin-top:4px">${observacion}</div>
+        </div>` : '';
     const body = `
-      <div style="font-size:13px;color:#666;margin-bottom:12px">${autor_nombre || 'Alguien'} avanzó un contenido en <strong>${campanaName}</strong></div>
-      <div style="background:#f8f8f8;border:1px solid #eee;border-radius:8px;padding:12px;margin-bottom:12px">
+      <div style="font-size:13px;color:#666;margin-bottom:12px">${headerText}</div>
+      <div style="background:${rechazado?'#fef2f2':'#f8f8f8'};border:1px solid ${rechazado?'#fecaca':'#eee'};border-radius:8px;padding:12px;margin-bottom:12px">
         <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.5px">Contenido</div>
         <div style="font-size:14px;font-weight:700;color:#111">${contTitle} — ${talentoName}</div>
-        <div style="margin-top:6px;font-size:12px;color:#666">Paso ${paso_anterior || '?'} → <strong style="color:#b2005d">${pasoLabel}</strong></div>
+        <div style="margin-top:6px;font-size:12px;color:#666">${rechazado?'⚠️ Rechazado — ':''}Paso ${paso_anterior || '?'} → <strong style="color:${rechazado?'#dc2626':'#b2005d'}">${pasoLabel}</strong></div>
       </div>
-      ${r.role === 'talent' ? `<div style="font-size:13px;color:#111;font-weight:600">👉 ${accion}</div>` :
+      ${rejectionBox}
+      ${r.role === 'talent' ? `<div style="font-size:13px;color:#111;font-weight:600">👉 ${rechazado?'Necesita corregir y re-subir':accion}</div>` :
         paso_nuevo >= 8 ? '<div style="font-size:13px;color:#16a34a;font-weight:600">✓ Contenido completado</div>' :
         `<div style="font-size:13px;color:#111;font-weight:600">👉 ${accion}</div>`}
       <div style="margin-top:10px">
         <a href="https://bemeagency.netlify.app/campana-detalle.html?id=${campanaId}" style="color:#b2005d;font-size:13px;font-weight:600;text-decoration:none">Ver campaña →</a>
       </div>`;
 
-    await sendEmail(r.email, `${campanaName} — ${contTitle} → ${pasoLabel}`, emailWrap('Actualización de Contenido', body));
+    const emailTitle = rechazado ? '⚠️ Contenido Rechazado' : 'Actualización de Contenido';
+    const emailSubject = rechazado
+      ? `⚠️ ${campanaName} — ${contTitle} rechazado`
+      : `${campanaName} — ${contTitle} → ${pasoLabel}`;
+    await sendEmail(r.email, emailSubject, emailWrap(emailTitle, body));
     sent++;
   }
 
