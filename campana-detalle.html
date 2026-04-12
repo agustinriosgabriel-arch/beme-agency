@@ -274,6 +274,27 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
 .side-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-dim);margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .side-title::before{content:'';width:2px;height:12px;background:var(--gradient);border-radius:99px}
 
+/* ── Brief Notes ── */
+.brief-notes-wrap{margin-top:12px;border-top:1px solid var(--border);padding-top:10px}
+.brief-notes-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:8px;display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none}
+.brief-notes-input{display:flex;gap:6px;margin-bottom:10px}
+.brief-notes-input textarea{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;font-family:inherit;color:var(--text);outline:none;resize:vertical;min-height:36px;max-height:120px;transition:border 0.2s}
+.brief-notes-input textarea:focus{border-color:var(--primary)}
+.brief-notes-input button{align-self:flex-end;flex-shrink:0}
+.brief-notes-list{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;padding-right:2px}
+.brief-note{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 11px;position:relative}
+.brief-note-meta{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.brief-note-author{font-size:10px;font-weight:700;color:var(--primary)}
+.brief-note-date{font-size:10px;color:var(--text-dim)}
+.brief-note-text{font-size:12px;color:var(--text);line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.brief-note-del{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:11px;padding:2px 4px;border-radius:4px;opacity:0;transition:opacity 0.15s}
+.brief-note:hover .brief-note-del{opacity:1}
+.brief-note-del:hover{color:var(--red);background:rgba(220,38,38,0.08)}
+.brief-notes-empty{font-size:11px;color:var(--text-dim);text-align:center;padding:8px 0}
+.brief-notes-toggle{margin-left:auto;transition:transform 0.2s;color:var(--text-dim)}
+.brief-notes-wrap.collapsed .brief-notes-list,.brief-notes-wrap.collapsed .brief-notes-input{display:none}
+.brief-notes-wrap.collapsed .brief-notes-toggle{transform:rotate(-90deg)}
+
 /* ── Financial table ── */
 .fin-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
 .fin-row:last-child{border-bottom:none;font-weight:800;font-size:14px;padding-top:8px}
@@ -421,6 +442,20 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
         </div>
         <div class="upload-area-sub">PDF, Word, imágenes — máx 50MB</div>
       </label>
+
+      <!-- Notas del Brief -->
+      <div class="brief-notes-wrap" id="brief-notes-wrap">
+        <div class="brief-notes-title" onclick="toggleBriefNotes()">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          Notas del Brief
+          <svg class="brief-notes-toggle" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="brief-notes-input" id="brief-notes-input">
+          <textarea id="brief-note-text" placeholder="Escribir nota..." rows="2"></textarea>
+          <button class="btn btn-primary btn-sm" onclick="addBriefNote()">+</button>
+        </div>
+        <div class="brief-notes-list" id="brief-notes-list"></div>
+      </div>
     </div>
 
     <!-- Finanzas (solo admin) -->
@@ -794,6 +829,7 @@ function renderAll() {
   renderHeader();
   renderPipeline();
   renderBriefFiles();
+  renderBriefNotes();
   renderTalentos();
   renderEquipo();
   renderFinanzas();
@@ -1000,6 +1036,74 @@ async function deleteBriefFile(id, url) {
   if (path) await sb.storage.from('campaign-briefs').remove([decodeURIComponent(path)]);
   await loadCampana(); renderBriefFiles();
   toast('Archivo eliminado','inf');
+}
+
+// ════════════════════════════════════════════════
+// BRIEF NOTES
+// ════════════════════════════════════════════════
+function toggleBriefNotes() {
+  document.getElementById('brief-notes-wrap').classList.toggle('collapsed');
+}
+
+function renderBriefNotes() {
+  const notas = campana.brief_notas || [];
+  const list = document.getElementById('brief-notes-list');
+  const inputWrap = document.getElementById('brief-notes-input');
+  // Only internal + handler can add notes
+  if (inputWrap) inputWrap.style.display = (isInternal() || isHandler()) ? 'flex' : 'none';
+  if (!notas.length) {
+    list.innerHTML = '<div class="brief-notes-empty">Sin notas aún</div>';
+    return;
+  }
+  // Newest first
+  const sorted = [...notas].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+  list.innerHTML = sorted.map((n, i) => `
+    <div class="brief-note">
+      <div class="brief-note-meta">
+        <span class="brief-note-author">${esc(n.autor||'')}</span>
+        <span class="brief-note-date">${fmtDT(n.fecha)}</span>
+      </div>
+      <div class="brief-note-text">${esc(n.texto)}</div>
+      ${isInternal()?`<button class="brief-note-del" onclick="deleteBriefNote(${i})" title="Eliminar">✕</button>`:''}
+    </div>`).join('');
+}
+
+async function addBriefNote() {
+  const textarea = document.getElementById('brief-note-text');
+  const texto = textarea.value.trim();
+  if (!texto) { toast('Escribí una nota','err'); return; }
+
+  const notas = campana.brief_notas || [];
+  notas.push({
+    texto,
+    autor: currentProfile.nombre,
+    autor_id: currentUser.id,
+    fecha: new Date().toISOString()
+  });
+
+  const {error} = await sb.from('campanas').update({brief_notas: notas}).eq('id', campanaId);
+  if (error) { toast('Error: '+error.message,'err'); return; }
+
+  campana.brief_notas = notas;
+  textarea.value = '';
+  renderBriefNotes();
+  toast('Nota agregada','ok');
+}
+
+async function deleteBriefNote(sortedIdx) {
+  if (!confirm('¿Eliminar esta nota?')) return;
+  const notas = campana.brief_notas || [];
+  // sorted is newest first, so map back to original index
+  const sorted = [...notas].map((n,i) => ({...n, _i:i})).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+  const originalIdx = sorted[sortedIdx]._i;
+  notas.splice(originalIdx, 1);
+
+  const {error} = await sb.from('campanas').update({brief_notas: notas}).eq('id', campanaId);
+  if (error) { toast('Error: '+error.message,'err'); return; }
+
+  campana.brief_notas = notas;
+  renderBriefNotes();
+  toast('Nota eliminada','inf');
 }
 
 async function uploadContentBriefs(input, contId) {
