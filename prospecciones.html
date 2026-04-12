@@ -702,11 +702,11 @@ async function loadAppConfig() {
 }
 
 async function loadProspecciones() {
-  const {data, error} = await sb.from('prospecciones').select('*').order('created_at', {ascending:false});
+  const {data, error} = await sb.from('prospecciones').select('id,nombre,descripcion,estado,created_at,updated_at').order('created_at', {ascending:false}).limit(50);
   if (error) throw error;
   prospecciones = data || [];
 
-  const {data: contactos} = await sb.from('prospeccion_contactos').select('id, prospeccion_id, etapa');
+  const {data: contactos} = await sb.from('prospeccion_contactos').select('id,prospeccion_id,etapa');
   contactosCounts = {};
   (contactos||[]).forEach(c => {
     if (!contactosCounts[c.prospeccion_id]) contactosCounts[c.prospeccion_id] = {total:0, interesados:0};

@@ -971,16 +971,16 @@ async function loadTalentosBD() {
 
 async function loadCampanas() {
   let query = sb.from('campanas').select(`
-    *,
-    marcas(id, nombre, logo_url, clientes(nombre)),
+    id,nombre,estado,fecha_inicio,fecha_fin,created_at,
+    marcas(id,nombre,logo_url,clientes(nombre)),
     campana_managers(user_id),
     campana_handlers(user_id),
     campana_talentos(
-      id, talent_id, fee_marca, fee_talento, moneda, pago_estado,
-      talentos(id, nombre, foto),
-      contenidos(id, paso_actual, tipo)
+      id,talent_id,fee_marca,fee_talento,moneda,pago_estado,
+      talentos(id,nombre,foto),
+      contenidos(id,paso_actual,tipo)
     )
-  `).order('created_at', {ascending:false});
+  `).order('created_at', {ascending:false}).limit(50);
 
   const {data, error} = await query;
   if (error) throw error;

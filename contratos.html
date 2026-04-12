@@ -827,20 +827,20 @@ async function initApp() {
 // ══════════════════════════════════════════════════════════
 async function loadData() {
   // Load contratos
-  const {data: cData, error: cErr} = await sb.from('contratos').select('*').order('created_at', {ascending:false});
+  const {data: cData, error: cErr} = await sb.from('contratos').select('*').order('created_at', {ascending:false}).limit(100);
   if (cErr) throw cErr;
   contratos = cData || [];
 
-  // Load campanas with marca
-  const {data: campData} = await sb.from('campanas').select('*').order('created_at', {ascending:false});
+  // Load campanas with marca (only needed fields)
+  const {data: campData} = await sb.from('campanas').select('id,nombre,estado,marca_id,marcas(id,nombre,logo_url)').order('created_at', {ascending:false}).limit(100);
   campanas = campData || [];
 
   // Load marcas
-  const {data: mData} = await sb.from('marcas').select('*');
+  const {data: mData} = await sb.from('marcas').select('id,nombre,logo_url');
   (mData||[]).forEach(m => { marcas[m.id] = m; });
 
   // Load campana_talentos with talent info
-  const {data: ctData} = await sb.from('campana_talentos').select('*, talentos(id,nombre,foto,email,telefono)');
+  const {data: ctData} = await sb.from('campana_talentos').select('id,campana_id,talent_id,fee_marca,fee_talento,moneda,metodo_pago,talentos(id,nombre,foto,email,telefono)').limit(500);
   campanasTalentos = {};
   (ctData||[]).forEach(ct => {
     if (!campanasTalentos[ct.campana_id]) campanasTalentos[ct.campana_id] = [];
@@ -848,7 +848,7 @@ async function loadData() {
   });
 
   // Load contenidos to build service descriptions
-  const {data: contData} = await sb.from('contenidos').select('campana_talento_id, tipo');
+  const {data: contData} = await sb.from('contenidos').select('campana_talento_id,tipo').limit(1000);
   const contenidosByCT = {};
   (contData||[]).forEach(c => {
     if (!contenidosByCT[c.campana_talento_id]) contenidosByCT[c.campana_talento_id] = [];

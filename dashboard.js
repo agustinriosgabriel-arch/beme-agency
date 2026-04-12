@@ -259,9 +259,9 @@ async function loadFromSupabase() {
     // Load WITHOUT foto first (base64 photos are huge, loaded in background after render)
     const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,genero,keywords,valores,updated,telefono';
     const [configResult, talentResult, rosterResult] = await Promise.all([
-      sb.from('app_config').select('*'),
+      sb.from('app_config').select('key,value'),
       loadTalentosWithRetry(TALENT_COLS),
-      sb.from('rosters').select('*').order('created_at', {ascending:false})
+      sb.from('rosters').select('id,nombre,talentos,created_at,updated_at').order('created_at', {ascending:false})
     ]);
 
     // Process config
@@ -324,7 +324,7 @@ async function loadFromSupabase() {
 
     // Load campaign history for talents
     try {
-      const {data: tcData} = await sb.from('campana_talentos').select('talent_id, fee_marca, fee_talento, moneda, campanas(id, nombre, marcas(nombre)), contenidos(tipo)').order('created_at', {ascending:false});
+      const {data: tcData} = await sb.from('campana_talentos').select('talent_id,fee_marca,fee_talento,moneda,campanas(id,nombre,marcas(nombre)),contenidos(tipo)').order('created_at', {ascending:false}).limit(200);
       talentCampaigns = (tcData||[]).map(ct => ({
         talent_id: ct.talent_id,
         campana: ct.campanas?.nombre||'',
@@ -398,8 +398,9 @@ function setupRealtimeSubscription() {
       } else if (payload.eventType === 'UPDATE') {
         const t = payload.new;
         if (!t || !t.id) {
-          // payload.new is empty — reload all talents from Supabase
-          sb.from('talentos').select('*').order('nombre').then(({ data }) => {
+          // payload.new is empty — reload only changed columns (skip foto to save IO)
+          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,genero,keywords,valores,updated,telefono';
+          sb.from('talentos').select(TALENT_COLS_RT).order('nombre').then(({ data }) => {
             if (data) { talents = data.map(x => ({...x, paises:x.paises||[], categorias:x.categorias||[], seguidores:x.seguidores||{tiktok:0,instagram:0,youtube:0}})); renderTalents(); updateStats(); updatePlatformCounts(); }
           });
         } else {
@@ -425,7 +426,7 @@ function setupRealtimeSubscription() {
       } else if (payload.eventType === 'UPDATE') {
         const r = payload.new;
         if (!r || !r.id) {
-          sb.from('rosters').select('*').order('created_at', {ascending:false}).then(({ data }) => {
+          sb.from('rosters').select('id,nombre,talentos,created_at,updated_at').order('created_at', {ascending:false}).then(({ data }) => {
             if (data) { rosters = data.map(x => ({...x, talentIds:x.talent_ids||[], platforms:x.platforms||{tt:true,ig:true,yt:true}})); renderRosters(); updateStats(); }
           });
         } else {

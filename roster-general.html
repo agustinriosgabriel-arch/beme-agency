@@ -195,7 +195,7 @@ async function init() {
 
     document.getElementById('load-msg').textContent = 'Cargando talentos...';
     // Load all talents that match the roster's built-in filters
-    let query = sb.from('talentos').select('*').order('nombre');
+    let query = sb.from('talentos').select('id,nombre,foto,paises,ciudad,categorias,seguidores,genero,tiktok,instagram,youtube,keywords,valores,precio').order('nombre');
     const { data: talentsData } = await query;
     ALL_TALENTS = applyRosterFilters(talentsData || []);
 

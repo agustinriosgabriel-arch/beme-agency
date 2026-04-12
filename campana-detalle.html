@@ -735,16 +735,25 @@ function isTalentOf(ct) { return currentProfile?.role === 'talent' && currentPro
 // ════════════════════════════════════════════════
 async function loadCampana() {
   const {data, error} = await sb.from('campanas').select(`
-    *,
+    id,nombre,estado,fecha_inicio,fecha_fin,descripcion,metodo_pago_marca,pais_facturacion,requiere_factura,notas_finanzas,created_at,
     marcas(id,nombre,logo_url,clientes(nombre)),
     campana_managers(user_id),
     campana_handlers(user_id),
-    campana_briefs(*),
-    campana_mensajes(*),
+    campana_briefs(id,nombre,url,size_bytes,created_at),
+    campana_mensajes(id,user_id,mensaje,created_at),
     campana_talentos(
-      *,
+      id,talent_id,fee_marca,fee_talento,moneda,metodo_pago,pago_estado,pago_fecha,
+      producto_estado,producto_paqueteria,producto_tracking,
+      derechos_imagen_dias,derechos_imagen_valor,derechos_imagen_desde,created_at,
       talentos(id,nombre,foto),
-      contenidos(*,contenido_observaciones(*),contenido_scripts(*),contenido_borradores(*),contenido_historial(*),contenido_briefs(*))
+      contenidos(id,tipo,titulo,fecha_publicacion,paso_actual,copy_texto,url_publicacion,url_publicacion_2,
+        script_requerido,estadisticas_requeridas,spark_code_dias,spark_code_valor,spark_code_texto,spark_code_desde,
+        pauta_dias,pauta_valor,pauta_desde,campana_talento_id,created_at,
+        contenido_observaciones(id,observacion,autor_nombre,created_at,user_profiles(nombre)),
+        contenido_scripts(id,url_archivo,version,subido_por,created_at),
+        contenido_borradores(id,url_archivo,nombre_archivo,version,subido_por,created_at),
+        contenido_historial(id,paso_anterior,paso_nuevo,accion,autor_nombre,created_at),
+        contenido_briefs(id,nombre,url,size_bytes,created_at))
     )
   `).eq('id', campanaId).single();
   if (error) {
