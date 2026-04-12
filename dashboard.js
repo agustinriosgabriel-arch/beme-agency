@@ -324,17 +324,29 @@ async function loadFromSupabase() {
 
     // Load campaign history for talents
     try {
-      const {data: tcData} = await sb.from('campana_talentos').select('talent_id,fee_marca,fee_talento,moneda,campanas(id,nombre,marcas(nombre)),contenidos(tipo)').order('created_at', {ascending:false}).limit(200);
-      talentCampaigns = (tcData||[]).map(ct => ({
-        talent_id: ct.talent_id,
-        campana: ct.campanas?.nombre||'',
-        marca: ct.campanas?.marcas?.nombre||'',
-        fee_marca: ct.fee_marca||0,
-        fee_talento: ct.fee_talento||0,
-        moneda: ct.moneda||'USD',
-        acciones: (ct.contenidos||[]).map(c => c.tipo).filter(Boolean),
-      }));
+      const {data: tcData} = await sb.from('campana_talentos').select('talent_id,fee_marca,fee_talento,moneda,campanas(id,nombre,deleted_at,marcas(nombre)),contenidos(tipo)').order('created_at', {ascending:false}).limit(200);
+      talentCampaigns = (tcData||[])
+        .filter(ct => ct.campanas && !ct.campanas.deleted_at) // Exclude soft-deleted campaigns
+        .map(ct => ({
+          talent_id: ct.talent_id,
+          campana: ct.campanas?.nombre||'',
+          marca: ct.campanas?.marcas?.nombre||'',
+          fee_marca: ct.fee_marca||0,
+          fee_talento: ct.fee_talento||0,
+          moneda: ct.moneda||'USD',
+          acciones: (ct.contenidos||[]).map(c => c.tipo).filter(Boolean),
+        }));
     } catch(e) { console.warn('Campaign history load:', e); talentCampaigns = []; }
+
+    // Auto-enrich marcas_previas from campaign history
+    for (const t of talents) {
+      const marcas = talentCampaigns.filter(tc => tc.talent_id === t.id && tc.marca).map(tc => tc.marca);
+      if (marcas.length) {
+        const existing = (t.marcas_previas||'').split(',').map(s=>s.trim()).filter(Boolean);
+        const merged = [...new Set([...existing, ...marcas])];
+        t.marcas_previas = merged.join(', ');
+      }
+    }
 
     renderTalents();
     renderRosters();
