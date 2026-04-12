@@ -2325,6 +2325,16 @@ function toggleMobFilter() {
   overlay.classList.toggle('open');
   panel.classList.toggle('open');
 }
+// DEBUG: find overflow element (temporary)
+setTimeout(()=>{
+  const vw = document.documentElement.clientWidth;
+  document.querySelectorAll('*').forEach(el=>{
+    if(el.offsetWidth > vw){
+      console.log('OVERFLOW:', el.tagName, el.className, el.id, 'width:', el.offsetWidth, 'vw:', vw);
+      el.style.outline='3px solid red';
+    }
+  });
+},3000);
 </script>
 </body>
 </html>
