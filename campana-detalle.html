@@ -739,17 +739,12 @@ async function loadCampana() {
     marcas(id,nombre,logo_url,clientes(nombre)),
     campana_managers(user_id),
     campana_handlers(user_id),
-    campana_briefs(id,nombre,url,size_bytes,created_at),
-    campana_mensajes(id,user_id,mensaje,created_at),
+    campana_briefs(*),
+    campana_mensajes(*),
     campana_talentos(
       *,
       talentos(id,nombre,foto),
-      contenidos(*,
-        contenido_observaciones(id,observacion,autor_nombre,created_at,user_profiles(nombre)),
-        contenido_scripts(id,url_archivo,version,subido_por,created_at),
-        contenido_borradores(id,url_archivo,nombre_archivo,version,subido_por,created_at),
-        contenido_historial(id,paso_anterior,paso_nuevo,accion,autor_nombre,created_at),
-        contenido_briefs(id,nombre,url,size_bytes,created_at))
+      contenidos(*,contenido_observaciones(*),contenido_scripts(*),contenido_borradores(*),contenido_historial(*),contenido_briefs(*))
     )
   `).eq('id', campanaId).single();
   if (error) {

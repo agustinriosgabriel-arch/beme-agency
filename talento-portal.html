@@ -299,13 +299,8 @@ async function loadCampaigns() {
   const {data: cts, error} = await sb.from('campana_talentos').select(`
     *,
     talentos(id,nombre,foto),
-    contenidos(*,
-      contenido_observaciones(id,observacion,autor_nombre,created_at),
-      contenido_scripts(id,url_archivo,version,created_at),
-      contenido_borradores(id,url_archivo,nombre_archivo,version,created_at),
-      contenido_historial(id,paso_anterior,paso_nuevo,accion,autor_nombre,created_at),
-      contenido_briefs(id,nombre,url,created_at)),
-    campanas(id,nombre,estado,fecha_inicio,fecha_fin,marcas(id,nombre,clientes(nombre)),campana_briefs(id,nombre,url,size_bytes))
+    contenidos(*,contenido_observaciones(*),contenido_scripts(*),contenido_borradores(*),contenido_historial(*),contenido_briefs(*)),
+    campanas(*,marcas(id,nombre,clientes(nombre)),campana_briefs(*))
   `).eq('talent_id', currentProfile.talent_id).order('created_at',{ascending:false});
 
   if (error) { console.error('loadCampaigns:',error); toast('Error: '+error.message,'err'); return; }

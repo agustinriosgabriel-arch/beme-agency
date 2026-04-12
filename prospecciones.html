@@ -702,7 +702,7 @@ async function loadAppConfig() {
 }
 
 async function loadProspecciones() {
-  const {data, error} = await sb.from('prospecciones').select('id,nombre,descripcion,estado,created_at,updated_at').order('created_at', {ascending:false}).limit(50);
+  const {data, error} = await sb.from('prospecciones').select('*').order('created_at', {ascending:false}).limit(50);
   if (error) throw error;
   prospecciones = data || [];
 

@@ -831,16 +831,16 @@ async function loadData() {
   if (cErr) throw cErr;
   contratos = cData || [];
 
-  // Load campanas with marca (only needed fields)
-  const {data: campData} = await sb.from('campanas').select('id,nombre,estado,marca_id,marcas(id,nombre,logo_url)').order('created_at', {ascending:false}).limit(100);
+  // Load campanas with marca
+  const {data: campData} = await sb.from('campanas').select('*,marcas(id,nombre,logo_url)').order('created_at', {ascending:false}).limit(100);
   campanas = campData || [];
 
   // Load marcas
-  const {data: mData} = await sb.from('marcas').select('id,nombre,logo_url');
+  const {data: mData} = await sb.from('marcas').select('*');
   (mData||[]).forEach(m => { marcas[m.id] = m; });
 
   // Load campana_talentos with talent info
-  const {data: ctData} = await sb.from('campana_talentos').select('id,campana_id,talent_id,fee_marca,fee_talento,moneda,metodo_pago,talentos(id,nombre,foto,email,telefono)').limit(500);
+  const {data: ctData} = await sb.from('campana_talentos').select('*,talentos(id,nombre,foto,email,telefono)').limit(500);
   campanasTalentos = {};
   (ctData||[]).forEach(ct => {
     if (!campanasTalentos[ct.campana_id]) campanasTalentos[ct.campana_id] = [];
