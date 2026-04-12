@@ -50,7 +50,7 @@ async function sendEmail(to, subject, html) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      from: 'Beme Agency <notifications@bemeagency.com>',
+      from: process.env.RESEND_FROM || 'Beme Agency <onboarding@resend.dev>',
       to,
       subject,
       html
