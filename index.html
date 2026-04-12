@@ -1006,8 +1006,10 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   .main-actions .btn{font-size:0;padding:8px;line-height:0;gap:0;}
   .main-actions .btn svg{width:14px;height:14px;}
   .view-toggle{display:none;}
-  /* Fix horizontal overflow */
-  html{overflow-x:hidden!important;}
+  /* Fix horizontal overflow — clip not hidden to preserve scroll */
+  html,body{overflow-x:clip;}
+  /* Sticky toolbar */
+  .main-header{position:sticky;top:62px;z-index:50;background:var(--bg);padding:12px 0 10px;margin:-12px 0 0;}
   .topbar-search{max-width:none;min-width:0;}
   /* Roster headers */
   .roster-manager-header{flex-wrap:wrap;gap:8px;}
