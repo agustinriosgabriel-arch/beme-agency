@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Beme — Panel de Agencia</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -116,17 +119,13 @@ a{color:inherit;text-decoration:none;}
   padding:0 24px;height:62px;
 }
 .logo{
-  display:flex;align-items:center;gap:2px;
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;
-  white-space:nowrap;letter-spacing:-0.5px;
+  display:flex;align-items:center;
 }
-.logo-be{font-weight:300;color:var(--text);}
-.logo-me{font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.logo-dots{display:flex;gap:3px;margin-left:6px;}
-.logo-dot{width:5px;height:5px;border-radius:50%;}
-.logo-dot:nth-child(1){background:var(--primary);}
-.logo-dot:nth-child(2){background:var(--purple);}
-.logo-dot:nth-child(3){background:var(--primary-light);}
+.logo img{height:32px;width:auto;}
+.logo .logo-light{display:none;}
+.logo .logo-dark{display:block;}
+body.light .logo .logo-light{display:block;}
+body.light .logo .logo-dark{display:none;}
 
 .topbar-stat{display:none;}
 .topbar-search input{
@@ -918,8 +917,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   transition: opacity 0.3s;
 }
 #app-loading-overlay.hidden { opacity: 0; pointer-events: none; }
-.beme-loader-logo { font-size: 28px; font-weight: 300; }
-.beme-loader-logo strong { font-weight: 800; background: linear-gradient(135deg,#b2005d,#9414E0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.beme-loader-logo img { height: 44px; width: auto; }
 .beme-loader-bar { width: 160px; height: 3px; background: rgba(178,0,93,0.15); border-radius: 2px; overflow: hidden; }
 .beme-loader-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#b2005d,#9414E0); border-radius: 2px; animation: beme-load 1.8s ease-in-out infinite; }
 @keyframes beme-load { 0%{width:0%;margin-left:0} 50%{width:60%;margin-left:20%} 100%{width:0%;margin-left:100%} }
@@ -973,8 +971,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   .topbar-stats{display:none;}
   .main{padding:16px 16px 80px;}
   .topbar{padding:0 12px;gap:8px;}
-  .logo{font-size:19px;}
-  .logo-dots{display:none;}
+  .logo img{height:26px;}
   .nav-tabs{display:none;}
   /* Hide topbar action buttons — they go in hamburger */
   .topbar .btn,.topbar .theme-toggle,.topbar #logout-btn,.net-update-wrap{display:none!important;}
@@ -1110,10 +1107,8 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
 <!-- TOP BAR -->
 <header class="topbar">
   <div class="logo">
-    <span class="logo-be">Be</span><span class="logo-me">me</span>
-    <div class="logo-dots">
-      <div class="logo-dot"></div><div class="logo-dot"></div><div class="logo-dot"></div>
-    </div>
+    <img src="assets/brand/logos/Beme1Color.png" alt="Beme" class="logo-light">
+    <img src="assets/brand/logos/Beme1blanco.png" alt="Beme" class="logo-dark">
   </div>
   <div class="topbar-search">
     <span class="search-icon">
@@ -2163,7 +2158,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
 
 <!-- APP LOADING OVERLAY -->
 <div id="app-loading-overlay">
-  <div class="beme-loader-logo">Be<strong>me</strong></div>
+  <div class="beme-loader-logo"><img src="assets/brand/logos/Beme1Color.png" alt="Beme"></div>
   <div class="beme-loader-bar"><div class="beme-loader-bar-fill"></div></div>
   <div class="beme-loader-text" id="app-load-msg">Conectando...</div>
 </div>

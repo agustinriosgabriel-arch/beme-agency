@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beme — Portal del Talento</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -25,8 +28,12 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 /* ── Topbar ── */
 .topbar{position:sticky;top:0;z-index:100;background:rgba(247,247,250,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;gap:12px}
 body.dark .topbar{background:rgba(15,15,15,0.92)}
-.logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px;text-decoration:none;color:var(--text)}
-.logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo{display:flex;align-items:center;text-decoration:none}
+.logo img{height:30px;width:auto}
+.logo .logo-light{display:block}
+.logo .logo-dark{display:none}
+body.dark .logo .logo-light{display:none}
+body.dark .logo .logo-dark{display:block}
 .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
 .user-chip{display:flex;align-items:center;gap:8px;padding:5px 12px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text-muted)}
 .user-avatar{width:24px;height:24px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0}
@@ -155,8 +162,7 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
 
 /* ── Loading / Login ── */
 #load-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-.loader-logo{font-family:'Syne',sans-serif;font-size:28px;font-weight:800}
-.loader-logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.loader-logo img{height:44px;width:auto}
 .loader-bar{width:200px;height:3px;background:var(--surface3);border-radius:99px;overflow:hidden}
 .loader-fill{height:100%;width:0;background:var(--gradient);border-radius:99px;animation:lAnim 1.4s ease-in-out infinite}
 @keyframes lAnim{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
@@ -174,7 +180,7 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
 /* ── Responsive: Tablet ── */
 @media(max-width:768px){
   .topbar{padding:0 12px;gap:8px}
-  .logo{font-size:18px}
+  .logo img{height:24px}
   .main{padding:20px 16px}
   .page-title{font-size:19px}
   .camp-head{padding:14px 16px;gap:10px}
@@ -195,7 +201,7 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
 /* ── Responsive: Small phone ── */
 @media(max-width:480px){
   .topbar{height:48px}
-  .logo{font-size:16px}
+  .logo img{height:20px}
   .user-chip span:not(.user-avatar){display:none}
   .role-tag{display:none}
   .main{padding:12px 10px}
@@ -232,7 +238,7 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
 
 <!-- LOADING -->
 <div id="load-overlay">
-  <div class="loader-logo">Be<span>me</span></div>
+  <div class="loader-logo"><img src="assets/brand/logos/Beme1Color.png" alt="Beme"></div>
   <div class="loader-bar"><div class="loader-fill"></div></div>
   <div id="load-msg" style="font-size:12px;color:var(--text-muted)">Conectando...</div>
 </div>
@@ -241,7 +247,7 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
 <div id="login-overlay" style="display:none">
   <div class="login-card">
     <div style="text-align:center;margin-bottom:28px">
-      <div class="loader-logo">Be<span>me</span></div>
+      <div class="loader-logo"><img src="assets/brand/logos/Beme1Color.png" alt="Beme"></div>
       <p style="font-size:13px;color:var(--text-muted);margin-top:6px">Portal del Talento</p>
     </div>
     <div class="login-error" id="login-error"></div>
@@ -257,7 +263,7 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
 <!-- APP -->
 <div id="app" style="display:none">
   <header class="topbar">
-    <a href="talento-portal.html" class="logo">Be<span>me</span></a>
+    <a href="talento-portal.html" class="logo"><img src="assets/brand/logos/Beme1Color.png" alt="Beme" class="logo-light"><img src="assets/brand/logos/Beme1blanco.png" alt="Beme" class="logo-dark"></a>
     <span class="role-tag">Talento</span>
     <div class="topbar-right">
       <button class="icon-btn" onclick="toggleTheme()" title="Tema">

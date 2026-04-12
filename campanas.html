@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beme — Campañas</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <style>
 /* ── Reset & Tokens ─────────────────────────────────────── */
@@ -40,8 +43,12 @@ body.dark{--bg:#0f0f0f;--surface:#181818;--surface2:#202020;--surface3:#2a2a2a;-
   display:flex;align-items:center;gap:16px;
 }
 body.dark .topbar{background:rgba(15,15,15,0.9)}
-.logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px;text-decoration:none;color:var(--text)}
-.logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo{display:flex;align-items:center;text-decoration:none}
+.logo img{height:32px;width:auto}
+.logo .logo-light{display:block}
+.logo .logo-dark{display:none}
+body.dark .logo .logo-light{display:none}
+body.dark .logo .logo-dark{display:block}
 .nav-tabs{display:flex;gap:2px;margin-left:24px}
 .nav-tab{
   padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;
@@ -273,8 +280,7 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
   transition:opacity 0.2s;
 }
-.loader-logo{font-family:'Syne',sans-serif;font-size:28px;font-weight:800}
-.loader-logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.loader-logo img{height:44px;width:auto}
 .loader-bar{width:200px;height:3px;background:var(--surface3);border-radius:99px;overflow:hidden}
 .loader-fill{height:100%;width:0;background:var(--gradient);border-radius:99px;animation:loaderAnim 1.4s ease-in-out infinite}
 @keyframes loaderAnim{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
@@ -283,9 +289,8 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
 #login-overlay{position:fixed;inset:0;background:rgba(247,247,250,0.97);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:9999}
 .login-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:40px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.12)}
 .login-logo{text-align:center;margin-bottom:28px}
-.login-logo h1{font-family:'Syne',sans-serif;font-size:28px;font-weight:800}
-.login-logo h1 span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.login-logo p{font-size:13px;color:var(--text-muted);margin-top:4px}
+.login-logo img{height:48px;width:auto;margin-bottom:4px}
+.login-logo p{font-size:13px;color:var(--text-muted);margin-top:8px}
 .login-error{display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#f87171;margin-bottom:14px}
 .login-fields{display:flex;flex-direction:column;gap:10px}
 
@@ -385,7 +390,7 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
 
 <!-- LOADING OVERLAY -->
 <div id="load-overlay">
-  <div class="loader-logo">Be<span>me</span></div>
+  <div class="loader-logo"><img src="assets/brand/logos/Beme1Color.png" alt="Beme"></div>
   <div class="loader-bar"><div class="loader-fill"></div></div>
   <p style="font-size:12px;color:var(--text-dim);margin-top:8px" id="load-msg">Conectando...</p>
 </div>
@@ -394,7 +399,7 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
 <div id="login-overlay" style="display:none">
   <div class="login-card">
     <div class="login-logo">
-      <h1>Be<span>me</span></h1>
+      <img src="assets/brand/logos/Beme1Color.png" alt="Beme">
       <p>Módulo de Campañas</p>
     </div>
     <div class="login-error" id="login-error"></div>
@@ -432,7 +437,7 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
 
   <!-- TOPBAR -->
   <header class="topbar">
-    <a href="index.html" class="logo">Be<span>me</span></a>
+    <a href="index.html" class="logo"><img src="assets/brand/logos/Beme1Color.png" alt="Beme" class="logo-light"><img src="assets/brand/logos/Beme1blanco.png" alt="Beme" class="logo-dark"></a>
     <nav class="nav-tabs">
       <a href="index.html" class="nav-tab">Talentos</a>
       <a href="campanas.html" class="nav-tab active">Campañas</a>

@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beme — Detalle Prospeccion</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -39,14 +42,12 @@ body.light .modal-header,body.light .modal-footer{background:var(--surface)}
 
 /* ── Topbar ── */
 .topbar{position:sticky;top:0;z-index:100;background:rgba(15,15,15,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;padding:0 24px;height:62px}
-.logo{display:flex;align-items:center;gap:2px;font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;white-space:nowrap;letter-spacing:-0.5px}
-.logo-be{font-weight:300;color:var(--text)}
-.logo-me{font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.logo-dots{display:flex;gap:3px;margin-left:6px}
-.logo-dot{width:5px;height:5px;border-radius:50%}
-.logo-dot:nth-child(1){background:var(--primary)}
-.logo-dot:nth-child(2){background:var(--purple)}
-.logo-dot:nth-child(3){background:var(--primary-light)}
+.logo{display:flex;align-items:center;text-decoration:none}
+.logo img{height:32px;width:auto}
+.logo .logo-light{display:block}
+.logo .logo-dark{display:none}
+body.dark .logo .logo-light{display:none}
+body.dark .logo .logo-dark{display:block}
 .breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted);flex:1;min-width:0}
 .breadcrumb a{color:var(--text-muted);text-decoration:none;white-space:nowrap}
 .breadcrumb a:hover{color:var(--text)}
@@ -192,9 +193,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none}
 
 /* ── Loading ── */
 #load-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-.loader-logo{font-family:'Plus Jakarta Sans',sans-serif;font-size:28px;display:flex;align-items:center;gap:2px}
-.loader-be{font-weight:300;color:var(--text)}
-.loader-me{font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.loader-logo img{height:44px;width:auto}
 .loader-bar{width:200px;height:3px;background:var(--surface3);border-radius:99px;overflow:hidden}
 .loader-fill{height:100%;width:0;background:var(--gradient);border-radius:99px;animation:loaderAnim 1.4s ease-in-out infinite}
 @keyframes loaderAnim{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
@@ -202,7 +201,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none}
 body.light #login-overlay{background:rgba(244,244,244,0.97)}
 .login-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:40px;width:100%;max-width:380px;box-shadow:var(--shadow)}
 .login-logo{text-align:center;margin-bottom:28px}
-.login-logo .logo{justify-content:center;font-size:28px}
+.login-logo img{height:48px;width:auto;margin-bottom:4px}
 .login-logo p{font-size:13px;color:var(--text-muted);margin-top:8px}
 .login-error{display:none;background:rgba(220,50,50,0.1);border:1px solid rgba(220,50,50,0.2);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#ff6b6b;margin-bottom:14px}
 .login-fields{display:flex;flex-direction:column;gap:10px}
@@ -269,7 +268,7 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
 <body>
 
 <div id="load-overlay">
-  <div class="loader-logo"><span class="loader-be">Be</span><span class="loader-me">me</span></div>
+  <div class="loader-logo"><img src="assets/brand/logos/Beme1Color.png" alt="Beme"></div>
   <div class="loader-bar"><div class="loader-fill"></div></div>
   <p style="font-size:12px;color:var(--text-dim);margin-top:8px" id="load-msg">Conectando...</p>
 </div>
@@ -277,7 +276,7 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
 <div id="login-overlay" style="display:none">
   <div class="login-card">
     <div class="login-logo">
-      <div class="logo"><span class="logo-be">Be</span><span class="logo-me">me</span><div class="logo-dots"><div class="logo-dot"></div><div class="logo-dot"></div><div class="logo-dot"></div></div></div>
+      <img src="assets/brand/logos/Beme1Color.png" alt="Beme">
       <p>Prospeccion</p>
     </div>
     <div class="login-error" id="login-error"></div>
@@ -293,8 +292,8 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
 
 <header class="topbar">
   <a href="index.html" class="logo">
-    <span class="logo-be">Be</span><span class="logo-me">me</span>
-    <div class="logo-dots"><div class="logo-dot"></div><div class="logo-dot"></div><div class="logo-dot"></div></div>
+    <img src="assets/brand/logos/Beme1Color.png" alt="Beme" class="logo-light">
+    <img src="assets/brand/logos/Beme1blanco.png" alt="Beme" class="logo-dark">
   </a>
   <div class="breadcrumb">
     <a href="prospecciones.html">Prospecciones</a>

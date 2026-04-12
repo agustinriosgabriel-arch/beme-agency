@@ -72,6 +72,10 @@ All social media URLs must have `https://`. Use `normalizeSocialUrl(raw, platfor
 ### 8. Categories persist to app_config
 When saving a talent with new categories, they must be pushed to `CATEGORIES[]` and then `saveData()` called to persist to `app_config` table in Supabase.
 
+## Git & Deploy
+- **Auto-deploy:** After completing changes, always commit and push to `origin/main` without asking. Netlify deploys automatically from GitHub.
+- Git remote: `origin` → `https://github.com/agustinriosgabriel-arch/beme-agency.git`
+
 ## Common Gotchas
 - `getElementById('x').value` crashes if element 'x' doesn't exist → always use optional chaining or null check
 - Supabase JOINs through foreign keys can fail silently with RLS → load related data separately
