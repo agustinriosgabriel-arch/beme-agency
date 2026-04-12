@@ -1561,8 +1561,28 @@ function buildActions(c, ct) {
 // ════════════════════════════════════════════════
 // WORKFLOW ACTIONS
 // ════════════════════════════════════════════════
+async function notifyPasoCambio(contId, pasoNuevo, pasoAnterior) {
+  try {
+    await fetch('/.netlify/functions/campaign-notifications', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        action: 'paso_cambio',
+        contenido_id: contId,
+        paso_nuevo: pasoNuevo,
+        paso_anterior: pasoAnterior,
+        autor_nombre: currentProfile.nombre
+      })
+    });
+  } catch(e) { /* silent — notifications are best-effort */ }
+}
+
 async function avanzar(contId) {
   try {
+    // Find current paso before advancing
+    const contBefore = campana.campana_talentos?.flatMap(ct=>ct.contenidos||[]).find(c=>c.id===contId);
+    const pasoBefore = contBefore?.paso_actual || 0;
+
     const {data, error} = await sb.rpc('avanzar_paso_contenido',{
       p_contenido_id: contId, p_autor_id: currentUser.id,
       p_autor_nombre: currentProfile.nombre, p_accion: 'Avanzado manualmente'
@@ -1570,6 +1590,9 @@ async function avanzar(contId) {
     if (error) throw error;
     await loadCampana(); renderAll();
     toast(`Paso actualizado → ${PASO_LABELS[data]||data}`, 'ok');
+
+    // Fire notification in background (don't await)
+    notifyPasoCambio(contId, data, pasoBefore).catch(()=>{});
   } catch(e) { toast('Error: '+e.message,'err'); }
 }
 
@@ -1637,6 +1660,10 @@ async function rechazarPaso(contId, paso, obsId) {
     await loadCampana(); renderAll();
     document.getElementById('cont-'+contId)?.classList.add('open');
     toast('Rechazo enviado — vuelve al paso anterior','inf');
+
+    // Notify talent that their content was rejected (goes back to upload step)
+    const pasoNuevo = paso === 3 ? 2 : paso === 5 ? 4 : paso - 1;
+    notifyPasoCambio(contId, pasoNuevo, paso).catch(()=>{});
   } catch(e) { toast('Error: '+e.message,'err'); }
 }
 

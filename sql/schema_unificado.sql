@@ -653,6 +653,43 @@ BEGIN
 END;
 $$;
 
+-- Auto-estado: when all contenidos in a campana reach paso >= 8,
+-- automatically set campana.estado = 'etapa_finanzas'
+CREATE OR REPLACE FUNCTION check_campana_auto_estado()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_campana_id integer;
+  v_total integer;
+  v_done integer;
+  v_estado text;
+BEGIN
+  SELECT ct.campana_id INTO v_campana_id
+  FROM campana_talentos ct WHERE ct.id = NEW.campana_talento_id;
+  IF v_campana_id IS NULL THEN RETURN NEW; END IF;
+  SELECT estado INTO v_estado FROM campanas WHERE id = v_campana_id;
+  IF v_estado != 'en_curso' THEN RETURN NEW; END IF;
+  SELECT COUNT(*), COUNT(*) FILTER (WHERE c.paso_actual >= 8)
+  INTO v_total, v_done
+  FROM contenidos c
+  JOIN campana_talentos ct ON ct.id = c.campana_talento_id
+  WHERE ct.campana_id = v_campana_id;
+  IF v_total > 0 AND v_total = v_done THEN
+    UPDATE campanas SET estado = 'etapa_finanzas' WHERE id = v_campana_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+-- ── notificaciones_enviadas ───────────────────────────────────
+CREATE TABLE IF NOT EXISTS notificaciones_enviadas (
+  id         serial PRIMARY KEY,
+  tipo       text NOT NULL,          -- paso_cambio, recordatorio
+  ref_id     integer,                -- contenido_id or campana_id
+  user_email text NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
 
 -- ┌─────────────────────────────────────────────────────────────┐
 -- │  4. TRIGGERS                                                │
@@ -673,6 +710,12 @@ CREATE TRIGGER trg_contenidos_updated
 DROP TRIGGER IF EXISTS trg_contract_number ON contratos;
 CREATE TRIGGER trg_contract_number
   BEFORE INSERT ON contratos FOR EACH ROW EXECUTE FUNCTION generate_contract_number();
+
+DROP TRIGGER IF EXISTS trg_auto_estado_campana ON contenidos;
+CREATE TRIGGER trg_auto_estado_campana
+  AFTER UPDATE OF paso_actual ON contenidos
+  FOR EACH ROW WHEN (NEW.paso_actual >= 8)
+  EXECUTE FUNCTION check_campana_auto_estado();
 
 
 -- ┌─────────────────────────────────────────────────────────────┐
@@ -712,6 +755,7 @@ ALTER TABLE prospeccion_historial ENABLE ROW LEVEL SECURITY;
 ALTER TABLE prospeccion_email_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE paquetes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE paquete_usos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notificaciones_enviadas ENABLE ROW LEVEL SECURITY;
 
 -- ── user_profiles ─────────────────────────────────────────────
 -- Cada usuario ve su perfil, admin ve todos
@@ -906,3 +950,5 @@ CREATE INDEX IF NOT EXISTS idx_contratos_campana ON contratos(campana_id);
 CREATE INDEX IF NOT EXISTS idx_prospeccion_contactos_prospeccion ON prospeccion_contactos(prospeccion_id);
 CREATE INDEX IF NOT EXISTS idx_user_profiles_role ON user_profiles(role);
 CREATE INDEX IF NOT EXISTS idx_user_profiles_talent ON user_profiles(talent_id);
+CREATE INDEX IF NOT EXISTS idx_notif_ref ON notificaciones_enviadas(tipo, ref_id);
+CREATE INDEX IF NOT EXISTS idx_notif_created ON notificaciones_enviadas(created_at);
