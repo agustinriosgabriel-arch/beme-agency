@@ -11,6 +11,10 @@
 [functions."roster-agent"]
   timeout = 30
 
+[functions."campaign-summary"]
+  timeout = 15
+  schedule = "0 11 * * *"  # 5:00 AM Mexico City (UTC-6)
+
 # Cache strategy
 [[headers]]
   for = "/*"

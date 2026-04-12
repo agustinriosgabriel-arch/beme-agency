@@ -89,6 +89,30 @@ body.dark .topbar{background:rgba(15,15,15,0.92)}
 .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-dim);display:flex;align-items:center;gap:8px;margin-bottom:12px}
 .section-title::before{content:'';width:3px;height:13px;background:var(--gradient);border-radius:99px;flex-shrink:0}
 
+/* ── Pipeline visual ── */
+.pipeline-section{margin-bottom:20px}
+.pipeline-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px}
+.pipe-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;text-align:center;border-top:3px solid transparent;transition:all 0.15s}
+.pipe-stat .ps-count{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;line-height:1}
+.pipe-stat .ps-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-dim);margin-top:3px}
+.pipeline-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;overflow-x:auto;padding-bottom:4px}
+.pipe-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;min-width:140px}
+.pipe-col-head{padding:8px 10px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border)}
+.pipe-col-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pipe-col-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px}
+.pipe-col-count{font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;background:var(--surface3);margin-left:auto}
+.pipe-items{padding:6px;display:flex;flex-direction:column;gap:6px;min-height:50px;max-height:260px;overflow-y:auto}
+.pipe-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 8px;cursor:pointer;transition:all 0.15s}
+.pipe-card:hover{border-color:var(--border2);background:var(--surface2)}
+.pipe-card-top{display:flex;align-items:center;gap:5px}
+.pipe-card-avatar{width:20px;height:20px;border-radius:50%;background:var(--surface2);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:var(--text-muted);overflow:hidden;flex-shrink:0}
+.pipe-card-avatar img{width:100%;height:100%;object-fit:cover}
+.pipe-card-name{font-size:11px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pipe-card-tipo{padding:1px 5px;border-radius:10px;font-size:8px;font-weight:700;background:var(--surface3);color:var(--text-muted);flex-shrink:0}
+.pipe-card-title{font-size:10px;color:var(--text-dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pipeline-board.collapsed,.pipeline-strip.collapsed{display:none}
+@media(max-width:900px){.pipeline-board{grid-template-columns:repeat(3,1fr)}.pipeline-strip{grid-template-columns:repeat(3,1fr)}}
+
 /* ── Talento card ── */
 .talento-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
 .talento-head{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;transition:background 0.15s}
@@ -131,6 +155,7 @@ body.dark .topbar{background:rgba(15,15,15,0.92)}
 .tb-tiktok_video{background:rgba(0,0,0,0.06);color:#333;border:1px solid rgba(0,0,0,0.1)}
 body.dark .tb-tiktok_video{background:rgba(255,255,255,0.08);color:#ccc}
 .tb-reel{background:rgba(225,48,108,0.1);color:#e1306c}
+.tb-reel_tiktok_espejo{background:linear-gradient(135deg,rgba(225,48,108,0.1),rgba(0,0,0,0.06));color:#c42d7b;border:1px solid rgba(225,48,108,0.15)}
 .tb-ig_story{background:rgba(131,58,180,0.1);color:#833ab4}
 .tb-youtube_video{background:rgba(255,0,0,0.08);color:#cc0000}
 .tb-youtube_short{background:rgba(255,0,0,0.06);color:#cc0000}
@@ -365,6 +390,16 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
     <!-- Campaña header -->
     <div class="camp-header" id="camp-header"></div>
 
+    <!-- Pipeline visual -->
+    <div class="pipeline-section" id="pipeline-section">
+      <div class="section-title" style="cursor:pointer;user-select:none" onclick="togglePipeline()">
+        Pipeline de Contenidos
+        <svg id="pipeline-chevron" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-left:auto;transition:transform 0.2s"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div id="pipeline-strip" class="pipeline-strip"></div>
+      <div id="pipeline-board" class="pipeline-board"></div>
+    </div>
+
     <!-- Talentos -->
     <div class="section-title">Talentos y Contenidos</div>
     <div id="talentos-container"></div>
@@ -481,6 +516,7 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
         <select id="mc-tipo" class="form-input" onchange="onMcTipoChange()">
           <option value="tiktok_video">TikTok Video</option>
           <option value="reel">Reel</option>
+          <option value="reel_tiktok_espejo">Reel/TikTok Espejo</option>
           <option value="ig_story">IG Story</option>
           <option value="youtube_video">YouTube Video</option>
           <option value="youtube_short">YouTube Short</option>
@@ -631,7 +667,7 @@ const PASO_LABELS = {
   8:'Completado / Pendiente pago',
   9:'Pagado'
 };
-const TIPO_LABELS = {tiktok_video:'TikTok Video',reel:'Reel',ig_story:'IG Story',youtube_video:'YouTube Video',youtube_short:'YouTube Short'};
+const TIPO_LABELS = {tiktok_video:'TikTok Video',reel:'Reel',reel_tiktok_espejo:'Reel/TikTok Espejo',ig_story:'IG Story',youtube_video:'YouTube Video',youtube_short:'YouTube Short'};
 
 // ════════════════════════════════════════════════
 // BOOT
@@ -756,6 +792,7 @@ function renderAll() {
   document.querySelectorAll('.open').forEach(el => { if(el.id) openIds.push(el.id); });
 
   renderHeader();
+  renderPipeline();
   renderBriefFiles();
   renderTalentos();
   renderEquipo();
@@ -768,6 +805,86 @@ function renderAll() {
     const el = document.getElementById(id);
     if(el) el.classList.add('open');
   });
+}
+
+// ════════════════════════════════════════════════
+// PIPELINE VISUAL
+// ════════════════════════════════════════════════
+const PIPE_STEPS = [
+  {n:1, label:'Brief',      color:'#a78bfa'},
+  {n:2, label:'Script',     color:'#38bdf8'},
+  {n:3, label:'Apr. Script',color:'#0ea5e9'},
+  {n:4, label:'Producción', color:'#fbbf24'},
+  {n:5, label:'Apr. Cont.', color:'#f97316'},
+  {n:6, label:'Publicar',   color:'#4ade80'},
+  {n:7, label:'Stats',      color:'#2dd4bf'},
+  {n:8, label:'Completado', color:'#22c55e'},
+];
+let pipelineCollapsed = false;
+
+function togglePipeline() {
+  pipelineCollapsed = !pipelineCollapsed;
+  document.getElementById('pipeline-strip').classList.toggle('collapsed', pipelineCollapsed);
+  document.getElementById('pipeline-board').classList.toggle('collapsed', pipelineCollapsed);
+  document.getElementById('pipeline-chevron').style.transform = pipelineCollapsed ? 'rotate(-90deg)' : '';
+}
+
+function renderPipeline() {
+  const allConts = [];
+  (campana.campana_talentos||[]).forEach(ct => {
+    const t = talentosList.find(t => t.id === ct.talent_id);
+    (ct.contenidos||[]).forEach(c => {
+      allConts.push({...c, talent_name: t?.nombre || 'Talento', talent_foto: t?.foto, ct_id: ct.id});
+    });
+  });
+
+  // Determine which steps are active in this campaign
+  const activeSteps = PIPE_STEPS.filter(s => {
+    if (s.n === 2 || s.n === 3) return allConts.some(c => c.script_requerido);
+    if (s.n === 7) return allConts.some(c => c.estadisticas_requeridas);
+    return true;
+  });
+
+  // Stats strip
+  document.getElementById('pipeline-strip').innerHTML = activeSteps.map(s => {
+    const count = allConts.filter(c => c.paso_actual === s.n).length;
+    return `<div class="pipe-stat" style="border-top-color:${s.color}">
+      <div class="ps-count" style="color:${s.color}">${count}</div>
+      <div class="ps-label">${s.label}</div>
+    </div>`;
+  }).join('');
+
+  // Board columns
+  document.getElementById('pipeline-board').innerHTML = activeSteps.map(s => {
+    const items = allConts.filter(c => c.paso_actual === s.n);
+    return `<div class="pipe-col">
+      <div class="pipe-col-head">
+        <div class="pipe-col-dot" style="background:${s.color}"></div>
+        <div class="pipe-col-title" style="color:${s.color}">${s.label}</div>
+        <div class="pipe-col-count">${items.length}</div>
+      </div>
+      <div class="pipe-items">
+        ${items.length ? items.map(c => {
+          const initials = (c.talent_name||'').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+          return `<div class="pipe-card" onclick="openPipeCard('tc-${c.ct_id}','cont-${c.id}')">
+            <div class="pipe-card-top">
+              <div class="pipe-card-avatar">${c.talent_foto?`<img src="${esc(c.talent_foto)}" loading="lazy">`:`${initials}`}</div>
+              <div class="pipe-card-name">${esc(c.talent_name)}</div>
+              <span class="pipe-card-tipo">${(TIPO_LABELS[c.tipo]||c.tipo).substring(0,12)}</span>
+            </div>
+            ${c.titulo?`<div class="pipe-card-title">${esc(c.titulo)}</div>`:''}
+          </div>`;
+        }).join('') : '<div style="font-size:10px;color:var(--text-dim);text-align:center;padding:12px">—</div>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openPipeCard(tcId, contId) {
+  const tc = document.getElementById(tcId);
+  if (tc) { tc.classList.add('open'); }
+  const cont = document.getElementById(contId);
+  if (cont) { cont.classList.add('open'); cont.scrollIntoView({behavior:'smooth', block:'center'}); }
 }
 
 function renderHeader() {
@@ -1081,7 +1198,11 @@ function renderContenido(c, ct) {
   }
   // Link publicado
   if (c.url_publicacion) {
-    fileButtonsHTML += `<a href="${esc(c.url_publicacion)}" target="_blank" class="file-access-btn link">🔗 Ver publicación</a>`;
+    const labelLink = c.tipo === 'reel_tiktok_espejo' ? '🔗 Reel' : '🔗 Ver publicación';
+    fileButtonsHTML += `<a href="${esc(c.url_publicacion)}" target="_blank" class="file-access-btn link">${labelLink}</a>`;
+  }
+  if (c.url_publicacion_2) {
+    fileButtonsHTML += `<a href="${esc(c.url_publicacion_2)}" target="_blank" class="file-access-btn link">🔗 TikTok</a>`;
   }
   fileButtonsHTML += '</div>';
   // Only show section if there are files
@@ -1190,8 +1311,8 @@ function buildActions(c, ct) {
 
   let html = '';
 
-  // ── Brief por contenido (siempre visible para internal) ──
-  if (canI) {
+  // ── Brief por contenido (visible para internal + handler) ──
+  if (canI || canH) {
     html += `<div class="workflow-action-box" style="background:rgba(168,85,247,0.04);border-color:rgba(168,85,247,0.15)">
       <div class="action-box-title" style="color:#a855f7">📋 Brief del contenido</div>
       <div class="action-btns">
@@ -1205,7 +1326,7 @@ function buildActions(c, ct) {
   }
 
   // ── Paso 1: Brief ──
-  if (paso === 1 && canI) {
+  if (paso === 1 && (canI || canH)) {
     html += `<div class="workflow-action-box">
       <div class="action-box-title">📄 Brief</div>
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Subí el brief en el panel lateral. Al subir, todos los contenidos avanzan automáticamente.</p>
@@ -1290,12 +1411,24 @@ function buildActions(c, ct) {
 
   // ── Paso 6: Cargar link ──
   if (paso === 6 && (canI || canT)) {
+    const isEspejo = c.tipo === 'reel_tiktok_espejo';
     html += `<div class="workflow-action-box">
       <div class="action-box-title">🔗 Cargar Link de Publicación</div>
+      ${isEspejo ? `
+      <div class="link-group" style="margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--text-muted);min-width:60px">Reel</span>
+        <input type="text" class="link-input" id="link-${c.id}" placeholder="https://www.instagram.com/reel/..." value="${esc(c.url_publicacion||'')}">
+      </div>
+      <div class="link-group">
+        <span style="font-size:11px;font-weight:700;color:var(--text-muted);min-width:60px">TikTok</span>
+        <input type="text" class="link-input" id="link2-${c.id}" placeholder="https://www.tiktok.com/@..." value="${esc(c.url_publicacion_2||'')}">
+      </div>
+      <div style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="saveLink(${c.id},true)">Confirmar ambos →</button></div>
+      ` : `
       <div class="link-group">
         <input type="text" class="link-input" id="link-${c.id}" placeholder="https://www.tiktok.com/@..." value="${esc(c.url_publicacion||'')}">
         <button class="btn btn-primary btn-sm" onclick="saveLink(${c.id})">Confirmar →</button>
-      </div>
+      </div>`}
     </div>`;
   }
 
@@ -1398,11 +1531,16 @@ async function rechazarPaso(contId, paso, obsId) {
   } catch(e) { toast('Error: '+e.message,'err'); }
 }
 
-async function saveLink(contId) {
+async function saveLink(contId, isDual) {
   const link = document.getElementById('link-'+contId)?.value.trim();
   if (!link) { toast('Ingresá el link de publicación','err'); return; }
-  await sb.from('contenidos').update({url_publicacion: link}).eq('id', contId);
-  // Advance paso 6 → 7 (stats) or 8 (no stats) — handled by DB function
+  const updateData = {url_publicacion: link};
+  if (isDual) {
+    const link2 = document.getElementById('link2-'+contId)?.value.trim();
+    if (!link2) { toast('Ingresá el segundo link (TikTok)','err'); return; }
+    updateData.url_publicacion_2 = link2;
+  }
+  await sb.from('contenidos').update(updateData).eq('id', contId);
   await avanzar(contId);
 }
 
@@ -1597,8 +1735,9 @@ function openEditCont(contId) {
 
 function onMcTipoChange() {
   const t = document.getElementById('mc-tipo').value;
-  document.getElementById('mc-spark').style.display = t==='tiktok_video'?'block':'none';
-  document.getElementById('mc-pauta').style.display = t==='reel'?'block':'none';
+  const isEspejo = t==='reel_tiktok_espejo';
+  document.getElementById('mc-spark').style.display = (t==='tiktok_video'||isEspejo)?'block':'none';
+  document.getElementById('mc-pauta').style.display = (t==='reel'||isEspejo)?'block':'none';
 }
 
 async function saveContenido() {
@@ -1613,11 +1752,11 @@ async function saveContenido() {
       script_requerido: document.getElementById('mc-script').checked,
       estadisticas_requeridas: document.getElementById('mc-stats').checked,
     };
-    if (tipo==='tiktok_video') {
+    if (tipo==='tiktok_video' || tipo==='reel_tiktok_espejo') {
       payload.spark_code_dias = parseInt(document.getElementById('mc-spark-dias').value)||null;
       payload.spark_code_valor = parseFloat(document.getElementById('mc-spark-valor').value)||null;
     }
-    if (tipo==='reel') {
+    if (tipo==='reel' || tipo==='reel_tiktok_espejo') {
       payload.pauta_dias = parseInt(document.getElementById('mc-pauta-dias').value)||null;
       payload.pauta_valor = parseFloat(document.getElementById('mc-pauta-valor').value)||null;
     }
