@@ -163,26 +163,6 @@ async function handlePasoCambio(payload) {
   // Deduplicate by email
   const unique = [...new Map(recipients.map(r => [r.email, r])).values()];
 
-  // Debug info (temporary)
-  if (unique.length === 0) {
-    const handlers = await sbQuery('campana_handlers', 'user_id', { 'campana_id': `eq.${campanaId}` });
-    const managers = await sbQuery('campana_managers', 'user_id', { 'campana_id': `eq.${campanaId}` });
-    return {
-      sent: 0, recipients: [],
-      debug: {
-        contenido_id, paso_nuevo, campanaId,
-        contenido_found: !!cont,
-        ct_found: !!ct,
-        talento_email: talentoEmail,
-        handlers_count: handlers.length,
-        handlers_raw: handlers,
-        managers_count: managers.length,
-        managers_raw: managers,
-        profiles_count: Object.keys(profileMap).length,
-        profile_ids: Object.keys(profileMap).slice(0, 10)
-      }
-    };
-  }
 
   let sent = 0;
   for (const r of unique) {

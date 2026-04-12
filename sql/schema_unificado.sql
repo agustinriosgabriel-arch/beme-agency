@@ -799,6 +799,14 @@ CREATE POLICY campanas_manager ON campanas FOR SELECT USING (EXISTS (SELECT 1 FR
 CREATE POLICY campanas_handler ON campanas FOR SELECT USING (EXISTS (SELECT 1 FROM campana_handlers WHERE campana_handlers.campana_id = campanas.id AND campana_handlers.user_id = auth.uid()));
 CREATE POLICY campanas_talent ON campanas FOR SELECT USING (EXISTS (SELECT 1 FROM campana_talentos ct JOIN user_profiles up ON up.talent_id = ct.talent_id WHERE ct.campana_id = campanas.id AND up.id = auth.uid()));
 
+-- ── campana_managers ──────────────────────────────────────────
+CREATE POLICY cm_admin ON campana_managers FOR ALL USING (is_admin());
+CREATE POLICY cm_internal_read ON campana_managers FOR SELECT USING (is_internal());
+
+-- ── campana_handlers ──────────────────────────────────────────
+CREATE POLICY ch_admin ON campana_handlers FOR ALL USING (is_admin());
+CREATE POLICY ch_internal_read ON campana_handlers FOR SELECT USING (is_internal());
+
 -- ── campana_talentos ──────────────────────────────────────────
 CREATE POLICY ct_admin ON campana_talentos FOR ALL USING (is_admin());
 CREATE POLICY ct_manager ON campana_talentos FOR SELECT USING (EXISTS (SELECT 1 FROM campana_managers WHERE campana_managers.campana_id = campana_talentos.campana_id AND campana_managers.user_id = auth.uid()));
