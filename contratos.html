@@ -289,10 +289,33 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   .form-grid{grid-template-columns:1fr}
   .contract-preview{padding:20px 24px}
 }
-@media(max-width:600px){
+@media(max-width:768px){
   .main{padding:16px}
-  .topbar{padding:0 16px}
-  .tab-nav{overflow-x:auto}
+  .topbar{padding:0 12px;gap:8px}
+  .tab-nav{overflow-x:auto;padding:0 12px;gap:2px}
+  .page-header{flex-wrap:wrap;gap:10px}
+  .page-header h1{font-size:20px}
+  .toolbar{gap:8px}
+  .search-wrap{min-width:0;max-width:100%;flex:1 1 100%}
+  .filter-select{flex:1;min-width:0}
+  .modal{max-width:calc(100% - 24px);margin:12px}
+  .modal-lg{max-width:calc(100% - 24px)}
+  .modal-header{padding:14px 16px}
+  .modal-body{padding:16px}
+  .form-input{padding:10px 12px;font-size:14px}
+  .contract-preview{padding:16px;font-size:13px}
+}
+@media(max-width:480px){
+  .main{padding:12px}
+  .topbar{height:48px}
+  .logo{font-size:16px}
+  .tab-nav{display:none}
+  .stats-strip{grid-template-columns:1fr 1fr;gap:6px}
+  .stat-card{padding:12px}
+  .stat-card .value{font-size:20px}
+  .modal{max-width:calc(100% - 16px);margin:8px}
+  .btn{padding:8px 14px;font-size:12px}
+  .contract-preview{padding:12px;font-size:12px}
 }
 </style>
 </head>

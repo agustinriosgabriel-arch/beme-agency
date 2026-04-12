@@ -171,8 +171,61 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
 .empty h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
 .empty p{font-size:13px}
 
-/* ── Responsive ── */
-@media(max-width:640px){.main{padding:16px 12px}.camp-head{padding:14px}.cont-head{flex-wrap:wrap}}
+/* ── Responsive: Tablet ── */
+@media(max-width:768px){
+  .topbar{padding:0 12px;gap:8px}
+  .logo{font-size:18px}
+  .main{padding:20px 16px}
+  .page-title{font-size:19px}
+  .camp-head{padding:14px 16px;gap:10px}
+  .camp-logo{width:36px;height:36px;font-size:13px}
+  .camp-name{font-size:14px}
+  .camp-body{padding:0 14px 14px}
+  .cont-head{flex-wrap:wrap;padding:10px 12px;gap:6px}
+  .cont-body{padding:12px}
+  .steps-list{gap:2px}
+  .step-row{padding:6px 8px;font-size:12px;gap:8px}
+  .step-icon{width:20px;height:20px;font-size:10px}
+  .action-box{padding:12px}
+  .link-group{flex-direction:column}
+  .toast-container{right:12px;left:12px}
+  .toast{max-width:100%}
+  .login-card{margin:16px;padding:28px 20px;max-width:100%}
+}
+/* ── Responsive: Small phone ── */
+@media(max-width:480px){
+  .topbar{height:48px}
+  .logo{font-size:16px}
+  .user-chip span:not(.user-avatar){display:none}
+  .role-tag{display:none}
+  .main{padding:12px 10px}
+  .page-title{font-size:17px}
+  .page-sub{font-size:12px;margin-bottom:16px}
+  .camp-head{padding:12px;gap:8px}
+  .camp-logo{width:32px;height:32px;font-size:12px;border-radius:8px}
+  .camp-name{font-size:13px}
+  .camp-marca{font-size:11px}
+  .estado-badge{font-size:10px;padding:2px 8px}
+  .camp-body{padding:0 10px 10px}
+  .brief-section{padding:10px}
+  .brief-file{font-size:11px;padding:4px 10px;margin:0 4px 4px 0}
+  .cont-head{padding:8px 10px}
+  .tipo-badge{font-size:10px;padding:2px 6px}
+  .cont-titulo{font-size:12px}
+  .paso-chip{font-size:9px;padding:2px 6px}
+  .cont-body{padding:10px}
+  .step-actions{flex-direction:column}
+  .step-btn{justify-content:center;padding:6px 12px}
+  .action-btns{flex-direction:column}
+  .action-btns .btn{justify-content:center;width:100%}
+  .btn{padding:10px 16px;font-size:13px}
+  .btn-sm{padding:8px 12px;font-size:12px}
+  .obs-item{padding:8px 10px}
+  .obs-text{font-size:12px}
+  .tl-list{padding:10px 10px 10px 14px}
+  .login-card{padding:24px 16px}
+  .login-input{padding:12px;font-size:15px}
+}
 </style>
 </head>
 <body>

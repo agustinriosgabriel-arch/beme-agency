@@ -50,12 +50,18 @@ input[type=number]{-moz-appearance:textfield;}
 }
 .save-badge.show{opacity:1;}
 
-@media(max-width:680px){
+@media(max-width:768px){
   body{padding-bottom:150px;}
-  .page{margin:0;border-radius:0;padding:18px;}
+  .page{margin:0;border-radius:0;padding:16px;}
   .desktop-view{display:none;}
   .mobile-view{display:block;}
-  #summary-bar{padding:12px 16px;}
+  #summary-bar{padding:12px 16px;gap:12px;}
+  #export-btn{padding:8px 14px;font-size:12px;}
+}
+@media(max-width:480px){
+  .page{padding:12px;}
+  #summary-bar{flex-direction:column;gap:10px;padding:10px 14px;}
+  #export-btn{width:100%;text-align:center;}
 }
 @media print{
   body{background:#fff;padding:0;}

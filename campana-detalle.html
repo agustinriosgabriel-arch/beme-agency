@@ -111,7 +111,7 @@ body.dark .topbar{background:rgba(15,15,15,0.92)}
 .pipe-card-tipo{padding:1px 5px;border-radius:10px;font-size:8px;font-weight:700;background:var(--surface3);color:var(--text-muted);flex-shrink:0}
 .pipe-card-title{font-size:10px;color:var(--text-dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pipeline-board.collapsed,.pipeline-strip.collapsed{display:none}
-@media(max-width:900px){.pipeline-board{grid-template-columns:repeat(3,1fr)}.pipeline-strip{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:900px){.pipeline-board{grid-template-columns:repeat(3,1fr)}.pipeline-strip{grid-template-columns:repeat(3,1fr)}.camp-meta-strip{flex-wrap:wrap;gap:10px}}
 
 /* ── Talento card ── */
 .talento-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
@@ -367,7 +367,77 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
 .loader-fill{height:100%;background:var(--gradient);border-radius:99px;animation:ldr 1.4s ease-in-out infinite}
 @keyframes ldr{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
 
-@media(max-width:860px){.layout{grid-template-columns:1fr}.side-col{display:none}}
+/* ── Responsive: Tablet ── */
+@media(max-width:860px){
+  .layout{grid-template-columns:1fr}
+  .side-col{display:none}
+}
+/* ── Responsive: Mobile ── */
+@media(max-width:768px){
+  .topbar{padding:0 12px;gap:8px}
+  .logo{font-size:17px}
+  .breadcrumb{font-size:12px;gap:4px}
+  .topbar-right{gap:5px}
+  .topbar-right .btn{font-size:11px;padding:6px 10px}
+  .main-col{padding:16px}
+  .camp-header{padding:14px}
+  .camp-title{font-size:17px}
+  .section-title{font-size:10px}
+  .pipeline-board{grid-template-columns:repeat(2,1fr)}
+  .pipeline-strip{grid-template-columns:repeat(2,1fr)}
+  .talento-head{padding:12px 14px;gap:10px}
+  .t-avatar{width:34px;height:34px}
+  .t-name{font-size:13px}
+  .fees-row{grid-template-columns:1fr;gap:6px;padding:10px 14px}
+  .talento-extras{grid-template-columns:1fr;padding:10px 14px}
+  .contenidos-wrap{padding:10px 14px}
+  .cont-head{padding:8px 12px;gap:6px;flex-wrap:wrap}
+  .tipo-badge{font-size:10px}
+  .cont-titulo{font-size:12px}
+  .cont-body{padding:10px}
+  .steps-list{gap:2px}
+  .step-row{padding:5px 8px;font-size:12px}
+  .cont-file-buttons{flex-wrap:wrap;gap:4px}
+  .file-access-btn{font-size:10px;padding:4px 8px}
+  .workflow-action-box{padding:10px}
+  .obs-textarea{font-size:13px;min-height:50px}
+  .link-input{font-size:13px}
+  .form-grid-2{grid-template-columns:1fr}
+  .modal{max-width:calc(100% - 24px);margin:12px}
+  .modal-head{padding:12px 16px}
+  .modal-body{padding:14px 16px}
+  .modal-foot{padding:10px 16px}
+  .form-input{padding:10px 12px;font-size:14px}
+  .brief-notes-list{max-height:200px}
+}
+/* ── Responsive: Small phone ── */
+@media(max-width:480px){
+  .pipeline-board{grid-template-columns:1fr}
+  .pipeline-strip{grid-template-columns:repeat(2,1fr)}
+  .topbar{height:48px}
+  .logo{font-size:15px}
+  .breadcrumb{display:none}
+  .main-col{padding:10px}
+  .camp-header{padding:10px}
+  .camp-title-row{flex-wrap:wrap;gap:10px}
+  .camp-title{font-size:15px}
+  .camp-sub{font-size:12px}
+  .estado-wrap{width:100%}
+  .estado-select{width:100%}
+  .camp-meta-strip{gap:8px;padding-top:10px}
+  .talento-head{padding:10px 12px}
+  .t-avatar{width:30px;height:30px;font-size:11px}
+  .fees-row{padding:8px 12px}
+  .fee-value{font-size:15px}
+  .cont-head{padding:7px 10px}
+  .paso-chip{font-size:9px;padding:2px 6px}
+  .btn-sm{font-size:11px;padding:6px 10px}
+  .btn-xs{font-size:10px;padding:4px 7px}
+  .pipe-card{padding:5px 7px}
+  .pipe-card-name{font-size:10px}
+  .pipe-col-title{font-size:9px}
+  .modal{max-width:calc(100% - 16px);margin:8px}
+}
 </style>
 </head>
 <body>

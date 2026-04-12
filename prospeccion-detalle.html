@@ -233,7 +233,33 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
 
 /* ── Responsive ── */
 @media(max-width:1200px){.kanban-wrap{grid-template-columns:repeat(3,1fr)}.etapa-strip{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:768px){.kanban-wrap{grid-template-columns:1fr}.etapa-strip{grid-template-columns:repeat(2,1fr)}.main{padding:16px}.topbar{padding:0 16px}.tab-nav{padding:0 16px}}
+@media(max-width:768px){
+  .kanban-wrap{grid-template-columns:repeat(2,1fr);gap:8px}
+  .etapa-strip{grid-template-columns:repeat(3,1fr);gap:6px}
+  .main{padding:16px}
+  .topbar{padding:0 12px;gap:8px}
+  .tab-nav{padding:0 12px;gap:2px}
+  .page-header{flex-wrap:wrap;gap:10px}
+  .toolbar{gap:8px}
+  .search-wrap{min-width:0;flex:1 1 100%}
+  .modal{max-width:calc(100% - 24px);margin:12px}
+  .modal-body{padding:16px}
+  .form-input{padding:10px 12px;font-size:14px}
+  .form-grid{grid-template-columns:1fr}
+  .k-card{padding:6px 8px}
+}
+@media(max-width:480px){
+  .kanban-wrap{grid-template-columns:1fr}
+  .etapa-strip{grid-template-columns:repeat(2,1fr)}
+  .main{padding:12px}
+  .topbar{height:48px}
+  .logo{font-size:16px}
+  .tab-nav{display:none}
+  .etapa-stat{padding:8px 10px}
+  .etapa-stat .e-count{font-size:18px}
+  .modal{max-width:calc(100% - 16px);margin:8px}
+  .btn{padding:8px 14px;font-size:12px}
+}
 </style>
 </head>
 <body>

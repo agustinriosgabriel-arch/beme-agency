@@ -941,12 +941,43 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
 .updating{animation:pulse 1s infinite;}
 
 /* ====== RESPONSIVE ====== */
+@media(max-width:900px){
+  .sidebar{width:220px;}
+  .talent-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));}
+  .roster-talent-grid{grid-template-columns:repeat(2,1fr);}
+}
 @media(max-width:768px){
   .sidebar{display:none;}
   .form-grid{grid-template-columns:1fr;}
   .roster-talent-grid{grid-template-columns:repeat(2,1fr);}
   .topbar-stats{display:none;}
   .main{padding:16px;}
+  .topbar{padding:0 12px;gap:8px;}
+  .logo{font-size:19px;}
+  .nav-tabs{display:none;}
+  .talent-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;}
+  .modal{max-width:calc(100% - 24px);margin:12px;}
+  .modal-xl{max-width:calc(100% - 24px);}
+  .modal-header{padding:14px 16px;}
+  .modal-body{padding:16px;}
+  .modal-footer{padding:12px 16px;}
+  .form-input{padding:10px 12px;font-size:14px;}
+  .page-header{flex-wrap:wrap;gap:10px;}
+  .page-title{font-size:20px;}
+  .chips-wrap{flex-wrap:wrap;}
+}
+@media(max-width:480px){
+  .topbar{height:48px;}
+  .logo{font-size:16px;}
+  .user-chip span:not(.avatar){display:none;}
+  .main{padding:12px;}
+  .page-title{font-size:18px;}
+  .talent-grid{grid-template-columns:1fr;gap:10px;}
+  .talent-card{padding:14px;}
+  .roster-talent-grid{grid-template-columns:1fr;}
+  .modal{max-width:calc(100% - 16px);margin:8px;}
+  .btn{padding:8px 14px;font-size:12px;}
+  .btn-sm{padding:6px 10px;font-size:11px;}
 }
 
 /* ====== SCROLLBAR ====== */

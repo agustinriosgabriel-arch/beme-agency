@@ -89,14 +89,19 @@ tr:nth-child(even){background:#faf9fc;}
 .mob-net{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f5f5f5;font-size:13px;}
 .mob-net:last-child{border-bottom:none;}
 
-@media(max-width:680px){
-  .page{margin:0;border-radius:0;padding:18px;}
+@media(max-width:768px){
+  .page{margin:0;border-radius:0;padding:16px;}
   .desktop-view{display:none;}
   .mobile-view{display:block;}
-  .filters-bar{flex-direction:column;}
-  .filter-select,.filter-input{width:100%;min-width:auto;}
+  .filters-bar{flex-direction:column;gap:8px;}
+  .filter-select,.filter-input{width:100%;min-width:auto;font-size:14px;padding:10px 12px;}
   .filter-seg-group{width:100%;}
   .filter-seg-input{flex:1;}
+}
+@media(max-width:480px){
+  .page{padding:12px;}
+  .mob-card{padding:12px;}
+  .mob-card-name{font-size:14px;}
 }
 @media print{
   body{background:#fff;padding:0;}
