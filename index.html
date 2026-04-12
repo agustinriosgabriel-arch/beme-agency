@@ -1008,8 +1008,10 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   .view-toggle{display:none;}
   /* Fix horizontal overflow — clip not hidden to preserve scroll */
   html,body{overflow-x:clip;}
-  /* Sticky toolbar */
-  .main-header{position:sticky;top:62px;z-index:98;background:var(--bg);padding:12px 0 10px;margin:-12px 0 0;border-bottom:1px solid var(--border);}
+  /* Title scrolls, actions bar sticks */
+  .main-header{position:relative;flex-direction:column;align-items:stretch;gap:0;margin-bottom:0;}
+  .main-header > div:first-child{padding:0 0 10px;}
+  .main-actions{position:sticky;top:62px;z-index:98;background:var(--bg);padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:12px;}
   .topbar-search{max-width:none;min-width:0;}
   /* Roster headers */
   .roster-manager-header{flex-wrap:wrap;gap:8px;}
@@ -1030,7 +1032,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
 }
 @media(max-width:480px){
   .topbar{height:48px;}
-  .main-header{top:48px;}
+  .main-actions{top:48px;}
   .logo{font-size:16px;}
   .main{padding:12px 12px 76px;}
   .page-title{font-size:18px;}
