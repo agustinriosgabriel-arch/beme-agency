@@ -186,11 +186,22 @@ exports.handler = async (event) => {
       timeZone: 'America/Mexico_City'
     });
 
-    // Fetch all non-cancelled campaigns with talentos and contenidos
+    // Purge campaigns in trash for 30+ days
+    try {
+      const purgeUrl = `${SUPABASE_URL}/rest/v1/rpc/purge_deleted_campanas`;
+      await fetch(purgeUrl, {
+        method: 'POST', headers: {
+          'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json'
+        }, body: '{}'
+      });
+    } catch(e) { console.log('Purge skipped:', e.message); }
+
+    // Fetch all non-cancelled, non-deleted campaigns
     const campaigns = await supabaseQuery(
       'campanas',
       '*, marcas(nombre,clientes(nombre)), campana_talentos(*, talentos(nombre), contenidos(*))',
-      { 'estado': 'neq.cancelada', 'order': 'created_at.desc' }
+      { 'estado': 'neq.cancelada', 'deleted_at': 'is.null', 'order': 'created_at.desc' }
     );
 
     if (!campaigns.length) {

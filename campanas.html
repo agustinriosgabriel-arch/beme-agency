@@ -484,6 +484,10 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
         <option value="">Todas las marcas</option>
       </select>
       <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost btn-sm" id="btn-trash" onclick="toggleTrash()" style="display:none" title="Papelera">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span id="trash-label">Papelera</span>
+        </button>
         <div class="view-toggle">
           <button class="view-btn active" id="vbtn-grid" onclick="setView('grid')" title="Grid">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
@@ -911,6 +915,7 @@ async function initApp() {
       document.getElementById('btn-nueva').style.display = 'inline-flex';
       document.getElementById('btn-clientes').style.display = 'inline-flex';
       document.getElementById('btn-usuarios').style.display = 'inline-flex';
+      document.getElementById('btn-trash').style.display = 'inline-flex';
     } else if (isInternal()) {
       document.getElementById('btn-nueva').style.display = 'inline-flex';
     }
@@ -969,9 +974,11 @@ async function loadTalentosBD() {
   talentosList = data || [];
 }
 
+let showTrash = false;
+
 async function loadCampanas() {
   let query = sb.from('campanas').select(`
-    id,nombre,estado,fecha_inicio,fecha_fin,created_at,
+    id,nombre,estado,fecha_inicio,fecha_fin,created_at,deleted_at,
     marcas(id,nombre,logo_url,clientes(nombre)),
     campana_managers(user_id),
     campana_handlers(user_id),
@@ -981,6 +988,12 @@ async function loadCampanas() {
       contenidos(id,paso_actual,tipo)
     )
   `).order('created_at', {ascending:false}).limit(50);
+
+  if (showTrash) {
+    query = query.not('deleted_at', 'is', null);
+  } else {
+    query = query.is('deleted_at', null);
+  }
 
   const {data, error} = await query;
   if (error) throw error;
@@ -1018,6 +1031,41 @@ function getFilteredCampanas() {
     }
     return true;
   });
+}
+
+async function toggleTrash() {
+  showTrash = !showTrash;
+  const lbl = document.getElementById('trash-label');
+  const btn = document.getElementById('btn-trash');
+  if (showTrash) {
+    lbl.textContent = 'Ver campañas';
+    btn.style.color = 'var(--red)';
+  } else {
+    lbl.textContent = 'Papelera';
+    btn.style.color = '';
+  }
+  await loadCampanas();
+  renderCampanas();
+}
+
+async function restoreCampana(id, e) {
+  e.stopPropagation();
+  if (!confirm('¿Restaurar esta campaña?')) return;
+  const {error} = await sb.from('campanas').update({deleted_at: null}).eq('id', id);
+  if (error) { toast('Error: '+error.message,'err'); return; }
+  await loadCampanas();
+  renderCampanas();
+  toast('Campaña restaurada','ok');
+}
+
+async function permanentDeleteCampana(id, e) {
+  e.stopPropagation();
+  if (!confirm('¿ELIMINAR PERMANENTEMENTE? Esta acción no se puede deshacer.')) return;
+  const {error} = await sb.from('campanas').delete().eq('id', id);
+  if (error) { toast('Error: '+error.message,'err'); return; }
+  await loadCampanas();
+  renderCampanas();
+  toast('Campaña eliminada permanentemente','inf');
 }
 
 function renderCampanas() {
@@ -1107,7 +1155,10 @@ function renderGrid(container, filtered) {
             return `<div class="manager-chip" title="${escHtml(name)}">${ini}</div>`;
           }).join('')}
         </div>
-        ${isInternal()?`<button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px;margin-left:4px" onclick="event.stopPropagation();editCampana(${c.id})">✎</button>`:''}
+        ${showTrash?`
+          <button class="btn btn-green btn-sm" style="padding:3px 10px;font-size:11px" onclick="restoreCampana(${c.id},event)">Restaurar</button>
+          <button class="btn btn-red btn-sm" style="padding:3px 10px;font-size:11px" onclick="permanentDeleteCampana(${c.id},event)">Eliminar</button>
+        `:isInternal()?`<button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px;margin-left:4px" onclick="event.stopPropagation();editCampana(${c.id})">✎</button>`:''}
       </div>
     </div>`;
   }).join('');
