@@ -115,6 +115,10 @@ async function handlePasoCambio(payload) {
   const pasoLabel = PASO_LABELS[paso_nuevo] || `Paso ${paso_nuevo}`;
   const campanaId = ct.campana_id;
 
+  // Load all user profiles once (for looking up emails by user_id)
+  const allProfiles = await sbQuery('user_profiles', 'id,nombre,email,role');
+  const profileMap = Object.fromEntries(allProfiles.map(p => [p.id, p]));
+
   // Determine who to notify based on the new step
   const recipients = [];
 
@@ -125,39 +129,25 @@ async function handlePasoCambio(payload) {
 
   // Steps where handler/manager need to act (3: approve script, 5: approve content)
   if ([3, 5].includes(paso_nuevo)) {
-    // Get handlers for this campaign
-    const handlers = await sbQuery('campana_handlers',
-      'user_id,user_profiles(email,nombre)',
-      { 'campana_id': `eq.${campanaId}` }
-    );
+    const handlers = await sbQuery('campana_handlers', 'user_id', { 'campana_id': `eq.${campanaId}` });
     handlers.forEach(h => {
-      if (h.user_profiles?.email) {
-        recipients.push({ email: h.user_profiles.email, name: h.user_profiles.nombre, role: 'handler' });
-      }
+      const p = profileMap[h.user_id];
+      if (p?.email) recipients.push({ email: p.email, name: p.nombre, role: 'handler' });
     });
 
-    // Get managers for this campaign
-    const managers = await sbQuery('campana_managers',
-      'user_id,user_profiles(email,nombre)',
-      { 'campana_id': `eq.${campanaId}` }
-    );
+    const managers = await sbQuery('campana_managers', 'user_id', { 'campana_id': `eq.${campanaId}` });
     managers.forEach(m => {
-      if (m.user_profiles?.email) {
-        recipients.push({ email: m.user_profiles.email, name: m.user_profiles.nombre, role: 'manager' });
-      }
+      const p = profileMap[m.user_id];
+      if (p?.email) recipients.push({ email: p.email, name: p.nombre, role: 'manager' });
     });
   }
 
   // Step 8: completed — notify managers
   if (paso_nuevo >= 8) {
-    const managers = await sbQuery('campana_managers',
-      'user_id,user_profiles(email,nombre)',
-      { 'campana_id': `eq.${campanaId}` }
-    );
+    const managers = await sbQuery('campana_managers', 'user_id', { 'campana_id': `eq.${campanaId}` });
     managers.forEach(m => {
-      if (m.user_profiles?.email) {
-        recipients.push({ email: m.user_profiles.email, name: m.user_profiles.nombre, role: 'manager' });
-      }
+      const p = profileMap[m.user_id];
+      if (p?.email) recipients.push({ email: p.email, name: p.nombre, role: 'manager' });
     });
   }
 
