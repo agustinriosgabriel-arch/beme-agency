@@ -951,10 +951,31 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   .form-grid{grid-template-columns:1fr;}
   .roster-talent-grid{grid-template-columns:repeat(2,1fr);}
   .topbar-stats{display:none;}
-  .main{padding:16px;}
+  .main{padding:16px 16px 80px;}
   .topbar{padding:0 12px;gap:8px;}
   .logo{font-size:19px;}
+  .logo-dots{display:none;}
   .nav-tabs{display:none;}
+  /* Tab nav → bottom nav */
+  .tab-nav{
+    position:fixed;bottom:0;left:0;right:0;top:auto;
+    z-index:200;padding:0;gap:0;
+    border-top:1px solid var(--border);border-bottom:none;
+    background:rgba(15,15,15,0.97);backdrop-filter:blur(20px);
+    justify-content:space-around;
+  }
+  .tab-btn{
+    flex-direction:column;gap:2px;padding:8px 4px 6px;
+    font-size:9px;border-bottom:none;margin-bottom:0;
+    border-top:2px solid transparent;flex:1;justify-content:center;
+    text-align:center;
+  }
+  .tab-btn.active{border-bottom:none;border-top-color:var(--primary);}
+  .tab-badge{font-size:9px;padding:0 5px;}
+  /* Action buttons → icon only */
+  .topbar .btn{font-size:0;padding:9px;line-height:0;gap:0;}
+  .topbar .btn svg{width:16px;height:16px;}
+  .topbar .theme-toggle{width:36px;height:36px;}
   .talent-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;}
   .modal{max-width:calc(100% - 24px);margin:12px;}
   .modal-xl{max-width:calc(100% - 24px);}
@@ -969,15 +990,14 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
 @media(max-width:480px){
   .topbar{height:48px;}
   .logo{font-size:16px;}
-  .user-chip span:not(.avatar){display:none;}
-  .main{padding:12px;}
+  .main{padding:12px 12px 76px;}
   .page-title{font-size:18px;}
   .talent-grid{grid-template-columns:1fr;gap:10px;}
   .talent-card{padding:14px;}
   .roster-talent-grid{grid-template-columns:1fr;}
   .modal{max-width:calc(100% - 16px);margin:8px;}
-  .btn{padding:8px 14px;font-size:12px;}
-  .btn-sm{padding:6px 10px;font-size:11px;}
+  .tab-btn{padding:6px 2px 5px;font-size:8px;}
+  .tab-btn svg{width:12px;height:12px;}
 }
 
 /* ====== SCROLLBAR ====== */
