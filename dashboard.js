@@ -261,7 +261,7 @@ async function loadFromSupabase() {
     const [configResult, talentResult, rosterResult] = await Promise.all([
       sb.from('app_config').select('key,value'),
       loadTalentosWithRetry(TALENT_COLS),
-      sb.from('rosters').select('id,nombre,talentos,created_at,updated_at').order('created_at', {ascending:false})
+      sb.from('rosters').select('*').order('created_at', {ascending:false})
     ]);
 
     // Process config
@@ -426,7 +426,7 @@ function setupRealtimeSubscription() {
       } else if (payload.eventType === 'UPDATE') {
         const r = payload.new;
         if (!r || !r.id) {
-          sb.from('rosters').select('id,nombre,talentos,created_at,updated_at').order('created_at', {ascending:false}).then(({ data }) => {
+          sb.from('rosters').select('*').order('created_at', {ascending:false}).then(({ data }) => {
             if (data) { rosters = data.map(x => ({...x, talentIds:x.talent_ids||[], platforms:x.platforms||{tt:true,ig:true,yt:true}})); renderRosters(); updateStats(); }
           });
         } else {

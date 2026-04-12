@@ -297,10 +297,9 @@ async function initApp() {
 async function loadCampaigns() {
   // Get all campana_talentos for this talent
   const {data: cts, error} = await sb.from('campana_talentos').select(`
-    id,talent_id,fee_talento,moneda,pago_estado,created_at,
+    *,
     talentos(id,nombre,foto),
-    contenidos(id,tipo,titulo,fecha_publicacion,paso_actual,copy_texto,url_publicacion,url_publicacion_2,
-      script_requerido,estadisticas_requeridas,campana_talento_id,created_at,
+    contenidos(*,
       contenido_observaciones(id,observacion,autor_nombre,created_at),
       contenido_scripts(id,url_archivo,version,created_at),
       contenido_borradores(id,url_archivo,nombre_archivo,version,created_at),
