@@ -99,18 +99,27 @@ async function handlePasoCambio(payload) {
   const { contenido_id, paso_nuevo, paso_anterior, autor_nombre } = payload;
   if (!contenido_id || !paso_nuevo) return { sent: 0, reason: 'missing params' };
 
-  // Get contenido + campaign info
-  const contenidos = await sbQuery('contenidos',
-    'id,tipo,titulo,paso_actual,campana_talento_id,campana_talentos(id,talent_id,campana_id,talentos(nombre,email),campanas(id,nombre))',
-    { 'id': `eq.${contenido_id}` }
-  );
+  // Step 1: Get the contenido
+  const contenidos = await sbQuery('contenidos', 'id,tipo,titulo,paso_actual,campana_talento_id', { 'id': `eq.${contenido_id}` });
   const cont = contenidos[0];
-  if (!cont || !cont.campana_talentos) return { sent: 0, reason: 'contenido not found' };
+  if (!cont) return { sent: 0, reason: 'contenido not found' };
 
-  const ct = cont.campana_talentos;
-  const campanaName = ct.campanas?.nombre || 'Campaña';
-  const talentoName = ct.talentos?.nombre || 'Talento';
-  const talentoEmail = ct.talentos?.email || '';
+  // Step 2: Get campana_talento
+  const cts = await sbQuery('campana_talentos', 'id,talent_id,campana_id', { 'id': `eq.${cont.campana_talento_id}` });
+  const ct = cts[0];
+  if (!ct) return { sent: 0, reason: 'campana_talento not found' };
+
+  // Step 3: Get talento info
+  const talentos = await sbQuery('talentos', 'id,nombre,email', { 'id': `eq.${ct.talent_id}` });
+  const talento = talentos[0] || {};
+
+  // Step 4: Get campana info
+  const campanas = await sbQuery('campanas', 'id,nombre', { 'id': `eq.${ct.campana_id}` });
+  const campana = campanas[0] || {};
+
+  const campanaName = campana.nombre || 'Campaña';
+  const talentoName = talento.nombre || 'Talento';
+  const talentoEmail = talento.email || '';
   const contTitle = cont.titulo || cont.tipo || 'Contenido';
   const pasoLabel = PASO_LABELS[paso_nuevo] || `Paso ${paso_nuevo}`;
   const campanaId = ct.campana_id;
