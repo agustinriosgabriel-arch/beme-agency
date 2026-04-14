@@ -21,6 +21,47 @@ let COUNTRY_FLAGS = {
   "Nicaragua":"🇳🇮","Panamá":"🇵🇦","Paraguay":"🇵🇾","Perú":"🇵🇪",
   "Puerto Rico":"🇵🇷","República Dominicana":"🇩🇴","Uruguay":"🇺🇾","Venezuela":"🇻🇪"
 };
+
+// Normalize country names: match variants (no accents, lowercase, aliases) to canonical name
+const COUNTRY_ALIASES = {};
+(function buildAliases() {
+  // Strip accents helper
+  function strip(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+  // Canonical names from COUNTRY_FLAGS
+  Object.keys(COUNTRY_FLAGS).forEach(function(name) {
+    COUNTRY_ALIASES[strip(name)] = name;
+  });
+  // Common aliases
+  var extras = {
+    'mexico':'México','peru':'Perú','panama':'Panamá','espana':'España','spain':'España',
+    'brasil':'Brasil','brazil':'Brasil','usa':'Estados Unidos','us':'Estados Unidos',
+    'united states':'Estados Unidos','eeuu':'Estados Unidos','dominican republic':'República Dominicana',
+    'rep dominicana':'República Dominicana','rep. dominicana':'República Dominicana',
+    'republica dominicana':'República Dominicana','puerto rico':'Puerto Rico',
+    'costa rica':'Costa Rica','el salvador':'El Salvador',
+    'mx':'México','ar':'Argentina','co':'Colombia','cl':'Chile','pe':'Perú',
+    've':'Venezuela','ec':'Ecuador','bo':'Bolivia','py':'Paraguay','uy':'Uruguay',
+    'gt':'Guatemala','hn':'Honduras','ni':'Nicaragua','sv':'El Salvador',
+    'cr':'Costa Rica','cu':'Cuba','pa':'Panamá','do':'República Dominicana','pr':'Puerto Rico',
+    'br':'Brasil','es':'España',
+  };
+  Object.keys(extras).forEach(function(k) { COUNTRY_ALIASES[k.toLowerCase()] = extras[k]; });
+})();
+
+function normalizeCountry(raw) {
+  if (!raw) return raw;
+  var s = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  // Strip leading flag emojis
+  s = s.replace(/^[\u{1F1E6}-\u{1F1FF}\s]+/gu, '').trim();
+  if (COUNTRY_ALIASES[s]) return COUNTRY_ALIASES[s];
+  // Try exact match with canonical names (case-insensitive)
+  var match = Object.keys(COUNTRY_FLAGS).find(function(name) {
+    return name.toLowerCase() === s;
+  });
+  if (match) return match;
+  // Return original with first letter capitalized
+  return raw.trim().charAt(0).toUpperCase() + raw.trim().slice(1);
+}
 const BASE_CATEGORIES = [
   "Música","Moda","Belleza","Fitness","Gastronomía","Viajes","Gaming",
   "Comedia","Lifestyle","Negocios","Deportes","Arte & Diseño",
@@ -1013,7 +1054,7 @@ async function parseCSV(text) {
     if(ytUrl && existingYT.has(ytUrl.toLowerCase())) { skippedDupe++; continue; }
 
     const paisRaw = row['paises']||row['países']||row['pais']||row['country']||'';
-    const paises = paisRaw.split(';').map(x=>x.trim()).filter(Boolean);
+    const paises = paisRaw.split(';').map(x=>normalizeCountry(x.trim())).filter(Boolean);
     paises.forEach(p => { if(p&&!COUNTRIES.includes(p)) COUNTRIES.push(p); });
 
     const rawCats = (row['categorias']||row['categories']||row['categorías']||'').split(';').map(c=>c.trim()).filter(Boolean);
@@ -2010,7 +2051,7 @@ async function fetchPhotosSelected() {
 async function saveTalent() {
   const nombre = document.getElementById('f-nombre').value.trim();
   if(!nombre) { showToast('El nombre es obligatorio', 'error'); return; }
-  const paises = [...formSelectedPaises].map(function(p){return p.replace(/^[\u{1F1E6}-\u{1FFFF}\s]+/gu,'').trim();}).filter(Boolean);
+  const paises = [...formSelectedPaises].map(function(p){return normalizeCountry(p.replace(/^[\u{1F1E6}-\u{1FFFF}\s]+/gu,'').trim());}).filter(Boolean);
   if(paises.length === 0) { showToast('Selecciona al menos un país', 'error'); return; }
   const cats = Array.from(document.querySelectorAll('.cat-check.selected')).map(el=>el.textContent.trim());
   if(cats.length === 0) { showToast('Selecciona al menos una categoría', 'error'); return; }
