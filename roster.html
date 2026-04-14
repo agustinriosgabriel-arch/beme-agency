@@ -116,7 +116,8 @@ let SELS = {}; // talent_id → {selected, accion, precio, contraoferta}
 let LINK_ID = 0; // 0 = legacy direct token, >0 = roster_links.id
 let CLIENT_NAME = '';
 var COMPACT_MODE = new URLSearchParams(window.location.search).get('compact') === '1';
-let rosterViewMode = 'cards'; // table | cards
+let rosterViewMode = 'table'; // table | cards
+let rosterSort = 'default'; // default | ig-desc | ig-asc | tt-desc | tt-asc
 let showAI = null; // null = use ROSTER.show_ai_descriptions
 let IS_INTERNAL = false; // admin or campaign_manager
 
@@ -227,6 +228,23 @@ function setRosterView(mode) {
   render();
   restoreSelections();
 }
+function setRosterSort(sort) {
+  rosterSort = sort;
+  render();
+  restoreSelections();
+}
+function applySortToTalents(talents) {
+  if (rosterSort === 'default') return talents;
+  return [...talents].sort(function(a, b) {
+    var aS = a.seguidores || {};
+    var bS = b.seguidores || {};
+    if (rosterSort === 'ig-desc') return (bS.instagram||0) - (aS.instagram||0);
+    if (rosterSort === 'ig-asc') return (aS.instagram||0) - (bS.instagram||0);
+    if (rosterSort === 'tt-desc') return (bS.tiktok||0) - (aS.tiktok||0);
+    if (rosterSort === 'tt-asc') return (aS.tiktok||0) - (bS.tiktok||0);
+    return 0;
+  });
+}
 function toggleAIView(show) {
   showAI = show;
   render();
@@ -269,7 +287,8 @@ function render() {
     ${showPriceComments ? `<th style="${thStyle}">Contraoferta</th>` : ''}
   </tr>`;
 
-  const tableRows = visibleTalents.map((t, i) => {
+  const sortedTalents = applySortToTalents(visibleTalents);
+  const tableRows = sortedTalents.map((t, i) => {
     const av = `<span data-avatar-id="${t.id}" style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:#f0e0e8;color:#b2005d;font-weight:800;font-size:13px;margin-right:8px;flex-shrink:0;overflow:hidden">${t.foto ? `<img src="${t.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : ini(t.nombre)}</span>`;
     const ctries = countries(t).join('<br>');
     const ttCell = !showTT?'':t.tiktok?`<div style="display:flex;align-items:center;gap:4px;">${ttSVG}<a href="${t.tiktok}" target="_blank" style="color:#ff0050;font-size:12px;font-weight:600;">${extractH(t.tiktok)}</a></div><div style="font-size:11px;color:#777;padding-left:15px;">${fmtF(t.seguidores?.tiktok)}</div>`:'<span style="color:#ccc;">—</span>';
@@ -328,7 +347,7 @@ function render() {
   }).join('');
 
   // Mobile cards
-  const mobileCards = visibleTalents.map(t => {
+  const mobileCards = sortedTalents.map(t => {
     const av = `<div data-avatar-id="${t.id}" style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#f0e0e8,#e8d0e0);color:#b2005d;font-weight:800;font-size:18px;display:flex;align-items:center;justify-content:center;border:2px solid rgba(178,0,93,0.2);overflow:hidden;flex-shrink:0">${t.foto ? `<img src="${t.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : ini(t.nombre)}</div>`;
     const ctries = countries(t).join(' · ');
     const nets = [
@@ -413,7 +432,14 @@ function render() {
           ? `<div style="margin-top:8px;font-size:11px;padding:4px 10px;background:linear-gradient(135deg,rgba(148,20,224,0.08),rgba(106,13,158,0.08));border:1px solid rgba(148,20,224,0.2);border-radius:10px;color:#9414E0;font-weight:700;">Vista Admin/Manager</div>`
           : ''
         }
-        <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;align-items:center">
+        <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;">
+          <select onchange="setRosterSort(this.value)" style="font-family:inherit;font-size:11px;padding:4px 8px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#555;cursor:pointer;">
+            <option value="default" ${rosterSort==='default'?'selected':''}>Orden original</option>
+            <option value="ig-desc" ${rosterSort==='ig-desc'?'selected':''}>IG: Mayor → Menor</option>
+            <option value="ig-asc" ${rosterSort==='ig-asc'?'selected':''}>IG: Menor → Mayor</option>
+            <option value="tt-desc" ${rosterSort==='tt-desc'?'selected':''}>TT: Mayor → Menor</option>
+            <option value="tt-asc" ${rosterSort==='tt-asc'?'selected':''}>TT: Menor → Mayor</option>
+          </select>
           ${hasAIDescs ? `<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#888;cursor:pointer"><input type="checkbox" ${aiVisible?'checked':''} onchange="toggleAIView(this.checked)" style="accent-color:#9414E0"> AI</label>` : ''}
           <button onclick="setRosterView('table')" style="width:30px;height:30px;border-radius:6px;border:1px solid ${rosterViewMode==='table'?'#b2005d':'#ddd'};background:${rosterViewMode==='table'?'#fdf4f8':'#fff'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="Tabla">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${rosterViewMode==='table'?'#b2005d':'#888'}" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
