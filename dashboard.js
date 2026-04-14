@@ -257,7 +257,7 @@ async function loadFromSupabase() {
 
     // Load all data in parallel for speed
     // Load WITHOUT foto first (base64 photos are huge, loaded in background after render)
-    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,genero,keywords,valores,updated,telefono';
+    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono';
     const [configResult, talentResult, rosterResult] = await Promise.all([
       sb.from('app_config').select('key,value'),
       loadTalentosWithRetry(TALENT_COLS),
@@ -293,6 +293,8 @@ async function loadFromSupabase() {
       categorias: t.categorias || [],
       seguidores: t.seguidores || {tiktok:0,instagram:0,youtube:0},
       engagement: t.engagement || {},
+      avg_views: t.avg_views || {},
+      social_meta: t.social_meta || {},
       genero: t.genero || '',
       keywords: t.keywords || ''
     }));
@@ -412,13 +414,13 @@ function setupRealtimeSubscription() {
         const t = payload.new;
         if (!t || !t.id) {
           // payload.new is empty — reload only changed columns (skip foto to save IO)
-          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,genero,keywords,valores,updated,telefono';
+          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono';
           sb.from('talentos').select(TALENT_COLS_RT).order('nombre').then(({ data }) => {
-            if (data) { talents = data.map(x => ({...x, paises:x.paises||[], categorias:x.categorias||[], seguidores:x.seguidores||{tiktok:0,instagram:0,youtube:0}, engagement:x.engagement||{}})); renderTalents(); updateStats(); updatePlatformCounts(); }
+            if (data) { talents = data.map(x => ({...x, paises:x.paises||[], categorias:x.categorias||[], seguidores:x.seguidores||{tiktok:0,instagram:0,youtube:0}, engagement:x.engagement||{}, avg_views:x.avg_views||{}, social_meta:x.social_meta||{}})); renderTalents(); updateStats(); updatePlatformCounts(); }
           });
         } else {
           const idx = talents.findIndex(x => x.id === t.id);
-          const mapped = { ...t, paises: t.paises||[], categorias: t.categorias||[], seguidores: t.seguidores||{tiktok:0,instagram:0,youtube:0}, engagement: t.engagement||{} };
+          const mapped = { ...t, paises: t.paises||[], categorias: t.categorias||[], seguidores: t.seguidores||{tiktok:0,instagram:0,youtube:0}, engagement: t.engagement||{}, avg_views: t.avg_views||{}, social_meta: t.social_meta||{} };
           if (idx >= 0) { talents[idx] = { ...talents[idx], ...mapped }; }
           else { talents.push(mapped); }
           renderTalents(); updateStats(); updatePlatformCounts();
@@ -1565,12 +1567,16 @@ function renderCard(t) {
     t.instagram ? `<div class="network-row"><div class="network-icon ig"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg></div><a class="network-link" href="${safeUrl(t.instagram)}" target="_blank" onclick="event.stopPropagation()">${escapeHtml(extractHandle(t.instagram))}</a><span class="network-followers">${formatFollowers(t.seguidores.instagram)}</span></div>` : '',
     t.youtube ? `<div class="network-row"><div class="network-icon yt"><svg width="11" height="11" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg></div><a class="network-link" href="${safeUrl(t.youtube)}" target="_blank" onclick="event.stopPropagation()">${escapeHtml(extractHandle(t.youtube))}</a><span class="network-followers">${formatFollowers(t.seguidores.youtube)}</span></div>` : '',
   ].filter(Boolean).join('');
-  const engBadges = [];
+  const metricBadges = [];
   if (t.engagement) {
-    if (t.engagement.tiktok != null) engBadges.push(`<span class="eng-badge eng-tt" title="Engagement TikTok">${t.engagement.tiktok}%</span>`);
-    if (t.engagement.instagram != null) engBadges.push(`<span class="eng-badge eng-ig" title="Engagement Instagram">${t.engagement.instagram}%</span>`);
+    if (t.engagement.tiktok != null) metricBadges.push(`<span class="eng-badge eng-tt" title="Engagement TikTok"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>${t.engagement.tiktok}%</span>`);
+    if (t.engagement.instagram != null) metricBadges.push(`<span class="eng-badge eng-ig" title="Engagement Instagram"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>${t.engagement.instagram}%</span>`);
   }
-  const engRow = engBadges.length ? `<div class="card-engagement">${engBadges.join('')}</div>` : '';
+  if (t.avg_views) {
+    if (t.avg_views.tiktok) metricBadges.push(`<span class="eng-badge views-tt" title="Avg views TikTok"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>${formatFollowers(t.avg_views.tiktok)}</span>`);
+    if (t.avg_views.instagram) metricBadges.push(`<span class="eng-badge views-ig" title="Avg views Instagram"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>${formatFollowers(t.avg_views.instagram)}</span>`);
+  }
+  const engRow = metricBadges.length ? `<div class="card-engagement">${metricBadges.join('')}</div>` : '';
   const genderBadge = t.genero ? `<span class="cat-tag" style="background:rgba(148,20,224,0.08);color:#9414E0;border-color:rgba(148,20,224,0.2);">${escapeHtml(t.genero)}</span>` : '';
   const cats = t.categorias.slice(0,3).map(c=>`<span class="cat-tag">${escapeHtml(c)}</span>`).join('');
   return `<div class="talent-card${sel?' selected':''}" id="card-${t.id}" data-action="edit" data-id="${t.id}">
@@ -2506,11 +2512,12 @@ async function updateAllFollowers(talentsOverride) {
 // ===================== EXPORT CSV =====================
 function exportCSV(list) {
   const data = list || talents;
-  const headers = ['ID','Nombre','Países','Ciudad','TikTok','Instagram','YouTube','Seguidores TikTok','Seguidores Instagram','Seguidores YouTube','Eng. TikTok %','Eng. Instagram %','Categorías','Valores','Teléfono','Email','Género','Keywords'];
+  const headers = ['ID','Nombre','Países','Ciudad','TikTok','Instagram','YouTube','Seguidores TikTok','Seguidores Instagram','Seguidores YouTube','Eng. TikTok %','Eng. Instagram %','Avg Views TikTok','Avg Views Instagram','Categorías','Valores','Teléfono','Email','Género','Keywords'];
   const rows = data.map(t => [
     t.id,t.nombre,(t.paises||[t.pais||'']).filter(Boolean).map(function(p){return p.replace(/^[\u{1F1E6}-\u{1FFFF}\s]+/gu,'').trim();}).filter(Boolean).join(';'),t.ciudad,t.tiktok,t.instagram,t.youtube,
     t.seguidores.tiktok,t.seguidores.instagram,t.seguidores.youtube,
     (t.engagement||{}).tiktok||'',(t.engagement||{}).instagram||'',
+    (t.avg_views||{}).tiktok||'',(t.avg_views||{}).instagram||'',
     t.categorias.join(';'),t.valores,t.telefono,t.email,t.genero||'',t.keywords||''
   ].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
   const csv = '\uFEFF' + [headers.join(','), ...rows].join('\n');
@@ -3937,11 +3944,18 @@ async function fetchEngagement(platform, profileUrl) {
     if (data.error) { console.log('[engagement]', data.error); return null; }
     return {
       engagementRate: data.engagementRate,
+      avgViews: data.avgViews || null,
       followers: data.followers,
       postsAnalyzed: data.postsAnalyzed,
       bio: data.bio || '',
       nickname: data.nickname || '',
+      verified: data.verified || false,
       category: data.category || '',
+      region: data.region || '',
+      instagram_id: data.instagram_id || '',
+      youtube_id: data.youtube_id || '',
+      external_url: data.external_url || '',
+      is_business: data.is_business || false,
     };
   } catch(e) {
     console.warn('[engagement]', username, platform, e.message);
@@ -3949,29 +3963,85 @@ async function fetchEngagement(platform, profileUrl) {
   }
 }
 
+// TikTok region code → country name mapping
+const REGION_TO_COUNTRY = {
+  'AR':'Argentina','BO':'Bolivia','BR':'Brasil','CL':'Chile','CO':'Colombia',
+  'CR':'Costa Rica','CU':'Cuba','EC':'Ecuador','SV':'El Salvador','ES':'España',
+  'US':'Estados Unidos','GT':'Guatemala','HN':'Honduras','MX':'México',
+  'NI':'Nicaragua','PA':'Panamá','PY':'Paraguay','PE':'Perú',
+  'PR':'Puerto Rico','DO':'República Dominicana','UY':'Uruguay','VE':'Venezuela',
+};
+
 async function engagementAndSave(t, platform) {
   var url = platform === 'instagram' ? t.instagram : t.tiktok;
   if (!url) return false;
   try {
     var result = await fetchEngagement(platform, url);
-    if (result && result.engagementRate !== null && result.engagementRate !== undefined) {
-      if (!t.engagement) t.engagement = {};
-      t.engagement[platform] = result.engagementRate;
-      if (result.followers) {
-        t.seguidores[platform] = result.followers;
+    if (!result || (result.engagementRate === null && result.engagementRate === undefined)) return false;
+
+    // ── Core metrics ──
+    if (!t.engagement) t.engagement = {};
+    t.engagement[platform] = result.engagementRate;
+    if (result.followers) t.seguidores[platform] = result.followers;
+
+    // ── Avg views ──
+    if (!t.avg_views) t.avg_views = {};
+    if (result.avgViews) t.avg_views[platform] = result.avgViews;
+
+    // ── Hidden metadata (social_meta) ──
+    if (!t.social_meta) t.social_meta = {};
+    if (!t.social_meta[platform]) t.social_meta[platform] = {};
+    var meta = t.social_meta[platform];
+    if (result.bio) meta.bio = result.bio;
+    if (result.nickname) meta.nickname = result.nickname;
+    if (result.verified !== undefined) meta.verified = result.verified;
+    if (result.category) meta.category = result.category;
+    if (result.region) meta.region = result.region;
+    if (result.external_url) meta.external_url = result.external_url;
+    if (result.is_business !== undefined) meta.is_business = result.is_business;
+    meta.updated = new Date().toISOString().split('T')[0];
+
+    // ── Auto-fill country from TikTok region ──
+    if (platform === 'tiktok' && result.region) {
+      var countryName = REGION_TO_COUNTRY[result.region.toUpperCase()];
+      if (countryName && (!t.paises || t.paises.length === 0)) {
+        t.paises = [countryName];
+        console.log('[engagement] Auto-filled country:', countryName, 'from region:', result.region);
       }
-      if (result.bio && !t.keywords) t.keywords = result.bio;
-      t.updated = new Date().toISOString().split('T')[0];
-      if (sb && currentUser) {
-        await sb.from('talentos').update({
-          seguidores: {...t.seguidores},
-          engagement: {...(t.engagement||{})},
-          keywords: t.keywords || '',
-          updated: t.updated
-        }).eq('id', t.id);
-      }
-      return true;
     }
+
+    // ── Auto-link IG/YT from TikTok connected accounts ──
+    if (platform === 'tiktok') {
+      if (result.instagram_id && !t.instagram) {
+        t.instagram = normalizeSocialUrl(result.instagram_id, 'instagram');
+        console.log('[engagement] Auto-linked Instagram:', t.instagram);
+      }
+      if (result.youtube_id && !t.youtube) {
+        t.youtube = 'https://www.youtube.com/channel/' + result.youtube_id;
+        console.log('[engagement] Auto-linked YouTube:', t.youtube);
+      }
+    }
+
+    t.updated = new Date().toISOString().split('T')[0];
+
+    // ── Save to Supabase ──
+    if (sb && currentUser) {
+      var updateObj = {
+        seguidores: {...t.seguidores},
+        engagement: {...(t.engagement||{})},
+        avg_views: {...(t.avg_views||{})},
+        social_meta: {...(t.social_meta||{})},
+        updated: t.updated
+      };
+      // Include auto-linked fields if changed
+      if (platform === 'tiktok') {
+        if (result.instagram_id && t.instagram) updateObj.instagram = t.instagram;
+        if (result.youtube_id && t.youtube) updateObj.youtube = t.youtube;
+        if (t.paises && t.paises.length > 0) updateObj.paises = t.paises;
+      }
+      await sb.from('talentos').update(updateObj).eq('id', t.id);
+    }
+    return true;
   } catch(e) { console.warn('[engagement]', t.nombre, platform, e.message); }
   return false;
 }

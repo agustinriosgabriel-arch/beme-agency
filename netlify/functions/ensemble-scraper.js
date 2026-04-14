@@ -96,6 +96,14 @@ function calculateEngagement(posts, followers) {
   return Math.round((avg / followers) * 10000) / 100; // 2 decimals
 }
 
+function calculateAvgViews(posts) {
+  if (!posts || posts.length === 0) return null;
+  const withPlays = posts.filter(p => (p.plays || 0) > 0);
+  if (withPlays.length === 0) return null;
+  const total = withPlays.reduce((sum, p) => sum + (p.plays || 0), 0);
+  return Math.round(total / withPlays.length);
+}
+
 // ─── Apify fallback (followers only) ────────────────────────
 async function apifyFallback(platform, username, apifyToken) {
   if (!apifyToken) return null;
@@ -190,16 +198,26 @@ exports.handler = async (event) => {
 
       const followers = info?.followers ?? null;
       const engagementRate = calculateEngagement(posts, followers);
+      const avgViews = calculateAvgViews(posts);
       const postsAnalyzed = posts?.length ?? 0;
 
-      console.log(`[scraper] engagement ${platform} @${clean} → ${engagementRate}% (${postsAnalyzed} posts)`);
+      console.log(`[scraper] engagement ${platform} @${clean} → ${engagementRate}% avgViews:${avgViews} (${postsAnalyzed} posts)`);
 
       return { statusCode: 200, headers, body: JSON.stringify({
         platform, username: clean, action: 'engagement',
-        followers, engagementRate, postsAnalyzed,
+        followers, engagementRate, avgViews, postsAnalyzed,
+        // Profile metadata
         bio: info?.bio || '',
         nickname: info?.nickname || '',
+        verified: info?.verified || false,
         category: info?.category || '',
+        // TikTok-specific
+        region: info?.region || '',
+        instagram_id: info?.instagram_id || '',
+        youtube_id: info?.youtube_id || '',
+        // Instagram-specific
+        external_url: info?.external_url || '',
+        is_business: info?.is_business || false,
         source: 'ensemble',
       }) };
     } catch (e) {
