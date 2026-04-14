@@ -12,9 +12,10 @@ const APIFY_ACTORS = {
 
 // ─── EnsembleData: user info ────────────────────────────────
 async function ensembleUserInfo(platform, username, token) {
+  // IG needs detailed-info to get followers/bio/category (user/info only returns basic data)
   const endpoint = platform === 'tiktok'
     ? `/tt/user/info?username=${encodeURIComponent(username)}&token=${token}`
-    : `/instagram/user/info?username=${encodeURIComponent(username)}&token=${token}`;
+    : `/instagram/user/detailed-info?username=${encodeURIComponent(username)}&token=${token}`;
 
   const resp = await fetch(ENSEMBLE_BASE + endpoint);
   if (!resp.ok) {
@@ -264,33 +265,6 @@ exports.handler = async (event) => {
 
   const clean = username.replace(/^@/, '');
   console.log(`[scraper] ${action} ${platform} @${clean}`);
-
-  // ── ACTION: debug (temporary — returns raw API response) ──
-  if (action === 'debug') {
-    if (!ensembleToken)
-      return { statusCode: 200, headers, body: JSON.stringify({ error: 'Need ensemble token' }) };
-    // Try multiple IG endpoints to find followers
-    if (platform === 'instagram') {
-      const endpoints = [
-        `/instagram/user/info?username=${encodeURIComponent(clean)}&token=${ensembleToken}`,
-        `/instagram/user/detailed-info?username=${encodeURIComponent(clean)}&token=${ensembleToken}`,
-        `/instagram/user/basic-info?username=${encodeURIComponent(clean)}&token=${ensembleToken}`,
-      ];
-      const results = {};
-      for (const ep of endpoints) {
-        try {
-          const r = await fetch(ENSEMBLE_BASE + ep);
-          const j = await r.json();
-          results[ep.split('?')[0]] = { status: r.status, keys: Object.keys(j.data || j).slice(0, 25), sample: JSON.stringify(j).substring(0, 800) };
-        } catch(e) { results[ep.split('?')[0]] = { error: e.message }; }
-      }
-      return { statusCode: 200, headers, body: JSON.stringify(results) };
-    }
-    const endpoint = `/tt/user/info?username=${encodeURIComponent(clean)}&token=${ensembleToken}`;
-    const resp = await fetch(ENSEMBLE_BASE + endpoint);
-    const raw = await resp.json();
-    return { statusCode: 200, headers, body: JSON.stringify({ status: resp.status, raw: JSON.stringify(raw).substring(0, 2000) }) };
-  }
 
   // ── ACTION: posts_only (engagement without re-fetching user info) ──
   // Saves 1 unit TT / 3 units IG when followers are already fresh
