@@ -265,6 +265,18 @@ exports.handler = async (event) => {
   const clean = username.replace(/^@/, '');
   console.log(`[scraper] ${action} ${platform} @${clean}`);
 
+  // ── ACTION: debug (temporary — returns raw API response) ──
+  if (action === 'debug') {
+    if (!ensembleToken)
+      return { statusCode: 200, headers, body: JSON.stringify({ error: 'Need ensemble token' }) };
+    const endpoint = platform === 'tiktok'
+      ? `/tt/user/info?username=${encodeURIComponent(clean)}&token=${ensembleToken}`
+      : `/instagram/user/info?username=${encodeURIComponent(clean)}&token=${ensembleToken}`;
+    const resp = await fetch(ENSEMBLE_BASE + endpoint);
+    const raw = await resp.json();
+    return { statusCode: 200, headers, body: JSON.stringify({ status: resp.status, raw }) };
+  }
+
   // ── ACTION: posts_only (engagement without re-fetching user info) ──
   // Saves 1 unit TT / 3 units IG when followers are already fresh
   if (action === 'posts_only') {
