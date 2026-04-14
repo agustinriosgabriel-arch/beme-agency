@@ -746,7 +746,7 @@ async function loadProspecciones() {
     if (!contactosCounts[c.prospeccion_id]) contactosCounts[c.prospeccion_id] = {total:0, interesados:0};
     contactosCounts[c.prospeccion_id].total++;
     if (c.etapa === 'interesado') contactosCounts[c.prospeccion_id].interesados++;
-    if (c.etapa === 'no_interesado' || c.etapa === 'descartado') {
+    if (c.etapa === 'no_interesado') {
       var prosp = prospecciones.find(function(p){return p.id===c.prospeccion_id;});
       c._prospeccion_nombre = prosp ? (prosp.marca || prosp.nombre || '') : '';
       noInteresadosGlobal.push(c);
@@ -889,7 +889,7 @@ function renderNoInteresados() {
         '<td style="padding:8px 10px;font-weight:600;">' + esc(c.nombre) + (isGrad ? ' <span style="color:#16a34a;font-size:10px;">✓ Talento</span>' : '') + '</td>' +
         '<td style="padding:8px 10px;color:var(--text-muted);">' + (handle ? esc(handle) : '—') + (segs ? '<br><span style="font-size:10px;">'+segs+'</span>' : '') + '</td>' +
         '<td style="padding:8px 10px;color:var(--text-muted);">' + esc(c._prospeccion_nombre || '') + '</td>' +
-        '<td style="padding:8px 10px;"><span style="font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(120,120,120,0.1);color:#888;">' + (c.etapa==='no_interesado'?'No interesado':'Descartado') + '</span></td>' +
+        '<td style="padding:8px 10px;"><span style="font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(120,120,120,0.1);color:#888;">No interesado</span></td>' +
         '<td style="padding:8px 10px;text-align:center;white-space:nowrap;">' +
           '<button onclick="niRestore('+c.id+')" style="border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:4px 8px;font-size:10px;cursor:pointer;font-family:inherit;color:var(--text-muted);" title="Restaurar a evaluación">Restaurar</button> ' +
           (!isGrad ? '<button onclick="niGraduate('+c.id+')" style="border:1px solid rgba(22,163,74,0.3);background:rgba(22,163,74,0.05);border-radius:6px;padding:4px 8px;font-size:10px;cursor:pointer;font-family:inherit;color:#16a34a;font-weight:600;" title="Pasar a Talentos">→ Talento</button>' : '') +
