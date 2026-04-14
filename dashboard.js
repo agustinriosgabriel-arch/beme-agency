@@ -2623,14 +2623,19 @@ function renderRosterCard(r, isArchived) {
 
   const brandEditCount = rosterBrandEdits[r.id] || 0;
   card.style.cursor = 'pointer';
-  card.onclick = function(e) { if (!e.target.closest('.roster-actions') && !e.target.closest('button')) viewRoster(r.id); };
+  card.onclick = function(e) {
+    if (e.target.closest('.roster-btn')) return; // let buttons handle themselves
+    viewRoster(r.id);
+  };
+  var rid = r.id;
+  var linkCount = rosterLinks.filter(function(l){return l.roster_id===rid;}).length;
   card.innerHTML = '\
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">\
-        <div class="roster-name" style="flex:1;min-width:0;cursor:pointer" onclick="viewRoster('+r.id+')">'+escapeHtml(r.name)+'</div>\
+        <div class="roster-name" style="flex:1;min-width:0;">'+escapeHtml(r.name)+'</div>\
         '+(brandEditCount ? '<span style="background:linear-gradient(135deg,#b2005d,#9414E0);color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px;white-space:nowrap" title="'+brandEditCount+' cambios de la marca">'+brandEditCount+' nuevo'+(brandEditCount!==1?'s':'')+'</span>' : '')+'\
-        <button class="btn btn-outline btn-sm" data-action="edit-roster" data-id="'+r.id+'" title="Editar nombre" style="padding:3px 7px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>\
-        <button class="btn btn-outline btn-sm" data-action="duplicate-roster" data-id="'+r.id+'" title="Duplicar" style="padding:3px 7px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>\
-        '+archiveBtn.replace('btn-outline btn-sm"', 'btn-outline btn-sm" style="padding:3px 7px;"')+'\
+        <button class="btn btn-outline btn-sm roster-btn" onclick="openCreateRosterModal('+rid+')" title="Editar nombre" style="padding:3px 7px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>\
+        <button class="btn btn-outline btn-sm roster-btn" onclick="duplicateRoster('+rid+')" title="Duplicar" style="padding:3px 7px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>\
+        <button class="btn btn-outline btn-sm roster-btn" onclick="'+(isArchived?'unarchiveRoster':'archiveRoster')+'('+rid+')" title="'+(isArchived?'Desarchivar':'Archivar')+'" style="padding:3px 7px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></button>\
       </div>\
       '+(r.description ? '<div class="roster-desc">'+escapeHtml(r.description)+'</div>' : '')+'\
       <div class="roster-meta">\
@@ -2642,13 +2647,13 @@ function renderRosterCard(r, isArchived) {
       </div>\
       '+(rosterTalents.length > 0 ? '<div style="display:flex;margin-left:6px;margin-bottom:10px">'+avatarsPrev+(rosterTalents.length>3?'<div style="width:24px;height:24px;border-radius:50%;background:var(--surface2);border:2px solid var(--surface);display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);margin-left:-6px">+'+(rosterTalents.length-3)+'</div>':'')+'</div>' : '')+'\
       <div class="roster-actions" style="flex-wrap:wrap">\
-        '+(brandEditCount ? '<button class="btn btn-outline btn-sm" data-action="clear-brand-edits" data-id="'+r.id+'" title="Marcar leido" style="color:#b2005d;border-color:rgba(178,0,93,0.4);font-size:10px">✓ Leido</button>' : '')+'\
-        <button class="btn btn-outline btn-sm" data-action="ai-descs-roster" data-id="'+r.id+'" title="Generar descripciones AI" style="color:#9414E0;border-color:rgba(148,20,224,0.4);font-weight:700;">AI</button>\
-        <button class="btn btn-outline btn-sm" data-action="manage-links" data-id="'+r.id+'" title="Links por cliente" style="color:#0ea5e9;border-color:rgba(14,165,233,0.4);font-weight:600;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> '+(rosterLinks.filter(function(l){return l.roster_id===r.id;}).length || '')+'</button>\
-        <button class="btn btn-outline btn-sm" data-action="copy-url" data-id="'+r.id+'" title="Copiar URL directa" style="color:#b2005d;border-color:rgba(178,0,93,0.4);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>\
-        <button class="btn btn-outline btn-sm" data-action="copy-url-compact" data-id="'+r.id+'" title="URL compacta (solo ver)" style="color:#4c6ef5;border-color:rgba(76,110,245,0.4);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3H5a2 2 0 0 0-2 2v11"/><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M10 12h9"/><path d="M10 16h5"/></svg></button>\
-        <button class="btn btn-outline btn-sm" data-action="manage-roster" data-id="'+r.id+'" title="Editar talentos"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>\
-        <button class="btn btn-danger btn-sm" data-action="delete-roster" data-id="'+r.id+'" title="Eliminar"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>\
+        '+(brandEditCount ? '<button class="btn btn-outline btn-sm roster-btn" onclick="clearRosterBrandEdits('+rid+')" title="Marcar leido" style="color:#b2005d;border-color:rgba(178,0,93,0.4);font-size:10px">✓ Leido</button>' : '')+'\
+        <button class="btn btn-outline btn-sm roster-btn" onclick="openAIDescsModal('+rid+')" title="Generar descripciones AI" style="color:#9414E0;border-color:rgba(148,20,224,0.4);font-weight:700;">AI</button>\
+        <button class="btn btn-outline btn-sm roster-btn" onclick="openManageLinksModal('+rid+')" title="Links por cliente" style="color:#0ea5e9;border-color:rgba(14,165,233,0.4);font-weight:600;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> '+(linkCount || '')+'</button>\
+        <button class="btn btn-outline btn-sm roster-btn" onclick="copyRosterUrl('+rid+')" title="Copiar URL directa" style="color:#b2005d;border-color:rgba(178,0,93,0.4);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>\
+        <button class="btn btn-outline btn-sm roster-btn" onclick="copyCompactRosterUrl('+rid+')" title="URL compacta (solo ver)" style="color:#4c6ef5;border-color:rgba(76,110,245,0.4);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3H5a2 2 0 0 0-2 2v11"/><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M10 12h9"/><path d="M10 16h5"/></svg></button>\
+        <button class="btn btn-outline btn-sm roster-btn" onclick="openManageTalentsForRoster('+rid+')" title="Editar talentos"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>\
+        <button class="btn btn-danger btn-sm roster-btn" onclick="if(confirm(\'Eliminar roster?\'))deleteRoster('+rid+')" title="Eliminar"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>\
       </div>';
   return card;
 }
