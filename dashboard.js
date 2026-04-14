@@ -2727,13 +2727,14 @@ async function toggleLinkMode(linkId) {
   showToast(link.client_name + ': ' + (link.compact ? 'Solo ver' : 'Con cotizaciones'), 'success');
 }
 
+function slugify(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'-').toLowerCase();
+}
 function copyLinkUrl(token) {
   var link = rosterLinks.find(function(l) { return l.token === token; });
   var roster = link ? rosters.find(function(r) { return r.id === link.roster_id; }) : null;
-  var params = 'link=' + token;
-  if (roster) params += '&r=' + encodeURIComponent(roster.name);
-  if (link && link.client_name) params += '&c=' + encodeURIComponent(link.client_name);
-  var url = 'https://bemeagency.netlify.app/roster.html?' + params;
+  var parts = [roster ? slugify(roster.name) : '', link && link.client_name ? slugify(link.client_name) : ''].filter(Boolean).join('--');
+  var url = 'https://bemeagency.netlify.app/roster.html?link=' + token + (parts ? '&n=' + parts : '');
   copyTextWithToast(url, 'URL copiada para el cliente');
 }
 
