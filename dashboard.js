@@ -2728,7 +2728,12 @@ async function toggleLinkMode(linkId) {
 }
 
 function copyLinkUrl(token) {
-  var url = 'https://bemeagency.netlify.app/roster.html?link=' + token;
+  var link = rosterLinks.find(function(l) { return l.token === token; });
+  var roster = link ? rosters.find(function(r) { return r.id === link.roster_id; }) : null;
+  var params = 'link=' + token;
+  if (roster) params += '&r=' + encodeURIComponent(roster.name);
+  if (link && link.client_name) params += '&c=' + encodeURIComponent(link.client_name);
+  var url = 'https://bemeagency.netlify.app/roster.html?' + params;
   copyTextWithToast(url, 'URL copiada para el cliente');
 }
 
