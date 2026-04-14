@@ -39,7 +39,7 @@ exports.handler = async (event) => {
     };
   }
 
-  const { profileUrl, platform } = normalized;
+  const { profileUrl, platform, username } = normalized;
 
   try {
     let photoUrl = null;
@@ -48,6 +48,32 @@ exports.handler = async (event) => {
       photoUrl = await extractTikTokPhoto(profileUrl);
     } else {
       photoUrl = await extractInstagramPhoto(profileUrl);
+    }
+
+    // Fallback: use EnsembleData API if HTML scraping failed
+    if (!photoUrl && username) {
+      const ensembleToken = process.env.ENSEMBLE_TOKEN;
+      if (ensembleToken) {
+        try {
+          const endpoint = platform === 'tiktok'
+            ? `https://ensembledata.com/apis/tt/user/info?username=${encodeURIComponent(username)}&token=${ensembleToken}`
+            : `https://ensembledata.com/apis/instagram/user/info?username=${encodeURIComponent(username)}&token=${ensembleToken}`;
+          const apiResp = await fetch(endpoint);
+          if (apiResp.ok) {
+            const json = await apiResp.json();
+            const d = json.data || json;
+            if (platform === 'tiktok') {
+              const user = d.user || d.userInfo?.user || d;
+              photoUrl = user.avatarLarger || user.avatarMedium || user.avatarThumb || user.avatar_larger?.url_list?.[0] || null;
+            } else {
+              photoUrl = d.profile_pic_url_hd || d.profile_pic_url || d.user?.profile_pic_url_hd || d.user?.profile_pic_url || null;
+            }
+            if (photoUrl) console.log(`[photo] ${platform} @${username} — got photo via EnsembleData`);
+          }
+        } catch (e) {
+          console.log(`[photo] EnsembleData fallback failed:`, e.message);
+        }
+      }
     }
 
     if (!photoUrl) {
@@ -88,22 +114,33 @@ exports.handler = async (event) => {
 
 // ── URL normalization ──────────────────────────────────────────
 function normalizeUrl(input) {
+  // Extract username from URL
+  function extractUser(url, platform) {
+    try {
+      const u = new URL(url.startsWith('http') ? url : 'https://' + url);
+      const segs = u.pathname.split('/').filter(Boolean);
+      const skip = new Set(['channel','user','c','p','reel','tv','reels','explore','videos']);
+      for (let i = segs.length - 1; i >= 0; i--) {
+        const s = segs[i].replace(/^@/, '');
+        if (s && !skip.has(s.toLowerCase())) return s;
+      }
+      return segs[0] ? segs[0].replace(/^@/, '') : '';
+    } catch { return ''; }
+  }
+
   // Detect platform from full URLs
   if (/tiktok\.com/i.test(input)) {
     let url = input;
     if (!url.startsWith('http')) url = 'https://' + url;
-    return { profileUrl: url, platform: 'tiktok' };
+    return { profileUrl: url, platform: 'tiktok', username: extractUser(url, 'tiktok') };
   }
   if (/instagram\.com/i.test(input)) {
     let url = input;
     if (!url.startsWith('http')) url = 'https://' + url;
-    // Ensure trailing slash for Instagram profiles
     if (!url.endsWith('/') && !url.includes('?')) url += '/';
-    return { profileUrl: url, platform: 'instagram' };
+    return { profileUrl: url, platform: 'instagram', username: extractUser(url, 'instagram') };
   }
 
-  // If it's just a username/handle (no domain), we can't determine the platform
-  // Return null - the frontend should provide full URLs
   return null;
 }
 
