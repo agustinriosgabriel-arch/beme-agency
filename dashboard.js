@@ -257,7 +257,7 @@ async function loadFromSupabase() {
 
     // Load all data in parallel for speed
     // Load WITHOUT foto first (base64 photos are huge, loaded in background after render)
-    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,genero,keywords,valores,updated,telefono';
+    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,genero,keywords,valores,updated,telefono';
     const [configResult, talentResult, rosterResult] = await Promise.all([
       sb.from('app_config').select('key,value'),
       loadTalentosWithRetry(TALENT_COLS),
@@ -292,6 +292,7 @@ async function loadFromSupabase() {
       paises: t.paises || [],
       categorias: t.categorias || [],
       seguidores: t.seguidores || {tiktok:0,instagram:0,youtube:0},
+      engagement: t.engagement || {},
       genero: t.genero || '',
       keywords: t.keywords || ''
     }));
@@ -411,13 +412,13 @@ function setupRealtimeSubscription() {
         const t = payload.new;
         if (!t || !t.id) {
           // payload.new is empty — reload only changed columns (skip foto to save IO)
-          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,genero,keywords,valores,updated,telefono';
+          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,genero,keywords,valores,updated,telefono';
           sb.from('talentos').select(TALENT_COLS_RT).order('nombre').then(({ data }) => {
-            if (data) { talents = data.map(x => ({...x, paises:x.paises||[], categorias:x.categorias||[], seguidores:x.seguidores||{tiktok:0,instagram:0,youtube:0}})); renderTalents(); updateStats(); updatePlatformCounts(); }
+            if (data) { talents = data.map(x => ({...x, paises:x.paises||[], categorias:x.categorias||[], seguidores:x.seguidores||{tiktok:0,instagram:0,youtube:0}, engagement:x.engagement||{}})); renderTalents(); updateStats(); updatePlatformCounts(); }
           });
         } else {
           const idx = talents.findIndex(x => x.id === t.id);
-          const mapped = { ...t, paises: t.paises||[], categorias: t.categorias||[], seguidores: t.seguidores||{tiktok:0,instagram:0,youtube:0} };
+          const mapped = { ...t, paises: t.paises||[], categorias: t.categorias||[], seguidores: t.seguidores||{tiktok:0,instagram:0,youtube:0}, engagement: t.engagement||{} };
           if (idx >= 0) { talents[idx] = { ...talents[idx], ...mapped }; }
           else { talents.push(mapped); }
           renderTalents(); updateStats(); updatePlatformCounts();
@@ -683,7 +684,11 @@ let FN_MAP = {
   saveApifyToken,
   testApifyToken,
   clearApifyToken,
-  toggleApifyTokenVisibility: function(){var i=document.getElementById("apify-token-input");if(i)i.type=i.type==="password"?"text":"password";},  // apify
+  toggleApifyTokenVisibility: function(){var i=document.getElementById("apify-token-input");if(i)i.type=i.type==="password"?"text":"password";},
+  saveEnsembleToken,
+  testEnsembleToken,
+  clearEnsembleToken,
+  toggleEnsembleTokenVisibility: function(){var i=document.getElementById("ensemble-token-input");if(i)i.type=i.type==="password"?"text":"password";},
   openCreateRosterModal,
   openCreateGeneralRosterModal: () => openCreateGeneralRosterModal(),
   closeGeneralRosterModal,
@@ -698,6 +703,14 @@ let FN_MAP = {
   scrapeAllInstagram,
   updateAll3Networks,
   updateSelectedAll,
+  engagementAllTikTok,
+  engagementAllInstagram,
+  updateSelectedTikTok,
+  updateSelectedInstagram,
+  updateSelectedYouTube,
+  engagementSelectedTikTok,
+  engagementSelectedInstagram,
+  toggleBottomBarUpdateMenu,
   toggleCatDropdown,
   addCategoryFromPanel,
   openManageCatsModal,
@@ -743,6 +756,9 @@ let ACTION_MAP = {
   'remove-country': (id, e, el) => removeCountry(el.dataset.country),
   'toggle-manage':  (id, e, el) => toggleManageTalent(parseInt(id), el),
   'upd-all':        (id)    => updateTalentAll(parseInt(id)),
+  'card-update-menu': (id) => toggleCardUpdateMenu(parseInt(id)),
+  'eng-tt':         (id)    => engagementSingle(parseInt(id), 'tiktok'),
+  'eng-ig':         (id)    => engagementSingle(parseInt(id), 'instagram'),
   'sort-opt':        (id, e, el) => setSort(el.dataset.sort || ''),
   'duplicate-roster':(id)    => duplicateRoster(parseInt(id)),
   'copy-url':        (id)    => copyRosterUrl(parseInt(id)),
@@ -1549,6 +1565,12 @@ function renderCard(t) {
     t.instagram ? `<div class="network-row"><div class="network-icon ig"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg></div><a class="network-link" href="${safeUrl(t.instagram)}" target="_blank" onclick="event.stopPropagation()">${escapeHtml(extractHandle(t.instagram))}</a><span class="network-followers">${formatFollowers(t.seguidores.instagram)}</span></div>` : '',
     t.youtube ? `<div class="network-row"><div class="network-icon yt"><svg width="11" height="11" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg></div><a class="network-link" href="${safeUrl(t.youtube)}" target="_blank" onclick="event.stopPropagation()">${escapeHtml(extractHandle(t.youtube))}</a><span class="network-followers">${formatFollowers(t.seguidores.youtube)}</span></div>` : '',
   ].filter(Boolean).join('');
+  const engBadges = [];
+  if (t.engagement) {
+    if (t.engagement.tiktok != null) engBadges.push(`<span class="eng-badge eng-tt" title="Engagement TikTok">${t.engagement.tiktok}%</span>`);
+    if (t.engagement.instagram != null) engBadges.push(`<span class="eng-badge eng-ig" title="Engagement Instagram">${t.engagement.instagram}%</span>`);
+  }
+  const engRow = engBadges.length ? `<div class="card-engagement">${engBadges.join('')}</div>` : '';
   const genderBadge = t.genero ? `<span class="cat-tag" style="background:rgba(148,20,224,0.08);color:#9414E0;border-color:rgba(148,20,224,0.2);">${escapeHtml(t.genero)}</span>` : '';
   const cats = t.categorias.slice(0,3).map(c=>`<span class="cat-tag">${escapeHtml(c)}</span>`).join('');
   return `<div class="talent-card${sel?' selected':''}" id="card-${t.id}" data-action="edit" data-id="${t.id}">
@@ -1557,13 +1579,28 @@ function renderCard(t) {
     <div class="card-name">${safeNombre}</div>
     <div class="card-location">${(t.paises||[]).map(p=>(COUNTRY_FLAGS[p]||'')+' '+escapeHtml(p)).join(' · ')}${safeCiudad?', '+safeCiudad:''}</div>
     <div class="card-networks">${networks}</div>
+    ${engRow}
     <div class="card-cats">${genderBadge}${cats}${t.categorias.length>3?`<span class="cat-tag">+${t.categorias.length-3}</span>`:''}</div>
     ${t.updated ? `<div class="card-updated" title="Última actualización de seguidores">↻ ${formatUpdatedDate(t.updated)}</div>` : ''}
     <div class="card-footer">
       <button class="btn btn-outline btn-sm" style="flex:1" data-action="edit" data-id="${t.id}" data-stop="1">Editar</button>
-      ${(t.tiktok || t.instagram || t.youtube) ? `<button class="scrape-btn upd-all" id="upd-all-${t.id}" data-action="upd-all" data-id="${t.id}" data-stop="1" title="Actualizar seguidores">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-      </button>` : ''}
+      ${(t.tiktok || t.instagram || t.youtube) ? `<div class="card-update-wrap" data-stop="1">
+        <button class="scrape-btn upd-all" id="upd-all-${t.id}" data-action="upd-all" data-id="${t.id}" data-stop="1" title="Actualizar todo">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+        </button>
+        <button class="scrape-btn card-update-drop-btn" data-action="card-update-menu" data-id="${t.id}" data-stop="1" title="Más opciones" style="width:18px;height:26px;background:rgba(148,20,224,0.05);color:#9414E0;border-radius:6px;">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="card-update-menu" id="card-menu-${t.id}" style="display:none;">
+          <div class="card-menu-title">Seguidores</div>
+          ${t.tiktok ? `<button class="card-menu-item" data-action="scrape-tt" data-id="${t.id}" data-stop="1"><svg width="10" height="10" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg>TikTok</button>` : ''}
+          ${t.instagram ? `<button class="card-menu-item" data-action="scrape-ig" data-id="${t.id}" data-stop="1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg>Instagram</button>` : ''}
+          ${t.youtube ? `<button class="card-menu-item" data-action="yt-refresh" data-id="${t.id}" data-stop="1"><svg width="10" height="10" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg>YouTube</button>` : ''}
+          <div class="card-menu-title" style="margin-top:2px;">Engagement</div>
+          ${t.tiktok ? `<button class="card-menu-item" data-action="eng-tt" data-id="${t.id}" data-stop="1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ff0050" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Eng. TikTok</button>` : ''}
+          ${t.instagram ? `<button class="card-menu-item" data-action="eng-ig" data-id="${t.id}" data-stop="1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Eng. Instagram</button>` : ''}
+        </div>
+      </div>` : ''}
     </div>
     ${renderCampaignHistory(t.id)}
   </div>`;
@@ -2118,11 +2155,13 @@ function deleteSelectedTalents() {
 // ===================== YOUTUBE + APIFY API =====================
 let ytApiKey = '';
 let apifyToken = '';
+let ensembleToken = '';
 
 function loadApiKey() {
   try {
-    ytApiKey   = localStorage.getItem('beme_yt_api_key')   || '';
-    apifyToken = localStorage.getItem('beme_apify_token') || '';
+    ytApiKey       = localStorage.getItem('beme_yt_api_key')       || '';
+    apifyToken     = localStorage.getItem('beme_apify_token')     || '';
+    ensembleToken  = localStorage.getItem('beme_ensemble_token')  || '';
   } catch(e) {}
   updateApiKeyUI();
 }
@@ -2140,6 +2179,10 @@ function updateApiKeyUI() {
   if(apifyDot){if(apifyToken)apifyDot.classList.add('active');else apifyDot.classList.remove('active');}
   var apifyLbl=document.getElementById('apify-status-text');
   if(apifyLbl) apifyLbl.textContent=apifyToken?'Apify ✓':'Sin token';
+  var ensDot=document.getElementById('ensemble-status-dot');
+  if(ensDot){if(ensembleToken)ensDot.classList.add('active');else ensDot.classList.remove('active');}
+  var ensLbl=document.getElementById('ensemble-status-text');
+  if(ensLbl) ensLbl.textContent=ensembleToken?'Token configurado ✓':'';
 }
 
 function openApiKeyModal() {
@@ -2151,6 +2194,10 @@ function openApiKeyModal() {
   if(apifyInp) apifyInp.value=apifyToken;
   var apifyStatus=document.getElementById('apify-status-text');
   if(apifyStatus) apifyStatus.textContent=apifyToken?'Token configurado ✓':'';
+  var ensInp=document.getElementById('ensemble-token-input');
+  if(ensInp) ensInp.value=ensembleToken;
+  var ensStatus=document.getElementById('ensemble-status-text');
+  if(ensStatus) ensStatus.textContent=ensembleToken?'Token configurado ✓':'';
   openModal('yt-api-modal');
 }
 
@@ -2233,6 +2280,47 @@ async function testApifyToken() {
       if(s) s.textContent='OK — '+data.followers.toLocaleString('es-ES')+' seguidores';
       showToast('Apify conectado ✓','success');
     } else { showToast('Sin respuesta. Verificá el token.','error'); }
+  } catch(e) { showToast('Error: '+e.message,'error'); }
+}
+
+// ── EnsembleData token management ────────────────────────────
+function saveEnsembleToken() {
+  var inp = document.getElementById('ensemble-token-input');
+  var key = inp ? inp.value.trim() : '';
+  if (!key) { showToast('Ingresá el token de EnsembleData','error'); return; }
+  ensembleToken = key;
+  try { localStorage.setItem('beme_ensemble_token', key); } catch(e) {}
+  updateApiKeyUI();
+  showToast('Token de EnsembleData guardado ✓','success');
+}
+function clearEnsembleToken() {
+  ensembleToken = '';
+  try { localStorage.removeItem('beme_ensemble_token'); } catch(e) {}
+  var inp = document.getElementById('ensemble-token-input');
+  if (inp) inp.value = '';
+  var s = document.getElementById('ensemble-status-text');
+  if (s) s.textContent = '';
+  updateApiKeyUI();
+  showToast('Token eliminado','info');
+}
+async function testEnsembleToken() {
+  var inp = document.getElementById('ensemble-token-input');
+  var key = inp ? inp.value.trim() : '';
+  if (key) { ensembleToken=key; try{localStorage.setItem('beme_ensemble_token',key);}catch(e){} }
+  if (!ensembleToken) { showToast('Ingresá el token primero','error'); return; }
+  showToast('Probando EnsembleData...','info');
+  try {
+    var resp = await fetch('/.netlify/functions/ensemble-scraper',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({platform:'tiktok',username:'tiktok',ensembleToken})
+    });
+    var data = await resp.json();
+    if (data.followers !== null && data.followers !== undefined) {
+      updateApiKeyUI();
+      var s=document.getElementById('ensemble-status-text');
+      if(s) s.textContent='OK — @tiktok: '+data.followers.toLocaleString('es-ES')+' seguidores';
+      showToast('EnsembleData conectado ✓','success');
+    } else { showToast('Sin respuesta: '+(data.error||'verificá el token'),'error'); }
   } catch(e) { showToast('Error: '+e.message,'error'); }
 }
 
@@ -2418,10 +2506,11 @@ async function updateAllFollowers(talentsOverride) {
 // ===================== EXPORT CSV =====================
 function exportCSV(list) {
   const data = list || talents;
-  const headers = ['ID','Nombre','Países','Ciudad','TikTok','Instagram','YouTube','Seguidores TikTok','Seguidores Instagram','Seguidores YouTube','Categorías','Valores','Teléfono','Email','Género','Keywords'];
+  const headers = ['ID','Nombre','Países','Ciudad','TikTok','Instagram','YouTube','Seguidores TikTok','Seguidores Instagram','Seguidores YouTube','Eng. TikTok %','Eng. Instagram %','Categorías','Valores','Teléfono','Email','Género','Keywords'];
   const rows = data.map(t => [
     t.id,t.nombre,(t.paises||[t.pais||'']).filter(Boolean).map(function(p){return p.replace(/^[\u{1F1E6}-\u{1FFFF}\s]+/gu,'').trim();}).filter(Boolean).join(';'),t.ciudad,t.tiktok,t.instagram,t.youtube,
     t.seguidores.tiktok,t.seguidores.instagram,t.seguidores.youtube,
+    (t.engagement||{}).tiktok||'',(t.engagement||{}).instagram||'',
     t.categorias.join(';'),t.valores,t.telefono,t.email,t.genero||'',t.keywords||''
   ].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
   const csv = '\uFEFF' + [headers.join(','), ...rows].join('\n');
@@ -3804,27 +3893,239 @@ async function saveScrapeResults(results) {
 }
 
 async function fetchFollowersViaApify(platform, profileUrl) {
-  if (!apifyToken) return null;
+  // Tokens are optional on frontend — server has env vars as fallback
   var username = extractUsername(profileUrl, platform);
   if (!username) return null;
   try {
     var controller = new AbortController();
-    var timer = setTimeout(function(){ controller.abort(); }, 60000);
-    var resp = await fetch('/.netlify/functions/apify-scraper', {
+    var timer = setTimeout(function(){ controller.abort(); }, 65000);
+    var resp = await fetch('/.netlify/functions/ensemble-scraper', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({platform, username, apifyToken}),
+      body: JSON.stringify({platform, username, action:'followers', ensembleToken, apifyToken}),
       signal: controller.signal
     });
     clearTimeout(timer);
     if (!resp.ok) return null;
     var data = await resp.json();
-    if (data.error) { console.log('[Apify]', data.error); return null; }
+    if (data.error) { console.log('[scraper]', data.error, '(source:', data.source||'none', ')'); return null; }
+    if (data.source) console.log('[scraper]', platform, '@'+username, data.followers, 'via', data.source);
     return (data.followers !== null && data.followers !== undefined) ? data.followers : null;
   } catch(e) {
-    console.warn('[Apify]', username, platform, e.message);
+    console.warn('[scraper]', username, platform, e.message);
     return null;
   }
+}
+
+// ── Engagement rate fetching ─────────────────────────────────
+async function fetchEngagement(platform, profileUrl) {
+  // Token optional on frontend — server has ENSEMBLE_TOKEN env var
+  var username = extractUsername(profileUrl, platform);
+  if (!username) return null;
+  try {
+    var controller = new AbortController();
+    var timer = setTimeout(function(){ controller.abort(); }, 65000);
+    var resp = await fetch('/.netlify/functions/ensemble-scraper', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({platform, username, action:'engagement', ensembleToken}),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    if (!resp.ok) return null;
+    var data = await resp.json();
+    if (data.error) { console.log('[engagement]', data.error); return null; }
+    return {
+      engagementRate: data.engagementRate,
+      followers: data.followers,
+      postsAnalyzed: data.postsAnalyzed,
+      bio: data.bio || '',
+      nickname: data.nickname || '',
+      category: data.category || '',
+    };
+  } catch(e) {
+    console.warn('[engagement]', username, platform, e.message);
+    return null;
+  }
+}
+
+async function engagementAndSave(t, platform) {
+  var url = platform === 'instagram' ? t.instagram : t.tiktok;
+  if (!url) return false;
+  try {
+    var result = await fetchEngagement(platform, url);
+    if (result && result.engagementRate !== null && result.engagementRate !== undefined) {
+      if (!t.engagement) t.engagement = {};
+      t.engagement[platform] = result.engagementRate;
+      if (result.followers) {
+        t.seguidores[platform] = result.followers;
+      }
+      if (result.bio && !t.keywords) t.keywords = result.bio;
+      t.updated = new Date().toISOString().split('T')[0];
+      if (sb && currentUser) {
+        await sb.from('talentos').update({
+          seguidores: {...t.seguidores},
+          engagement: {...(t.engagement||{})},
+          keywords: t.keywords || '',
+          updated: t.updated
+        }).eq('id', t.id);
+      }
+      return true;
+    }
+  } catch(e) { console.warn('[engagement]', t.nombre, platform, e.message); }
+  return false;
+}
+
+// ── Bulk engagement functions ────────────────────────────────
+async function engagementAllTikTok() {
+  netDropdownOpen = false;
+  var panel = document.getElementById('net-update-panel');
+  if (panel) panel.classList.remove('open');
+  var list = talents.filter(function(t){ return t.tiktok; });
+  if (!list.length) { showToast('Nadie tiene TikTok', 'info'); return; }
+  showProgressBar('ext', list.length);
+  var btn = document.getElementById('eng-tt-all-btn');
+  if (btn) btn.disabled = true;
+  var ok = 0;
+  for (var i = 0; i < list.length; i++) {
+    updateProgressBar('ext', i + 1, list.length, 'Eng TT: ' + list[i].nombre);
+    if (await engagementAndSave(list[i], 'tiktok')) ok++;
+    renderTalents();
+    if (i < list.length - 1) await new Promise(function(r) { setTimeout(r, 400); });
+  }
+  hideProgressBar('ext');
+  if (btn) btn.disabled = false;
+  updateStats();
+  showToast('Engagement TikTok: ' + ok + ' actualizado(s)', ok > 0 ? 'success' : 'info');
+}
+
+async function engagementAllInstagram() {
+  netDropdownOpen = false;
+  var panel = document.getElementById('net-update-panel');
+  if (panel) panel.classList.remove('open');
+  var list = talents.filter(function(t){ return t.instagram; });
+  if (!list.length) { showToast('Nadie tiene Instagram', 'info'); return; }
+  showProgressBar('ig', list.length);
+  var btn = document.getElementById('eng-ig-all-btn');
+  if (btn) btn.disabled = true;
+  var ok = 0;
+  for (var i = 0; i < list.length; i++) {
+    updateProgressBar('ig', i + 1, list.length, 'Eng IG: ' + list[i].nombre);
+    if (await engagementAndSave(list[i], 'instagram')) ok++;
+    renderTalents();
+    if (i < list.length - 1) await new Promise(function(r) { setTimeout(r, 600); });
+  }
+  hideProgressBar('ig');
+  if (btn) btn.disabled = false;
+  updateStats();
+  showToast('Engagement Instagram: ' + ok + ' actualizado(s)', ok > 0 ? 'success' : 'info');
+}
+
+// ── Selected talents: per-platform updates ───────────────────
+async function updateSelectedTikTok() {
+  closeBottomBarMenu();
+  if (selectedIds.size === 0) { showToast('Selecciona talentos primero', 'error'); return; }
+  var list = talents.filter(function(t){ return selectedIds.has(t.id) && t.tiktok; });
+  if (!list.length) { showToast('Ningún seleccionado tiene TikTok', 'info'); return; }
+  showProgressBar('ext', list.length);
+  var ok = 0;
+  for (var i = 0; i < list.length; i++) {
+    updateProgressBar('ext', i + 1, list.length, list[i].nombre);
+    if (await scrapeAndSave(list[i], 'tiktok')) ok++;
+    renderTalents();
+    if (i < list.length - 1) await new Promise(function(r){ setTimeout(r, 300); });
+  }
+  hideProgressBar('ext');
+  updateStats();
+  showToast('TikTok: ' + ok + ' actualizado(s)', ok > 0 ? 'success' : 'info');
+}
+
+async function updateSelectedInstagram() {
+  closeBottomBarMenu();
+  if (selectedIds.size === 0) { showToast('Selecciona talentos primero', 'error'); return; }
+  var list = talents.filter(function(t){ return selectedIds.has(t.id) && t.instagram; });
+  if (!list.length) { showToast('Ningún seleccionado tiene Instagram', 'info'); return; }
+  showProgressBar('ig', list.length);
+  var ok = 0;
+  for (var i = 0; i < list.length; i++) {
+    updateProgressBar('ig', i + 1, list.length, list[i].nombre);
+    if (await scrapeAndSave(list[i], 'instagram')) ok++;
+    renderTalents();
+    if (i < list.length - 1) await new Promise(function(r){ setTimeout(r, 600); });
+  }
+  hideProgressBar('ig');
+  updateStats();
+  showToast('Instagram: ' + ok + ' actualizado(s)', ok > 0 ? 'success' : 'info');
+}
+
+async function updateSelectedYouTube() {
+  closeBottomBarMenu();
+  if (selectedIds.size === 0) { showToast('Selecciona talentos primero', 'error'); return; }
+  if (!ytApiKey) { showToast('Configura tu clave de YouTube primero','error'); openApiKeyModal(); return; }
+  var list = talents.filter(function(t){ return selectedIds.has(t.id) && t.youtube; });
+  if (!list.length) { showToast('Ningún seleccionado tiene YouTube', 'info'); return; }
+  var ok = 0;
+  for (var i = 0; i < list.length; i++) {
+    try {
+      var r = await Promise.race([fetchYouTubeSubscribers(list[i].youtube), new Promise(function(_,rej){setTimeout(function(){rej(new Error('timeout'));},15000);})]);
+      if (r && r.subscribers !== undefined) {
+        list[i].seguidores.youtube = r.subscribers;
+        list[i].updated = new Date().toISOString().split('T')[0];
+        if (sb && currentUser) await sb.from('talentos').update({seguidores:{...list[i].seguidores},updated:list[i].updated}).eq('id',list[i].id);
+        ok++;
+      }
+    } catch(e) { console.warn('[YT]', e.message); }
+    await new Promise(function(r){setTimeout(r,200);});
+  }
+  renderTalents(); updateStats();
+  showToast('YouTube: ' + ok + ' actualizado(s)', ok > 0 ? 'success' : 'info');
+}
+
+async function engagementSelectedTikTok() {
+  closeBottomBarMenu();
+  if (selectedIds.size === 0) { showToast('Selecciona talentos primero', 'error'); return; }
+  var list = talents.filter(function(t){ return selectedIds.has(t.id) && t.tiktok; });
+  if (!list.length) { showToast('Ningún seleccionado tiene TikTok', 'info'); return; }
+  showProgressBar('ext', list.length);
+  var ok = 0;
+  for (var i = 0; i < list.length; i++) {
+    updateProgressBar('ext', i + 1, list.length, 'Eng TT: ' + list[i].nombre);
+    if (await engagementAndSave(list[i], 'tiktok')) ok++;
+    renderTalents();
+    if (i < list.length - 1) await new Promise(function(r){ setTimeout(r, 400); });
+  }
+  hideProgressBar('ext');
+  updateStats();
+  showToast('Engagement TikTok: ' + ok + ' OK', ok > 0 ? 'success' : 'info');
+}
+
+async function engagementSelectedInstagram() {
+  closeBottomBarMenu();
+  if (selectedIds.size === 0) { showToast('Selecciona talentos primero', 'error'); return; }
+  var list = talents.filter(function(t){ return selectedIds.has(t.id) && t.instagram; });
+  if (!list.length) { showToast('Ningún seleccionado tiene Instagram', 'info'); return; }
+  showProgressBar('ig', list.length);
+  var ok = 0;
+  for (var i = 0; i < list.length; i++) {
+    updateProgressBar('ig', i + 1, list.length, 'Eng IG: ' + list[i].nombre);
+    if (await engagementAndSave(list[i], 'instagram')) ok++;
+    renderTalents();
+    if (i < list.length - 1) await new Promise(function(r){ setTimeout(r, 600); });
+  }
+  hideProgressBar('ig');
+  updateStats();
+  showToast('Engagement Instagram: ' + ok + ' OK', ok > 0 ? 'success' : 'info');
+}
+
+// ── Bottom bar update menu toggle ────────────────────────────
+function toggleBottomBarUpdateMenu() {
+  var menu = document.getElementById('bottom-bar-update-menu');
+  if (menu) menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+  if (menu) menu.style.flexDirection = 'column';
+}
+function closeBottomBarMenu() {
+  var menu = document.getElementById('bottom-bar-update-menu');
+  if (menu) menu.style.display = 'none';
 }
 
 async function saveFollowers(t, platform, followers) {
@@ -3837,7 +4138,7 @@ async function saveFollowers(t, platform, followers) {
 
 async function scrapeAndSave(t, platform) {
   var url = platform === 'instagram' ? t.instagram : t.tiktok;
-  if (!url || !apifyToken) return false;
+  if (!url) return false;
   try {
     var timeoutP = new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, 65000); });
     var followers = await Promise.race([fetchFollowersViaApify(platform, url), timeoutP]);
@@ -3850,7 +4151,7 @@ async function scrapeAndSave(t, platform) {
 }
 
 async function scrapeAllProfiles() {
-  if (!apifyToken) { showToast('Configurá el token de Apify primero','error'); openApiKeyModal(); return; }
+  // Server has tokens via env vars — proceed directly
   var toScrape = talents.filter(function(t){ return t.instagram || t.tiktok; });
   if (!toScrape.length) { showToast('Ningún talento tiene IG o TikTok','info'); return; }
   showProgressBar('ext', toScrape.length);
@@ -3870,7 +4171,7 @@ async function scrapeAllProfiles() {
 }
 
 async function scrapeSingle(talentId, platform) {
-  if (!apifyToken) { showToast('Configurá el token de Apify primero','error'); openApiKeyModal(); return; }
+  // Server has tokens via env vars — proceed directly
   const t = talents.find(function(x){ return x.id===talentId; });
   if (!t) return;
   const url = platform==='instagram' ? t.instagram : t.tiktok;
@@ -4078,7 +4379,7 @@ function toggleNetUpdateDropdown() {
 async function scrapeAllTikTok() {
   netDropdownOpen = false;
   document.getElementById('net-update-panel').classList.remove('open');
-  if (!apifyToken) { showToast('Configurá el token de Apify primero','error'); openApiKeyModal(); return; }
+  // Server has tokens via env vars — proceed directly
   var list = talents.filter(t => t.tiktok);
   if (!list.length) { showToast('Nadie tiene TikTok', 'info'); return; }
   showProgressBar('ext', list.length);
@@ -4100,7 +4401,7 @@ async function scrapeAllTikTok() {
 async function scrapeAllInstagram() {
   netDropdownOpen = false;
   document.getElementById('net-update-panel').classList.remove('open');
-  if (!apifyToken) { showToast('Configurá el token de Apify primero','error'); openApiKeyModal(); return; }
+  // Server has tokens via env vars — proceed directly
   var list = talents.filter(t => t.instagram);
   if (!list.length) { showToast('Nadie tiene Instagram', 'info'); return; }
   showProgressBar('ig', list.length);
@@ -4126,7 +4427,7 @@ async function updateAll3Networks() {
   var panel = document.getElementById('net-update-panel');
   if (panel) panel.classList.remove('open');
   // Step 1: TT+IG (saves to Supabase inside scrapeAllProfiles)
-  if (apifyToken) { try { await scrapeAllProfiles(); } catch(e) { console.error('[Beme] Scrape error:', e); } }
+  try { await scrapeAllProfiles(); } catch(e) { console.error('[Beme] Scrape error:', e); }
   // Step 2: YouTube (isolated)
   if (ytApiKey) { try { await updateAllFollowers(); } catch(e) { console.error('[Beme] YT error:', e); } }
 }
@@ -4136,8 +4437,9 @@ async function updateSelectedAll() {
   if (selectedIds.size === 0) { showToast('Selecciona talentos primero', 'error'); return; }
   var selected = talents.filter(t => selectedIds.has(t.id));
 
+  closeBottomBarMenu();
   // Step 1: TT+IG — one profile at a time
-  if (apifyToken) {
+  {
     var toScrape = selected.filter(t => t.instagram || t.tiktok);
     if (toScrape.length > 0) {
       showProgressBar('ext', toScrape.length);
@@ -4187,7 +4489,7 @@ async function updateTalentAll(talentId) {
   var msgs = [];
 
   // Step 1: TT+IG — each as separate short message
-  if (apifyToken) {
+  if (ensembleToken || apifyToken) {
     if (t.instagram) { if (await scrapeAndSave(t, 'instagram')) msgs.push('IG ✓'); else msgs.push('IG ✗'); }
     if (t.tiktok) { if (await scrapeAndSave(t, 'tiktok')) msgs.push('TT ✓'); else msgs.push('TT ✗'); }
     renderTalents(); updateStats();
@@ -4212,6 +4514,46 @@ async function updateTalentAll(talentId) {
   renderTalents(); updateStats();
   showToast(t.nombre + ': ' + (msgs.join(' · ') || 'Sin redes'), msgs.some(function(m){return m.includes('✓');}) ? 'success' : 'info');
 }
+
+// ── CARD UPDATE MENU ─────────────────────────────────────────
+function toggleCardUpdateMenu(talentId) {
+  // Close all other menus first
+  document.querySelectorAll('.card-update-menu').forEach(function(m) {
+    if (m.id !== 'card-menu-' + talentId) m.style.display = 'none';
+  });
+  var menu = document.getElementById('card-menu-' + talentId);
+  if (menu) menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+}
+
+async function engagementSingle(talentId, platform) {
+  var t = talents.find(function(x){ return x.id===talentId; });
+  if (!t) return;
+  var url = platform === 'instagram' ? t.instagram : t.tiktok;
+  if (!url) return;
+  // Close menu
+  var menu = document.getElementById('card-menu-' + talentId);
+  if (menu) menu.style.display = 'none';
+  var btn = document.getElementById('upd-all-' + talentId);
+  if (btn) btn.classList.add('spinning');
+  var ok = await engagementAndSave(t, platform);
+  if (btn) btn.classList.remove('spinning');
+  if (ok) {
+    renderTalents(); updateStats();
+    showToast(t.nombre + ': Engagement ' + platform + ' ' + (t.engagement[platform]||0) + '% ✓', 'success');
+  } else {
+    showToast(t.nombre + ': no se pudo obtener engagement ' + platform, 'error');
+  }
+}
+
+// Close card menus on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.card-update-wrap')) {
+    document.querySelectorAll('.card-update-menu').forEach(function(m) { m.style.display = 'none'; });
+  }
+  if (!e.target.closest('.bottom-bar-update-group')) {
+    closeBottomBarMenu();
+  }
+});
 
 // ── PROGRESS BAR HELPERS ─────────────────────────────────────
 function showProgressBar(type, total) {
@@ -4252,7 +4594,7 @@ function toggleIgInstructions() {}
 function toggleIgTokenVisibility() {}
 function updateAllInstagram() {}
 async function refreshInstagramSingle(talentId) {
-  if (!apifyToken) { showToast('Configurá el token de Apify primero','error'); openApiKeyModal(); return; }
+  // Server has tokens via env vars — proceed directly
   var t = talents.find(function(x){ return x.id === talentId; });
   if (!t || !t.instagram) return;
   var btn = document.getElementById('scr-ig-' + talentId);

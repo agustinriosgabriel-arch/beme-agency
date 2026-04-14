@@ -825,12 +825,54 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
 .net-update-all .net-update-item-name { background:var(--gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 .net-update-yt-config .net-update-item-name { font-size:12px; color:var(--text-muted); }
 
-/* ====== CARD UPDATE BUTTON ====== */
+/* ====== CARD UPDATE BUTTON + DROPDOWN ====== */
 .scrape-btn.upd-all {
   background:rgba(148,20,224,0.1); color:#9414E0;
   width:26px; height:26px;
 }
 .scrape-btn.upd-all:hover { background:rgba(148,20,224,0.2); }
+.card-update-wrap {
+  position:relative; display:flex; gap:2px; align-items:center;
+}
+.card-update-menu {
+  position:absolute; bottom:calc(100% + 4px); right:0;
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:var(--radius-lg); min-width:160px;
+  box-shadow:var(--shadow); z-index:180;
+  flex-direction:column; padding:4px;
+  animation:fadeIn 0.15s ease;
+}
+.card-menu-title {
+  font-size:9px; font-weight:700; letter-spacing:1px;
+  text-transform:uppercase; color:var(--text-dim);
+  padding:4px 8px 2px;
+}
+.card-menu-item {
+  display:flex; align-items:center; gap:8px;
+  padding:6px 8px; border-radius:var(--radius-sm);
+  border:none; background:transparent; cursor:pointer;
+  font-size:12px; font-weight:500; color:var(--text);
+  font-family:'Plus Jakarta Sans',sans-serif; width:100%;
+  text-align:left; transition:background 0.15s;
+}
+.card-menu-item:hover { background:var(--surface2); }
+
+/* ====== ENGAGEMENT BADGES ====== */
+.card-engagement {
+  display:flex; gap:6px; padding:0 2px; margin:2px 0;
+}
+.eng-badge {
+  font-size:10px; font-weight:700; padding:2px 7px;
+  border-radius:10px; display:inline-flex; align-items:center; gap:3px;
+}
+.eng-badge.eng-tt {
+  background:rgba(255,0,80,0.08); color:#ff0050;
+  border:1px solid rgba(255,0,80,0.15);
+}
+.eng-badge.eng-ig {
+  background:rgba(225,48,108,0.08); color:#e1306c;
+  border:1px solid rgba(225,48,108,0.15);
+}
 
 /* ====== CAT PANEL FOOTER ====== */
 .cat-panel-footer {
@@ -1124,37 +1166,51 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
     <div class="net-update-panel" id="net-update-panel">
-      <div class="net-update-title">Actualizar seguidores</div>
-      <!-- TikTok scrape -->
+      <div class="net-update-title">Seguidores</div>
+      <!-- TikTok followers -->
       <button class="net-update-item" id="scrape-tt-all-btn" data-fn="scrapeAllTikTok">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg>
-        <div><div class="net-update-item-name">Scraping TikTok</div><div class="net-update-item-sub">Via Apify</div></div>
+        <div><div class="net-update-item-name">Actualizar TikTok</div><div class="net-update-item-sub">Seguidores — 1 unit/talento</div></div>
         <div class="net-update-item-status" id="net-status-tt"></div>
       </button>
-      <!-- Instagram scrape -->
+      <!-- Instagram followers -->
       <button class="net-update-item" id="scrape-ig-all-btn" data-fn="scrapeAllInstagram">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#e1306c" stroke="none"/></svg>
-        <div><div class="net-update-item-name">Scraping Instagram</div><div class="net-update-item-sub">Via extensión</div></div>
+        <div><div class="net-update-item-name">Actualizar Instagram</div><div class="net-update-item-sub">Seguidores — 3 units/talento</div></div>
         <div class="net-update-item-status" id="net-status-ig"></div>
       </button>
-      <!-- YouTube API -->
+      <!-- YouTube followers -->
       <button class="net-update-item" id="update-yt-btn" data-fn="updateAllFollowers">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg>
         <div>
-          <div class="net-update-item-name">YouTube API</div>
+          <div class="net-update-item-name">Actualizar YouTube</div>
           <div class="net-update-item-sub" id="yt-api-status-inline">Sin clave configurada</div>
         </div>
         <div class="api-status-dot" id="api-status-dot" style="margin-left:auto"></div>
       </button>
       <div class="net-update-divider"></div>
+      <div class="net-update-title">Engagement</div>
+      <!-- TikTok engagement -->
+      <button class="net-update-item" id="eng-tt-all-btn" data-fn="engagementAllTikTok">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff0050" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <div><div class="net-update-item-name">Engagement TikTok</div><div class="net-update-item-sub">Info + posts — 2 units/talento</div></div>
+        <div class="net-update-item-status" id="net-status-eng-tt"></div>
+      </button>
+      <!-- Instagram engagement -->
+      <button class="net-update-item" id="eng-ig-all-btn" data-fn="engagementAllInstagram">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <div><div class="net-update-item-name">Engagement Instagram</div><div class="net-update-item-sub">Info + posts — ~5 units/talento</div></div>
+        <div class="net-update-item-status" id="net-status-eng-ig"></div>
+      </button>
+      <div class="net-update-divider"></div>
       <button class="net-update-item net-update-all" data-fn="updateAll3Networks">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-        <div><div class="net-update-item-name">Actualizar todas las redes</div><div class="net-update-item-sub">TT + IG primero, luego YouTube</div></div>
+        <div><div class="net-update-item-name">Actualizar todas las redes</div><div class="net-update-item-sub">TT + IG + YouTube (seguidores)</div></div>
       </button>
       <div class="net-update-divider"></div>
       <button class="net-update-item net-update-yt-config" data-fn="openApiKeyModal">
         <div class="api-status-dot" id="api-status-dot2" style="flex-shrink:0"></div>
-        <div><div class="net-update-item-name">Configurar YouTube API</div><div class="net-update-item-sub" id="yt-api-btn-label">Sin clave</div></div>
+        <div><div class="net-update-item-name">Configurar APIs</div><div class="net-update-item-sub" id="yt-api-btn-label">YouTube + EnsembleData + Apify</div></div>
       </button>
     </div>
   </div>
@@ -1582,10 +1638,43 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   </div>
   <button class="btn btn-ghost btn-sm" data-fn="clearSelection">Limpiar</button>
   <div class="bottom-bar-actions">
-    <button class="btn btn-outline btn-sm" data-fn="updateSelectedAll" title="Actualizar TT+IG y luego YouTube" style="border-color:rgba(148,20,224,0.3);color:#9414E0;">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-      Actualizar
-    </button>
+    <div class="bottom-bar-update-group" style="display:flex;gap:4px;position:relative;">
+      <button class="btn btn-outline btn-sm" data-fn="toggleBottomBarUpdateMenu" title="Opciones de actualización" style="border-color:rgba(148,20,224,0.3);color:#9414E0;display:flex;align-items:center;gap:4px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+        Actualizar
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="bottom-bar-update-menu" id="bottom-bar-update-menu" style="display:none;position:absolute;bottom:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);min-width:220px;box-shadow:var(--shadow);z-index:200;padding:6px;animation:fadeIn 0.15s ease;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);padding:4px 10px 2px;">Seguidores</div>
+        <button class="net-update-item" data-fn="updateSelectedTikTok">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg>
+          <div><div class="net-update-item-name">TikTok</div></div>
+        </button>
+        <button class="net-update-item" data-fn="updateSelectedInstagram">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#e1306c" stroke="none"/></svg>
+          <div><div class="net-update-item-name">Instagram</div></div>
+        </button>
+        <button class="net-update-item" data-fn="updateSelectedYouTube">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg>
+          <div><div class="net-update-item-name">YouTube</div></div>
+        </button>
+        <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);padding:4px 10px 2px;">Engagement</div>
+        <button class="net-update-item" data-fn="engagementSelectedTikTok">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ff0050" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <div><div class="net-update-item-name">Eng. TikTok</div></div>
+        </button>
+        <button class="net-update-item" data-fn="engagementSelectedInstagram">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <div><div class="net-update-item-name">Eng. Instagram</div></div>
+        </button>
+        <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+        <button class="net-update-item" data-fn="updateSelectedAll">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+          <div><div class="net-update-item-name" style="background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Todas las redes</div></div>
+        </button>
+      </div>
+    </div>
     <button class="btn btn-outline btn-sm" data-fn="exportSelectedCSV">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       Exportar
@@ -2116,14 +2205,41 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
       <button class="btn btn-primary" data-fn="saveApiKey">Guardar y probar</button>
     </div>
 
-    <!-- Apify Section -->
+    <!-- EnsembleData Section (PRIMARY) -->
     <div style="border-top:1px solid var(--border);margin:0 -24px;padding:20px 24px 0;">
-      <h3 style="font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-primary)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        Apify — Instagram &amp; TikTok
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6c5ce7" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>
+        EnsembleData <span style="font-size:10px;font-weight:600;background:rgba(108,92,231,0.15);color:#6c5ce7;padding:2px 8px;border-radius:10px;">PRINCIPAL</span>
       </h3>
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.5;">
-        Obtené tu API token en <a href="https://console.apify.com/account/integrations" target="_blank" style="color:var(--primary)">console.apify.com → Integrations</a>. El plan gratuito incluye $5/mes de crédito.
+        TikTok (1 unit) + Instagram (3 units) + Engagement. Obtené tu token en <a href="https://dashboard.ensembledata.com" target="_blank" style="color:#6c5ce7">dashboard.ensembledata.com</a>
+      </p>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label">API Token de EnsembleData</label>
+        <div style="display:flex;gap:8px;">
+          <input type="password" id="ensemble-token-input" class="form-input" placeholder="Token de EnsembleData..." autocomplete="off">
+          <button class="btn btn-outline btn-sm" data-fn="toggleEnsembleTokenVisibility" style="flex-shrink:0;padding:0 10px;">👁</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <div class="api-status-dot" id="ensemble-status-dot"></div>
+        <div style="display:flex;gap:8px;flex:1;">
+          <button class="btn btn-outline btn-sm" data-fn="saveEnsembleToken">Guardar</button>
+          <button class="btn btn-outline btn-sm" data-fn="testEnsembleToken" style="color:#6c5ce7;border-color:rgba(108,92,231,0.3);">Probar</button>
+          <button class="btn btn-ghost btn-sm" data-fn="clearEnsembleToken" style="color:#ff6b6b;font-size:11px;margin-left:auto;">Eliminar</button>
+        </div>
+      </div>
+      <div id="ensemble-status-text" style="font-size:12px;color:var(--text-muted);min-height:18px;"></div>
+    </div>
+
+    <!-- Apify Section (FALLBACK) -->
+    <div style="border-top:1px solid var(--border);margin:0 -24px;padding:20px 24px 0;">
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Apify <span style="font-size:10px;font-weight:600;background:rgba(255,255,255,0.08);color:var(--text-dim);padding:2px 8px;border-radius:10px;">FALLBACK</span>
+      </h3>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.5;">
+        Se usa si EnsembleData falla. Token en <a href="https://console.apify.com/account/integrations" target="_blank" style="color:var(--primary)">console.apify.com</a>
       </p>
       <div class="form-group" style="margin-bottom:10px;">
         <label class="form-label">API Token de Apify</label>
