@@ -4117,7 +4117,7 @@ async function engagementAndSave(t, platform, force) {
       }
       await sb.from('talentos').update(updateObj).eq('id', t.id);
     }
-    return true;
+    return followersFresh ? 'optimized' : true;
   } catch(e) { console.warn('[engagement]', t.nombre, platform, e.message); }
   return false;
 }
@@ -4132,19 +4132,21 @@ async function engagementAllTikTok() {
   showProgressBar('ext', list.length);
   var btn = document.getElementById('eng-tt-all-btn');
   if (btn) btn.disabled = true;
-  var ok = 0, skipped = 0;
+  var ok = 0, skipped = 0, optimized = 0;
   for (var i = 0; i < list.length; i++) {
     updateProgressBar('ext', i + 1, list.length, 'Eng TT: ' + list[i].nombre);
     var r = await engagementAndSave(list[i], 'tiktok');
-    if (r === 'skipped') skipped++; else if (r) ok++;
+    if (r === 'skipped') skipped++; else if (r === 'optimized') { ok++; optimized++; } else if (r) ok++;
     renderTalents();
     if (r !== 'skipped' && i < list.length - 1) await new Promise(function(r) { setTimeout(r, 400); });
   }
   hideProgressBar('ext');
   if (btn) btn.disabled = false;
   updateStats();
+  var saved = skipped * 2 + optimized * 1; // skip eng TT = 2u, optimized = saves 1u (user info)
   var msg = 'Eng TikTok: ' + ok + ' actualizado(s)';
-  if (skipped > 0) msg += ', ' + skipped + ' sin cambios (<7 dias)';
+  if (skipped > 0) msg += ', ' + skipped + ' sin cambios';
+  if (saved > 0) msg += ' (ahorraste ' + saved + ' units)';
   showToast(msg, ok > 0 ? 'success' : 'info');
 }
 
@@ -4157,19 +4159,21 @@ async function engagementAllInstagram() {
   showProgressBar('ig', list.length);
   var btn = document.getElementById('eng-ig-all-btn');
   if (btn) btn.disabled = true;
-  var ok = 0, skipped = 0;
+  var ok = 0, skipped = 0, optimized = 0;
   for (var i = 0; i < list.length; i++) {
     updateProgressBar('ig', i + 1, list.length, 'Eng IG: ' + list[i].nombre);
     var r = await engagementAndSave(list[i], 'instagram');
-    if (r === 'skipped') skipped++; else if (r) ok++;
+    if (r === 'skipped') skipped++; else if (r === 'optimized') { ok++; optimized++; } else if (r) ok++;
     renderTalents();
     if (r !== 'skipped' && i < list.length - 1) await new Promise(function(r) { setTimeout(r, 600); });
   }
   hideProgressBar('ig');
   if (btn) btn.disabled = false;
   updateStats();
+  var saved = skipped * 5 + optimized * 3; // skip eng IG = ~5u, optimized = saves 3u (user info)
   var msg2 = 'Eng Instagram: ' + ok + ' actualizado(s)';
-  if (skipped > 0) msg2 += ', ' + skipped + ' sin cambios (<7 dias)';
+  if (skipped > 0) msg2 += ', ' + skipped + ' sin cambios';
+  if (saved > 0) msg2 += ' (ahorraste ' + saved + ' units)';
   showToast(msg2, ok > 0 ? 'success' : 'info');
 }
 
@@ -4330,8 +4334,9 @@ async function scrapeAllProfiles() {
   hideProgressBar('ext');
   updatePlatformCounts();
   var msg = ok+' OK';
-  if (skipped > 0) msg += ', '+skipped+' sin cambios (<7 dias)';
+  if (skipped > 0) msg += ', '+skipped+' sin cambios';
   if (errors > 0) msg += ', '+errors+' errores';
+  if (skipped > 0) msg += ' (ahorraste ~'+skipped+' units)';
   showToast(msg, ok>0?'success':'info');
 }
 
@@ -4348,7 +4353,7 @@ async function scrapeSingle(talentId, platform) {
   // Close card menu
   var menu = document.getElementById('card-menu-' + talentId);
   if (menu) menu.style.display = 'none';
-  if (ok === 'skipped') { showToast(t.nombre+': '+platform+' ya actualizado (<7 dias)','info'); }
+  if (ok === 'skipped') { var savedU = platform==='instagram'?3:1; showToast(t.nombre+': '+platform+' ya actualizado — ahorraste '+savedU+' unit(s)','info'); }
   else if (ok) { renderTalents(); updateStats(); showToast(t.nombre+': '+formatFollowers(t.seguidores[platform])+' ✓','success'); }
   else { showToast(t.nombre+': no se pudo obtener '+platform,'error'); }
 }
@@ -4566,7 +4571,8 @@ async function scrapeAllTikTok() {
   if (btn) btn.disabled = false;
   updateStats();
   var msg = 'TikTok: ' + ok + ' actualizado(s)';
-  if (skipped > 0) msg += ', ' + skipped + ' sin cambios (<7 dias)';
+  if (skipped > 0) msg += ', ' + skipped + ' sin cambios';
+  if (skipped > 0) msg += ' (ahorraste ' + skipped + ' units)';
   showToast(msg, ok > 0 ? 'success' : 'info');
 }
 
@@ -4591,7 +4597,8 @@ async function scrapeAllInstagram() {
   if (btn) btn.disabled = false;
   updateStats();
   var msg = 'Instagram: ' + ok + ' actualizado(s)';
-  if (skipped > 0) msg += ', ' + skipped + ' sin cambios (<7 dias)';
+  if (skipped > 0) msg += ', ' + skipped + ' sin cambios';
+  if (skipped > 0) msg += ' (ahorraste ' + (skipped * 3) + ' units)';
   showToast(msg, ok > 0 ? 'success' : 'info');
 }
 
@@ -4713,7 +4720,8 @@ async function engagementSingle(talentId, platform) {
   var ok = await engagementAndSave(t, platform);
   if (btn) btn.classList.remove('spinning');
   if (ok === 'skipped') {
-    showToast(t.nombre + ': Engagement ' + platform + ' ya actualizado (<7 dias)', 'info');
+    var savedU = platform==='instagram'?5:2;
+    showToast(t.nombre + ': Engagement ' + platform + ' ya actualizado — ahorraste ~' + savedU + ' units', 'info');
   } else if (ok) {
     renderTalents(); updateStats();
     showToast(t.nombre + ': Engagement ' + platform + ' ' + (t.engagement[platform]||0) + '%', 'success');
