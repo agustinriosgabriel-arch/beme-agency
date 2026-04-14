@@ -2680,12 +2680,14 @@ function renderLinksList() {
   }
   container.innerHTML = links.map(function(link) {
     var url = 'https://bemeagency.netlify.app/roster.html?link=' + link.token;
-    var typeLabel = link.compact ? 'Solo ver' : 'Con cotizaciones';
-    return '<div style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);">' +
+    var modeColor = link.compact ? '#f59e0b' : '#22c55e';
+    var modeLabel = link.compact ? 'Solo ver' : 'Cotizaciones';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);">' +
       '<div style="flex:1;min-width:0;">' +
         '<div style="font-weight:700;font-size:13px;">' + escapeHtml(link.client_name) + '</div>' +
-        '<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">' + typeLabel + ' · ' + new Date(link.created_at).toLocaleDateString('es-ES') + '</div>' +
+        '<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">' + new Date(link.created_at).toLocaleDateString('es-ES') + '</div>' +
       '</div>' +
+      '<button class="btn btn-outline btn-sm" onclick="toggleLinkMode(' + link.id + ')" title="Cambiar modo" style="font-size:10px;font-weight:700;color:' + modeColor + ';border-color:' + modeColor + '40;min-width:90px;justify-content:center;">' + modeLabel + '</button>' +
       '<button class="btn btn-outline btn-sm" onclick="copyLinkUrl(\'' + link.token + '\')" title="Copiar URL"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>' +
       '<button class="btn btn-danger btn-sm" onclick="deleteRosterLink(' + link.id + ')" title="Eliminar" style="padding:4px 8px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>' +
     '</div>';
@@ -2714,6 +2716,15 @@ async function deleteRosterLink(linkId) {
   renderLinksList();
   renderRosters();
   showToast('Link eliminado', 'success');
+}
+
+async function toggleLinkMode(linkId) {
+  var link = rosterLinks.find(function(l) { return l.id === linkId; });
+  if (!link) return;
+  link.compact = !link.compact;
+  await sb.from('roster_links').update({ compact: link.compact }).eq('id', linkId);
+  renderLinksList();
+  showToast(link.client_name + ': ' + (link.compact ? 'Solo ver' : 'Con cotizaciones'), 'success');
 }
 
 function copyLinkUrl(token) {
