@@ -103,7 +103,7 @@ body.dark .logo .logo-dark{display:block}
 .stat-card .label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim)}
 .stat-card .value{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;margin-top:4px;line-height:1}
 .stat-card .sub{font-size:11px;color:var(--text-muted);margin-top:4px}
-.stat-card.highlight{background:linear-gradient(135deg,rgba(178,0,93,0.06),rgba(148,20,224,0.06));border-color:rgba(178,0,93,0.15)}
+/* highlight removed — stats use dynamic coloring */
 
 /* ── Toolbar ─────────────────────────────────────────────── */
 .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
@@ -137,11 +137,11 @@ body.dark .logo .logo-dark{display:block}
   flex-shrink:0;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;
   letter-spacing:0.3px;white-space:nowrap;
 }
-.estado-sin_iniciar{background:rgba(85,85,85,0.15);color:#888}
-.estado-en_curso{background:rgba(14,165,233,0.12);color:#38bdf8}
-.estado-etapa_finanzas{background:rgba(245,158,11,0.12);color:#fbbf24}
-.estado-finalizada{background:rgba(34,197,94,0.12);color:#4ade80}
-.estado-cancelada{background:rgba(239,68,68,0.12);color:#ef4444}
+.estado-sin_iniciar{background:rgba(120,120,120,0.12);color:#888}
+.estado-en_curso{background:rgba(245,158,11,0.1);color:#d97706}
+.estado-etapa_finanzas{background:rgba(245,158,11,0.1);color:#d97706}
+.estado-finalizada{background:rgba(34,197,94,0.1);color:#16a34a}
+.estado-cancelada{background:rgba(120,120,120,0.12);color:#888}
 
 .campana-card-body{display:flex;flex-direction:column;gap:6px}
 .campana-talentos-row{display:flex;align-items:center;gap:6px}
@@ -490,27 +490,27 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
 
     <!-- Stats strip -->
     <div class="stats-strip" id="stats-strip">
-      <div class="stat-card highlight">
+      <div class="stat-card" id="card-total">
         <div class="label">Total</div>
         <div class="value" id="stat-total">0</div>
         <div class="sub">campañas</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" id="card-en-curso">
         <div class="label">En Curso</div>
-        <div class="value" id="stat-en-curso" style="color:#38bdf8">0</div>
+        <div class="value" id="stat-en-curso">0</div>
         <div class="sub">activas</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" id="card-finanzas">
         <div class="label">Finanzas</div>
-        <div class="value" id="stat-finanzas" style="color:#fbbf24">0</div>
+        <div class="value" id="stat-finanzas">0</div>
         <div class="sub">pendientes</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" id="card-finalizadas">
         <div class="label">Finalizadas</div>
-        <div class="value" id="stat-finalizadas" style="color:#4ade80">0</div>
+        <div class="value" id="stat-finalizadas">0</div>
         <div class="sub">este año</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" id="card-talentos">
         <div class="label">Talentos</div>
         <div class="value" id="stat-talentos">0</div>
         <div class="sub">en campañas activas</div>
@@ -1266,11 +1266,11 @@ function renderList(container, filtered) {
 function renderKanban(container, filtered) {
   container.className = '';
   const cols = [
-    {key:'sin_iniciar', label:'Sin iniciar', color:'#555'},
-    {key:'en_curso',    label:'En curso',    color:'#38bdf8'},
-    {key:'etapa_finanzas', label:'Finanzas', color:'#fbbf24'},
-    {key:'finalizada',  label:'Finalizada',  color:'#4ade80'},
-    {key:'cancelada',   label:'Cancelada',   color:'#ef4444'},
+    {key:'sin_iniciar', label:'Sin iniciar', color:'#888'},
+    {key:'en_curso',    label:'En curso',    color:'#d97706'},
+    {key:'etapa_finanzas', label:'Finanzas', color:'#d97706'},
+    {key:'finalizada',  label:'Finalizada',  color:'#16a34a'},
+    {key:'cancelada',   label:'Cancelada',   color:'#888'},
   ];
   container.innerHTML = `<div class="kanban-wrap">
     ${cols.map(col => {
@@ -1296,16 +1296,34 @@ function renderKanban(container, filtered) {
 }
 
 function renderStats() {
-  document.getElementById('stat-total').textContent = campanas.length;
-  document.getElementById('stat-en-curso').textContent = campanas.filter(c=>c.estado==='en_curso').length;
-  document.getElementById('stat-finanzas').textContent = campanas.filter(c=>c.estado==='etapa_finanzas').length;
-  document.getElementById('stat-finalizadas').textContent = campanas.filter(c=>c.estado==='finalizada').length;
-  const talentosActivos = new Set(
+  var enCurso = campanas.filter(c=>c.estado==='en_curso').length;
+  var finanzas = campanas.filter(c=>c.estado==='etapa_finanzas').length;
+  var finalizadas = campanas.filter(c=>c.estado==='finalizada').length;
+  var talentosActivos = new Set(
     campanas.filter(c=>c.estado==='en_curso')
       .flatMap(c=>c.campana_talentos||[])
       .map(ct=>ct.talent_id)
   ).size;
+
+  // Values
+  document.getElementById('stat-total').textContent = campanas.length;
+  document.getElementById('stat-en-curso').textContent = enCurso;
+  document.getElementById('stat-finanzas').textContent = finanzas;
+  document.getElementById('stat-finalizadas').textContent = finalizadas;
   document.getElementById('stat-talentos').textContent = talentosActivos;
+
+  // Colors: active (has items) vs inactive (grey)
+  var grey = 'var(--text-dim)';
+  document.getElementById('stat-total').style.color = '#111';
+  document.getElementById('stat-en-curso').style.color = enCurso > 0 ? '#f59e0b' : grey;
+  document.getElementById('stat-finanzas').style.color = finanzas > 0 ? '#f59e0b' : grey;
+  document.getElementById('stat-finalizadas').style.color = finalizadas > 0 ? '#22c55e' : grey;
+  document.getElementById('stat-talentos').style.color = '#111';
+
+  // Card border highlight when active
+  document.getElementById('card-en-curso').style.borderColor = enCurso > 0 ? 'rgba(245,158,11,0.3)' : '';
+  document.getElementById('card-finanzas').style.borderColor = finanzas > 0 ? 'rgba(245,158,11,0.3)' : '';
+  document.getElementById('card-finalizadas').style.borderColor = finalizadas > 0 ? 'rgba(34,197,94,0.2)' : '';
 }
 
 function populateFiltroMarcas() {
