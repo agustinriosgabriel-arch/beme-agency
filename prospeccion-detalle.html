@@ -118,7 +118,7 @@ body.dark .logo .logo-dark{display:block}
 .ms-opt.selected .ms-check{background:var(--primary);border-color:var(--primary);color:#fff}
 
 /* ── Stats strip (6 etapas) ── */
-.etapa-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px}
+.etapa-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
 .etapa-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;text-align:center;cursor:pointer;transition:all 0.15s;border-top:3px solid transparent}
 .etapa-stat:hover{border-color:var(--border2)}
 .etapa-stat.active{border-top-color:var(--primary);background:rgba(178,0,93,0.04)}
@@ -346,14 +346,13 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
   <!-- Kanban -->
   <div class="kanban-wrap" id="kanban-wrap"></div>
 
-  <!-- No Interesados (collapsed, just count) -->
+  <!-- No Interesados / Descartados section -->
   <div id="no-interesados-section" style="margin-top:16px;display:none;">
-    <button onclick="document.getElementById('ni-list').style.display=document.getElementById('ni-list').style.display==='none'?'block':'none'" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:8px;width:100%;">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    <button onclick="var l=document.getElementById('ni-list');l.style.display=l.style.display==='none'?'block':'none';this.querySelector('svg').style.transform=l.style.display==='none'?'':'rotate(180deg)'" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:8px;width:100%;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform 0.2s"><polyline points="6 9 12 15 18 9"/></svg>
       <span id="ni-count-label">No Interesados (0)</span>
-      <span style="margin-left:auto;font-size:10px;color:var(--text-dim);">Estos contactos se pueden editar y graduar desde Prospecciones</span>
     </button>
-    <div id="ni-list" style="display:none;margin-top:8px;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;">
+    <div id="ni-list" style="display:none;margin-top:8px;max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px;">
     </div>
   </div>
 </main>
@@ -746,7 +745,8 @@ function renderHeader() {
 // RENDER ETAPA STRIP
 // ══════════════════════════════════════════════════════════
 function renderEtapaStrip() {
-  document.getElementById('etapa-strip').innerHTML = ALL_ETAPAS.map(e => {
+  // Only show the 4 active etapas in the strip (matching kanban columns)
+  document.getElementById('etapa-strip').innerHTML = ETAPAS.map(e => {
     const count = contactos.filter(c=>c.etapa===e.key).length;
     return `<div class="etapa-stat" style="border-top-color:${count > 0 ? e.color : 'var(--border)'}">
       <div class="e-count" style="color:${count > 0 ? e.color : 'var(--text-dim)'}">${count}</div>
@@ -780,14 +780,19 @@ function renderKanban() {
   var niSection = document.getElementById('no-interesados-section');
   if (niList.length > 0) {
     niSection.style.display = 'block';
-    document.getElementById('ni-count-label').textContent = 'No Interesados / Descartados (' + niList.length + ')';
-    document.getElementById('ni-list').innerHTML = niList.map(function(c) {
+    var niNoGrad = niList.filter(function(c) { return !c.talento_id; });
+    var niGrad = niList.filter(function(c) { return !!c.talento_id; });
+    document.getElementById('ni-count-label').textContent = 'No Interesados / Descartados (' + niNoGrad.length + ')' + (niGrad.length ? ' · ' + niGrad.length + ' graduado' + (niGrad.length!==1?'s':'') : '');
+    document.getElementById('ni-list').innerHTML = niNoGrad.map(function(c) {
       var handle = c.tiktok ? '@'+extractHandle(c.tiktok) : (c.instagram ? '@'+extractHandle(c.instagram) : '');
+      var canGrad = (c.email || c.telefono) && (c.tiktok || c.instagram || c.youtube);
       return '<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--border);">' +
         '<div style="font-weight:600;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(c.nombre) + (handle ? ' <span style="color:var(--text-dim);font-weight:400;">'+esc(handle)+'</span>' : '') + '</div>' +
         '<span style="font-size:10px;color:#888;padding:2px 6px;background:var(--surface2);border-radius:8px;">' + (c.etapa === 'no_interesado' ? 'No interesado' : 'Descartado') + '</span>' +
         '<button class="btn btn-outline btn-xs" onclick="changeEtapa('+c.id+',\'evaluacion\')" style="font-size:10px;">Restaurar</button>' +
         '<button class="btn btn-outline btn-xs" onclick="openDetalle('+c.id+')" style="font-size:10px;">Editar</button>' +
+        (canGrad ? '<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();graduarATalento('+c.id+')" style="font-size:10px;color:#16a34a;border-color:rgba(22,163,74,0.3);font-weight:600;">→ Talento</button>' : '') +
+        (c.etapa !== 'descartado' ? '<button class="btn btn-outline btn-xs" onclick="if(confirm(\'Descartar a '+esc(c.nombre).replace(/'/g,'')+'?\'))changeEtapa('+c.id+',\'descartado\')" style="font-size:10px;color:#ef4444;border-color:rgba(239,68,68,0.3);">Descartar</button>' : '') +
       '</div>';
     }).join('');
   } else {
