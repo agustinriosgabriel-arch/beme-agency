@@ -45,15 +45,25 @@ async function ensembleUserInfo(platform, username, token) {
 
   if (platform === 'instagram') {
     const d = json.data || json;
+    console.log(`[info] IG data keys: ${Object.keys(d).slice(0,20).join(',')}`);
+    console.log(`[info] IG data sample:`, JSON.stringify(d).substring(0, 600));
+    // Try multiple follower field paths
+    const followers = d.edge_followed_by?.count
+      ?? d.follower_count
+      ?? d.followers_count
+      ?? d.user?.edge_followed_by?.count
+      ?? d.user?.follower_count
+      ?? null;
     return {
-      followers: d.edge_followed_by?.count ?? d.follower_count ?? null,
-      bio: d.biography || '',
-      nickname: d.full_name || '',
-      verified: !!d.is_verified,
-      category: d.category_name || '',
-      external_url: d.external_url || '',
-      is_business: !!d.is_business_account,
-      mediaCount: d.edge_owner_to_timeline_media?.count ?? d.media_count ?? 0,
+      followers,
+      bio: d.biography || d.user?.biography || '',
+      nickname: d.full_name || d.user?.full_name || '',
+      verified: !!(d.is_verified ?? d.user?.is_verified),
+      category: d.category_name || d.user?.category_name || '',
+      external_url: d.external_url || d.user?.external_url || '',
+      is_business: !!(d.is_business_account ?? d.user?.is_business_account),
+      mediaCount: d.edge_owner_to_timeline_media?.count ?? d.media_count ?? d.user?.media_count ?? 0,
+      user_id: d.pk || d.id || d.user?.pk || d.user?.id || null,
     };
   }
 
@@ -61,7 +71,7 @@ async function ensembleUserInfo(platform, username, token) {
 }
 
 // ─── EnsembleData: user posts (for engagement) ──────────────
-async function ensembleUserPosts(platform, username, token) {
+async function ensembleUserPosts(platform, username, token, userId) {
   if (platform === 'tiktok') {
     const url = `${ENSEMBLE_BASE}/tt/user/posts?username=${encodeURIComponent(username)}&depth=1&token=${token}`;
     const resp = await fetch(url);
@@ -93,21 +103,43 @@ async function ensembleUserPosts(platform, username, token) {
   }
 
   if (platform === 'instagram') {
-    const url = `${ENSEMBLE_BASE}/instagram/user/posts?username=${encodeURIComponent(username)}&depth=1&token=${token}`;
-    const resp = await fetch(url);
+    // IG posts endpoint needs user_id — try with userId if provided, else username
+    let url;
+    if (userId) {
+      url = `${ENSEMBLE_BASE}/instagram/user/posts?user_id=${userId}&depth=1&token=${token}`;
+      console.log(`[posts] IG using user_id: ${userId}`);
+    } else {
+      url = `${ENSEMBLE_BASE}/instagram/user/posts?username=${encodeURIComponent(username)}&depth=1&token=${token}`;
+    }
+    let resp = await fetch(url);
+
+    // If username approach fails with 422, try getting user_id
+    if (resp.status === 422 && !userId) {
+      console.log(`[posts] IG username failed (422), trying to get user_id...`);
+      const infoResp = await fetch(`${ENSEMBLE_BASE}/instagram/user/info?username=${encodeURIComponent(username)}&token=${token}`);
+      if (infoResp.ok) {
+        const infoJson = await infoResp.json();
+        const d = infoJson.data || infoJson;
+        const resolvedId = d.pk || d.id || d.user?.pk || d.user?.id;
+        if (resolvedId) {
+          console.log(`[posts] IG resolved user_id: ${resolvedId}`);
+          url = `${ENSEMBLE_BASE}/instagram/user/posts?user_id=${resolvedId}&depth=1&token=${token}`;
+          resp = await fetch(url);
+        }
+      }
+    }
+
     if (!resp.ok) {
       const errText = await resp.text().catch(() => '');
       console.log(`[posts] IG HTTP ${resp.status}: ${errText.substring(0, 300)}`);
       throw new Error(`Ensemble IG posts HTTP ${resp.status}`);
     }
     const json = await resp.json();
-    // Debug: log raw structure
     const topKeys = Object.keys(json).join(',');
     console.log(`[posts] IG raw keys: ${topKeys}`);
     // Instagram posts can be nested in different structures
     let rawPosts = json.data || [];
     if (Array.isArray(rawPosts) && rawPosts.length === 0) {
-      // Try alternate structures
       rawPosts = json.posts || json.items || json.edge_owner_to_timeline_media?.edges?.map(e => e.node) || [];
     }
     console.log(`[posts] IG posts array length: ${rawPosts.length}`);
@@ -257,10 +289,18 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ error: 'Engagement requiere EnsembleData token' }) };
 
     try {
-      const [info, posts] = await Promise.all([
-        ensembleUserInfo(platform, clean, ensembleToken),
-        ensembleUserPosts(platform, clean, ensembleToken),
-      ]);
+      // For IG, posts may need user_id from info — run sequentially
+      // For TT, can run in parallel
+      let info, posts;
+      if (platform === 'instagram') {
+        info = await ensembleUserInfo(platform, clean, ensembleToken);
+        posts = await ensembleUserPosts(platform, clean, ensembleToken, info?.user_id);
+      } else {
+        [info, posts] = await Promise.all([
+          ensembleUserInfo(platform, clean, ensembleToken),
+          ensembleUserPosts(platform, clean, ensembleToken),
+        ]);
+      }
 
       const followers = info?.followers ?? null;
       const engagementRate = calculateEngagement(posts, followers);
