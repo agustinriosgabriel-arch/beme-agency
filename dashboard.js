@@ -2623,10 +2623,9 @@ function renderRosterCard(r, isArchived) {
 
   const brandEditCount = rosterBrandEdits[r.id] || 0;
   card.style.cursor = 'pointer';
-  card.setAttribute('data-action', 'view-roster');
-  card.setAttribute('data-id', r.id);
+  card.onclick = function(e) { if (!e.target.closest('.roster-actions') && !e.target.closest('button')) viewRoster(r.id); };
   card.innerHTML = '\
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px" onclick="event.stopPropagation()">\
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">\
         <div class="roster-name" style="flex:1;min-width:0;cursor:pointer" onclick="viewRoster('+r.id+')">'+escapeHtml(r.name)+'</div>\
         '+(brandEditCount ? '<span style="background:linear-gradient(135deg,#b2005d,#9414E0);color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px;white-space:nowrap" title="'+brandEditCount+' cambios de la marca">'+brandEditCount+' nuevo'+(brandEditCount!==1?'s':'')+'</span>' : '')+'\
         <button class="btn btn-outline btn-sm" data-action="edit-roster" data-id="'+r.id+'" title="Editar nombre" style="padding:3px 7px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>\
@@ -2642,7 +2641,7 @@ function renderRosterCard(r, isArchived) {
         <span>Creado '+escapeHtml(r.created || '')+'</span>\
       </div>\
       '+(rosterTalents.length > 0 ? '<div style="display:flex;margin-left:6px;margin-bottom:10px">'+avatarsPrev+(rosterTalents.length>3?'<div style="width:24px;height:24px;border-radius:50%;background:var(--surface2);border:2px solid var(--surface);display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);margin-left:-6px">+'+(rosterTalents.length-3)+'</div>':'')+'</div>' : '')+'\
-      <div class="roster-actions" onclick="event.stopPropagation()" style="flex-wrap:wrap">\
+      <div class="roster-actions" style="flex-wrap:wrap">\
         '+(brandEditCount ? '<button class="btn btn-outline btn-sm" data-action="clear-brand-edits" data-id="'+r.id+'" title="Marcar leido" style="color:#b2005d;border-color:rgba(178,0,93,0.4);font-size:10px">✓ Leido</button>' : '')+'\
         <button class="btn btn-outline btn-sm" data-action="ai-descs-roster" data-id="'+r.id+'" title="Generar descripciones AI" style="color:#9414E0;border-color:rgba(148,20,224,0.4);font-weight:700;">AI</button>\
         <button class="btn btn-outline btn-sm" data-action="manage-links" data-id="'+r.id+'" title="Links por cliente" style="color:#0ea5e9;border-color:rgba(14,165,233,0.4);font-weight:600;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> '+(rosterLinks.filter(function(l){return l.roster_id===r.id;}).length || '')+'</button>\
