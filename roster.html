@@ -116,8 +116,13 @@ let SELS = {}; // talent_id → {selected, accion, precio, contraoferta}
 let LINK_ID = 0; // 0 = legacy direct token, >0 = roster_links.id
 let CLIENT_NAME = '';
 var COMPACT_MODE = new URLSearchParams(window.location.search).get('compact') === '1';
-let rosterViewMode = 'table'; // table | cards
-let rosterSort = 'default'; // default | ig-desc | ig-asc | tt-desc | tt-asc
+// Persist view/sort preferences per roster in localStorage
+function _rosterPrefKey() { return 'roster_prefs_' + (new URLSearchParams(window.location.search).get('link') || new URLSearchParams(window.location.search).get('token') || ''); }
+function _loadRosterPrefs() { try { return JSON.parse(localStorage.getItem(_rosterPrefKey())) || {}; } catch(e) { return {}; } }
+function _saveRosterPrefs(prefs) { try { localStorage.setItem(_rosterPrefKey(), JSON.stringify(prefs)); } catch(e) {} }
+var _prefs = _loadRosterPrefs();
+let rosterViewMode = _prefs.view || 'table';
+let rosterSort = _prefs.sort || 'default';
 let showAI = null; // null = use ROSTER.show_ai_descriptions
 let IS_INTERNAL = false; // admin or campaign_manager
 
@@ -225,11 +230,13 @@ function showError(msg) {
 // ── Render ────────────────────────────────────────────────────
 function setRosterView(mode) {
   rosterViewMode = mode;
+  _saveRosterPrefs({ view: rosterViewMode, sort: rosterSort });
   render();
   restoreSelections();
 }
 function setRosterSort(sort) {
   rosterSort = sort;
+  _saveRosterPrefs({ view: rosterViewMode, sort: rosterSort });
   render();
   restoreSelections();
 }
