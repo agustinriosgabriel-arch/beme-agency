@@ -185,7 +185,33 @@ exports.handler = async (event) => {
   const clean = username.replace(/^@/, '');
   console.log(`[scraper] ${action} ${platform} @${clean}`);
 
-  // ── ACTION: engagement ─────────────────────────────────────
+  // ── ACTION: posts_only (engagement without re-fetching user info) ──
+  // Saves 1 unit TT / 3 units IG when followers are already fresh
+  if (action === 'posts_only') {
+    if (!ensembleToken)
+      return { statusCode: 200, headers, body: JSON.stringify({ error: 'posts_only requiere EnsembleData token' }) };
+
+    const existingFollowers = body.followers || 0;
+    try {
+      const posts = await ensembleUserPosts(platform, clean, ensembleToken);
+      const engagementRate = calculateEngagement(posts, existingFollowers);
+      const avgViews = calculateAvgViews(posts);
+      const postsAnalyzed = posts?.length ?? 0;
+
+      console.log(`[scraper] posts_only ${platform} @${clean} → ${engagementRate}% avgViews:${avgViews} (${postsAnalyzed} posts, existing followers: ${existingFollowers})`);
+
+      return { statusCode: 200, headers, body: JSON.stringify({
+        platform, username: clean, action: 'posts_only',
+        followers: existingFollowers, engagementRate, avgViews, postsAnalyzed,
+        source: 'ensemble',
+      }) };
+    } catch (e) {
+      console.log(`[scraper] posts_only error:`, e.message);
+      return { statusCode: 200, headers, body: JSON.stringify({ error: e.message }) };
+    }
+  }
+
+  // ── ACTION: engagement (full — user info + posts) ─────────
   if (action === 'engagement') {
     if (!ensembleToken)
       return { statusCode: 200, headers, body: JSON.stringify({ error: 'Engagement requiere EnsembleData token' }) };

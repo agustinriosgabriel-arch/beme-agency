@@ -3963,7 +3963,59 @@ async function fetchEngagement(platform, profileUrl) {
   }
 }
 
+// ── Posts-only fetch (reuse existing followers) ──────────────
+async function fetchPostsOnly(platform, profileUrl, existingFollowers) {
+  var username = extractUsername(profileUrl, platform);
+  if (!username) return null;
+  try {
+    var controller = new AbortController();
+    var timer = setTimeout(function(){ controller.abort(); }, 65000);
+    var resp = await fetch('/.netlify/functions/ensemble-scraper', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({platform, username, action:'posts_only', followers: existingFollowers, ensembleToken}),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    if (!resp.ok) return null;
+    var data = await resp.json();
+    if (data.error) { console.log('[posts_only]', data.error); return null; }
+    return {
+      engagementRate: data.engagementRate,
+      avgViews: data.avgViews || null,
+      followers: existingFollowers,
+      postsAnalyzed: data.postsAnalyzed,
+    };
+  } catch(e) {
+    console.warn('[posts_only]', username, platform, e.message);
+    return null;
+  }
+}
+
 // TikTok region code → country name mapping
+// ── Freshness check (7-day cooldown) ─────────────────────────
+const FRESHNESS_DAYS = 7;
+
+function isFresh(t, platform, dataType) {
+  // dataType: 'followers' or 'engagement'
+  var meta = (t.social_meta || {})[platform];
+  if (!meta) return false;
+  var key = dataType === 'engagement' ? 'engagement_at' : 'followers_at';
+  var dateStr = meta[key];
+  if (!dateStr) return false;
+  var then = new Date(dateStr);
+  var now = new Date();
+  var diffDays = (now - then) / (1000 * 60 * 60 * 24);
+  return diffDays < FRESHNESS_DAYS;
+}
+
+function setFreshTimestamp(t, platform, dataType) {
+  if (!t.social_meta) t.social_meta = {};
+  if (!t.social_meta[platform]) t.social_meta[platform] = {};
+  var key = dataType === 'engagement' ? 'engagement_at' : 'followers_at';
+  t.social_meta[platform][key] = new Date().toISOString().split('T')[0];
+}
+
 const REGION_TO_COUNTRY = {
   'AR':'Argentina','BO':'Bolivia','BR':'Brasil','CL':'Chile','CO':'Colombia',
   'CR':'Costa Rica','CU':'Cuba','EC':'Ecuador','SV':'El Salvador','ES':'España',
@@ -3972,11 +4024,30 @@ const REGION_TO_COUNTRY = {
   'PR':'Puerto Rico','DO':'República Dominicana','UY':'Uruguay','VE':'Venezuela',
 };
 
-async function engagementAndSave(t, platform) {
+async function engagementAndSave(t, platform, force) {
   var url = platform === 'instagram' ? t.instagram : t.tiktok;
   if (!url) return false;
+
+  // Skip if engagement is already fresh
+  if (!force && isFresh(t, platform, 'engagement')) {
+    console.log('[engagement] SKIP', t.nombre, platform, '— engagement fresh');
+    return 'skipped';
+  }
+
   try {
-    var result = await fetchEngagement(platform, url);
+    var result;
+    var followersFresh = isFresh(t, platform, 'followers');
+    var existingFollowers = t.seguidores[platform] || 0;
+
+    if (followersFresh && existingFollowers > 0) {
+      // Followers are fresh → only fetch posts (saves 1 unit TT / 3 units IG)
+      console.log('[engagement] OPTIMIZED', t.nombre, platform, '— reusing fresh followers, only fetching posts');
+      result = await fetchPostsOnly(platform, url, existingFollowers);
+    } else {
+      // Followers stale or missing → full engagement (user info + posts)
+      result = await fetchEngagement(platform, url);
+    }
+
     if (!result || (result.engagementRate === null && result.engagementRate === undefined)) return false;
 
     // ── Core metrics ──
@@ -3988,7 +4059,13 @@ async function engagementAndSave(t, platform) {
     if (!t.avg_views) t.avg_views = {};
     if (result.avgViews) t.avg_views[platform] = result.avgViews;
 
-    // ── Hidden metadata (social_meta) ──
+    // ── Timestamps ──
+    setFreshTimestamp(t, platform, 'engagement');
+    if (!followersFresh && result.followers) {
+      setFreshTimestamp(t, platform, 'followers');
+    }
+
+    // ── Hidden metadata (social_meta) — only from full engagement ──
     if (!t.social_meta) t.social_meta = {};
     if (!t.social_meta[platform]) t.social_meta[platform] = {};
     var meta = t.social_meta[platform];
@@ -4033,7 +4110,6 @@ async function engagementAndSave(t, platform) {
         social_meta: {...(t.social_meta||{})},
         updated: t.updated
       };
-      // Include auto-linked fields if changed
       if (platform === 'tiktok') {
         if (result.instagram_id && t.instagram) updateObj.instagram = t.instagram;
         if (result.youtube_id && t.youtube) updateObj.youtube = t.youtube;
@@ -4056,17 +4132,20 @@ async function engagementAllTikTok() {
   showProgressBar('ext', list.length);
   var btn = document.getElementById('eng-tt-all-btn');
   if (btn) btn.disabled = true;
-  var ok = 0;
+  var ok = 0, skipped = 0;
   for (var i = 0; i < list.length; i++) {
     updateProgressBar('ext', i + 1, list.length, 'Eng TT: ' + list[i].nombre);
-    if (await engagementAndSave(list[i], 'tiktok')) ok++;
+    var r = await engagementAndSave(list[i], 'tiktok');
+    if (r === 'skipped') skipped++; else if (r) ok++;
     renderTalents();
-    if (i < list.length - 1) await new Promise(function(r) { setTimeout(r, 400); });
+    if (r !== 'skipped' && i < list.length - 1) await new Promise(function(r) { setTimeout(r, 400); });
   }
   hideProgressBar('ext');
   if (btn) btn.disabled = false;
   updateStats();
-  showToast('Engagement TikTok: ' + ok + ' actualizado(s)', ok > 0 ? 'success' : 'info');
+  var msg = 'Eng TikTok: ' + ok + ' actualizado(s)';
+  if (skipped > 0) msg += ', ' + skipped + ' sin cambios (<7 dias)';
+  showToast(msg, ok > 0 ? 'success' : 'info');
 }
 
 async function engagementAllInstagram() {
@@ -4078,17 +4157,20 @@ async function engagementAllInstagram() {
   showProgressBar('ig', list.length);
   var btn = document.getElementById('eng-ig-all-btn');
   if (btn) btn.disabled = true;
-  var ok = 0;
+  var ok = 0, skipped = 0;
   for (var i = 0; i < list.length; i++) {
     updateProgressBar('ig', i + 1, list.length, 'Eng IG: ' + list[i].nombre);
-    if (await engagementAndSave(list[i], 'instagram')) ok++;
+    var r = await engagementAndSave(list[i], 'instagram');
+    if (r === 'skipped') skipped++; else if (r) ok++;
     renderTalents();
-    if (i < list.length - 1) await new Promise(function(r) { setTimeout(r, 600); });
+    if (r !== 'skipped' && i < list.length - 1) await new Promise(function(r) { setTimeout(r, 600); });
   }
   hideProgressBar('ig');
   if (btn) btn.disabled = false;
   updateStats();
-  showToast('Engagement Instagram: ' + ok + ' actualizado(s)', ok > 0 ? 'success' : 'info');
+  var msg2 = 'Eng Instagram: ' + ok + ' actualizado(s)';
+  if (skipped > 0) msg2 += ', ' + skipped + ' sin cambios (<7 dias)';
+  showToast(msg2, ok > 0 ? 'success' : 'info');
 }
 
 // ── Selected talents: per-platform updates ───────────────────
@@ -4206,17 +4288,27 @@ async function saveFollowers(t, platform, followers) {
   }
 }
 
-async function scrapeAndSave(t, platform) {
+async function scrapeAndSave(t, platform, force) {
   var url = platform === 'instagram' ? t.instagram : t.tiktok;
   if (!url) return false;
+  // Skip if followers are fresh (updated < 7 days ago)
+  if (!force && isFresh(t, platform, 'followers')) {
+    console.log('[scraper] SKIP', t.nombre, platform, '— followers fresh');
+    return 'skipped';
+  }
   try {
     var timeoutP = new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, 65000); });
     var followers = await Promise.race([fetchFollowersViaApify(platform, url), timeoutP]);
     if (followers !== null && followers !== undefined) {
       try { await Promise.race([saveFollowers(t, platform, followers), new Promise(function(r){ setTimeout(r,5000); })]); } catch(e) {}
+      setFreshTimestamp(t, platform, 'followers');
+      // Persist timestamp
+      if (sb && currentUser) {
+        sb.from('talentos').update({ social_meta: {...(t.social_meta||{})} }).eq('id', t.id).then(function(){});
+      }
       return true;
     }
-  } catch(e) { console.warn('[Apify]', t.nombre, platform, e.message); }
+  } catch(e) { console.warn('[scraper]', t.nombre, platform, e.message); }
   return false;
 }
 
@@ -4225,19 +4317,22 @@ async function scrapeAllProfiles() {
   var toScrape = talents.filter(function(t){ return t.instagram || t.tiktok; });
   if (!toScrape.length) { showToast('Ningún talento tiene IG o TikTok','info'); return; }
   showProgressBar('ext', toScrape.length);
-  var ok=0, errors=0, done=0;
+  var ok=0, errors=0, skipped=0, done=0;
   for (var i=0; i<toScrape.length; i++) {
     var t = toScrape[i];
     updateProgressBar('ext', done+1, toScrape.length, t.nombre);
-    if (t.instagram) { if (await scrapeAndSave(t,'instagram')) ok++; else errors++; }
-    if (t.tiktok)    { if (await scrapeAndSave(t,'tiktok'))    ok++; else errors++; }
+    if (t.instagram) { var ri = await scrapeAndSave(t,'instagram'); if (ri==='skipped') skipped++; else if (ri) ok++; else errors++; }
+    if (t.tiktok)    { var rt = await scrapeAndSave(t,'tiktok');    if (rt==='skipped') skipped++; else if (rt) ok++; else errors++; }
     done++;
     renderTalents(); updateStats();
     if (i < toScrape.length-1) await new Promise(function(r){ setTimeout(r,500); });
   }
   hideProgressBar('ext');
   updatePlatformCounts();
-  showToast('Apify: '+ok+' OK, '+errors+' errores', ok>0?'success':'info');
+  var msg = ok+' OK';
+  if (skipped > 0) msg += ', '+skipped+' sin cambios (<7 dias)';
+  if (errors > 0) msg += ', '+errors+' errores';
+  showToast(msg, ok>0?'success':'info');
 }
 
 async function scrapeSingle(talentId, platform) {
@@ -4250,7 +4345,11 @@ async function scrapeSingle(talentId, platform) {
   if (btn) btn.classList.add('spinning');
   const ok = await scrapeAndSave(t, platform);
   if (btn) btn.classList.remove('spinning');
-  if (ok) { renderTalents(); updateStats(); showToast(t.nombre+': '+formatFollowers(t.seguidores[platform])+' ✓','success'); }
+  // Close card menu
+  var menu = document.getElementById('card-menu-' + talentId);
+  if (menu) menu.style.display = 'none';
+  if (ok === 'skipped') { showToast(t.nombre+': '+platform+' ya actualizado (<7 dias)','info'); }
+  else if (ok) { renderTalents(); updateStats(); showToast(t.nombre+': '+formatFollowers(t.seguidores[platform])+' ✓','success'); }
   else { showToast(t.nombre+': no se pudo obtener '+platform,'error'); }
 }
 
@@ -4455,17 +4554,20 @@ async function scrapeAllTikTok() {
   showProgressBar('ext', list.length);
   var btn = document.getElementById('scrape-tt-all-btn');
   if (btn) btn.disabled = true;
-  var ok = 0;
+  var ok = 0, skipped = 0;
   for (var i = 0; i < list.length; i++) {
     updateProgressBar('ext', i + 1, list.length, list[i].nombre);
-    if (await scrapeAndSave(list[i], 'tiktok')) ok++;
+    var r = await scrapeAndSave(list[i], 'tiktok');
+    if (r === 'skipped') skipped++; else if (r) ok++;
     renderTalents();
-    if (i < list.length - 1) await new Promise(function(r) { setTimeout(r, 300); });
+    if (r !== 'skipped' && i < list.length - 1) await new Promise(function(r) { setTimeout(r, 300); });
   }
   hideProgressBar('ext');
   if (btn) btn.disabled = false;
   updateStats();
-  showToast('TikTok: ' + ok + ' actualizado(s)', ok > 0 ? 'success' : 'info');
+  var msg = 'TikTok: ' + ok + ' actualizado(s)';
+  if (skipped > 0) msg += ', ' + skipped + ' sin cambios (<7 dias)';
+  showToast(msg, ok > 0 ? 'success' : 'info');
 }
 
 async function scrapeAllInstagram() {
@@ -4477,17 +4579,20 @@ async function scrapeAllInstagram() {
   showProgressBar('ig', list.length);
   var btn = document.getElementById('scrape-ig-all-btn');
   if (btn) btn.disabled = true;
-  var ok = 0;
+  var ok = 0, skipped = 0;
   for (var i = 0; i < list.length; i++) {
     updateProgressBar('ig', i + 1, list.length, list[i].nombre);
-    if (await scrapeAndSave(list[i], 'instagram')) ok++;
+    var r = await scrapeAndSave(list[i], 'instagram');
+    if (r === 'skipped') skipped++; else if (r) ok++;
     renderTalents();
-    if (i < list.length - 1) await new Promise(function(r) { setTimeout(r, 600); });
+    if (r !== 'skipped' && i < list.length - 1) await new Promise(function(r) { setTimeout(r, 600); });
   }
   hideProgressBar('ig');
   if (btn) btn.disabled = false;
   updateStats();
-  showToast('Instagram: ' + ok + ' actualizado(s)', ok > 0 ? 'success' : 'info');
+  var msg = 'Instagram: ' + ok + ' actualizado(s)';
+  if (skipped > 0) msg += ', ' + skipped + ' sin cambios (<7 dias)';
+  showToast(msg, ok > 0 ? 'success' : 'info');
 }
 
 // ── UPDATE ALL 3 NETWORKS ────────────────────────────────────
@@ -4607,9 +4712,11 @@ async function engagementSingle(talentId, platform) {
   if (btn) btn.classList.add('spinning');
   var ok = await engagementAndSave(t, platform);
   if (btn) btn.classList.remove('spinning');
-  if (ok) {
+  if (ok === 'skipped') {
+    showToast(t.nombre + ': Engagement ' + platform + ' ya actualizado (<7 dias)', 'info');
+  } else if (ok) {
     renderTalents(); updateStats();
-    showToast(t.nombre + ': Engagement ' + platform + ' ' + (t.engagement[platform]||0) + '% ✓', 'success');
+    showToast(t.nombre + ': Engagement ' + platform + ' ' + (t.engagement[platform]||0) + '%', 'success');
   } else {
     showToast(t.nombre + ': no se pudo obtener engagement ' + platform, 'error');
   }
