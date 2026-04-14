@@ -2732,6 +2732,8 @@ function copyLinkUrl(token) {
   copyTextWithToast(url, 'URL copiada para el cliente');
 }
 
+function filterRosters() { renderRosters(); }
+
 function renderRosters() {
   var grid = document.getElementById('roster-manager-grid');
   var archGrid = document.getElementById('archived-roster-grid');
@@ -2739,8 +2741,10 @@ function renderRosters() {
   grid.innerHTML = '';
   if (archGrid) archGrid.innerHTML = '';
 
-  var active = sortRosterList(rosters.filter(function(r) { return !r.archived; }));
-  var archived = sortRosterList(rosters.filter(function(r) { return r.archived; }));
+  var searchInput = document.getElementById('roster-search');
+  var search = searchInput ? searchInput.value.toLowerCase().trim() : '';
+  var active = sortRosterList(rosters.filter(function(r) { return !r.archived && (!search || r.name.toLowerCase().includes(search)); }));
+  var archived = sortRosterList(rosters.filter(function(r) { return r.archived && (!search || r.name.toLowerCase().includes(search)); }));
 
   if (active.length === 0 && archived.length === 0) {
     grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:60px 20px"><div class="empty-icon">📋</div><h3>Sin rosters todavía</h3><p>Crea tu primer roster para organizar talentos por cliente.</p></div>';
@@ -3123,7 +3127,7 @@ function openCreateRosterAndAdd() {
 // ===================== GENERAL ROSTERS =====================
 let generalRosters = [];
 let editingGeneralRosterId = null;
-let currentRosterSubtab = 'generales';
+let currentRosterSubtab = 'personalizados';
 
 function switchRosterSubtab(tab) {
   currentRosterSubtab = tab;
