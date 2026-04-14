@@ -585,11 +585,8 @@ const ETAPAS = [
   {key:'esperando_respuesta', label:'Esperando',         color:'#d97706'},
   {key:'interesado',          label:'Interesado',        color:'#16a34a'},
 ];
-const ETAPAS_HIDDEN = [
-  {key:'no_interesado',       label:'No Interesado',     color:'#888'},
-  {key:'descartado',          label:'Descartado',        color:'#888'},
-];
-const ALL_ETAPAS = [...ETAPAS, ...ETAPAS_HIDDEN];
+// descartado exists in DB but is never shown in UI
+const ALL_ETAPAS = [...ETAPAS];
 
 let currentUser = null, currentProfile = null;
 let prospeccion = null, contactos = [], historial = [];
@@ -833,8 +830,7 @@ function etapaButtons(c, etapa) {
       <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'no_interesado')">No interesado</button>
       <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();addMedio(${c.id})" title="Agregar otro medio de contacto">+ Medio</button>
       <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'contactar')" title="Volver">&larr;</button>`;
-    case 'descartado': return `
-      <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'evaluacion')">Restaurar</button>`;
+    case 'descartado': return ''; // hidden from UI
     case 'no_interesado': return `
       <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'esperando_respuesta')">Restaurar</button>`;
     case 'interesado': return `
