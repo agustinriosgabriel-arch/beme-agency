@@ -1574,6 +1574,10 @@ function formatFollowers(n) {
   if(n>=1000) return Math.floor(n/1000)+'K';
   return n.toString();
 }
+function formatFollowersOrError(n) {
+  if(!n||n===0) return '<span style="color:#ef4444;font-weight:700;font-size:10px;">ERROR</span>';
+  return formatFollowers(n);
+}
 function extractHandle(url) {
   if(!url) return '';
   // Try @handle first
@@ -1625,9 +1629,9 @@ function renderCard(t) {
     : `<div class="card-avatar">${getInitials(t.nombre)}</div>`;
   const safeUrl = (url) => { if(!url) return '#'; if(url.startsWith('http')) return escapeHtml(url); return escapeHtml('https://'+url); };
   const networks = [
-    t.tiktok ? `<div class="network-row"><div class="network-icon tt"><svg width="11" height="11" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg></div><a class="network-link" href="${safeUrl(t.tiktok)}" target="_blank" onclick="event.stopPropagation()">${escapeHtml(extractHandle(t.tiktok))}</a><span class="network-followers">${formatFollowers(t.seguidores.tiktok)}</span></div>` : '',
-    t.instagram ? `<div class="network-row"><div class="network-icon ig"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg></div><a class="network-link" href="${safeUrl(t.instagram)}" target="_blank" onclick="event.stopPropagation()">${escapeHtml(extractHandle(t.instagram))}</a><span class="network-followers">${formatFollowers(t.seguidores.instagram)}</span></div>` : '',
-    t.youtube ? `<div class="network-row"><div class="network-icon yt"><svg width="11" height="11" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg></div><a class="network-link" href="${safeUrl(t.youtube)}" target="_blank" onclick="event.stopPropagation()">${escapeHtml(extractHandle(t.youtube))}</a><span class="network-followers">${formatFollowers(t.seguidores.youtube)}</span></div>` : '',
+    t.tiktok ? `<div class="network-row"><div class="network-icon tt"><svg width="11" height="11" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg></div><a class="network-link" href="${safeUrl(t.tiktok)}" target="_blank" onclick="event.stopPropagation()">${escapeHtml(extractHandle(t.tiktok))}</a><span class="network-followers">${formatFollowersOrError(t.seguidores.tiktok)}</span></div>` : '',
+    t.instagram ? `<div class="network-row"><div class="network-icon ig"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg></div><a class="network-link" href="${safeUrl(t.instagram)}" target="_blank" onclick="event.stopPropagation()">${escapeHtml(extractHandle(t.instagram))}</a><span class="network-followers">${formatFollowersOrError(t.seguidores.instagram)}</span></div>` : '',
+    t.youtube ? `<div class="network-row"><div class="network-icon yt"><svg width="11" height="11" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg></div><a class="network-link" href="${safeUrl(t.youtube)}" target="_blank" onclick="event.stopPropagation()">${escapeHtml(extractHandle(t.youtube))}</a><span class="network-followers">${formatFollowersOrError(t.seguidores.youtube)}</span></div>` : '',
   ].filter(Boolean).join('');
   const metricRows = [];
   // TikTok metrics
@@ -1915,22 +1919,29 @@ function handlePhotoUpload(input) {
 function normalizeSocialUrl(raw, platform) {
   if(!raw) return null;
   let url = raw.trim();
-  if(!url) return '';
+  if(!url || url === '-') return '';
   // Already a full URL — just ensure https
-  if(url.match(/^https?:\/\//)) return url;
+  if(url.match(/^https?:\/\//)) {
+    // Validate it contains the correct domain
+    var result = url;
+    if(platform === 'tiktok' && !result.includes('tiktok.com')) return '';
+    if(platform === 'instagram' && !result.includes('instagram.com')) return '';
+    if(platform === 'youtube' && !result.includes('youtube.com') && !result.includes('youtu.be')) return '';
+    return result;
+  }
   // Has domain but no protocol
   if(url.includes('tiktok.com') || url.includes('instagram.com') || url.includes('youtube.com') || url.includes('youtu.be')) {
     return 'https://' + url;
   }
-  // Just a handle (@user or user)
+  // Just a handle (@user or user) — must be alphanumeric (2+ chars, no spaces)
   let username = url.replace(/^@/, '');
-  if(username && !username.includes('/') && !username.includes('.')) {
+  if(username && username.length >= 2 && /^[a-zA-Z0-9._]+$/.test(username)) {
     if(platform === 'tiktok') return 'https://www.tiktok.com/@' + username;
     if(platform === 'instagram') return 'https://www.instagram.com/' + username + '/';
     if(platform === 'youtube') return 'https://www.youtube.com/@' + username;
   }
-  // Fallback: add https
-  return 'https://' + url;
+  // Invalid input — return empty
+  return '';
 }
 
 async function fetchProfilePhoto() {
