@@ -143,9 +143,20 @@ async function ensembleUserPosts(platform, username, token, userId) {
     const topKeys = Object.keys(json).join(',');
     console.log(`[posts] IG raw keys: ${topKeys}`);
     // Instagram posts can be nested in different structures
-    let rawPosts = json.data || [];
-    if (Array.isArray(rawPosts) && rawPosts.length === 0) {
-      rawPosts = json.posts || json.items || json.edge_owner_to_timeline_media?.edges?.map(e => e.node) || [];
+    let rawPosts = Array.isArray(json.data) ? json.data : [];
+    if (rawPosts.length === 0) {
+      rawPosts = Array.isArray(json.posts) ? json.posts
+        : Array.isArray(json.items) ? json.items
+        : Array.isArray(json.edge_owner_to_timeline_media?.edges) ? json.edge_owner_to_timeline_media.edges.map(e => e.node)
+        : [];
+    }
+    // If data was an object with nested posts
+    if (rawPosts.length === 0 && json.data && !Array.isArray(json.data)) {
+      const d = json.data;
+      rawPosts = Array.isArray(d.items) ? d.items
+        : Array.isArray(d.posts) ? d.posts
+        : Array.isArray(d.edges) ? d.edges.map(e => e.node || e)
+        : [];
     }
     console.log(`[posts] IG posts array length: ${rawPosts.length}`);
     if (rawPosts.length > 0) {

@@ -414,9 +414,19 @@ function setupRealtimeSubscription() {
         const t = payload.new;
         if (!t || !t.id) {
           // payload.new is empty — reload only changed columns (skip foto to save IO)
+          // payload.new is empty — merge updated columns into existing talents (preserve foto, etc.)
           const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono';
           sb.from('talentos').select(TALENT_COLS_RT).order('nombre').then(({ data }) => {
-            if (data) { talents = data.map(x => ({...x, paises:x.paises||[], categorias:x.categorias||[], seguidores:x.seguidores||{tiktok:0,instagram:0,youtube:0}, engagement:x.engagement||{}, avg_views:x.avg_views||{}, social_meta:x.social_meta||{}})); renderTalents(); updateStats(); updatePlatformCounts(); }
+            if (data) {
+              // Merge into existing talents to preserve fields not in RT select (like foto)
+              var byId = {};
+              talents.forEach(function(x) { byId[x.id] = x; });
+              talents = data.map(function(x) {
+                var existing = byId[x.id] || {};
+                return { ...existing, ...x, paises:x.paises||existing.paises||[], categorias:x.categorias||existing.categorias||[], seguidores:x.seguidores||existing.seguidores||{tiktok:0,instagram:0,youtube:0}, engagement:x.engagement||existing.engagement||{}, avg_views:x.avg_views||existing.avg_views||{}, social_meta:x.social_meta||existing.social_meta||{} };
+              });
+              renderTalents(); updateStats(); updatePlatformCounts();
+            }
           });
         } else {
           const idx = talents.findIndex(x => x.id === t.id);
