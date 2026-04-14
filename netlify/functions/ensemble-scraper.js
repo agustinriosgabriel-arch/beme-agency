@@ -160,19 +160,14 @@ async function ensembleUserPosts(platform, username, token, userId) {
     }
     // Unwrap GraphQL {node: {...}} wrapper if present
     rawPosts = rawPosts.map(p => p.node || p);
-    console.log(`[posts] IG posts array length: ${rawPosts.length}`);
-    // Capture debug info for first post
-    let _igPostDebug = null;
-    if (rawPosts.length > 0) {
-      const first = rawPosts[0];
-      const firstKeys = Object.keys(first).slice(0, 25).join(',');
-      console.log(`[posts] IG first post keys: ${firstKeys}`);
-      console.log(`[posts] IG first post (partial):`, JSON.stringify(first).substring(0, 800));
-      _igPostDebug = { keys: firstKeys, sample: JSON.stringify(first).substring(0, 800) };
-    }
+    // Filter only videos/reels (skip static photos)
+    const videoPosts = rawPosts.filter(p => p.__typename === 'GraphVideo' || p.is_video || p.media_type === 2 || p.video_url);
+    console.log(`[posts] IG total: ${rawPosts.length}, videos/reels: ${videoPosts.length}`);
+    // Use video posts if available, otherwise fall back to all posts
+    const igPosts = videoPosts.length > 0 ? videoPosts : rawPosts;
     // Skip first 3 posts (usually pinned/viral) to avoid skewing engagement
     const SKIP_PINNED_IG = 3;
-    const filteredIG = rawPosts.length > SKIP_PINNED_IG ? rawPosts.slice(SKIP_PINNED_IG) : rawPosts;
+    const filteredIG = igPosts.length > SKIP_PINNED_IG ? igPosts.slice(SKIP_PINNED_IG) : igPosts;
     console.log(`[posts] IG using ${filteredIG.length} posts (skipped ${rawPosts.length - filteredIG.length} pinned)`);
     return filteredIG.map(p => ({
       likes: p.like_count ?? p.edge_liked_by?.count ?? p.likes?.count ?? 0,
