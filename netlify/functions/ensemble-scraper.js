@@ -17,8 +17,14 @@ async function ensembleUserInfo(platform, username, token) {
     : `/instagram/user/info?username=${encodeURIComponent(username)}&token=${token}`;
 
   const resp = await fetch(ENSEMBLE_BASE + endpoint);
-  if (!resp.ok) throw new Error(`Ensemble HTTP ${resp.status}`);
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => '');
+    console.log(`[info] ${platform} HTTP ${resp.status}: ${errText.substring(0, 300)}`);
+    throw new Error(`Ensemble HTTP ${resp.status}`);
+  }
   const json = await resp.json();
+  const topKeys = Object.keys(json).join(',');
+  console.log(`[info] ${platform} raw keys: ${topKeys}`);
 
   if (platform === 'tiktok') {
     const d = json.data || json;
@@ -59,28 +65,62 @@ async function ensembleUserPosts(platform, username, token) {
   if (platform === 'tiktok') {
     const url = `${ENSEMBLE_BASE}/tt/user/posts?username=${encodeURIComponent(username)}&depth=1&token=${token}`;
     const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`Ensemble posts HTTP ${resp.status}`);
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => '');
+      console.log(`[posts] TT HTTP ${resp.status}: ${errText.substring(0, 300)}`);
+      throw new Error(`Ensemble posts HTTP ${resp.status}`);
+    }
     const json = await resp.json();
-    const posts = json.data || [];
-    return posts.map(p => ({
-      likes: p.stats?.diggCount ?? p.diggCount ?? 0,
-      comments: p.stats?.commentCount ?? p.commentCount ?? 0,
-      shares: p.stats?.shareCount ?? p.shareCount ?? 0,
-      plays: p.stats?.playCount ?? p.playCount ?? 0,
-      saves: p.stats?.collectCount ?? p.collectCount ?? 0,
+    // Debug: log raw structure
+    const topKeys = Object.keys(json).join(',');
+    const rawPosts = json.data || json.posts || json.items || json.aweme_list || [];
+    console.log(`[posts] TT raw keys: ${topKeys} | posts array length: ${rawPosts.length}`);
+    if (rawPosts.length > 0) {
+      const first = rawPosts[0];
+      const firstKeys = Object.keys(first).slice(0, 15).join(',');
+      console.log(`[posts] TT first post keys: ${firstKeys}`);
+      if (first.stats) console.log(`[posts] TT first.stats:`, JSON.stringify(first.stats));
+      else if (first.statistics) console.log(`[posts] TT first.statistics:`, JSON.stringify(first.statistics));
+      else console.log(`[posts] TT first post (partial):`, JSON.stringify(first).substring(0, 500));
+    }
+    return rawPosts.map(p => ({
+      likes: p.stats?.diggCount ?? p.diggCount ?? p.statistics?.digg_count ?? 0,
+      comments: p.stats?.commentCount ?? p.commentCount ?? p.statistics?.comment_count ?? 0,
+      shares: p.stats?.shareCount ?? p.shareCount ?? p.statistics?.share_count ?? 0,
+      plays: p.stats?.playCount ?? p.playCount ?? p.statistics?.play_count ?? 0,
+      saves: p.stats?.collectCount ?? p.collectCount ?? p.statistics?.collect_count ?? 0,
     }));
   }
 
   if (platform === 'instagram') {
     const url = `${ENSEMBLE_BASE}/instagram/user/posts?username=${encodeURIComponent(username)}&depth=1&token=${token}`;
     const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`Ensemble IG posts HTTP ${resp.status}`);
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => '');
+      console.log(`[posts] IG HTTP ${resp.status}: ${errText.substring(0, 300)}`);
+      throw new Error(`Ensemble IG posts HTTP ${resp.status}`);
+    }
     const json = await resp.json();
-    const posts = json.data || [];
-    return posts.map(p => ({
-      likes: p.like_count ?? p.edge_liked_by?.count ?? 0,
-      comments: p.comment_count ?? p.edge_media_to_comment?.count ?? 0,
-      plays: p.video_view_count ?? p.play_count ?? 0,
+    // Debug: log raw structure
+    const topKeys = Object.keys(json).join(',');
+    console.log(`[posts] IG raw keys: ${topKeys}`);
+    // Instagram posts can be nested in different structures
+    let rawPosts = json.data || [];
+    if (Array.isArray(rawPosts) && rawPosts.length === 0) {
+      // Try alternate structures
+      rawPosts = json.posts || json.items || json.edge_owner_to_timeline_media?.edges?.map(e => e.node) || [];
+    }
+    console.log(`[posts] IG posts array length: ${rawPosts.length}`);
+    if (rawPosts.length > 0) {
+      const first = rawPosts[0];
+      const firstKeys = Object.keys(first).slice(0, 15).join(',');
+      console.log(`[posts] IG first post keys: ${firstKeys}`);
+      console.log(`[posts] IG first post (partial):`, JSON.stringify(first).substring(0, 500));
+    }
+    return rawPosts.map(p => ({
+      likes: p.like_count ?? p.edge_liked_by?.count ?? p.likes?.count ?? 0,
+      comments: p.comment_count ?? p.edge_media_to_comment?.count ?? p.comments?.count ?? 0,
+      plays: p.video_view_count ?? p.play_count ?? p.video_views ?? 0,
     }));
   }
 
