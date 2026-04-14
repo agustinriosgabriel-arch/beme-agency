@@ -4006,7 +4006,7 @@ async function fetchPostsOnly(platform, profileUrl, existingFollowers) {
 
 // TikTok region code → country name mapping
 // ── Freshness check (7-day cooldown) ─────────────────────────
-const FRESHNESS_DAYS = 7;
+const FRESHNESS_DAYS = 30;
 
 function isFresh(t, platform, dataType) {
   // dataType: 'followers' or 'engagement'
