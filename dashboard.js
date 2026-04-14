@@ -2698,7 +2698,7 @@ async function createRosterLink() {
   var clientName = document.getElementById('new-link-client-name').value.trim();
   if (!clientName) { showToast('Escribe el nombre del cliente', 'error'); return; }
   var compact = document.getElementById('new-link-compact').checked;
-  var token = generateToken();
+  var token = Math.random().toString(36).substring(2, 10);
   var payload = { roster_id: managingLinksRosterId, client_name: clientName, token: token, compact: compact };
   var result = await sb.from('roster_links').insert(payload).select().single();
   if (result.error) { showToast('Error: ' + result.error.message, 'error'); return; }
