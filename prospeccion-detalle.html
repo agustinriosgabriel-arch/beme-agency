@@ -126,7 +126,7 @@ body.dark .logo .logo-dark{display:block}
 .etapa-stat .e-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-top:4px}
 
 /* ── Kanban ── */
-.kanban-wrap{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;overflow-x:auto;padding-bottom:8px}
+.kanban-wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;overflow-x:auto;padding-bottom:8px}
 .kanban-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;min-width:200px}
 .kanban-col-header{padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
 .kanban-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -345,6 +345,17 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
 
   <!-- Kanban -->
   <div class="kanban-wrap" id="kanban-wrap"></div>
+
+  <!-- No Interesados (collapsed, just count) -->
+  <div id="no-interesados-section" style="margin-top:16px;display:none;">
+    <button onclick="document.getElementById('ni-list').style.display=document.getElementById('ni-list').style.display==='none'?'block':'none'" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:8px;width:100%;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      <span id="ni-count-label">No Interesados (0)</span>
+      <span style="margin-left:auto;font-size:10px;color:var(--text-dim);">Estos contactos se pueden editar y graduar desde Prospecciones</span>
+    </button>
+    <div id="ni-list" style="display:none;margin-top:8px;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;">
+    </div>
+  </div>
 </main>
 
 <!-- Bulk action bar -->
@@ -570,13 +581,16 @@ const sb = supabase.createClient(SB_URL, SB_KEY);
 const prospId = parseInt(new URLSearchParams(location.search).get('id'))||0;
 
 const ETAPAS = [
-  {key:'evaluacion',          label:'Evaluacion',        color:'#38bdf8'},
-  {key:'contactar',           label:'Contactar',         color:'#fbbf24'},
-  {key:'esperando_respuesta', label:'Esperando',         color:'#a78bfa'},
-  {key:'descartado',          label:'Descartado',        color:'#888'},
-  {key:'no_interesado',       label:'No Interesado',     color:'#f87171'},
-  {key:'interesado',          label:'Interesado',        color:'#4ade80'},
+  {key:'evaluacion',          label:'Evaluacion',        color:'#d97706'},
+  {key:'contactar',           label:'Contactar',         color:'#d97706'},
+  {key:'esperando_respuesta', label:'Esperando',         color:'#d97706'},
+  {key:'interesado',          label:'Interesado',        color:'#16a34a'},
 ];
+const ETAPAS_HIDDEN = [
+  {key:'no_interesado',       label:'No Interesado',     color:'#888'},
+  {key:'descartado',          label:'Descartado',        color:'#888'},
+];
+const ALL_ETAPAS = [...ETAPAS, ...ETAPAS_HIDDEN];
 
 let currentUser = null, currentProfile = null;
 let prospeccion = null, contactos = [], historial = [];
@@ -732,10 +746,10 @@ function renderHeader() {
 // RENDER ETAPA STRIP
 // ══════════════════════════════════════════════════════════
 function renderEtapaStrip() {
-  document.getElementById('etapa-strip').innerHTML = ETAPAS.map(e => {
+  document.getElementById('etapa-strip').innerHTML = ALL_ETAPAS.map(e => {
     const count = contactos.filter(c=>c.etapa===e.key).length;
-    return `<div class="etapa-stat" style="border-top-color:${e.color}">
-      <div class="e-count" style="color:${e.color}">${count}</div>
+    return `<div class="etapa-stat" style="border-top-color:${count > 0 ? e.color : 'var(--border)'}">
+      <div class="e-count" style="color:${count > 0 ? e.color : 'var(--text-dim)'}">${count}</div>
       <div class="e-label">${e.label}</div>
     </div>`;
   }).join('');
@@ -745,12 +759,13 @@ function renderEtapaStrip() {
 // RENDER KANBAN
 // ══════════════════════════════════════════════════════════
 function renderKanban() {
+  // Only show active etapas in kanban
   document.getElementById('kanban-wrap').innerHTML = ETAPAS.map(e => {
     const items = contactos.filter(c=>c.etapa===e.key).sort((a,b) => (a.talento_id?1:0) - (b.talento_id?1:0));
     return `<div class="kanban-col">
       <div class="kanban-col-header">
-        <div class="kanban-dot" style="background:${e.color}"></div>
-        <div class="kanban-col-title" style="color:${e.color}">${e.label}</div>
+        <div class="kanban-dot" style="background:${items.length > 0 ? e.color : 'var(--text-dim)'}"></div>
+        <div class="kanban-col-title" style="color:${items.length > 0 ? e.color : 'var(--text-dim)'}">${e.label}</div>
         <div class="kanban-count">${items.length}</div>
       </div>
       <div class="kanban-items">
@@ -759,6 +774,25 @@ function renderKanban() {
       </div>
     </div>`;
   }).join('');
+
+  // No interesados + descartados collapsed section
+  var niList = contactos.filter(c => c.etapa === 'no_interesado' || c.etapa === 'descartado');
+  var niSection = document.getElementById('no-interesados-section');
+  if (niList.length > 0) {
+    niSection.style.display = 'block';
+    document.getElementById('ni-count-label').textContent = 'No Interesados / Descartados (' + niList.length + ')';
+    document.getElementById('ni-list').innerHTML = niList.map(function(c) {
+      var handle = c.tiktok ? '@'+extractHandle(c.tiktok) : (c.instagram ? '@'+extractHandle(c.instagram) : '');
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--border);">' +
+        '<div style="font-weight:600;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(c.nombre) + (handle ? ' <span style="color:var(--text-dim);font-weight:400;">'+esc(handle)+'</span>' : '') + '</div>' +
+        '<span style="font-size:10px;color:#888;padding:2px 6px;background:var(--surface2);border-radius:8px;">' + (c.etapa === 'no_interesado' ? 'No interesado' : 'Descartado') + '</span>' +
+        '<button class="btn btn-outline btn-xs" onclick="changeEtapa('+c.id+',\'evaluacion\')" style="font-size:10px;">Restaurar</button>' +
+        '<button class="btn btn-outline btn-xs" onclick="openDetalle('+c.id+')" style="font-size:10px;">Editar</button>' +
+      '</div>';
+    }).join('');
+  } else {
+    niSection.style.display = 'none';
+  }
 }
 
 function renderKanbanCard(c, etapa) {
