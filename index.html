@@ -2270,6 +2270,29 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   </div>
 </div>
 
+<!-- MANAGE ROSTER LINKS MODAL -->
+<div class="modal-overlay" id="manage-links-modal">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <h2 class="modal-title" id="manage-links-title">Links del Roster</h2>
+      <button class="modal-close" data-fn="closeManageLinksModal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Crea un link diferente para cada cliente/marca. Cada uno tiene sus propias cotizaciones y selecciones.</p>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <input type="text" id="new-link-client-name" class="form-input" placeholder="Nombre del cliente o marca..." style="flex:1">
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-muted);white-space:nowrap;cursor:pointer;">
+          <input type="checkbox" id="new-link-compact" style="accent-color:var(--primary)"> Solo ver
+        </label>
+        <button class="btn btn-primary btn-sm" data-fn="createRosterLink">Crear</button>
+      </div>
+      <div id="links-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toast-container"></div>
 

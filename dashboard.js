@@ -72,6 +72,7 @@ const BASE_CATEGORIES = [
 let CATEGORIES = [...BASE_CATEGORIES];
 let talents = [];
 let rosters = [];
+let rosterLinks = [];
 let talentCampaigns = []; // campaign history per talent
 let rosterBrandEdits = {}; // roster_id → count of brand edits
 let nextTalentId = 1000;
@@ -299,10 +300,11 @@ async function loadFromSupabase() {
     // Load all data in parallel for speed
     // Load WITHOUT foto first (base64 photos are huge, loaded in background after render)
     const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono';
-    const [configResult, talentResult, rosterResult] = await Promise.all([
+    const [configResult, talentResult, rosterResult, linksResult] = await Promise.all([
       sb.from('app_config').select('key,value'),
       loadTalentosWithRetry(TALENT_COLS),
-      sb.from('rosters').select('*').order('created_at', {ascending:false})
+      sb.from('rosters').select('*').order('created_at', {ascending:false}),
+      sb.from('roster_links').select('*').order('created_at', {ascending:false})
     ]);
 
     // Process config
@@ -349,6 +351,7 @@ async function loadFromSupabase() {
       platforms: r.platforms || {tt:true,ig:true,yt:true},
       public_token: r.public_token || generateToken()
     }));
+    rosterLinks = linksResult.data || [];
 
     // Only migrate from localStorage if query succeeded and returned 0
     if (talents.length === 0 && !talentQueryError) tryMigrateFromLocalStorage();
@@ -768,6 +771,8 @@ let FN_MAP = {
   addCategoryFromPanel,
   openManageCatsModal,
   closeManageCatsModal,
+  closeManageLinksModal: function(){ closeModal('manage-links-modal'); },
+  createRosterLink,
   addCategoryFromModal,
   togglePaisDropdown,
   toggleSortDropdown,
@@ -800,6 +805,7 @@ let ACTION_MAP = {
   'view-roster':    (id)    => viewRoster(parseInt(id)),
   'edit-roster':    (id)    => openCreateRosterModal(parseInt(id)),
   'manage-roster':  (id)    => openManageTalentsForRoster(parseInt(id)),
+  'manage-links':   (id)    => openManageLinksModal(parseInt(id)),
   'download-roster':(id)    => downloadRosterById(parseInt(id)),
   'delete-roster':  (id)    => deleteRoster(parseInt(id)),
   'archive-roster': (id)    => archiveRoster(parseInt(id)),
@@ -2639,12 +2645,76 @@ function renderRosterCard(r, isArchived) {
       <div class="roster-actions" onclick="event.stopPropagation()" style="flex-wrap:wrap">\
         '+(brandEditCount ? '<button class="btn btn-outline btn-sm" data-action="clear-brand-edits" data-id="'+r.id+'" title="Marcar leido" style="color:#b2005d;border-color:rgba(178,0,93,0.4);font-size:10px">✓ Leido</button>' : '')+'\
         <button class="btn btn-outline btn-sm" data-action="ai-descs-roster" data-id="'+r.id+'" title="Generar descripciones AI" style="color:#9414E0;border-color:rgba(148,20,224,0.4);font-weight:700;">AI</button>\
-        <button class="btn btn-outline btn-sm" data-action="copy-url" data-id="'+r.id+'" title="Copiar URL" style="color:#b2005d;border-color:rgba(178,0,93,0.4);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>\
-        <button class="btn btn-outline btn-sm" data-action="copy-url-compact" data-id="'+r.id+'" title="URL compacta" style="color:#4c6ef5;border-color:rgba(76,110,245,0.4);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3H5a2 2 0 0 0-2 2v11"/><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M10 12h9"/><path d="M10 16h5"/></svg></button>\
+        <button class="btn btn-outline btn-sm" data-action="manage-links" data-id="'+r.id+'" title="Links por cliente" style="color:#0ea5e9;border-color:rgba(14,165,233,0.4);font-weight:600;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> '+(rosterLinks.filter(function(l){return l.roster_id===r.id;}).length || '')+'</button>\
+        <button class="btn btn-outline btn-sm" data-action="copy-url" data-id="'+r.id+'" title="Copiar URL directa" style="color:#b2005d;border-color:rgba(178,0,93,0.4);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>\
+        <button class="btn btn-outline btn-sm" data-action="copy-url-compact" data-id="'+r.id+'" title="URL compacta (solo ver)" style="color:#4c6ef5;border-color:rgba(76,110,245,0.4);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3H5a2 2 0 0 0-2 2v11"/><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M10 12h9"/><path d="M10 16h5"/></svg></button>\
         <button class="btn btn-outline btn-sm" data-action="manage-roster" data-id="'+r.id+'" title="Editar talentos"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>\
         <button class="btn btn-danger btn-sm" data-action="delete-roster" data-id="'+r.id+'" title="Eliminar"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>\
       </div>';
   return card;
+}
+
+// ── ROSTER LINKS MANAGEMENT ──────────────────────────────────
+let managingLinksRosterId = null;
+
+function openManageLinksModal(rosterId) {
+  managingLinksRosterId = rosterId;
+  var roster = rosters.find(function(r) { return r.id === rosterId; });
+  document.getElementById('manage-links-title').textContent = 'Links — ' + (roster ? roster.name : '');
+  document.getElementById('new-link-client-name').value = '';
+  document.getElementById('new-link-compact').checked = false;
+  renderLinksList();
+  openModal('manage-links-modal');
+}
+
+function renderLinksList() {
+  var links = rosterLinks.filter(function(l) { return l.roster_id === managingLinksRosterId; });
+  var container = document.getElementById('links-list');
+  if (!links.length) {
+    container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-dim);font-size:13px;">No hay links creados. Agrega uno arriba.</div>';
+    return;
+  }
+  container.innerHTML = links.map(function(link) {
+    var url = 'https://bemeagency.netlify.app/roster.html?link=' + link.token;
+    var typeLabel = link.compact ? 'Solo ver' : 'Con cotizaciones';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);">' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-weight:700;font-size:13px;">' + escapeHtml(link.client_name) + '</div>' +
+        '<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">' + typeLabel + ' · ' + new Date(link.created_at).toLocaleDateString('es-ES') + '</div>' +
+      '</div>' +
+      '<button class="btn btn-outline btn-sm" onclick="copyLinkUrl(\'' + link.token + '\')" title="Copiar URL"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>' +
+      '<button class="btn btn-danger btn-sm" onclick="deleteRosterLink(' + link.id + ')" title="Eliminar" style="padding:4px 8px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>' +
+    '</div>';
+  }).join('');
+}
+
+async function createRosterLink() {
+  var clientName = document.getElementById('new-link-client-name').value.trim();
+  if (!clientName) { showToast('Escribe el nombre del cliente', 'error'); return; }
+  var compact = document.getElementById('new-link-compact').checked;
+  var token = generateToken();
+  var payload = { roster_id: managingLinksRosterId, client_name: clientName, token: token, compact: compact };
+  var result = await sb.from('roster_links').insert(payload).select().single();
+  if (result.error) { showToast('Error: ' + result.error.message, 'error'); return; }
+  rosterLinks.push(result.data);
+  renderLinksList();
+  renderRosters();
+  document.getElementById('new-link-client-name').value = '';
+  showToast('Link creado para ' + clientName, 'success');
+}
+
+async function deleteRosterLink(linkId) {
+  if (!confirm('Eliminar este link? Se perderán las selecciones del cliente.')) return;
+  await sb.from('roster_links').delete().eq('id', linkId);
+  rosterLinks = rosterLinks.filter(function(l) { return l.id !== linkId; });
+  renderLinksList();
+  renderRosters();
+  showToast('Link eliminado', 'success');
+}
+
+function copyLinkUrl(token) {
+  var url = 'https://bemeagency.netlify.app/roster.html?link=' + token;
+  copyTextWithToast(url, 'URL copiada para el cliente');
 }
 
 function renderRosters() {

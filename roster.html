@@ -112,7 +112,9 @@ const FLAG_MAP = {"Argentina":"🇦🇷","Bolivia":"🇧🇴","Brasil":"🇧🇷
 let ROSTER = null;
 let TALENTS = [];
 let SELS = {}; // talent_id → {selected, accion, precio, contraoferta}
-const COMPACT_MODE = new URLSearchParams(window.location.search).get('compact') === '1';
+let LINK_ID = 0; // 0 = legacy direct token, >0 = roster_links.id
+let CLIENT_NAME = '';
+var COMPACT_MODE = new URLSearchParams(window.location.search).get('compact') === '1';
 let rosterViewMode = 'cards'; // table | cards
 let showAI = null; // null = use ROSTER.show_ai_descriptions
 let IS_INTERNAL = false; // admin or campaign_manager
@@ -125,8 +127,10 @@ function countries(t){return(t.paises||[t.pais||'']).filter(Boolean).map(c=>(FLA
 
 // ── Init ─────────────────────────────────────────────────────
 async function init() {
-  const token = new URLSearchParams(window.location.search).get('token');
-  if (!token) { showError('URL inválida — falta el token del roster.'); return; }
+  const params = new URLSearchParams(window.location.search);
+  const linkToken = params.get('link');
+  const legacyToken = params.get('token');
+  if (!linkToken && !legacyToken) { showError('URL inválida — falta el token del roster.'); return; }
 
   try {
     document.getElementById('load-msg').textContent = 'Cargando roster...';
@@ -140,20 +144,41 @@ async function init() {
       }
     } catch(e) {}
 
-    const { data: roster, error: rErr } = await sb.from('rosters').select('*').eq('public_token', token).single();
-    if (rErr || !roster) { showError('Roster no encontrado. Verificá el link.'); return; }
-    ROSTER = roster;
-    document.title = 'Roster — ' + roster.name;
+    // Resolve roster: via roster_links (?link=) or legacy (?token=)
+    if (linkToken) {
+      const { data: link, error: lErr } = await sb.from('roster_links').select('*').eq('token', linkToken).single();
+      if (lErr || !link) { showError('Link no encontrado. Verificá la URL.'); return; }
+      LINK_ID = link.id;
+      CLIENT_NAME = link.client_name || '';
+      if (link.compact) {
+        // Override compact mode from link setting
+        Object.defineProperty(window, 'COMPACT_MODE_OVERRIDE', { value: true });
+      }
+      const { data: roster, error: rErr } = await sb.from('rosters').select('*').eq('id', link.roster_id).single();
+      if (rErr || !roster) { showError('Roster no encontrado.'); return; }
+      ROSTER = roster;
+    } else {
+      const { data: roster, error: rErr } = await sb.from('rosters').select('*').eq('public_token', legacyToken).single();
+      if (rErr || !roster) { showError('Roster no encontrado. Verificá el link.'); return; }
+      ROSTER = roster;
+      LINK_ID = 0;
+    }
 
-    const talentIds = (roster.talent_ids || []).map(id => parseInt(id)).filter(Boolean);
+    // Override compact from link setting
+    if (window.COMPACT_MODE_OVERRIDE) COMPACT_MODE = true;
+
+    document.title = 'Roster — ' + ROSTER.name + (CLIENT_NAME ? ' — ' + CLIENT_NAME : '');
+
+    const talentIds = (ROSTER.talent_ids || []).map(id => parseInt(id)).filter(Boolean);
     document.getElementById('load-msg').textContent = 'Cargando talentos...';
 
-    // Load talents and selections in parallel, only essential fields (no foto initially)
+    // Load talents and selections in parallel
+    const selQuery = sb.from('roster_selecciones').select('*').eq('roster_id', ROSTER.id).eq('link_id', LINK_ID);
     const [talentsRes, selRes] = await Promise.all([
       talentIds.length > 0
         ? sb.from('talentos').select('id,nombre,paises,ciudad,tiktok,instagram,youtube,categorias,seguidores,genero,keywords').in('id', talentIds)
         : {data:[]},
-      sb.from('roster_selecciones').select('*').eq('roster_id', roster.id),
+      selQuery,
     ]);
 
     // Preserve order from talent_ids
@@ -360,6 +385,7 @@ function render() {
       <div>
         <div style="font-size:24px;font-weight:300;margin-bottom:5px;">Be<strong style="font-weight:800;color:#b2005d">me</strong></div>
         <div style="font-family:'Syne',sans-serif;font-size:19px;font-weight:700;color:#111;">${ROSTER.name}</div>
+        ${CLIENT_NAME ? `<div style="font-size:12px;color:#b2005d;font-weight:600;margin-top:2px;">Para: ${CLIENT_NAME}</div>` : ''}
         ${ROSTER.description?`<div style="font-size:13px;color:#666;margin-top:3px;">${ROSTER.description}</div>`:''}
       </div>
       <div style="text-align:right;">
@@ -447,7 +473,7 @@ async function removeSelectedFromRoster() {
     await sb.from('rosters').update({talent_ids: newIds}).eq('id', ROSTER.id);
     // Remove selections
     for (const id of ids) {
-      await sb.from('roster_selecciones').delete().eq('roster_id', ROSTER.id).eq('talent_id', id);
+      await sb.from('roster_selecciones').delete().eq('roster_id', ROSTER.id).eq('talent_id', id).eq('link_id', LINK_ID);
       delete SELS[id];
     }
     ROSTER.talent_ids = newIds;
@@ -482,6 +508,7 @@ async function saveSelection(talentId) {
   const row = {
     roster_id: ROSTER.id,
     talent_id: id,
+    link_id: LINK_ID,
     selected: chk ? chk.checked : false,
     accion: accionEl ? accionEl.value.trim() : '',
     precio: priceEl && priceEl.value ? parseFloat(priceEl.value.replace(/[^0-9.]/g, '')) || null : null,
@@ -500,7 +527,7 @@ async function saveSelection(talentId) {
 
   const badge = document.getElementById('save-badge');
   try {
-    await sb.from('roster_selecciones').upsert(row, { onConflict: 'roster_id,talent_id' });
+    await sb.from('roster_selecciones').upsert(row, { onConflict: 'roster_id,talent_id,link_id' });
     badge.textContent = '✓ Guardado';
     badge.style.background = '#1D9E75';
   } catch(e) {
