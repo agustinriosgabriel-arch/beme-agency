@@ -776,13 +776,13 @@ function renderKanban() {
   }).join('');
 
   // No interesados + descartados collapsed section
-  var niList = contactos.filter(c => c.etapa === 'no_interesado' || c.etapa === 'descartado');
+  var niList = contactos.filter(c => c.etapa === 'no_interesado');
   var niSection = document.getElementById('no-interesados-section');
   if (niList.length > 0) {
     niSection.style.display = 'block';
     var niNoGrad = niList.filter(function(c) { return !c.talento_id; });
     var niGrad = niList.filter(function(c) { return !!c.talento_id; });
-    document.getElementById('ni-count-label').textContent = 'No Interesados / Descartados (' + niNoGrad.length + ')' + (niGrad.length ? ' · ' + niGrad.length + ' graduado' + (niGrad.length!==1?'s':'') : '');
+    document.getElementById('ni-count-label').textContent = 'No Interesados (' + niNoGrad.length + ')' + (niGrad.length ? ' · ' + niGrad.length + ' graduado' + (niGrad.length!==1?'s':'') : '');
     document.getElementById('ni-list').innerHTML = niNoGrad.map(function(c) {
       var handle = c.tiktok ? '@'+extractHandle(c.tiktok) : (c.instagram ? '@'+extractHandle(c.instagram) : '');
       var canGrad = (c.email || c.telefono) && (c.tiktok || c.instagram || c.youtube);
