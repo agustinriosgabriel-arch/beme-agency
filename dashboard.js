@@ -4285,7 +4285,7 @@ async function engagementAllTikTok() {
     var r = await engagementAndSave(list[i], 'tiktok');
     if (r === 'skipped') skipped++; else if (r === 'optimized') { ok++; optimized++; } else if (r) ok++;
     renderTalents();
-    if (r !== 'skipped' && i < list.length - 1) await new Promise(function(r) { setTimeout(r, 100); });
+    if (r !== 'skipped' && i < list.length - 1) await new Promise(function(r) { setTimeout(r, 0); });
   }
   hideProgressBar('ext');
   if (btn) btn.disabled = false;
@@ -4312,7 +4312,7 @@ async function engagementAllInstagram() {
     var r = await engagementAndSave(list[i], 'instagram');
     if (r === 'skipped') skipped++; else if (r === 'optimized') { ok++; optimized++; } else if (r) ok++;
     renderTalents();
-    if (r !== 'skipped' && i < list.length - 1) await new Promise(function(r) { setTimeout(r, 100); });
+    if (r !== 'skipped' && i < list.length - 1) await new Promise(function(r) { setTimeout(r, 0); });
   }
   hideProgressBar('ig');
   if (btn) btn.disabled = false;
@@ -4476,7 +4476,7 @@ async function scrapeAllProfiles() {
     if (t.tiktok)    { var rt = await scrapeAndSave(t,'tiktok');    if (rt==='skipped') skipped++; else if (rt) ok++; else errors++; }
     done++;
     renderTalents(); updateStats();
-    if (i < toScrape.length-1) await new Promise(function(r){ setTimeout(r,100); });
+    if (i < toScrape.length-1) await new Promise(function(r){ setTimeout(r,0); });
   }
   hideProgressBar('ext');
   updatePlatformCounts();
@@ -4712,7 +4712,7 @@ async function scrapeAllTikTok() {
     var r = await scrapeAndSave(list[i], 'tiktok');
     if (r === 'skipped') skipped++; else if (r) ok++;
     renderTalents();
-    if (r !== 'skipped' && i < list.length - 1) await new Promise(function(r) { setTimeout(r, 100); });
+    if (r !== 'skipped' && i < list.length - 1) await new Promise(function(r) { setTimeout(r, 0); });
   }
   hideProgressBar('ext');
   if (btn) btn.disabled = false;
@@ -4738,7 +4738,7 @@ async function scrapeAllInstagram() {
     var r = await scrapeAndSave(list[i], 'instagram');
     if (r === 'skipped') skipped++; else if (r) ok++;
     renderTalents();
-    if (r !== 'skipped' && i < list.length - 1) await new Promise(function(r) { setTimeout(r, 100); });
+    if (r !== 'skipped' && i < list.length - 1) await new Promise(function(r) { setTimeout(r, 0); });
   }
   hideProgressBar('ig');
   if (btn) btn.disabled = false;
