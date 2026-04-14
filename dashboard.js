@@ -439,6 +439,7 @@ async function loadTalentPhotos() {
 }
 
 let _realtimeChannel = null;
+let _recentlyDeleted = new Set(); // track recently deleted IDs to prevent re-insert from RT
 function setupRealtimeSubscription() {
   if (_realtimeChannel) { sb.removeChannel(_realtimeChannel); _realtimeChannel = null; }
   // Unique channel name per session to avoid conflicts between users
@@ -449,7 +450,7 @@ function setupRealtimeSubscription() {
       if (payload.eventType === 'INSERT') {
         const t = payload.new;
         // Only add if not already in local array (saveTalent already pushed it)
-        if (!talents.find(x => x.id === t.id)) {
+        if (!talents.find(x => x.id === t.id) && !_recentlyDeleted.has(t.id)) {
           talents.push({ ...t, paises: t.paises||[], categorias: t.categorias||[], seguidores: t.seguidores||{tiktok:0,instagram:0,youtube:0} });
           renderTalents(); updateStats(); updatePlatformCounts();
         }
@@ -465,7 +466,7 @@ function setupRealtimeSubscription() {
               // Merge into existing talents to preserve fields not in RT select (like foto)
               var byId = {};
               talents.forEach(function(x) { byId[x.id] = x; });
-              talents = data.map(function(x) {
+              talents = data.filter(function(x) { return !_recentlyDeleted.has(x.id); }).map(function(x) {
                 var existing = byId[x.id] || {};
                 return { ...existing, ...x, paises:x.paises||existing.paises||[], categorias:x.categorias||existing.categorias||[], seguidores:x.seguidores||existing.seguidores||{tiktok:0,instagram:0,youtube:0}, engagement:x.engagement||existing.engagement||{}, avg_views:x.avg_views||existing.avg_views||{}, social_meta:x.social_meta||existing.social_meta||{} };
               });
@@ -475,13 +476,17 @@ function setupRealtimeSubscription() {
         } else {
           const idx = talents.findIndex(x => x.id === t.id);
           const mapped = { ...t, paises: t.paises||[], categorias: t.categorias||[], seguidores: t.seguidores||{tiktok:0,instagram:0,youtube:0}, engagement: t.engagement||{}, avg_views: t.avg_views||{}, social_meta: t.social_meta||{} };
-          if (idx >= 0) { talents[idx] = { ...talents[idx], ...mapped }; }
+          if (_recentlyDeleted.has(t.id)) { /* skip — recently deleted */ }
+          else if (idx >= 0) { talents[idx] = { ...talents[idx], ...mapped }; }
           else { talents.push(mapped); }
           renderTalents(); updateStats(); updatePlatformCounts();
         }
       } else if (payload.eventType === 'DELETE') {
+        const delId = payload.old.id;
+        _recentlyDeleted.add(delId);
+        setTimeout(function() { _recentlyDeleted.delete(delId); }, 10000);
         const before = talents.length;
-        talents = talents.filter(x => x.id !== payload.old.id);
+        talents = talents.filter(x => x.id !== delId);
         if (talents.length !== before) { renderTalents(); updateStats(); updatePlatformCounts(); }
       }
     })
