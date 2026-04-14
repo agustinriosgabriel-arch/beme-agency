@@ -444,6 +444,19 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   <!-- Grid container -->
   <div id="prosp-container"></div>
 
+  <!-- No Interesados global section -->
+  <div id="ni-global-section" style="margin-top:32px;display:none;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <h2 style="font-size:16px;font-weight:700;margin:0;">No Interesados</h2>
+      <span id="ni-global-count" style="font-size:12px;color:var(--text-dim);background:var(--surface2);padding:2px 10px;border-radius:10px;">0</span>
+      <span style="font-size:11px;color:var(--text-dim);">Contactos descartados de todas las prospecciones — editables y graduables a Talentos</span>
+    </div>
+    <div style="margin-bottom:10px;">
+      <input type="text" id="ni-search" class="form-input" placeholder="Buscar por nombre..." oninput="renderNoInteresados()" style="max-width:320px;font-size:13px;">
+    </div>
+    <div id="ni-global-list" style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;"></div>
+  </div>
+
 </main>
 
 <!-- ═══════════════════════════════════════════════════
@@ -695,6 +708,7 @@ async function initApp() {
     populateMsOptions('ms-categorias', CATEGORIES);
     renderProspecciones();
     renderStats();
+    renderNoInteresados();
 
   } catch(e) {
     console.error('initApp error:', e);
@@ -718,17 +732,25 @@ async function loadAppConfig() {
   }
 }
 
+let noInteresadosGlobal = [];
+
 async function loadProspecciones() {
   const {data, error} = await sb.from('prospecciones').select('*').order('created_at', {ascending:false}).limit(50);
   if (error) throw error;
   prospecciones = data || [];
 
-  const {data: contactos} = await sb.from('prospeccion_contactos').select('id,prospeccion_id,etapa');
+  const {data: contactos} = await sb.from('prospeccion_contactos').select('id,prospeccion_id,etapa,nombre,tiktok,instagram,youtube,email,telefono,ciudad,paises,seguidores,categorias,foto,genero,keywords,valores,talento_id');
   contactosCounts = {};
+  noInteresadosGlobal = [];
   (contactos||[]).forEach(c => {
     if (!contactosCounts[c.prospeccion_id]) contactosCounts[c.prospeccion_id] = {total:0, interesados:0};
     contactosCounts[c.prospeccion_id].total++;
     if (c.etapa === 'interesado') contactosCounts[c.prospeccion_id].interesados++;
+    if (c.etapa === 'no_interesado' || c.etapa === 'descartado') {
+      var prosp = prospecciones.find(function(p){return p.id===c.prospeccion_id;});
+      c._prospeccion_nombre = prosp ? (prosp.marca || prosp.nombre || '') : '';
+      noInteresadosGlobal.push(c);
+    }
   });
 }
 
@@ -821,6 +843,97 @@ function renderStats() {
   Object.values(contactosCounts).forEach(c => { totalContactos += c.total; totalInteresados += c.interesados; });
   document.getElementById('stat-contactos').textContent = totalContactos;
   document.getElementById('stat-interesados').textContent = totalInteresados;
+}
+
+// ══════════════════════════════════════════════════════════
+// NO INTERESADOS GLOBAL LIST
+// ══════════════════════════════════════════════════════════
+function renderNoInteresados() {
+  var section = document.getElementById('ni-global-section');
+  if (!noInteresadosGlobal.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  var search = (document.getElementById('ni-search')?.value || '').toLowerCase().trim();
+  var filtered = noInteresadosGlobal.filter(function(c) {
+    if (!search) return true;
+    return (c.nombre||'').toLowerCase().includes(search) ||
+           (c.tiktok||'').toLowerCase().includes(search) ||
+           (c.instagram||'').toLowerCase().includes(search) ||
+           (c._prospeccion_nombre||'').toLowerCase().includes(search);
+  });
+
+  document.getElementById('ni-global-count').textContent = filtered.length + ' de ' + noInteresadosGlobal.length;
+
+  var container = document.getElementById('ni-global-list');
+  if (!filtered.length) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px;">Sin resultados</div>';
+    return;
+  }
+
+  function extractH(url) { if(!url)return''; var m=url.match(/@([^/?#&]+)/); return m?'@'+m[1]:''; }
+  function fmtF(n) { if(!n||n===0)return''; if(n>=1e6)return(n/1e6).toFixed(1)+'M'; if(n>=1000)return Math.floor(n/1000)+'K'; return String(n); }
+  function esc(s) { var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+  container.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+    '<thead><tr style="background:var(--surface2);"><th style="padding:8px 10px;text-align:left;font-weight:700;font-size:11px;">Nombre</th><th style="padding:8px 10px;text-align:left;">Redes</th><th style="padding:8px 10px;text-align:left;">Prospección</th><th style="padding:8px 10px;text-align:left;">Estado</th><th style="padding:8px 10px;text-align:center;">Acciones</th></tr></thead>' +
+    '<tbody>' + filtered.map(function(c, i) {
+      var bg = i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)';
+      var handle = c.tiktok ? extractH(c.tiktok) : extractH(c.instagram);
+      var segs = '';
+      if (c.seguidores) {
+        var tt = fmtF(c.seguidores.tiktok); var ig = fmtF(c.seguidores.instagram);
+        segs = [tt?'TT '+tt:'', ig?'IG '+ig:''].filter(Boolean).join(' · ');
+      }
+      var isGrad = !!c.talento_id;
+      return '<tr style="background:'+bg+';">' +
+        '<td style="padding:8px 10px;font-weight:600;">' + esc(c.nombre) + (isGrad ? ' <span style="color:#16a34a;font-size:10px;">✓ Talento</span>' : '') + '</td>' +
+        '<td style="padding:8px 10px;color:var(--text-muted);">' + (handle ? esc(handle) : '—') + (segs ? '<br><span style="font-size:10px;">'+segs+'</span>' : '') + '</td>' +
+        '<td style="padding:8px 10px;color:var(--text-muted);">' + esc(c._prospeccion_nombre || '') + '</td>' +
+        '<td style="padding:8px 10px;"><span style="font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(120,120,120,0.1);color:#888;">' + (c.etapa==='no_interesado'?'No interesado':'Descartado') + '</span></td>' +
+        '<td style="padding:8px 10px;text-align:center;white-space:nowrap;">' +
+          '<button onclick="niRestore('+c.id+')" style="border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:4px 8px;font-size:10px;cursor:pointer;font-family:inherit;color:var(--text-muted);" title="Restaurar a evaluación">Restaurar</button> ' +
+          (!isGrad ? '<button onclick="niGraduate('+c.id+')" style="border:1px solid rgba(22,163,74,0.3);background:rgba(22,163,74,0.05);border-radius:6px;padding:4px 8px;font-size:10px;cursor:pointer;font-family:inherit;color:#16a34a;font-weight:600;" title="Pasar a Talentos">→ Talento</button>' : '') +
+        '</td>' +
+      '</tr>';
+    }).join('') + '</tbody></table>';
+}
+
+async function niRestore(contactoId) {
+  try {
+    await sb.from('prospeccion_contactos').update({ etapa: 'evaluacion', updated_at: new Date().toISOString() }).eq('id', contactoId);
+    noInteresadosGlobal = noInteresadosGlobal.filter(function(c) { return c.id !== contactoId; });
+    renderNoInteresados();
+    showToast('Contacto restaurado a evaluación', 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+async function niGraduate(contactoId) {
+  var c = noInteresadosGlobal.find(function(x) { return x.id === contactoId; });
+  if (!c) return;
+  if (c.talento_id) { showToast('Ya es talento', 'info'); return; }
+  if (!c.email && !c.telefono) { showToast('Necesita email o teléfono', 'error'); return; }
+  if (!c.tiktok && !c.instagram && !c.youtube) { showToast('Necesita al menos una red social', 'error'); return; }
+
+  if (!confirm('Pasar a ' + c.nombre + ' a Talentos?')) return;
+
+  try {
+    var talentRow = {
+      nombre: c.nombre, paises: c.paises || [], ciudad: c.ciudad || '',
+      telefono: c.telefono || '', email: c.email || '',
+      tiktok: c.tiktok || '', instagram: c.instagram || '', youtube: c.youtube || '',
+      categorias: c.categorias || [], foto: c.foto || '',
+      seguidores: c.seguidores || {tiktok:0,instagram:0,youtube:0},
+      genero: c.genero || '', keywords: c.keywords || '', valores: c.valores || '',
+      updated: new Date().toISOString().split('T')[0]
+    };
+    var { data: newTalent, error } = await sb.from('talentos').insert(talentRow).select().single();
+    if (error) throw error;
+
+    await sb.from('prospeccion_contactos').update({ talento_id: newTalent.id, updated_at: new Date().toISOString() }).eq('id', contactoId);
+    c.talento_id = newTalent.id;
+    renderNoInteresados();
+    showToast(c.nombre + ' agregado a Talentos (ID: ' + newTalent.id + ')', 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
 
 // ══════════════════════════════════════════════════════════
