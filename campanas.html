@@ -315,23 +315,23 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
 .alerta-fecha{font-size:11px;color:var(--text-dim);margin-top:4px}
 
 /* ── Kanban view ─────────────────────────────────────────── */
-.kanban-wrap{display:grid;grid-template-columns:repeat(5,280px);gap:14px;overflow-x:auto;padding-bottom:8px}
-.kanban-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-.kanban-col-header{padding:12px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
-.kanban-col-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+.kanban-wrap{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;overflow-x:auto;padding-bottom:8px}
+.kanban-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;min-width:180px}
+.kanban-col-header{padding:8px 10px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border)}
+.kanban-col-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
 .kanban-count{font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--surface3)}
-.kanban-items{padding:10px;display:flex;flex-direction:column;gap:8px;min-height:120px}
-.kanban-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;cursor:pointer;transition:all 0.15s;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
+.kanban-items{padding:6px;display:flex;flex-direction:column;gap:6px;min-height:80px}
+.kanban-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;cursor:pointer;transition:all 0.15s;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
 .kanban-card:hover{border-color:var(--border2);background:var(--surface3)}
-.kanban-card-nombre{font-size:13px;font-weight:600;margin-bottom:6px}
-.kanban-card-meta{font-size:11px;color:var(--text-muted)}
+.kanban-card-nombre{font-size:12px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kanban-card-meta{font-size:10px;color:var(--text-muted)}
 
 /* ── Responsive ─────────────────────────────────────────── */
 @media(max-width:900px){
   .stats-strip{grid-template-columns:repeat(3,1fr)}
   .campanas-grid{grid-template-columns:1fr}
   .campana-row{grid-template-columns:36px 1fr auto}
-  .kanban-wrap{grid-template-columns:repeat(3,260px)}
+  .kanban-wrap{grid-template-columns:repeat(5,1fr);min-width:0}
 }
 @media(max-width:768px){
   .main{padding:16px}
