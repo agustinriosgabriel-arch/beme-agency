@@ -99,6 +99,7 @@ input[type=number]{-moz-appearance:textfield;}
   </div>
   <div id="sum-list" style="flex:1;min-width:180px;max-height:100px;overflow-y:auto;font-size:12px;"></div>
   <button id="remove-selected-btn" onclick="removeSelectedFromRoster()" style="display:none;padding:10px 18px;border-radius:24px;border:1px solid rgba(255,100,100,0.5);background:rgba(255,60,60,0.15);color:#ff6b6b;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Quitar del Roster</button>
+  <button id="hide-selected-btn" onclick="bulkHideSelected()" style="display:none;padding:10px 18px;border-radius:24px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Descartar seleccionados</button>
   <button id="export-btn">↓ Exportar CSV</button>
 </div>
 
@@ -239,10 +240,10 @@ function render() {
   const showIG = ROSTER.platforms?.ig !== false;
   const showYT = ROSTER.platforms?.yt !== false;
   const showPriceComments = !COMPACT_MODE;
-  // Filter out hidden talents (per link_id) unless showHidden is on
+  // Filter out hidden talents (per link_id) unless showHidden is on or IS_INTERNAL
   const hiddenIds = new Set();
   Object.keys(SELS).forEach(function(id) { if (SELS[id].hidden) hiddenIds.add(parseInt(id)); });
-  const visibleTalents = showHidden ? TALENTS : TALENTS.filter(function(t) { return !hiddenIds.has(t.id); });
+  const visibleTalents = (showHidden || IS_INTERNAL) ? TALENTS : TALENTS.filter(function(t) { return !hiddenIds.has(t.id); });
   const today = new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'});
   const hasAIDescs = ROSTER.ai_descriptions && Object.keys(ROSTER.ai_descriptions).length > 0;
   const aiVisible = showAI !== null ? showAI : (ROSTER.show_ai_descriptions && hasAIDescs);
@@ -316,7 +317,10 @@ function render() {
         ${(IS_INTERNAL || SELS[t.id]?.allow_counteroffer) ? `<input type="text" class="contra-input" data-id="${t.id}" placeholder="${IS_INTERNAL?'Contraoferta':'Tu contraoferta'}"
           style="width:100%;border:1px solid #e0e0e0;border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;color:#111;outline:none" ${!IS_INTERNAL && !SELS[t.id]?.allow_counteroffer ? 'disabled' : ''}>` : '<span style="font-size:11px;color:#ccc">—</span>'}
       </td>` : ''}
-      ${LINK_ID > 0 ? `<td style="padding:6px;border-bottom:1px solid #f0f0f0;text-align:center;"><button onclick="toggleHideTalent(${t.id})" title="${hiddenIds.has(t.id)?'Restaurar':'Descartar'}" style="background:${hiddenIds.has(t.id)?'#dcfce7':'#fef2f2'};border:1px solid ${hiddenIds.has(t.id)?'#86efac':'#fca5a5'};color:${hiddenIds.has(t.id)?'#16a34a':'#dc2626'};width:26px;height:26px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">${hiddenIds.has(t.id)?'<path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 2.1-5.3L3 7"/>':'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'}</svg></button></td>` : ''}
+      ${LINK_ID > 0 ? `<td style="padding:6px;border-bottom:1px solid #f0f0f0;text-align:center;">${hiddenIds.has(t.id)
+        ? '<button onclick="toggleHideTalent('+t.id+')" title="Restaurar" style="background:#dcfce7;border:1px solid #86efac;color:#16a34a;width:26px;height:26px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 2.1-5.3L3 7"/></svg></button>'
+        : '<button onclick="confirmHideTalent('+t.id+')" title="Descartar" style="background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;width:26px;height:26px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
+      }</td>` : ''}
     </tr>
     ${aiVisible && ROSTER.ai_descriptions?.[t.id] ? `<tr style="background:${rowBg}"><td colspan="20" style="padding:4px 14px 12px;border-bottom:1px solid #f0f0f0;">
       <div style="background:linear-gradient(135deg,rgba(148,20,224,0.03),rgba(178,0,93,0.03));border:1px solid rgba(148,20,224,0.1);border-radius:8px;padding:8px 12px;font-size:11px;color:#555;line-height:1.5;max-width:100%"><span style="font-weight:700;color:#9414E0;font-size:10px;margin-right:4px">AI</span>${ROSTER.ai_descriptions[t.id].reason||''}</div>
@@ -333,7 +337,8 @@ function render() {
       showYT && t.youtube ? `<div style="display:flex;align-items:center;gap:8px;padding:9px 0;">${ytSVG}<a href="${t.youtube}" target="_blank" style="color:#cc0000;font-weight:700;font-size:13px;flex:1;">${extractH(t.youtube)}</a><span style="color:#333;font-weight:700;font-size:13px;">${fmtF(t.seguidores?.youtube)}</span></div>` : '',
     ].filter(Boolean).join('');
     const cats = (t.categorias||[]).slice(0,4).map(c=>`<span style="background:#f5f0f8;color:#7a3fa0;font-size:11px;padding:3px 9px;border-radius:10px;">${c}</span>`).join(' ');
-    return `<div class="mob-card" id="mob_${t.id}" style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.07);margin-bottom:14px;transition:box-shadow 0.2s;">
+    const isHidden = hiddenIds.has(t.id);
+    return `<div class="mob-card" id="mob_${t.id}" style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.07);margin-bottom:14px;transition:box-shadow 0.2s;${isHidden?'opacity:0.5;border:2px dashed #ef4444;':''}">
       <div style="background:linear-gradient(135deg,#1a1a1a,#2d2d2d);padding:16px 18px;display:flex;align-items:center;gap:14px;">
         ${COMPACT_MODE ? '' : `<input type="checkbox" class="row-check" data-id="${t.id}" style="width:22px;height:22px;accent-color:#b2005d;cursor:pointer;flex-shrink:0;">`}
         ${av}
@@ -341,9 +346,10 @@ function render() {
           <div style="color:#fff;font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.nombre}</div>
           <div style="color:rgba(255,255,255,0.5);font-size:12px;margin-top:2px;">${ctries}${t.ciudad?' · '+t.ciudad:''}</div>
         </div>
-        ${LINK_ID > 0 ? `<button onclick="toggleHideTalent(${t.id})" title="${hiddenIds.has(t.id)?'Restaurar':'Descartar'}" style="background:${hiddenIds.has(t.id)?'rgba(34,197,94,0.2)':'rgba(255,255,255,0.1)'};border:none;color:${hiddenIds.has(t.id)?'#4ade80':'rgba(255,255,255,0.4)'};width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;">
-          ${hiddenIds.has(t.id) ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 2.1-5.3L3 7"/></svg>' : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'}
-        </button>` : ''}
+        ${LINK_ID > 0 ? (hiddenIds.has(t.id)
+          ? `<button onclick="toggleHideTalent(${t.id})" title="Restaurar" style="background:rgba(34,197,94,0.2);border:none;color:#4ade80;width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 2.1-5.3L3 7"/></svg></button>`
+          : `<button onclick="confirmHideTalent(${t.id})" title="Descartar" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`
+        ) : ''}
       </div>
       ${nets?`<div style="padding:0 18px;">${nets}</div>`:''}
       ${cats?`<div style="padding:10px 18px;border-top:1px solid #f5f5f5;display:flex;flex-wrap:wrap;gap:5px;">${cats}</div>`:''}
@@ -405,7 +411,7 @@ function render() {
         </div>
         ${IS_INTERNAL
           ? `<div style="margin-top:8px;font-size:11px;padding:4px 10px;background:linear-gradient(135deg,rgba(148,20,224,0.08),rgba(106,13,158,0.08));border:1px solid rgba(148,20,224,0.2);border-radius:10px;color:#9414E0;font-weight:700;">Vista Admin/Manager</div>`
-          : `<div style="margin-top:8px;font-size:12px;padding:5px 12px;background:#fdf4f8;border:1px solid #f0ccd9;border-radius:10px;color:#b2005d;font-weight:600;">Marca los talentos de tu interes</div>`
+          : ''
         }
         <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;align-items:center">
           ${hasAIDescs ? `<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#888;cursor:pointer"><input type="checkbox" ${aiVisible?'checked':''} onchange="toggleAIView(this.checked)" style="accent-color:#9414E0"> AI</label>` : ''}
@@ -549,10 +555,24 @@ async function saveSelection(talentId) {
 }
 
 // ── Summary bar ───────────────────────────────────────────────
+function confirmHideTalent(talentId) {
+  var t = TALENTS.find(function(x){return x.id===parseInt(talentId);});
+  var nombre = t ? t.nombre : 'este talento';
+  if (confirm('Descartar a ' + nombre + '?')) {
+    setHideTalent(talentId, true);
+  }
+}
+
 async function toggleHideTalent(talentId) {
   var id = parseInt(talentId);
+  var isHidden = SELS[id] && SELS[id].hidden;
+  setHideTalent(id, !isHidden);
+}
+
+async function setHideTalent(talentId, hidden) {
+  var id = parseInt(talentId);
   var sel = SELS[id] || { roster_id: ROSTER.id, talent_id: id, link_id: LINK_ID, selected: false };
-  sel.hidden = !sel.hidden;
+  sel.hidden = hidden;
   sel.link_id = LINK_ID;
   sel.roster_id = ROSTER.id;
   sel.talent_id = id;
@@ -563,6 +583,16 @@ async function toggleHideTalent(talentId) {
   } catch(e) { console.warn('hide error:', e); }
   render();
   restoreSelections();
+}
+
+function bulkHideSelected() {
+  var checked = document.querySelectorAll('.row-check:checked');
+  var ids = [];
+  checked.forEach(function(c) { var id = parseInt(c.getAttribute('data-id')); if (ids.indexOf(id) === -1) ids.push(id); });
+  if (!ids.length) return;
+  var names = ids.map(function(id) { var t = TALENTS.find(function(x){return x.id===id;}); return t ? t.nombre : id; });
+  if (!confirm('Descartar ' + ids.length + ' talento' + (ids.length!==1?'s':'') + '?\n\n' + names.join(', '))) return;
+  ids.forEach(function(id) { setHideTalent(id, true); });
 }
 
 function updateSummary() {
@@ -596,7 +626,10 @@ function updateSummary() {
   document.getElementById('sum-list').innerHTML = html;
   // Show remove button (not for compact/general rosters, available to everyone)
   const removeBtn = document.getElementById('remove-selected-btn');
-  if (removeBtn && !COMPACT_MODE) removeBtn.style.display = unique.length ? 'block' : 'none';
+  if (removeBtn && !COMPACT_MODE) removeBtn.style.display = (unique.length && IS_INTERNAL) ? 'block' : 'none';
+  // Show hide button for link-based rosters
+  const hideBtn = document.getElementById('hide-selected-btn');
+  if (hideBtn) hideBtn.style.display = (unique.length && LINK_ID > 0) ? 'block' : 'none';
 }
 
 // ── Event delegation ──────────────────────────────────────────
