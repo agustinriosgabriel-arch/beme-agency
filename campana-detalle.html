@@ -51,6 +51,13 @@ body.dark .logo .logo-dark{display:block}
 .icon-btn{width:32px;height:32px;border-radius:8px;border:none;background:var(--surface2);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
 .icon-btn:hover{background:var(--surface3);color:var(--text)}
 
+/* ── Tab Nav ── */
+.tab-nav{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--border);padding:0 24px;background:rgba(15,15,15,0.7);backdrop-filter:blur(10px);position:sticky;top:56px;z-index:99}
+body.light .tab-nav{background:rgba(244,244,244,0.9)}
+.tab-btn{display:flex;align-items:center;gap:7px;padding:12px 18px;font-size:13px;font-weight:600;color:var(--text-muted);border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;margin-bottom:-1px;font-family:'Plus Jakarta Sans',sans-serif;text-decoration:none}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
+
 /* ── Layout ── */
 .layout{display:grid;grid-template-columns:1fr 300px;min-height:calc(100vh - 56px)}
 .main-col{padding:24px;overflow-y:auto;min-width:0}
@@ -386,6 +393,7 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
   .topbar-right{gap:5px}
   .topbar-right{gap:4px}
   .topbar-right .btn{font-size:11px;padding:6px 8px}
+  .tab-nav{padding:0 12px;gap:2px}
   .main-col{padding:16px}
   .camp-header{padding:14px}
   .camp-title{font-size:17px}
@@ -422,6 +430,7 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
   .pipeline-board{grid-template-columns:1fr}
   .pipeline-strip{grid-template-columns:repeat(2,1fr)}
   .topbar{height:48px}
+  .tab-nav{top:48px;display:none}
   .logo{font-size:15px}
   .breadcrumb{display:none}
   .main-col{padding:10px}
@@ -483,6 +492,29 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
     </button>
   </div>
 </header>
+
+<nav class="tab-nav">
+  <a class="tab-btn" href="index.html" target="_blank" style="text-decoration:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Talentos
+  </a>
+  <a class="tab-btn active" href="campanas.html" style="text-decoration:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Campanas
+  </a>
+  <a class="tab-btn" href="prospecciones.html" target="_blank" style="text-decoration:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    Prospeccion
+  </a>
+  <a class="tab-btn" href="contratos.html" target="_blank" style="text-decoration:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Contratos
+  </a>
+  <a class="tab-btn" href="finanzas.html" target="_blank" style="text-decoration:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    Finanzas
+  </a>
+</nav>
 
 <div class="layout" id="app" style="display:none">
 
