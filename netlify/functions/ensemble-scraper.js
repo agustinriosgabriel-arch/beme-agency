@@ -159,11 +159,14 @@ async function ensembleUserPosts(platform, username, token, userId) {
         : [];
     }
     console.log(`[posts] IG posts array length: ${rawPosts.length}`);
+    // Capture debug info for first post
+    let _igPostDebug = null;
     if (rawPosts.length > 0) {
       const first = rawPosts[0];
-      const firstKeys = Object.keys(first).slice(0, 15).join(',');
+      const firstKeys = Object.keys(first).slice(0, 25).join(',');
       console.log(`[posts] IG first post keys: ${firstKeys}`);
-      console.log(`[posts] IG first post (partial):`, JSON.stringify(first).substring(0, 500));
+      console.log(`[posts] IG first post (partial):`, JSON.stringify(first).substring(0, 800));
+      _igPostDebug = { keys: firstKeys, sample: JSON.stringify(first).substring(0, 800) };
     }
     // Skip first 3 posts (usually pinned/viral) to avoid skewing engagement
     const SKIP_PINNED_IG = 3;
@@ -276,6 +279,30 @@ exports.handler = async (event) => {
 
   const clean = username.replace(/^@/, '');
   console.log(`[scraper] ${action} ${platform} @${clean}`);
+
+  // ── ACTION: debug_posts (temporary) ──
+  if (action === 'debug_posts') {
+    if (!ensembleToken) return { statusCode: 200, headers, body: JSON.stringify({ error: 'need token' }) };
+    try {
+      const info = platform === 'instagram' ? await ensembleUserInfo(platform, clean, ensembleToken) : null;
+      const uid = info?.user_id || null;
+      const postUrl = platform === 'instagram'
+        ? `${ENSEMBLE_BASE}/instagram/user/posts?user_id=${uid}&depth=1&token=${ensembleToken}`
+        : `${ENSEMBLE_BASE}/tt/user/posts?username=${encodeURIComponent(clean)}&depth=1&token=${ensembleToken}`;
+      const resp = await fetch(postUrl);
+      const raw = await resp.json();
+      const topKeys = Object.keys(raw);
+      const dataType = typeof raw.data;
+      const isArr = Array.isArray(raw.data);
+      let firstPost = null;
+      if (isArr && raw.data.length > 0) firstPost = JSON.stringify(raw.data[0]).substring(0, 1000);
+      else if (!isArr && raw.data) {
+        const nested = raw.data.items || raw.data.posts || raw.data.edges || [];
+        if (nested.length > 0) firstPost = JSON.stringify(nested[0]).substring(0, 1000);
+      }
+      return { statusCode: 200, headers, body: JSON.stringify({ user_id: uid, topKeys, dataType, isArr, dataKeys: isArr ? null : (raw.data ? Object.keys(raw.data).slice(0,20) : null), firstPost, totalRaw: JSON.stringify(raw).length }) };
+    } catch(e) { return { statusCode: 200, headers, body: JSON.stringify({ error: e.message }) }; }
+  }
 
   // ── ACTION: posts_only (engagement without re-fetching user info) ──
   // Saves 1 unit TT / 3 units IG when followers are already fresh
