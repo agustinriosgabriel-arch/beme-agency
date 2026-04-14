@@ -94,10 +94,10 @@ body.light .tab-nav{background:rgba(244,244,244,0.9)}
 .estado-wrap{margin-left:auto;flex-shrink:0}
 .estado-select{appearance:none;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:5px 22px 5px 10px;border-radius:20px;border:none;outline:none;background-image:url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L4 4L7 1' stroke='%23888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
 .es-sin_iniciar{background-color:rgba(136,136,136,0.12);color:#888}
-.es-en_curso{background-color:rgba(14,165,233,0.12);color:#0284c7}
-.es-etapa_finanzas{background-color:rgba(217,119,6,0.12);color:var(--yellow)}
-.es-finalizada{background-color:rgba(22,163,74,0.12);color:var(--green)}
-.es-cancelada{background-color:rgba(220,38,38,0.12);color:var(--red)}
+.es-en_curso{background-color:rgba(245,158,11,0.1);color:#d97706}
+.es-etapa_finanzas{background-color:rgba(245,158,11,0.1);color:#d97706}
+.es-finalizada{background-color:rgba(22,163,74,0.1);color:#16a34a}
+.es-cancelada{background-color:rgba(136,136,136,0.12);color:#888}
 
 /* ── Section ── */
 .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-dim);display:flex;align-items:center;gap:8px;margin-bottom:12px}
@@ -176,7 +176,7 @@ body.dark .tb-tiktok_video{background:rgba(255,255,255,0.08);color:#ccc}
 .cont-titulo{font-size:13px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cont-fecha{font-size:11px;color:var(--text-dim);flex-shrink:0}
 .paso-chip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);flex-shrink:0;white-space:nowrap}
-.paso-chip.active{background:rgba(178,0,93,0.08);border-color:rgba(178,0,93,0.2);color:var(--primary)}
+.paso-chip.active{background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.2);color:#d97706}
 .paso-chip.done{background:rgba(22,163,74,0.08);border-color:rgba(22,163,74,0.2);color:var(--green)}
 .cont-expand{transition:transform 0.2s;color:var(--text-dim);flex-shrink:0}
 .contenido-item.open .cont-expand{transform:rotate(180deg)}
@@ -186,15 +186,15 @@ body.dark .tb-tiktok_video{background:rgba(255,255,255,0.08);color:#ccc}
 /* ── Workflow steps ── */
 .steps-list{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
 .step-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--radius-sm);font-size:13px}
-.step-row.done{background:rgba(22,163,74,0.06);color:var(--green)}
-.step-row.current{background:rgba(178,0,93,0.06);border:1px solid rgba(178,0,93,0.15)}
+.step-row.done{background:rgba(22,163,74,0.06);color:#16a34a}
+.step-row.current{background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2)}
 .step-row.pending{color:var(--text-dim)}
 .step-icon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
-.step-icon.done{background:var(--green);color:#fff}
-.step-icon.current{background:var(--primary);color:#fff}
+.step-icon.done{background:#16a34a;color:#fff}
+.step-icon.current{background:#d97706;color:#fff}
 .step-icon.pending{background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);font-size:10px}
 .step-label{flex:1}
-.step-current-tag{font-size:10px;font-weight:800;color:var(--primary);letter-spacing:0.3px}
+.step-current-tag{font-size:10px;font-weight:800;color:#d97706;letter-spacing:0.3px}
 
 /* ── Workflow actions area ── */
 .workflow-action-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
@@ -1300,15 +1300,15 @@ function renderTalentoCard(ct) {
     </div>
 
     ${isAdmin()?`<div class="fees-row">
-      <div class="fee-box">
-        <div class="fee-label">Fee Marca</div>
-        <div class="fee-value">${fmtMoney(fm,mon)}</div>
-        <input type="number" class="fee-input" id="fm-${ct.id}" value="${fm||''}" placeholder="0.00" onblur="saveFees(${ct.id})">
+      <div class="fee-box" style="cursor:pointer" onclick="toggleFeeEdit(${ct.id},'fm')">
+        <div class="fee-label">Fee Marca <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.4"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></div>
+        <div class="fee-value" id="fmv-${ct.id}">${fmtMoney(fm,mon)}</div>
+        <input type="number" class="fee-input" id="fm-${ct.id}" value="${fm||''}" placeholder="0.00" onblur="saveFees(${ct.id})" style="display:none">
       </div>
-      <div class="fee-box">
-        <div class="fee-label">Fee Talento</div>
-        <div class="fee-value">${fmtMoney(ft,mon)}</div>
-        <input type="number" class="fee-input" id="ft-${ct.id}" value="${ft||''}" placeholder="0.00" onblur="saveFees(${ct.id})">
+      <div class="fee-box" style="cursor:pointer" onclick="toggleFeeEdit(${ct.id},'ft')">
+        <div class="fee-label">Fee Talento <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.4"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></div>
+        <div class="fee-value" id="ftv-${ct.id}">${fmtMoney(ft,mon)}</div>
+        <input type="number" class="fee-input" id="ft-${ct.id}" value="${ft||''}" placeholder="0.00" onblur="saveFees(${ct.id})" style="display:none">
       </div>
       <div class="fee-box ganancia">
         <div class="fee-label">Ganancia Agencia</div>
@@ -1909,12 +1909,33 @@ async function saveTalento() {
   } catch(e) { toast('Error: '+e.message,'err'); }
 }
 
+function toggleFeeEdit(ctId, type) {
+  var input = document.getElementById(type + '-' + ctId);
+  var display = document.getElementById(type + 'v-' + ctId);
+  if (!input || !display) return;
+  if (input.style.display === 'none') {
+    input.style.display = 'block';
+    display.style.display = 'none';
+    input.focus();
+    input.select();
+  }
+}
+
 async function saveFees(ctId) {
-  const fm = parseFloat(document.getElementById('fm-'+ctId)?.value)||0;
-  const ft = parseFloat(document.getElementById('ft-'+ctId)?.value)||0;
+  const fmInput = document.getElementById('fm-'+ctId);
+  const ftInput = document.getElementById('ft-'+ctId);
+  const fm = parseFloat(fmInput?.value)||0;
+  const ft = parseFloat(ftInput?.value)||0;
   await sb.from('campana_talentos').update({fee_marca:fm,fee_talento:ft}).eq('id',ctId);
   const ct = campana.campana_talentos?.find(x=>x.id===ctId);
   if (ct) { ct.fee_marca=fm; ct.fee_talento=ft; }
+  // Hide inputs, show updated values
+  if (fmInput) fmInput.style.display = 'none';
+  if (ftInput) ftInput.style.display = 'none';
+  var fmv = document.getElementById('fmv-'+ctId);
+  var ftv = document.getElementById('ftv-'+ctId);
+  if (fmv) { fmv.style.display = ''; fmv.textContent = fmtMoney(fm, campana.moneda||'USD'); }
+  if (ftv) { ftv.style.display = ''; ftv.textContent = fmtMoney(ft, campana.moneda||'USD'); }
   renderFinanzas();
   toast('Fees actualizados ✓','ok');
 }
