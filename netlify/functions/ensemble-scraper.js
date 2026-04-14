@@ -160,24 +160,10 @@ async function ensembleUserPosts(platform, username, token, userId) {
     }
     // Unwrap GraphQL {node: {...}} wrapper if present
     rawPosts = rawPosts.map(p => p.node || p);
-    // Filter only videos/reels (skip static photos)
-    const videoPosts = rawPosts.filter(p => p.__typename === 'GraphVideo' || p.is_video || p.media_type === 2 || p.video_url);
-    console.log(`[posts] IG total: ${rawPosts.length}, videos/reels: ${videoPosts.length}`);
-    // Debug: log like/comment fields from first video post
-    const debugPost = (videoPosts.length > 0 ? videoPosts : rawPosts)[0];
-    if (debugPost) {
-      const likeFields = ['like_count','edge_liked_by','edge_media_preview_like','likes','thumbnail_resources'];
-      const foundLikes = {};
-      for (const f of likeFields) { if (debugPost[f] !== undefined) foundLikes[f] = JSON.stringify(debugPost[f]).substring(0, 100); }
-      console.log(`[posts] IG like fields found:`, JSON.stringify(foundLikes));
-      console.log(`[posts] IG comment fields:`, debugPost.edge_media_to_comment ? JSON.stringify(debugPost.edge_media_to_comment).substring(0,100) : 'none', 'comment_count:', debugPost.comment_count);
-      console.log(`[posts] IG video_view_count:`, debugPost.video_view_count, 'edge_media_video_views:', debugPost.edge_media_video_views);
-    }
-    // Use video posts if available, otherwise fall back to all posts
-    const igPosts = videoPosts.length > 0 ? videoPosts : rawPosts;
+    console.log(`[posts] IG total posts: ${rawPosts.length}`);
     // Skip first 3 posts (usually pinned/viral) to avoid skewing engagement
     const SKIP_PINNED_IG = 3;
-    const filteredIG = igPosts.length > SKIP_PINNED_IG ? igPosts.slice(SKIP_PINNED_IG) : igPosts;
+    const filteredIG = rawPosts.length > SKIP_PINNED_IG ? rawPosts.slice(SKIP_PINNED_IG) : rawPosts;
     console.log(`[posts] IG using ${filteredIG.length} posts (skipped ${rawPosts.length - filteredIG.length} pinned)`);
     return filteredIG.map(p => ({
       likes: p.like_count ?? p.edge_media_preview_like?.count ?? p.edge_liked_by?.count ?? p.likes?.count ?? 0,
