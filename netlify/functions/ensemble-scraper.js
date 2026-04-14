@@ -269,12 +269,13 @@ exports.handler = async (event) => {
   if (action === 'debug') {
     if (!ensembleToken)
       return { statusCode: 200, headers, body: JSON.stringify({ error: 'Need ensemble token' }) };
+    // Try detailed-info for IG
     const endpoint = platform === 'tiktok'
       ? `/tt/user/info?username=${encodeURIComponent(clean)}&token=${ensembleToken}`
-      : `/instagram/user/info?username=${encodeURIComponent(clean)}&token=${ensembleToken}`;
+      : `/instagram/user/detailed-info?username=${encodeURIComponent(clean)}&token=${ensembleToken}`;
     const resp = await fetch(ENSEMBLE_BASE + endpoint);
     const raw = await resp.json();
-    return { statusCode: 200, headers, body: JSON.stringify({ status: resp.status, raw }) };
+    return { statusCode: 200, headers, body: JSON.stringify({ status: resp.status, endpoint, raw: JSON.stringify(raw).substring(0, 2000) }) };
   }
 
   // ── ACTION: posts_only (engagement without re-fetching user info) ──
