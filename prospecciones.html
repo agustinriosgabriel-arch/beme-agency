@@ -147,10 +147,10 @@ body.light .tab-nav{background:rgba(244,244,244,0.9)}
   flex-shrink:0;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;
   letter-spacing:0.3px;white-space:nowrap;
 }
-.estado-activa{background:rgba(14,165,233,0.12);color:#38bdf8}
-.estado-pausada{background:rgba(245,158,11,0.12);color:#fbbf24}
-.estado-completada{background:rgba(34,197,94,0.12);color:#4ade80}
-.estado-cancelada{background:rgba(239,68,68,0.12);color:#ef4444}
+.estado-activa{background:rgba(22,163,74,0.1);color:#16a34a}
+.estado-pausada{background:rgba(245,158,11,0.1);color:#d97706}
+.estado-completada{background:rgba(22,163,74,0.1);color:#16a34a}
+.estado-cancelada{background:rgba(239,68,68,0.1);color:#dc2626}
 
 .prosp-card-body{display:flex;flex-direction:column;gap:8px}
 .prosp-tags{display:flex;flex-wrap:wrap;gap:4px}
@@ -404,14 +404,14 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
 
   <!-- Stats strip -->
   <div class="stats-strip">
-    <div class="stat-card highlight">
+    <div class="stat-card">
       <div class="label">Total</div>
       <div class="value" id="stat-total">0</div>
       <div class="sub">prospecciones</div>
     </div>
     <div class="stat-card">
       <div class="label">Activas</div>
-      <div class="value" id="stat-activas" style="color:#38bdf8">0</div>
+      <div class="value" id="stat-activas">0</div>
       <div class="sub">en curso</div>
     </div>
     <div class="stat-card">
@@ -421,7 +421,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
     </div>
     <div class="stat-card">
       <div class="label">Interesados</div>
-      <div class="value" id="stat-interesados" style="color:#4ade80">0</div>
+      <div class="value" id="stat-interesados">0</div>
       <div class="sub">listos para convertir</div>
     </div>
   </div>
@@ -837,12 +837,20 @@ function estadoBadgeHTML(estado) {
 }
 
 function renderStats() {
-  document.getElementById('stat-total').textContent = prospecciones.length;
-  document.getElementById('stat-activas').textContent = prospecciones.filter(p=>p.estado==='activa').length;
-  let totalContactos = 0, totalInteresados = 0;
+  var activas = prospecciones.filter(p=>p.estado==='activa').length;
+  var totalContactos = 0, totalInteresados = 0;
   Object.values(contactosCounts).forEach(c => { totalContactos += c.total; totalInteresados += c.interesados; });
+
+  document.getElementById('stat-total').textContent = prospecciones.length;
+  document.getElementById('stat-activas').textContent = activas;
   document.getElementById('stat-contactos').textContent = totalContactos;
   document.getElementById('stat-interesados').textContent = totalInteresados;
+
+  var grey = 'var(--text-dim)';
+  document.getElementById('stat-total').style.color = '#111';
+  document.getElementById('stat-activas').style.color = activas > 0 ? '#16a34a' : grey;
+  document.getElementById('stat-contactos').style.color = '#111';
+  document.getElementById('stat-interesados').style.color = totalInteresados > 0 ? '#16a34a' : grey;
 }
 
 // ══════════════════════════════════════════════════════════
