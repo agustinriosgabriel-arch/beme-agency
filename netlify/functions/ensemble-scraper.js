@@ -93,7 +93,11 @@ async function ensembleUserPosts(platform, username, token, userId) {
       else if (first.statistics) console.log(`[posts] TT first.statistics:`, JSON.stringify(first.statistics));
       else console.log(`[posts] TT first post (partial):`, JSON.stringify(first).substring(0, 500));
     }
-    return rawPosts.map(p => ({
+    // Skip first 3 posts (usually pinned/viral) to avoid skewing engagement
+    const SKIP_PINNED = 3;
+    const filteredTT = rawPosts.length > SKIP_PINNED ? rawPosts.slice(SKIP_PINNED) : rawPosts;
+    console.log(`[posts] TT using ${filteredTT.length} posts (skipped ${rawPosts.length - filteredTT.length} pinned)`);
+    return filteredTT.map(p => ({
       likes: p.stats?.diggCount ?? p.diggCount ?? p.statistics?.digg_count ?? 0,
       comments: p.stats?.commentCount ?? p.commentCount ?? p.statistics?.comment_count ?? 0,
       shares: p.stats?.shareCount ?? p.shareCount ?? p.statistics?.share_count ?? 0,
@@ -149,7 +153,11 @@ async function ensembleUserPosts(platform, username, token, userId) {
       console.log(`[posts] IG first post keys: ${firstKeys}`);
       console.log(`[posts] IG first post (partial):`, JSON.stringify(first).substring(0, 500));
     }
-    return rawPosts.map(p => ({
+    // Skip first 3 posts (usually pinned/viral) to avoid skewing engagement
+    const SKIP_PINNED_IG = 3;
+    const filteredIG = rawPosts.length > SKIP_PINNED_IG ? rawPosts.slice(SKIP_PINNED_IG) : rawPosts;
+    console.log(`[posts] IG using ${filteredIG.length} posts (skipped ${rawPosts.length - filteredIG.length} pinned)`);
+    return filteredIG.map(p => ({
       likes: p.like_count ?? p.edge_liked_by?.count ?? p.likes?.count ?? 0,
       comments: p.comment_count ?? p.edge_media_to_comment?.count ?? p.comments?.count ?? 0,
       plays: p.video_view_count ?? p.play_count ?? p.video_views ?? 0,
