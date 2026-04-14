@@ -165,11 +165,13 @@ async function ensembleUserPosts(platform, username, token, userId) {
     const SKIP_PINNED_IG = 3;
     const filteredIG = rawPosts.length > SKIP_PINNED_IG ? rawPosts.slice(SKIP_PINNED_IG) : rawPosts;
     console.log(`[posts] IG using ${filteredIG.length} posts (skipped ${rawPosts.length - filteredIG.length} pinned)`);
-    return filteredIG.map(p => ({
+    const parsed = filteredIG.map(p => ({
       likes: p.like_count ?? p.edge_media_preview_like?.count ?? p.edge_liked_by?.count ?? p.likes?.count ?? 0,
       comments: p.comment_count ?? p.edge_media_to_comment?.count ?? p.edge_media_to_parent_comment?.count ?? p.comments?.count ?? 0,
       plays: p.video_view_count ?? p.edge_media_video_views?.count ?? p.play_count ?? p.video_views ?? 0,
     }));
+    console.log(`[posts] IG parsed per post:`, parsed.map((p,i) => `#${i+1}: ${p.likes}L ${p.comments}C ${p.plays}V`).join(' | '));
+    return parsed;
   }
 
   return [];
