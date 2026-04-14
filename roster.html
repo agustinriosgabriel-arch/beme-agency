@@ -122,7 +122,7 @@ function _loadRosterPrefs() { try { return JSON.parse(localStorage.getItem(_rost
 function _saveRosterPrefs(prefs) { try { localStorage.setItem(_rosterPrefKey(), JSON.stringify(prefs)); } catch(e) {} }
 var _prefs = _loadRosterPrefs();
 let rosterViewMode = _prefs.view || 'table';
-let rosterSort = _prefs.sort || 'default';
+let rosterSort = _prefs.sort || 'ig-desc';
 let showAI = null; // null = use ROSTER.show_ai_descriptions
 let IS_INTERNAL = false; // admin or campaign_manager
 
