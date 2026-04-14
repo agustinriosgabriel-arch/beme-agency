@@ -1577,16 +1577,18 @@ function renderCard(t) {
     t.instagram ? `<div class="network-row"><div class="network-icon ig"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg></div><a class="network-link" href="${safeUrl(t.instagram)}" target="_blank" onclick="event.stopPropagation()">${escapeHtml(extractHandle(t.instagram))}</a><span class="network-followers">${formatFollowers(t.seguidores.instagram)}</span></div>` : '',
     t.youtube ? `<div class="network-row"><div class="network-icon yt"><svg width="11" height="11" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg></div><a class="network-link" href="${safeUrl(t.youtube)}" target="_blank" onclick="event.stopPropagation()">${escapeHtml(extractHandle(t.youtube))}</a><span class="network-followers">${formatFollowers(t.seguidores.youtube)}</span></div>` : '',
   ].filter(Boolean).join('');
-  const metricBadges = [];
-  if (t.engagement) {
-    if (t.engagement.tiktok != null) metricBadges.push(`<span class="eng-badge eng-tt" title="Engagement TikTok"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>${t.engagement.tiktok}%</span>`);
-    if (t.engagement.instagram != null) metricBadges.push(`<span class="eng-badge eng-ig" title="Engagement Instagram"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>${t.engagement.instagram}%</span>`);
-  }
-  if (t.avg_views) {
-    if (t.avg_views.tiktok) metricBadges.push(`<span class="eng-badge views-tt" title="Avg views TikTok"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>${formatFollowers(t.avg_views.tiktok)}</span>`);
-    if (t.avg_views.instagram) metricBadges.push(`<span class="eng-badge views-ig" title="Avg views Instagram"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>${formatFollowers(t.avg_views.instagram)}</span>`);
-  }
-  const engRow = metricBadges.length ? `<div class="card-engagement">${metricBadges.join('')}</div>` : '';
+  const metricRows = [];
+  // TikTok metrics
+  const ttMetrics = [];
+  if (t.engagement?.tiktok != null) ttMetrics.push(`<span class="metric-val">ER ${t.engagement.tiktok}%</span>`);
+  if (t.avg_views?.tiktok) ttMetrics.push(`<span class="metric-val">Views ${formatFollowers(t.avg_views.tiktok)}</span>`);
+  if (ttMetrics.length) metricRows.push(`<div class="metric-row metric-tt"><span class="metric-label">TT</span>${ttMetrics.join('<span class="metric-sep">·</span>')}</div>`);
+  // Instagram metrics
+  const igMetrics = [];
+  if (t.engagement?.instagram != null) igMetrics.push(`<span class="metric-val">ER ${t.engagement.instagram}%</span>`);
+  if (t.avg_views?.instagram) igMetrics.push(`<span class="metric-val">Views ${formatFollowers(t.avg_views.instagram)}</span>`);
+  if (igMetrics.length) metricRows.push(`<div class="metric-row metric-ig"><span class="metric-label">IG</span>${igMetrics.join('<span class="metric-sep">·</span>')}</div>`);
+  const engRow = metricRows.length ? `<div class="card-metrics">${metricRows.join('')}</div>` : '';
   const genderBadge = t.genero ? `<span class="cat-tag" style="background:rgba(148,20,224,0.08);color:#9414E0;border-color:rgba(148,20,224,0.2);">${escapeHtml(t.genero)}</span>` : '';
   const cats = t.categorias.slice(0,3).map(c=>`<span class="cat-tag">${escapeHtml(c)}</span>`).join('');
   return `<div class="talent-card${sel?' selected':''}" id="card-${t.id}" data-action="edit" data-id="${t.id}">
@@ -4004,7 +4006,7 @@ async function fetchPostsOnly(platform, profileUrl, existingFollowers) {
 
 // TikTok region code → country name mapping
 // ── Freshness check (7-day cooldown) ─────────────────────────
-const FRESHNESS_DAYS = 0; // TODO: volver a 7 cuando terminen las pruebas
+const FRESHNESS_DAYS = 7;
 
 function isFresh(t, platform, dataType) {
   // dataType: 'followers' or 'engagement'

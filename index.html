@@ -857,30 +857,31 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
 }
 .card-menu-item:hover { background:var(--surface2); }
 
-/* ====== ENGAGEMENT BADGES ====== */
-.card-engagement {
-  display:flex; gap:6px; padding:0 2px; margin:2px 0;
+/* ====== ENGAGEMENT & VIEWS METRICS ====== */
+.card-metrics {
+  display:flex; flex-direction:column; gap:3px; padding:0 2px; margin:4px 0 2px;
 }
-.eng-badge {
-  font-size:10px; font-weight:700; padding:2px 7px;
-  border-radius:10px; display:inline-flex; align-items:center; gap:3px;
+.metric-row {
+  display:flex; align-items:center; gap:6px;
+  font-size:10.5px; font-weight:600; line-height:1;
+  padding:3px 8px; border-radius:8px;
 }
-.eng-badge.eng-tt {
-  background:rgba(255,0,80,0.08); color:#ff0050;
-  border:1px solid rgba(255,0,80,0.15);
+.metric-label {
+  font-size:9px; font-weight:800; letter-spacing:0.5px;
+  min-width:16px; text-align:center;
 }
-.eng-badge.eng-ig {
+.metric-val { white-space:nowrap; }
+.metric-sep { opacity:0.3; margin:0 1px; }
+.metric-row.metric-tt {
+  background:rgba(37,244,238,0.08); color:#00b8d4;
+  border:1px solid rgba(37,244,238,0.18);
+}
+.metric-row.metric-tt .metric-label { color:#00b8d4; }
+.metric-row.metric-ig {
   background:rgba(225,48,108,0.08); color:#e1306c;
   border:1px solid rgba(225,48,108,0.15);
 }
-.eng-badge.views-tt {
-  background:rgba(255,0,80,0.05); color:#cc0040;
-  border:1px solid rgba(255,0,80,0.1);
-}
-.eng-badge.views-ig {
-  background:rgba(225,48,108,0.05); color:#b0284e;
-  border:1px solid rgba(225,48,108,0.1);
-}
+.metric-row.metric-ig .metric-label { color:#e1306c; }
 
 /* ====== CAT PANEL FOOTER ====== */
 .cat-panel-footer {
