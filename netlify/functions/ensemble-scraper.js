@@ -372,6 +372,11 @@ exports.handler = async (event) => {
           nickname: info.nickname || '',
           category: info.category || '',
           verified: info.verified || false,
+          region: info.region || '',
+          instagram_id: info.instagram_id || '',
+          youtube_id: info.youtube_id || '',
+          external_url: info.external_url || '',
+          is_business: info.is_business || false,
         };
         source = 'ensemble';
         console.log(`[scraper] ${platform} @${clean} → ${info.followers} (ensemble)`);

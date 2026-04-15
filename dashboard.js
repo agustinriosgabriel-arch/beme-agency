@@ -4086,7 +4086,8 @@ async function fetchFollowersViaApify(platform, profileUrl) {
     var data = await resp.json();
     if (data.error) { console.log('[scraper]', data.error, '(source:', data.source||'none', ')'); return null; }
     if (data.source) console.log('[scraper]', platform, '@'+username, data.followers, 'via', data.source);
-    return (data.followers !== null && data.followers !== undefined) ? data.followers : null;
+    if (data.followers === null || data.followers === undefined) return null;
+    return data; // return full object with followers + metadata
   } catch(e) {
     console.warn('[scraper]', username, platform, e.message);
     return null;
@@ -4471,13 +4472,45 @@ async function scrapeAndSave(t, platform, force) {
   }
   try {
     var timeoutP = new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, 65000); });
-    var followers = await Promise.race([fetchFollowersViaApify(platform, url), timeoutP]);
-    if (followers !== null && followers !== undefined) {
+    var data = await Promise.race([fetchFollowersViaApify(platform, url), timeoutP]);
+    if (data !== null && data !== undefined) {
+      var followers = typeof data === 'number' ? data : data.followers;
+      if (followers === null || followers === undefined) return false;
       try { await Promise.race([saveFollowers(t, platform, followers), new Promise(function(r){ setTimeout(r,5000); })]); } catch(e) {}
       setFreshTimestamp(t, platform, 'followers');
-      // Persist timestamp
+      // Save metadata from EnsembleData (bio, category, verified, etc.)
+      if (typeof data === 'object' && data.source === 'ensemble') {
+        if (!t.social_meta) t.social_meta = {};
+        if (!t.social_meta[platform]) t.social_meta[platform] = {};
+        var meta = t.social_meta[platform];
+        if (data.bio) meta.bio = data.bio;
+        if (data.nickname) meta.nickname = data.nickname;
+        if (data.verified !== undefined) meta.verified = data.verified;
+        if (data.category) meta.category = data.category;
+        if (data.region) meta.region = data.region;
+        if (data.external_url) meta.external_url = data.external_url;
+        if (data.is_business !== undefined) meta.is_business = data.is_business;
+        meta.followers_at = new Date().toISOString().split('T')[0];
+        // Auto-fill country from TikTok region
+        if (platform === 'tiktok' && data.region) {
+          var countryName = REGION_TO_COUNTRY[data.region.toUpperCase()];
+          if (countryName && (!t.paises || t.paises.length === 0)) {
+            t.paises = [countryName];
+          }
+        }
+        // Auto-link IG/YT from TikTok
+        if (platform === 'tiktok') {
+          if (data.instagram_id && !t.instagram) t.instagram = normalizeSocialUrl(data.instagram_id, 'instagram');
+          if (data.youtube_id && !t.youtube) t.youtube = 'https://www.youtube.com/channel/' + data.youtube_id;
+        }
+      }
+      // Persist all changes
       if (sb && currentUser) {
-        sb.from('talentos').update({ social_meta: {...(t.social_meta||{})} }).eq('id', t.id).then(function(){});
+        var updateObj = { social_meta: {...(t.social_meta||{})} };
+        if (t.paises && t.paises.length > 0) updateObj.paises = t.paises;
+        if (platform === 'tiktok' && data.instagram_id && t.instagram) updateObj.instagram = t.instagram;
+        if (platform === 'tiktok' && data.youtube_id && t.youtube) updateObj.youtube = t.youtube;
+        sb.from('talentos').update(updateObj).eq('id', t.id).then(function(){});
       }
       return true;
     }
