@@ -646,6 +646,15 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
           <input type="date" id="c-derechos-desde" class="form-input">
         </div>
 
+        <div class="form-section-title">Spark Code</div>
+        <div class="form-group">
+          <label class="form-label">Incluir Spark Code</label>
+          <select id="c-spark-code" class="form-input">
+            <option value="no">No</option>
+            <option value="si">Sí (se otorga spark code)</option>
+          </select>
+        </div>
+
         <div class="form-section-title">Comentarios Adicionales</div>
         <div class="form-group full">
           <label class="form-label">Comentarios (se incluiran en el contrato)</label>
@@ -1169,6 +1178,7 @@ function collectFormData() {
     derechos_dias: parseInt(document.getElementById('c-derechos-dias').value) || null,
     derechos_valor: parseFloat(document.getElementById('c-derechos-valor').value) || null,
     derechos_desde: document.getElementById('c-derechos-desde').value || null,
+    spark_code: document.getElementById('c-spark-code').value === 'si',
     comentarios: document.getElementById('c-comentarios').value.trim(),
     created_by: currentUser.id,
   };
