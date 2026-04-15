@@ -161,6 +161,10 @@ async function ensembleUserPosts(platform, username, token, userId) {
     // Unwrap GraphQL {node: {...}} wrapper if present
     rawPosts = rawPosts.map(p => p.node || p);
     console.log(`[posts] IG total posts: ${rawPosts.length}`);
+    // Log ALL posts raw view fields for debugging
+    rawPosts.forEach((p, i) => {
+      console.log(`[posts] IG RAW #${i+1}: video_view_count=${p.video_view_count} edge_media_video_views=${JSON.stringify(p.edge_media_video_views)} play_count=${p.play_count} video_views=${p.video_views} likes=${p.edge_media_preview_like?.count ?? p.like_count} type=${p.__typename} shortcode=${p.shortcode}`);
+    });
     // Skip first 3 posts (usually pinned/viral) to avoid skewing engagement
     const SKIP_PINNED_IG = 3;
     const filteredIG = rawPosts.length > SKIP_PINNED_IG ? rawPosts.slice(SKIP_PINNED_IG) : rawPosts;
@@ -330,7 +334,8 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({
         platform, username: clean, action: 'engagement',
         followers, engagementRate, avgViews, postsAnalyzed,
-        _debug_posts: posts, // temporary — shows all post data
+        _debug_posts: posts,
+        _debug_all_posts: platform === 'instagram' ? '_see_netlify_logs' : undefined,
         // Profile metadata
         bio: info?.bio || '',
         nickname: info?.nickname || '',
