@@ -330,6 +330,7 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({
         platform, username: clean, action: 'engagement',
         followers, engagementRate, avgViews, postsAnalyzed,
+        _debug_posts: posts, // temporary — shows all post data
         // Profile metadata
         bio: info?.bio || '',
         nickname: info?.nickname || '',
