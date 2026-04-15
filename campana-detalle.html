@@ -52,8 +52,8 @@ body.dark .logo .logo-dark{display:block}
 .icon-btn:hover{background:var(--surface3);color:var(--text)}
 
 /* ── Tab Nav ── */
-.tab-nav{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--border);padding:0 24px;background:rgba(15,15,15,0.7);backdrop-filter:blur(10px);position:sticky;top:56px;z-index:99}
-body.light .tab-nav{background:rgba(244,244,244,0.9)}
+.tab-nav{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--border);padding:0 24px;background:var(--surface);position:sticky;top:56px;z-index:99}
+body.dark .tab-nav{background:var(--surface)}
 .tab-btn{display:flex;align-items:center;gap:7px;padding:12px 18px;font-size:13px;font-weight:600;color:var(--text-muted);border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;margin-bottom:-1px;font-family:'Plus Jakarta Sans',sans-serif;text-decoration:none}
 .tab-btn:hover{color:var(--text)}
 .tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
@@ -105,11 +105,11 @@ body.light .tab-nav{background:rgba(244,244,244,0.9)}
 
 /* ── Pipeline visual ── */
 .pipeline-section{margin-bottom:20px}
-.pipeline-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px}
+.pipeline-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:12px}
 .pipe-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;text-align:center;border-top:3px solid transparent;transition:all 0.15s}
 .pipe-stat .ps-count{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;line-height:1}
 .pipe-stat .ps-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-dim);margin-top:3px}
-.pipeline-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;overflow-x:auto;padding-bottom:4px}
+.pipeline-board{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;overflow-x:auto;padding-bottom:4px}
 .pipe-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;min-width:140px}
 .pipe-col-head{padding:8px 10px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border)}
 .pipe-col-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
@@ -125,7 +125,7 @@ body.light .tab-nav{background:rgba(244,244,244,0.9)}
 .pipe-card-tipo{padding:1px 5px;border-radius:10px;font-size:8px;font-weight:700;background:var(--surface3);color:var(--text-muted);flex-shrink:0}
 .pipe-card-title{font-size:10px;color:var(--text-dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pipeline-board.collapsed,.pipeline-strip.collapsed{display:none}
-@media(max-width:900px){.pipeline-board{grid-template-columns:repeat(3,1fr)}.pipeline-strip{grid-template-columns:repeat(3,1fr)}.camp-meta-strip{flex-wrap:wrap;gap:10px}}
+@media(max-width:900px){.pipeline-board{grid-template-columns:repeat(4,1fr)}.pipeline-strip{grid-template-columns:repeat(4,1fr)}.camp-meta-strip{flex-wrap:wrap;gap:10px}}
 
 /* ── Talento card ── */
 .talento-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
@@ -961,14 +961,14 @@ function renderAll() {
 // PIPELINE VISUAL
 // ════════════════════════════════════════════════
 const PIPE_STEPS = [
-  {n:1, label:'Brief',      color:'#a78bfa'},
-  {n:2, label:'Script',     color:'#38bdf8'},
-  {n:3, label:'Apr. Script',color:'#0ea5e9'},
-  {n:4, label:'Producción', color:'#fbbf24'},
-  {n:5, label:'Apr. Cont.', color:'#f97316'},
-  {n:6, label:'Publicar',   color:'#4ade80'},
-  {n:7, label:'Stats',      color:'#2dd4bf'},
-  {n:8, label:'Completado', color:'#22c55e'},
+  {n:1, label:'Brief',      color:'#d97706'},
+  {n:2, label:'Script',     color:'#d97706'},
+  {n:3, label:'Apr. Script',color:'#d97706'},
+  {n:4, label:'Producción', color:'#d97706'},
+  {n:5, label:'Apr. Cont.', color:'#d97706'},
+  {n:6, label:'Publicar',   color:'#d97706'},
+  {n:7, label:'Stats',      color:'#d97706'},
+  {n:8, label:'Completado', color:'#16a34a'},
 ];
 let pipelineCollapsed = false;
 
@@ -998,8 +998,9 @@ function renderPipeline() {
   // Stats strip
   document.getElementById('pipeline-strip').innerHTML = activeSteps.map(s => {
     const count = allConts.filter(c => c.paso_actual === s.n).length;
-    return `<div class="pipe-stat" style="border-top-color:${s.color}">
-      <div class="ps-count" style="color:${s.color}">${count}</div>
+    const c = count > 0 ? s.color : '#aaa';
+    return `<div class="pipe-stat" style="border-top-color:${c}">
+      <div class="ps-count" style="color:${c}">${count}</div>
       <div class="ps-label">${s.label}</div>
     </div>`;
   }).join('');
@@ -1007,10 +1008,11 @@ function renderPipeline() {
   // Board columns
   document.getElementById('pipeline-board').innerHTML = activeSteps.map(s => {
     const items = allConts.filter(c => c.paso_actual === s.n);
+    const clr = items.length > 0 ? s.color : '#aaa';
     return `<div class="pipe-col">
       <div class="pipe-col-head">
-        <div class="pipe-col-dot" style="background:${s.color}"></div>
-        <div class="pipe-col-title" style="color:${s.color}">${s.label}</div>
+        <div class="pipe-col-dot" style="background:${clr}"></div>
+        <div class="pipe-col-title" style="color:${clr}">${s.label}</div>
         <div class="pipe-col-count">${items.length}</div>
       </div>
       <div class="pipe-items">
