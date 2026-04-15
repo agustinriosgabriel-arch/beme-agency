@@ -279,6 +279,38 @@ exports.handler = async (event) => {
   const clean = username.replace(/^@/, '');
   console.log(`[scraper] ${action} ${platform} @${clean}`);
 
+  // ── ACTION: debug_raw (temporary — all posts without skip) ──
+  if (action === 'debug_raw') {
+    if (!ensembleToken) return { statusCode: 200, headers, body: JSON.stringify({ error: 'need token' }) };
+    try {
+      const info = platform === 'instagram' ? await ensembleUserInfo(platform, clean, ensembleToken) : null;
+      const uid = info?.user_id || null;
+      const postUrl = platform === 'instagram'
+        ? `${ENSEMBLE_BASE}/instagram/user/posts?user_id=${uid}&depth=1&token=${ensembleToken}`
+        : `${ENSEMBLE_BASE}/tt/user/posts?username=${encodeURIComponent(clean)}&depth=1&token=${ensembleToken}`;
+      const resp = await fetch(postUrl);
+      const json = await resp.json();
+      let rawPosts = Array.isArray(json.data) ? json.data : [];
+      if (rawPosts.length === 0 && json.data && !Array.isArray(json.data)) {
+        const d = json.data;
+        rawPosts = Array.isArray(d.posts) ? d.posts : Array.isArray(d.items) ? d.items : [];
+      }
+      rawPosts = rawPosts.map(p => p.node || p);
+      const allParsed = rawPosts.map((p, i) => ({
+        index: i + 1,
+        shortcode: p.shortcode || '',
+        type: p.__typename || '',
+        likes: p.edge_media_preview_like?.count ?? p.like_count ?? 0,
+        comments: p.edge_media_to_comment?.count ?? p.comment_count ?? 0,
+        video_view_count: p.video_view_count ?? null,
+        edge_media_video_views: p.edge_media_video_views?.count ?? null,
+        play_count: p.play_count ?? null,
+        is_video: !!p.is_video,
+      }));
+      return { statusCode: 200, headers, body: JSON.stringify({ followers: info?.followers, total_posts: rawPosts.length, posts: allParsed }) };
+    } catch(e) { return { statusCode: 200, headers, body: JSON.stringify({ error: e.message }) }; }
+  }
+
   // ── ACTION: posts_only (engagement without re-fetching user info) ──
   // Saves 1 unit TT / 3 units IG when followers are already fresh
   if (action === 'posts_only') {
@@ -335,7 +367,6 @@ exports.handler = async (event) => {
         platform, username: clean, action: 'engagement',
         followers, engagementRate, avgViews, postsAnalyzed,
         _debug_posts: posts,
-        _debug_all_posts: platform === 'instagram' ? '_see_netlify_logs' : undefined,
         // Profile metadata
         bio: info?.bio || '',
         nickname: info?.nickname || '',
