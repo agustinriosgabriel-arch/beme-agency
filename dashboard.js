@@ -2222,6 +2222,10 @@ function deleteTalent() {
   // Store undo
   _lastUndo = {type: 'delete-talent', talent: talentCopy, rosterLinks: rosterLinks};
 
+  // Mark as recently deleted to prevent realtime re-insert
+  _recentlyDeleted.add(idToDel);
+  setTimeout(function() { _recentlyDeleted.delete(idToDel); }, 30000);
+
   // Delete locally
   talents = talents.filter(t => t.id !== idToDel);
   rosters.forEach(r => { r.talentIds = r.talentIds.filter(id => id !== idToDel); });
@@ -2231,7 +2235,10 @@ function deleteTalent() {
 
   // Delete from Supabase
   if(sb && currentUser) {
-    sb.from('talentos').delete().eq('id', idToDel);
+    sb.from('talentos').delete().eq('id', idToDel).then(({ error }) => {
+      if (error) { console.error('[Beme] Error deleting talent:', error); showToast('Error eliminando de la nube. Recargá la página.', 'error'); }
+      else { console.log('[Beme] Talent', idToDel, 'deleted from Supabase'); }
+    });
     rosterLinks.forEach(rl => {
       const r = rosters.find(x => x.id === rl.rosterId);
       if(r) sb.from('rosters').update({talent_ids: r.talentIds}).eq('id', rl.rosterId);
@@ -2252,13 +2259,19 @@ function deleteSelectedTalents() {
 
   _lastUndo = {type: 'delete-talents', talents: talentsCopy, rosterLinks: rosterLinks};
 
+  // Mark as recently deleted to prevent realtime re-insert
+  idsToDelete.forEach(id => { _recentlyDeleted.add(id); setTimeout(function() { _recentlyDeleted.delete(id); }, 30000); });
+
   talents = talents.filter(t => !selectedIds.has(t.id));
   rosters.forEach(r => { r.talentIds = r.talentIds.filter(id => !selectedIds.has(id)); });
   selectedIds.clear();
   updateBottomBar(); renderTalents(); updateStats(); updatePlatformCounts();
 
   if(sb && currentUser) {
-    sb.from('talentos').delete().in('id', idsToDelete);
+    sb.from('talentos').delete().in('id', idsToDelete).then(({ error }) => {
+      if (error) { console.error('[Beme] Error deleting talents:', error); showToast('Error eliminando de la nube. Recargá la página.', 'error'); }
+      else { console.log('[Beme] Deleted', idsToDelete.length, 'talents from Supabase'); }
+    });
     const _rids=[...new Set(rosterLinks.map(rl=>rl.rosterId))]; _rids.forEach(rid=>{const r=rosters.find(x=>x.id===rid);if(r)sb.from('rosters').update({talent_ids:r.talentIds}).eq('id',rid);});
   }
   showUndoToast(count + ' talento' + (count!==1?'s':'') + ' eliminado' + (count!==1?'s':''));
@@ -5523,6 +5536,8 @@ async function executeUndo() {
 
   try {
     if (action.type === 'delete-talent') {
+      // Remove from recently deleted so realtime doesn't block it
+      _recentlyDeleted.delete(action.talent.id);
       // Restore talent locally
       talents.push(action.talent);
       // Restore in rosters
@@ -5556,6 +5571,8 @@ async function executeUndo() {
     }
 
     else if (action.type === 'delete-talents') {
+      // Remove from recently deleted so realtime doesn't block them
+      action.talents.forEach(function(t) { _recentlyDeleted.delete(t.id); });
       // Restore all talents
       action.talents.forEach(function(t) { talents.push(t); });
       if (action.rosterLinks) {
