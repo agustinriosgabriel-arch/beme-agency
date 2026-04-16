@@ -452,6 +452,10 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
           <input type="text" id="c-keywords" class="form-input" placeholder="comedia, lifestyle...">
         </div>
         <div class="form-group full">
+          <label class="form-label">Valores de Contenido</label>
+          <textarea id="c-valores" class="form-input" placeholder="Tarifas por contenido: reel, story, TikTok, colaboración..."></textarea>
+        </div>
+        <div class="form-group full">
           <label class="form-label">Notas</label>
           <textarea id="c-notas" class="form-input" placeholder="Notas sobre este contacto..."></textarea>
         </div>
@@ -1010,12 +1014,13 @@ function openEditContacto(id) {
   selectedCCats = [...(c.categorias||[])];
   renderMsChips('ms-ccats', selectedCCats, 'selectedCCats');
   document.getElementById('c-keywords').value = c.keywords||'';
+  document.getElementById('c-valores').value = c.valores||'';
   document.getElementById('c-notas').value = c.notas||'';
   openModal('modal-contacto');
 }
 
 function clearContactForm() {
-  ['c-nombre','c-ciudad','c-email','c-telefono','c-tiktok','c-instagram','c-youtube','c-keywords','c-notas'].forEach(id=>{
+  ['c-nombre','c-ciudad','c-email','c-telefono','c-tiktok','c-instagram','c-youtube','c-keywords','c-valores','c-notas'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('c-genero').value = '';
@@ -1052,6 +1057,7 @@ async function saveContacto() {
     genero: document.getElementById('c-genero').value,
     categorias: [...selectedCCats],
     keywords: document.getElementById('c-keywords').value.trim(),
+    valores: document.getElementById('c-valores').value.trim(),
     notas: document.getElementById('c-notas').value.trim(),
     updated_at: new Date().toISOString(),
   };
@@ -1098,6 +1104,7 @@ function openDetalle(id) {
     ${c.youtube?`<div class="detail-row"><div class="detail-label">YouTube</div><div class="detail-value"><a href="${safeUrl(c.youtube)}" target="_blank">${esc(c.youtube)}</a></div></div>`:''}
     ${c.genero?`<div class="detail-row"><div class="detail-label">Genero</div><div class="detail-value">${esc(c.genero)}</div></div>`:''}
     ${c.categorias?.length?`<div class="detail-row"><div class="detail-label">Categorias</div><div class="detail-value">${c.categorias.map(x=>`<span class="prosp-tag">${esc(x)}</span>`).join(' ')}</div></div>`:''}
+    ${c.valores?`<div class="detail-row"><div class="detail-label">Valores</div><div class="detail-value" style="white-space:pre-wrap">${esc(c.valores)}</div></div>`:''}
     ${c.notas?`<div class="detail-row"><div class="detail-label">Notas</div><div class="detail-value">${esc(c.notas)}</div></div>`:''}
     <div class="detail-row"><div class="detail-label">Etapa</div><div class="detail-value"><span class="estado-badge es-${c.etapa==='activa'?'activa':''}" style="background:${ETAPAS.find(e=>e.key===c.etapa)?.color||'#888'}22;color:${ETAPAS.find(e=>e.key===c.etapa)?.color||'#888'}">${ETAPAS.find(e=>e.key===c.etapa)?.label||c.etapa}</span></div></div>
     ${c.medio_contacto?`<div class="detail-row"><div class="detail-label">Medio</div><div class="detail-value"><span class="k-medio">${c.medio_contacto.toUpperCase()}</span></div></div>`:''}
@@ -1864,6 +1871,7 @@ async function parseCSVForProspeccion(text) {
       genero: row['genero'] || row['gender'] || '',
       categorias: (row['categorias'] || row['categories'] || '').split(/[;,]/).map(c=>c.trim()).filter(Boolean),
       keywords: row['keywords'] || '',
+      valores: row['valores'] || row['values'] || '',
       notas: row['notas'] || row['notes'] || '',
       badge, badgeColor,
     });
@@ -1935,6 +1943,7 @@ async function confirmCSVImport() {
         genero: r.genero || '',
         categorias: r.categorias || [],
         keywords: r.keywords || '',
+        valores: r.valores || '',
         notas: r.notas || '',
         etapa: 'evaluacion',
         seguidores: {tiktok:0, instagram:0, youtube:0},
