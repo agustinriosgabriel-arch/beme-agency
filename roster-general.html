@@ -210,7 +210,8 @@ async function init() {
     setupFilterListeners();
 
     document.getElementById('roster-title').textContent = roster.name;
-    document.getElementById('roster-desc').textContent = roster.description || '';
+    // Description is for internal use only, not shown to external viewers
+    document.getElementById('roster-desc').textContent = '';
     const today = new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'});
     document.getElementById('date-line').textContent = today;
 
