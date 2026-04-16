@@ -68,6 +68,17 @@ const BASE_CATEGORIES = [
   "Familia / Maternidad","Tecnología","Entretenimiento","Educación","Mascotas","Salud"
 ];
 
+// Normalize category capitalization: match BASE_CATEGORIES or capitalize first letter
+function normalizeCategory(cat) {
+  if (!cat) return cat;
+  var trimmed = cat.trim();
+  // Try to match a known base category (case-insensitive)
+  var match = BASE_CATEGORIES.find(b => b.toLowerCase() === trimmed.toLowerCase());
+  if (match) return match;
+  // Otherwise capitalize first letter
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
 // ===================== STATE =====================
 let CATEGORIES = [...BASE_CATEGORIES];
 let talents = [];
@@ -311,7 +322,7 @@ async function loadFromSupabase() {
     const configRows = configResult.data;
     if (configRows) {
       for (const row of configRows) {
-        if (row.key === 'categories' && Array.isArray(row.value)) { CATEGORIES.length=0; row.value.forEach(c=>CATEGORIES.push(c)); }
+        if (row.key === 'categories' && Array.isArray(row.value)) { CATEGORIES.length=0; row.value.forEach(c=>CATEGORIES.push(normalizeCategory(c))); }
         if (row.key === 'countries' && Array.isArray(row.value)) {
           COUNTRIES.length = 0;
           row.value.forEach(c => {
@@ -330,18 +341,38 @@ async function loadFromSupabase() {
 
     // Process talents
     const { data: allTalents, error: talentQueryError } = talentResult;
-    talents = (allTalents || []).map(t => ({
-      ...t,
-      paises: t.paises || [],
-      categorias: t.categorias || [],
-      seguidores: t.seguidores || {tiktok:0,instagram:0,youtube:0},
-      engagement: t.engagement || {},
-      avg_views: t.avg_views || {},
-      social_meta: t.social_meta || {},
-      genero: t.genero || '',
-      keywords: t.keywords || ''
-    }));
+    // Track talents that need category normalization in DB
+    const talentsToFixCats = [];
+    talents = (allTalents || []).map(t => {
+      const originalCats = t.categorias || [];
+      const normalizedCats = originalCats.map(c => normalizeCategory(c));
+      const needsFix = originalCats.some((c, i) => c !== normalizedCats[i]);
+      if (needsFix) talentsToFixCats.push({ id: t.id, categorias: normalizedCats });
+      return {
+        ...t,
+        paises: t.paises || [],
+        categorias: normalizedCats,
+        seguidores: t.seguidores || {tiktok:0,instagram:0,youtube:0},
+        engagement: t.engagement || {},
+        avg_views: t.avg_views || {},
+        social_meta: t.social_meta || {},
+        genero: t.genero || '',
+        keywords: t.keywords || ''
+      };
+    });
     console.log('[Beme] Loaded', talents.length, 'talentos from Supabase');
+
+    // Auto-fix category capitalization in DB for affected talents
+    if (talentsToFixCats.length > 0) {
+      console.log('[Beme] Fixing category capitalization for', talentsToFixCats.length, 'talentos');
+      for (const fix of talentsToFixCats) {
+        sb.from('talentos').update({ categorias: fix.categorias }).eq('id', fix.id).then(({ error }) => {
+          if (error) console.warn('[Beme] Error fixing categories for talent', fix.id, error);
+        });
+      }
+      // Also save normalized CATEGORIES list
+      saveData();
+    }
 
     // Process rosters
     if (rosterResult.error) console.error('[Beme] Error loading rosters:', rosterResult.error);
@@ -1068,7 +1099,7 @@ async function parseCSV(text) {
     const paises = paisRaw.split(';').map(x=>normalizeCountry(x.trim())).filter(Boolean);
     paises.forEach(p => { if(p&&!COUNTRIES.includes(p)) COUNTRIES.push(p); });
 
-    const rawCats = (row['categorias']||row['categories']||row['categorías']||'').split(';').map(c=>c.trim()).filter(Boolean);
+    const rawCats = (row['categorias']||row['categories']||row['categorías']||'').split(';').map(c=>normalizeCategory(c.trim())).filter(Boolean);
     rawCats.forEach(cat => { if(cat&&!CATEGORIES.includes(cat)) CATEGORIES.push(cat); });
 
     rows.push({
@@ -1767,7 +1798,7 @@ function updatePlatformCounts() {
 function addCustomCategory() {
   const name = prompt('Nombre de la nueva categoría:');
   if(!name || !name.trim()) return;
-  const trimmed = name.trim();
+  const trimmed = normalizeCategory(name.trim());
   if(CATEGORIES.includes(trimmed)) { showToast('Esa categoría ya existe', 'info'); return; }
   CATEGORIES.push(trimmed);
   saveData();
@@ -2698,11 +2729,14 @@ function renderLinksList() {
     var url = 'https://bemeagency.netlify.app/roster.html?link=' + link.token;
     var modeColor = link.compact ? '#f59e0b' : '#22c55e';
     var modeLabel = link.compact ? 'Solo ver' : 'Cotizaciones';
+    var titleDisplay = link.roster_title ? '<div style="font-size:10px;color:#9414E0;margin-top:1px;">Título: ' + escapeHtml(link.roster_title) + '</div>' : '';
     return '<div style="display:flex;align-items:center;gap:8px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);">' +
       '<div style="flex:1;min-width:0;">' +
         '<div style="font-weight:700;font-size:13px;">' + escapeHtml(link.client_name) + '</div>' +
+        titleDisplay +
         '<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">' + new Date(link.created_at).toLocaleDateString('es-ES') + '</div>' +
       '</div>' +
+      '<button class="btn btn-outline btn-sm" onclick="editLinkTitle(' + link.id + ')" title="Editar título" style="padding:4px 8px;color:#9414E0;border-color:rgba(148,20,224,0.4);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>' +
       '<button class="btn btn-outline btn-sm" onclick="toggleLinkMode(' + link.id + ')" title="Cambiar modo" style="font-size:10px;font-weight:700;color:' + modeColor + ';border-color:' + modeColor + '40;min-width:90px;justify-content:center;">' + modeLabel + '</button>' +
       '<button class="btn btn-outline btn-sm" onclick="copyLinkUrl(\'' + link.token + '\')" title="Copiar URL"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>' +
       '<button class="btn btn-danger btn-sm" onclick="deleteRosterLink(' + link.id + ')" title="Eliminar" style="padding:4px 8px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>' +
@@ -2714,14 +2748,16 @@ async function createRosterLink() {
   var clientName = document.getElementById('new-link-client-name').value.trim();
   if (!clientName) { showToast('Escribe el nombre del cliente', 'error'); return; }
   var compact = document.getElementById('new-link-compact').checked;
+  var rosterTitle = (document.getElementById('new-link-roster-title').value || '').trim();
   var token = Math.random().toString(36).substring(2, 10);
-  var payload = { roster_id: managingLinksRosterId, client_name: clientName, token: token, compact: compact };
+  var payload = { roster_id: managingLinksRosterId, client_name: clientName, token: token, compact: compact, roster_title: rosterTitle };
   var result = await sb.from('roster_links').insert(payload).select().single();
   if (result.error) { showToast('Error: ' + result.error.message, 'error'); return; }
   rosterLinks.push(result.data);
   renderLinksList();
   renderRosters();
   document.getElementById('new-link-client-name').value = '';
+  document.getElementById('new-link-roster-title').value = '';
   showToast('Link creado para ' + clientName, 'success');
 }
 
@@ -2741,6 +2777,18 @@ async function toggleLinkMode(linkId) {
   await sb.from('roster_links').update({ compact: link.compact }).eq('id', linkId);
   renderLinksList();
   showToast(link.client_name + ': ' + (link.compact ? 'Solo ver' : 'Con cotizaciones'), 'success');
+}
+
+async function editLinkTitle(linkId) {
+  var link = rosterLinks.find(function(l) { return l.id === linkId; });
+  if (!link) return;
+  var newTitle = prompt('Título del roster para esta marca:', link.roster_title || '');
+  if (newTitle === null) return;
+  newTitle = newTitle.trim();
+  link.roster_title = newTitle;
+  await sb.from('roster_links').update({ roster_title: newTitle }).eq('id', linkId);
+  renderLinksList();
+  showToast('Título actualizado', 'success');
 }
 
 function slugify(str) {
@@ -4634,7 +4682,7 @@ function updateCatPills() {
 function addCategoryFromPanel() {
   const name = prompt('Nombre de la nueva categoría:');
   if (!name || !name.trim()) return;
-  const trimmed = name.trim();
+  const trimmed = normalizeCategory(name.trim());
   if (CATEGORIES.includes(trimmed)) { showToast('Ya existe', 'info'); return; }
   CATEGORIES.push(trimmed);
   saveData(); populateCatCheckboxes(); renderCatPanelList();
@@ -4661,8 +4709,9 @@ function renderCatsMgrList() {
 }
 
 function addCategoryFromModal() {
-  const name = document.getElementById('new-cat-name').value.trim();
-  if (!name) return;
+  const raw = document.getElementById('new-cat-name').value.trim();
+  if (!raw) return;
+  const name = normalizeCategory(raw);
   if (CATEGORIES.includes(name)) { showToast('Ya existe', 'info'); return; }
   CATEGORIES.push(name);
   document.getElementById('new-cat-name').value = '';
