@@ -2282,9 +2282,11 @@ let ytApiKey = '';
 let apifyToken = '';
 let ensembleToken = '';
 
+const YT_API_KEY_DEFAULT = 'AIzaSyA1ldlefc3IyyJ_nnt4dKF4mF7qowtG3fY';
+
 function loadApiKey() {
   try {
-    ytApiKey       = localStorage.getItem('beme_yt_api_key')       || '';
+    ytApiKey       = localStorage.getItem('beme_yt_api_key')       || YT_API_KEY_DEFAULT;
     apifyToken     = localStorage.getItem('beme_apify_token')     || '';
     ensembleToken  = localStorage.getItem('beme_ensemble_token')  || '';
   } catch(e) {}
@@ -2358,13 +2360,12 @@ async function saveApiKey() {
 }
 
 function clearApiKey() {
-  ytApiKey = '';
+  ytApiKey = YT_API_KEY_DEFAULT;
   try { localStorage.removeItem('beme_yt_api_key'); } catch(e) {}
   document.getElementById('yt-api-key-input').value = '';
-  document.getElementById('yt-api-status-row').style.display = 'none';
   updateApiKeyUI();
   closeModal('yt-api-modal');
-  showToast('Clave eliminada', 'info');
+  showToast('Clave restaurada a la predeterminada', 'info');
 }
 
 // ── Apify token management ───────────────────────────────────
