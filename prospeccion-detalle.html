@@ -1430,12 +1430,14 @@ function updateBulkUI() {
   }
   // Email + Delete always available
   const withEmail = [...bulkSelected].filter(id => { const c=contactos.find(x=>x.id===id); return c && c.email; }).length;
-  if (withEmail > 0) {
-    btns += `<button class="btn btn-outline btn-sm" onclick="bulkSendEmail()">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-      Enviar Email (${withEmail})
-    </button>`;
-  }
+  const emailLabel = withEmail === count
+    ? `Enviar Email (${count})`
+    : `Enviar Email (${withEmail}/${count})`;
+  const emailDisabled = withEmail === 0 ? 'disabled title="Ningún contacto seleccionado tiene email"' : '';
+  btns += `<button class="btn btn-primary btn-sm" onclick="bulkSendEmail()" ${emailDisabled}>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    ${emailLabel}
+  </button>`;
   btns += `<button class="btn btn-danger btn-sm" onclick="bulkDelete()">Eliminar (${count})</button>`;
   document.getElementById('bulk-actions').innerHTML = btns;
 }
