@@ -98,7 +98,7 @@ input[type=number]{-moz-appearance:textfield;}
     </div>
   </div>
   <div id="sum-list" style="flex:1;min-width:180px;max-height:100px;overflow-y:auto;font-size:12px;"></div>
-  <button id="remove-selected-btn" onclick="removeSelectedFromRoster()" style="display:none;padding:10px 18px;border-radius:24px;border:1px solid rgba(255,100,100,0.5);background:rgba(255,60,60,0.15);color:#ff6b6b;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Quitar del Roster</button>
+  <button id="remove-selected-btn" onclick="removeSelectedFromRoster()" style="display:none;padding:10px 18px;border-radius:24px;border:1px solid rgba(255,100,100,0.5);background:rgba(255,60,60,0.15);color:#ff6b6b;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">🗑 Eliminar del Roster</button>
   <button id="hide-selected-btn" onclick="bulkHideSelected()" style="display:none;padding:10px 18px;border-radius:24px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Descartar seleccionados</button>
   <button id="export-btn">↓ Exportar CSV</button>
 </div>
@@ -511,21 +511,22 @@ function highlightRow(checkbox) {
   document.querySelectorAll(`.row-check[data-id="${id}"]`).forEach(c => { c.checked = checkbox.checked; });
 }
 
-// ── Remove talents from roster ────────────────────────────────
+// ── Remove talents from roster (permanently, admin only) ─────
 async function removeSelectedFromRoster() {
   const checked = document.querySelectorAll('.row-check:checked');
   const seen = {}; const ids = [];
   checked.forEach(c => { const id = c.getAttribute('data-id'); if(!seen[id]){seen[id]=true;ids.push(parseInt(id));} });
   if (!ids.length) return;
-  if (!confirm(`Quitar ${ids.length} talento${ids.length!==1?'s':''} del roster?`)) return;
+  const names = ids.map(id => { const t = TALENTS.find(x => String(x.id)===String(id)); return t ? t.nombre : id; });
+  if (!confirm(`¿Eliminar ${ids.length} talento${ids.length!==1?'s':''} del roster definitivamente?\n\n${names.join(', ')}\n\nEsta acción no se puede deshacer.`)) return;
 
   try {
     // Remove from talent_ids array
     const newIds = (ROSTER.talent_ids||[]).map(id=>parseInt(id)).filter(id => !ids.includes(id));
     await sb.from('rosters').update({talent_ids: newIds}).eq('id', ROSTER.id);
-    // Remove selections
+    // Remove ALL selections for these talents (across all links)
     for (const id of ids) {
-      await sb.from('roster_selecciones').delete().eq('roster_id', ROSTER.id).eq('talent_id', id).eq('link_id', LINK_ID);
+      await sb.from('roster_selecciones').delete().eq('roster_id', ROSTER.id).eq('talent_id', id);
       delete SELS[id];
     }
     ROSTER.talent_ids = newIds;
