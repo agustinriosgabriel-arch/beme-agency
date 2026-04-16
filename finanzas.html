@@ -852,7 +852,6 @@ function toggleTheme(){isDark=!isDark;document.body.classList.toggle('light',!is
 function loadTheme(){try{const t=localStorage.getItem('beme_theme');if(t==='dark'){isDark=true;document.body.classList.remove('light');document.getElementById('theme-icon-dark').style.display='none';document.getElementById('theme-icon-light').style.display='block';}else{isDark=false;document.body.classList.add('light');document.getElementById('theme-icon-dark').style.display='block';document.getElementById('theme-icon-light').style.display='none';}}catch(e){}}
 function openModal(id){document.getElementById(id)?.classList.add('open');}
 function closeModal(id){document.getElementById(id)?.classList.remove('open');}
-document.addEventListener('click',e=>{if(e.target.classList.contains('modal-overlay'))e.target.classList.remove('open');});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));});
 function showToast(msg,type='info',dur=3000){const t=document.createElement('div');t.className=`toast ${type}`;t.innerHTML=`<span>${({success:'&#10003;',error:'&#10007;',info:'&#8505;'})[type]||'&bull;'}</span><span>${esc(msg)}</span>`;document.getElementById('toast-container').appendChild(t);setTimeout(()=>t.remove(),dur);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
