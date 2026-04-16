@@ -176,8 +176,13 @@ async function init() {
     // Override compact from link setting
     if (window.COMPACT_MODE_OVERRIDE) COMPACT_MODE = true;
 
-    DISPLAY_TITLE = (typeof LINK_ROSTER_TITLE !== 'undefined' && LINK_ROSTER_TITLE) ? LINK_ROSTER_TITLE : ROSTER.name;
-    document.title = 'Roster — ' + DISPLAY_TITLE + (CLIENT_NAME ? ' — ' + CLIENT_NAME : '');
+    // Internal team sees the real roster name; clients see their own brand name (or the custom link title)
+    if (IS_INTERNAL) {
+      DISPLAY_TITLE = (typeof LINK_ROSTER_TITLE !== 'undefined' && LINK_ROSTER_TITLE) ? LINK_ROSTER_TITLE : ROSTER.name;
+    } else {
+      DISPLAY_TITLE = (typeof LINK_ROSTER_TITLE !== 'undefined' && LINK_ROSTER_TITLE) ? LINK_ROSTER_TITLE : (CLIENT_NAME || ROSTER.name);
+    }
+    document.title = 'Roster — ' + DISPLAY_TITLE + (IS_INTERNAL && CLIENT_NAME ? ' — ' + CLIENT_NAME : '');
 
     const talentIds = (ROSTER.talent_ids || []).map(id => parseInt(id)).filter(Boolean);
     document.getElementById('load-msg').textContent = 'Cargando talentos...';
@@ -430,7 +435,7 @@ function render() {
       <div>
         <div style="font-size:24px;font-weight:300;margin-bottom:5px;">Be<strong style="font-weight:800;color:#b2005d">me</strong></div>
         <div style="font-family:'Syne',sans-serif;font-size:19px;font-weight:700;color:#111;">${DISPLAY_TITLE}</div>
-        ${CLIENT_NAME ? `<div style="font-size:12px;color:#b2005d;font-weight:600;margin-top:2px;">Para: ${CLIENT_NAME}</div>` : ''}
+        ${IS_INTERNAL && CLIENT_NAME ? `<div style="font-size:12px;color:#b2005d;font-weight:600;margin-top:2px;">Para: ${CLIENT_NAME}</div>` : ''}
         ${ROSTER.description && IS_INTERNAL?`<div style="font-size:13px;color:#666;margin-top:3px;">${ROSTER.description}</div>`:''}
       </div>
       <div style="text-align:right;">
