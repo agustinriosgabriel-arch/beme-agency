@@ -682,9 +682,9 @@ function updateSummary() {
   const tw = document.getElementById('sum-total-wrap');
   if(hasPrice){ document.getElementById('sum-total').textContent='$ '+total.toLocaleString('es-ES'); tw.style.display='flex'; } else tw.style.display='none';
   document.getElementById('sum-list').innerHTML = html;
-  // Show remove button (not for compact/general rosters, available to everyone)
+  // Show remove button (admin only, works in all modes including compact)
   const removeBtn = document.getElementById('remove-selected-btn');
-  if (removeBtn && !COMPACT_MODE) removeBtn.style.display = (unique.length && IS_INTERNAL) ? 'block' : 'none';
+  if (removeBtn) removeBtn.style.display = (unique.length && IS_INTERNAL) ? 'block' : 'none';
   // Show hide button for link-based rosters
   const hideBtn = document.getElementById('hide-selected-btn');
   if (hideBtn) hideBtn.style.display = (unique.length && LINK_ID > 0) ? 'block' : 'none';
