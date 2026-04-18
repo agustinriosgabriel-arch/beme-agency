@@ -63,9 +63,8 @@ function normalizeCountry(raw) {
   return raw.trim().charAt(0).toUpperCase() + raw.trim().slice(1);
 }
 const BASE_CATEGORIES = [
-  "Música","Moda","Belleza","Fitness","Gastronomía","Viajes","Gaming",
-  "Comedia","Lifestyle","Negocios","Deportes","Arte & Diseño",
-  "Familia / Maternidad","Tecnología","Entretenimiento","Educación","Mascotas","Salud"
+  "Profesional","Familia","Deporte","Entretenimiento","Gaming","Belleza","Moda",
+  "Gastronomía","Hogar","Aventura","Creatividad/Arte","Contenido","Tecnología","Música"
 ];
 
 // Normalize category capitalization: match BASE_CATEGORIES or capitalize first letter
