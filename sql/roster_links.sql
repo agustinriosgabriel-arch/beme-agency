@@ -21,6 +21,9 @@ ALTER TABLE roster_selecciones DROP CONSTRAINT IF EXISTS roster_selecciones_pkey
 CREATE UNIQUE INDEX IF NOT EXISTS roster_selecciones_pkey_v2
   ON roster_selecciones (roster_id, talent_id, link_id);
 
+-- 3b. Add roster_title column (custom title per link)
+ALTER TABLE roster_links ADD COLUMN IF NOT EXISTS roster_title text NOT NULL DEFAULT '';
+
 -- 4. RLS for roster_links
 ALTER TABLE roster_links ENABLE ROW LEVEL SECURITY;
 

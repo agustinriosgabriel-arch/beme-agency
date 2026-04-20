@@ -1344,6 +1344,16 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   <!-- SIDEBAR -->
   <aside class="sidebar">
 
+    <!-- Review flag filter -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Revisión <span class="sidebar-clear" id="clear-review" data-fn="clearReviewFilter" style="display:none">Limpiar</span></div>
+      <div id="filter-review" data-fn="toggleReviewFilter" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1.5px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.06);cursor:pointer;font-size:12px;font-weight:600;color:#b45309;transition:all 0.15s;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span style="flex:1;">Solo para revisión</span>
+        <span id="count-review" style="background:rgba(245,158,11,0.18);padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700;">0</span>
+      </div>
+    </div>
+
     <!-- Platform filter: single select -->
     <div class="sidebar-section">
       <div class="sidebar-label">Plataforma <span class="sidebar-clear" id="clear-platform" data-fn="clearPlatformFilter" style="display:none">Limpiar</span></div>
@@ -1709,6 +1719,17 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
       </button>
     </div>
     <div class="modal-body">
+      <div id="review-banner" style="margin-bottom:14px;padding:12px 14px;border-radius:var(--radius-sm);background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#b45309;">
+          <input type="checkbox" id="f-needs-review" data-fn="toggleReviewBox" style="accent-color:#f59e0b;cursor:pointer;width:15px;height:15px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Marcar este perfil PARA REVISIÓN
+        </label>
+        <div id="review-box" style="display:none;margin-top:10px;">
+          <textarea id="f-review-comment" class="form-input" placeholder="Describí el error o qué hay que revisar (ej: link de TikTok roto, seguidores no coinciden, foto vieja...)" style="min-height:64px;font-size:12.5px;"></textarea>
+          <div id="review-meta" style="display:none;margin-top:6px;font-size:11px;color:#92400e;"></div>
+        </div>
+      </div>
       <div class="photo-upload">
         <div class="photo-preview" id="modal-photo-preview">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>

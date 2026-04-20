@@ -105,6 +105,7 @@ let followerNetwork = 'total'; // which network to filter on: tt, ig, yt, total
 let activeKeywords = []; // keywords filter
 let selectedGenders = new Set();
 let genderDropdownOpen = false;
+let reviewFilterActive = false;
 let currentPhoto = '';
 let filterDebounce = null;
 let currentSort = ''; // '' | 'az' | 'za' | 'tt-desc' | 'ig-desc' | 'yt-desc' | 'total-desc'
@@ -309,7 +310,7 @@ async function loadFromSupabase() {
 
     // Load all data in parallel for speed
     // Load WITHOUT foto first (base64 photos are huge, loaded in background after render)
-    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono';
+    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,needs_review,review_comment,review_marked_by,review_marked_at';
     const [configResult, talentResult, rosterResult, linksResult] = await Promise.all([
       sb.from('app_config').select('key,value'),
       loadTalentosWithRetry(TALENT_COLS),
@@ -356,7 +357,11 @@ async function loadFromSupabase() {
         avg_views: t.avg_views || {},
         social_meta: t.social_meta || {},
         genero: t.genero || '',
-        keywords: t.keywords || ''
+        keywords: t.keywords || '',
+        needs_review: !!t.needs_review,
+        review_comment: t.review_comment || '',
+        review_marked_by: t.review_marked_by || '',
+        review_marked_at: t.review_marked_at || null
       };
     });
     console.log('[Beme] Loaded', talents.length, 'talentos from Supabase');
@@ -490,7 +495,7 @@ function setupRealtimeSubscription() {
         if (!t || !t.id) {
           // payload.new is empty — reload only changed columns (skip foto to save IO)
           // payload.new is empty — merge updated columns into existing talents (preserve foto, etc.)
-          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono';
+          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,needs_review,review_comment,review_marked_by,review_marked_at';
           sb.from('talentos').select(TALENT_COLS_RT).order('nombre').then(({ data }) => {
             if (data) {
               // Merge into existing talents to preserve fields not in RT select (like foto)
@@ -743,6 +748,8 @@ let FN_MAP = {
   clearGenderFilter,
   openManageCountriesModal,
   clearAllFilters,
+  toggleReviewFilter,
+  clearReviewFilter,
   viewGrid:             () => setView('grid'),
   viewList:             () => setView('list'),
   exportCSV,
@@ -753,6 +760,11 @@ let FN_MAP = {
   openAddToRosterModal,
   closeTalentModal:     () => closeModal('talent-modal'),
   triggerPhotoUpload:   () => document.getElementById('photo-file').click(),
+  toggleReviewBox:      () => {
+    var cb = document.getElementById('f-needs-review');
+    var box = document.getElementById('review-box');
+    if (cb && box) box.style.display = cb.checked ? 'block' : 'none';
+  },
   fetchProfilePhoto,
   deleteTalent,
   saveTalent,
@@ -1327,6 +1339,37 @@ function clearPlatformFilter() {
   renderTalents();
 }
 
+function toggleReviewFilter() {
+  reviewFilterActive = !reviewFilterActive;
+  updateReviewFilterUI();
+  renderTalents();
+}
+function clearReviewFilter() {
+  reviewFilterActive = false;
+  updateReviewFilterUI();
+  renderTalents();
+}
+function updateReviewFilterUI() {
+  const el = document.getElementById('filter-review');
+  const clr = document.getElementById('clear-review');
+  if (el) {
+    if (reviewFilterActive) {
+      el.style.background = 'rgba(245,158,11,0.18)';
+      el.style.borderColor = '#f59e0b';
+      el.style.color = '#92400e';
+    } else {
+      el.style.background = 'rgba(245,158,11,0.06)';
+      el.style.borderColor = 'rgba(245,158,11,0.3)';
+      el.style.color = '#b45309';
+    }
+  }
+  if (clr) clr.style.display = reviewFilterActive ? 'inline' : 'none';
+}
+function updateReviewCount() {
+  const c = document.getElementById('count-review');
+  if (c) c.textContent = talents.filter(t => t.needs_review).length;
+}
+
 function toggleCountryDropdown() {
   const panel = document.getElementById('country-panel');
   const trigger = document.getElementById('country-trigger');
@@ -1523,7 +1566,9 @@ function clearAllFilters() {
   updateGenderTrigger();
   updateGenderPills();
   populateGenderDropdown();
-  ['clear-platform','clear-cats','clear-countries','clear-followers','clear-roster','clear-keywords','clear-gender'].forEach(id => { var el=document.getElementById(id); if(el) el.style.display='none'; });
+  reviewFilterActive = false;
+  updateReviewFilterUI();
+  ['clear-platform','clear-cats','clear-countries','clear-followers','clear-roster','clear-keywords','clear-gender','clear-review'].forEach(id => { var el=document.getElementById(id); if(el) el.style.display='none'; });
   populateCountryDropdown();
   updateCountryTrigger();
   updateCountryPills();
@@ -1545,6 +1590,7 @@ function getFilteredTalents() {
        !(t.instagram||'').toLowerCase().includes(search) &&
        !(t.youtube||'').toLowerCase().includes(search)) return false;
     if(selectedGenders.size > 0 && !selectedGenders.has(t.genero || 'SIN ASIGNAR')) return false;
+    if(reviewFilterActive && !t.needs_review) return false;
     if(selectedCountries.size > 0 && !(t.paises||[]).some(p => selectedCountries.has(p))) return false;
     if(networkFilter === 'tt' && !t.tiktok) return false;
     if(networkFilter === 'ig' && !t.instagram) return false;
@@ -1676,15 +1722,18 @@ function renderCard(t) {
   if (igMetrics.length) metricRows.push(`<div class="metric-row metric-ig"><span class="metric-label">IG</span>${igMetrics.join('<span class="metric-sep">·</span>')}</div>`);
   const engRow = metricRows.length ? `<div class="card-metrics">${metricRows.join('')}</div>` : '';
   const genderBadge = t.genero ? `<span class="cat-tag" style="background:rgba(148,20,224,0.08);color:#9414E0;border-color:rgba(148,20,224,0.2);">${escapeHtml(t.genero)}</span>` : '';
+  const reviewBadge = t.needs_review ? `<span class="cat-tag" title="${escapeHtml(t.review_comment||'Perfil marcado para revisión')}" style="background:rgba(245,158,11,0.12);color:#b45309;border-color:rgba(245,158,11,0.35);display:inline-flex;align-items:center;gap:3px;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>REVISIÓN</span>` : '';
   const cats = t.categorias.slice(0,3).map(c=>`<span class="cat-tag">${escapeHtml(c)}</span>`).join('');
-  return `<div class="talent-card${sel?' selected':''}" id="card-${t.id}" data-action="edit" data-id="${t.id}">
+  const reviewCardStyle = t.needs_review ? ' style="border-color:rgba(245,158,11,0.55);box-shadow:0 0 0 1px rgba(245,158,11,0.25);"' : '';
+  return `<div class="talent-card${sel?' selected':''}" id="card-${t.id}" data-action="edit" data-id="${t.id}"${reviewCardStyle}>
     <div class="card-select" data-action="select" data-id="${t.id}" data-stop="1">${sel?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
     ${avatar}
     <div class="card-name">${safeNombre}</div>
     <div class="card-location">${(t.paises||[]).map(p=>(COUNTRY_FLAGS[p]||'')+' '+escapeHtml(p)).join(' · ')}${safeCiudad?', '+safeCiudad:''}</div>
     <div class="card-networks">${networks}</div>
     ${engRow}
-    <div class="card-cats">${genderBadge}${cats}${t.categorias.length>3?`<span class="cat-tag">+${t.categorias.length-3}</span>`:''}</div>
+    <div class="card-cats">${reviewBadge}${genderBadge}${cats}${t.categorias.length>3?`<span class="cat-tag">+${t.categorias.length-3}</span>`:''}</div>
+    ${t.needs_review && t.review_comment ? `<div style="margin-top:4px;padding:6px 8px;background:rgba(245,158,11,0.07);border-left:2px solid #f59e0b;border-radius:4px;font-size:11px;color:#92400e;line-height:1.35;"><strong style="font-weight:700;">Revisión:</strong> ${escapeHtml(t.review_comment)}</div>` : ''}
     ${t.updated ? `<div class="card-updated" title="Última actualización de seguidores">↻ ${formatUpdatedDate(t.updated)}</div>` : ''}
     <div class="card-footer">
       <button class="btn btn-outline btn-sm" style="flex:1" data-action="edit" data-id="${t.id}" data-stop="1">Editar</button>
@@ -1741,11 +1790,13 @@ function renderListRow(t) {
   const avatar = safeFoto
     ? `<div class="list-avatar"><img src="${safeFoto}" alt="${safeNombre}"></div>`
     : `<div class="list-avatar">${getInitials(t.nombre)}</div>`;
-  return `<div class="talent-list-row${sel?' selected':''}" id="card-${t.id}">
+  const reviewListBadge = t.needs_review ? ` <span title="${escapeHtml(t.review_comment||'Perfil marcado para revisión')}" style="display:inline-flex;align-items:center;gap:3px;margin-left:6px;padding:1px 6px;background:rgba(245,158,11,0.12);color:#b45309;border:1px solid rgba(245,158,11,0.35);border-radius:4px;font-size:10px;font-weight:600;vertical-align:middle;"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>REVISIÓN</span>` : '';
+  const reviewListStyle = t.needs_review ? ' style="border-left:3px solid #f59e0b;"' : '';
+  return `<div class="talent-list-row${sel?' selected':''}" id="card-${t.id}"${reviewListStyle}>
     <input type="checkbox" ${sel?'checked':''} data-action="select" data-id="${t.id}" style="cursor:pointer;accent-color:var(--primary)">
     ${avatar}
     <div style="min-width:0;flex:1">
-      <div class="list-name">${safeNombre}</div>
+      <div class="list-name">${safeNombre}${reviewListBadge}</div>
       <div class="list-location">${(t.paises||[]).map(p=>(COUNTRY_FLAGS[p]||'')+' '+escapeHtml(p)).join(' · ')}${safeCiudad?', '+safeCiudad:''}</div>
     </div>
     <div class="list-networks">
@@ -1791,6 +1842,7 @@ function updatePlatformCounts() {
   document.getElementById('count-tt').textContent = talents.filter(t=>t.tiktok).length;
   document.getElementById('count-ig').textContent = talents.filter(t=>t.instagram).length;
   document.getElementById('count-yt').textContent = talents.filter(t=>t.youtube).length;
+  updateReviewCount();
 }
 
 // ===================== CUSTOM CATEGORIES =====================
@@ -1896,6 +1948,10 @@ function clearForm() {
   var _fmp = document.getElementById('f-marcas-previas'); if(_fmp) _fmp.value = '';
   var _fni = document.getElementById('f-notas-internas'); if(_fni) _fni.value = '';
   var _ftm = document.getElementById('f-tiene-manager'); if(_ftm) _ftm.value = 'false';
+  var _fnr = document.getElementById('f-needs-review'); if(_fnr) _fnr.checked = false;
+  var _frc = document.getElementById('f-review-comment'); if(_frc) _frc.value = '';
+  var _frb = document.getElementById('review-box'); if(_frb) _frb.style.display = 'none';
+  var _frm = document.getElementById('review-meta'); if(_frm) { _frm.style.display='none'; _frm.textContent=''; }
   formSelectedPaises = [];
   updatePaisTrigger();
   updatePaisPills();
@@ -1924,6 +1980,23 @@ function fillForm(t) {
   var _fmp = document.getElementById('f-marcas-previas'); if(_fmp) _fmp.value = t.marcas_previas||'';
   var _fni = document.getElementById('f-notas-internas'); if(_fni) _fni.value = t.notas_internas||'';
   var _ftm = document.getElementById('f-tiene-manager'); if(_ftm) _ftm.value = t.tiene_manager ? 'true' : 'false';
+  var _fnr = document.getElementById('f-needs-review');
+  var _frc = document.getElementById('f-review-comment');
+  var _frb = document.getElementById('review-box');
+  var _frm = document.getElementById('review-meta');
+  if (_fnr) _fnr.checked = !!t.needs_review;
+  if (_frc) _frc.value = t.review_comment || '';
+  if (_frb) _frb.style.display = t.needs_review ? 'block' : 'none';
+  if (_frm) {
+    if (t.needs_review && (t.review_marked_by || t.review_marked_at)) {
+      var _when = t.review_marked_at ? new Date(t.review_marked_at).toLocaleString('es-ES',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+      _frm.textContent = 'Marcado' + (t.review_marked_by ? ' por ' + t.review_marked_by : '') + (_when ? ' · ' + _when : '');
+      _frm.style.display = 'block';
+    } else {
+      _frm.style.display = 'none';
+      _frm.textContent = '';
+    }
+  }
   document.getElementById('f-seg-tiktok').value = t.seguidores?.tiktok || 0;
   document.getElementById('f-seg-instagram').value = t.seguidores?.instagram || 0;
   document.getElementById('f-seg-youtube').value = t.seguidores?.youtube || 0;
@@ -2149,6 +2222,25 @@ async function saveTalent() {
     categorias: cats,
     updated: new Date().toISOString().split('T')[0]
   };
+  // Review flag + comment
+  const _needsReview = !!(document.getElementById('f-needs-review') && document.getElementById('f-needs-review').checked);
+  const _reviewComment = (document.getElementById('f-review-comment') ? document.getElementById('f-review-comment').value.trim() : '');
+  const _prevTalent = editingId ? talents.find(t => t.id === editingId) : null;
+  const _wasMarked = _prevTalent ? !!_prevTalent.needs_review : false;
+  data.needs_review = _needsReview;
+  data.review_comment = _needsReview ? _reviewComment : '';
+  if (_needsReview && !_wasMarked) {
+    // Just marked — stamp author + date
+    data.review_marked_by = (currentUser && currentUser.email) || '';
+    data.review_marked_at = new Date().toISOString();
+  } else if (_needsReview && _prevTalent) {
+    // Keep prior author/date
+    data.review_marked_by = _prevTalent.review_marked_by || ((currentUser && currentUser.email) || '');
+    data.review_marked_at = _prevTalent.review_marked_at || new Date().toISOString();
+  } else {
+    data.review_marked_by = '';
+    data.review_marked_at = null;
+  }
   const manualSeg = {
     tiktok: parseInt(document.getElementById('f-seg-tiktok').value) || 0,
     instagram: parseInt(document.getElementById('f-seg-instagram').value) || 0,
@@ -2180,7 +2272,11 @@ async function saveTalent() {
       genero: savedTalent.genero||'', keywords: savedTalent.keywords||'',
       tipo_contenido: savedTalent.tipo_contenido||'', calidad: savedTalent.calidad||'',
       marcas_previas: savedTalent.marcas_previas||'', notas_internas: savedTalent.notas_internas||'',
-      tiene_manager: savedTalent.tiene_manager||false
+      tiene_manager: savedTalent.tiene_manager||false,
+      needs_review: !!savedTalent.needs_review,
+      review_comment: savedTalent.review_comment||'',
+      review_marked_by: savedTalent.review_marked_by||'',
+      review_marked_at: savedTalent.review_marked_at||null
     };
     sb.from('talentos').upsert([row], {onConflict:'id'})
       .then(({error}) => {
@@ -4132,7 +4228,8 @@ async function saveScrapeResults(results) {
 async function fetchFollowersViaApify(platform, profileUrl) {
   // Tokens are optional on frontend — server has env vars as fallback
   var username = extractUsername(profileUrl, platform);
-  if (!username) return null;
+  if (!username) { console.warn('[scraper] no username parsed from', profileUrl); return null; }
+  console.log('[scraper] → fetch', platform, '@'+username, 'tokens:', {ensemble: !!ensembleToken, apify: !!apifyToken});
   try {
     var controller = new AbortController();
     var timer = setTimeout(function(){ controller.abort(); }, 65000);
@@ -4143,11 +4240,15 @@ async function fetchFollowersViaApify(platform, profileUrl) {
       signal: controller.signal
     });
     clearTimeout(timer);
-    if (!resp.ok) return null;
+    if (!resp.ok) {
+      var errBody = await resp.text().catch(function(){return '';});
+      console.warn('[scraper] HTTP', resp.status, platform, '@'+username, '→', errBody.substring(0,200));
+      return null;
+    }
     var data = await resp.json();
     if (data.error) { console.log('[scraper]', data.error, '(source:', data.source||'none', ')'); return null; }
     if (data.source) console.log('[scraper]', platform, '@'+username, data.followers, 'via', data.source);
-    if (data.followers === null || data.followers === undefined) return null;
+    if (data.followers === null || data.followers === undefined) { console.warn('[scraper] no followers in response', platform, '@'+username, data); return null; }
     return data; // return full object with followers + metadata
   } catch(e) {
     console.warn('[scraper]', username, platform, e.message);
@@ -4525,12 +4626,13 @@ async function saveFollowers(t, platform, followers) {
 
 async function scrapeAndSave(t, platform, force) {
   var url = platform === 'instagram' ? t.instagram : t.tiktok;
-  if (!url) return false;
+  if (!url) { console.log('[scraper] no URL for', t.nombre, platform); return false; }
   // Skip if followers are fresh (updated < 7 days ago)
   if (!force && isFresh(t, platform, 'followers')) {
     console.log('[scraper] SKIP', t.nombre, platform, '— followers fresh');
     return 'skipped';
   }
+  console.log('[scraper] scrapeAndSave', t.nombre, platform, url);
   try {
     var timeoutP = new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, 65000); });
     var data = await Promise.race([fetchFollowersViaApify(platform, url), timeoutP]);

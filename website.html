@@ -1,0 +1,2248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BEME Agency — Marketing de Influencers</title>
+    <meta name="description" content="Agencia de marketing de influencers. Conectamos marcas con talentos para campañas con resultados medibles. +350 clientes satisfechos.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ============================================
+           BEME AGENCY — WEBSITE
+           Design System: Dark Premium + Pink/Purple
+           ============================================ */
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --pink: #b2005d;
+            --pink-light: #ed568f;
+            --pink-glow: rgba(178, 0, 93, 0.35);
+            --purple: #9414E0;
+            --purple-light: #b557f0;
+            --gradient: linear-gradient(135deg, #b2005d 0%, #9414E0 100%);
+            --gradient-hover: linear-gradient(135deg, #c8006a 0%, #a718f5 100%);
+            --gradient-text: linear-gradient(135deg, #ed568f 0%, #b557f0 100%);
+
+            --bg: #0a0a0a;
+            --bg-2: #111111;
+            --bg-3: #181818;
+            --bg-card: #141414;
+            --bg-card-hover: #1a1a1a;
+
+            --text: #f4f4f4;
+            --text-secondary: #a0a0b0;
+            --text-muted: #6a6a7a;
+
+            --border: rgba(255, 255, 255, 0.06);
+            --border-2: rgba(255, 255, 255, 0.12);
+
+            --radius: 16px;
+            --radius-sm: 10px;
+            --radius-lg: 24px;
+            --radius-full: 9999px;
+
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+            --font-heading: 'Syne', sans-serif;
+
+            --shadow-glow: 0 0 60px rgba(178, 0, 93, 0.15);
+            --shadow-card: 0 4px 32px rgba(0, 0, 0, 0.4);
+
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        html {
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        img {
+            max-width: 100%;
+            display: block;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        .section {
+            padding: 120px 0;
+        }
+
+        @media (max-width: 768px) {
+            .section { padding: 80px 0; }
+        }
+
+        /* ============================================
+           BUTTONS
+           ============================================ */
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 32px;
+            border-radius: var(--radius-full);
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            border: none;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: #fff;
+            box-shadow: 0 4px 20px var(--pink-glow);
+        }
+
+        .btn-primary:hover {
+            background: var(--gradient-hover);
+            box-shadow: 0 6px 30px var(--pink-glow);
+            transform: translateY(-2px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text);
+            border: 1.5px solid var(--border-2);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--pink);
+            color: var(--pink-light);
+            background: rgba(178, 0, 93, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .btn-ghost {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-ghost:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .btn-lg {
+            padding: 18px 40px;
+            font-size: 16px;
+        }
+
+        .btn svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        /* ============================================
+           GRADIENT TEXT
+           ============================================ */
+
+        .gradient-text {
+            background: var(--gradient-text);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ============================================
+           SECTION LABELS
+           ============================================ */
+
+        .section-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            border-radius: var(--radius-full);
+            background: rgba(178, 0, 93, 0.1);
+            border: 1px solid rgba(178, 0, 93, 0.2);
+            color: var(--pink-light);
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+        }
+
+        .section-label svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .section-title {
+            font-family: var(--font-heading);
+            font-size: clamp(32px, 5vw, 52px);
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 20px;
+        }
+
+        .section-subtitle {
+            font-size: 18px;
+            color: var(--text-secondary);
+            max-width: 600px;
+            line-height: 1.7;
+        }
+
+        /* ============================================
+           NAV
+           ============================================ */
+
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 16px 0;
+            transition: var(--transition);
+            background: transparent;
+        }
+
+        .nav.scrolled {
+            background: rgba(10, 10, 10, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 0;
+        }
+
+        .nav .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-logo img {
+            height: 32px;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: var(--transition-fast);
+        }
+
+        .nav-links a:hover {
+            color: var(--text);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-actions .btn {
+            padding: 10px 24px;
+            font-size: 14px;
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            padding: 8px;
+            background: none;
+            border: none;
+        }
+
+        .hamburger span {
+            width: 24px;
+            height: 2px;
+            background: var(--text);
+            border-radius: 2px;
+            transition: var(--transition);
+        }
+
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 10, 0.97);
+            backdrop-filter: blur(20px);
+            z-index: 999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 32px;
+        }
+
+        .mobile-menu.open {
+            display: flex;
+        }
+
+        .mobile-menu a {
+            font-family: var(--font-heading);
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text);
+            transition: var(--transition-fast);
+        }
+
+        .mobile-menu a:hover {
+            color: var(--pink-light);
+        }
+
+        .mobile-close {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: none;
+            border: none;
+            color: var(--text);
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .mobile-close svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        @media (max-width: 900px) {
+            .nav-links, .nav-actions { display: none; }
+            .hamburger { display: flex; }
+        }
+
+        /* ============================================
+           HERO
+           ============================================ */
+
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            padding-top: 80px;
+        }
+
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .hero-bg::before {
+            content: '';
+            position: absolute;
+            top: -200px;
+            right: -200px;
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(178, 0, 93, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .hero-bg::after {
+            content: '';
+            position: absolute;
+            bottom: -150px;
+            left: -150px;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(148, 20, 224, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .hero-grid {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+        }
+
+        .hero .container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px 8px 12px;
+            border-radius: var(--radius-full);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-2);
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .hero-badge-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .hero h1 {
+            font-family: var(--font-heading);
+            font-size: clamp(40px, 7vw, 80px);
+            font-weight: 800;
+            line-height: 1.05;
+            margin-bottom: 24px;
+            animation: fadeInUp 0.6s ease-out 0.1s both;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(16px, 2.5vw, 20px);
+            color: var(--text-secondary);
+            max-width: 640px;
+            margin: 0 auto 48px;
+            line-height: 1.7;
+            animation: fadeInUp 0.6s ease-out 0.2s both;
+        }
+
+        .hero-ctas {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 72px;
+            animation: fadeInUp 0.6s ease-out 0.3s both;
+        }
+
+        .hero-stats {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 48px;
+            animation: fadeInUp 0.6s ease-out 0.4s both;
+        }
+
+        .hero-stat {
+            text-align: center;
+        }
+
+        .hero-stat-number {
+            font-family: var(--font-heading);
+            font-size: 36px;
+            font-weight: 800;
+            background: var(--gradient-text);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-stat-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .hero-stat-divider {
+            width: 1px;
+            height: 40px;
+            background: var(--border-2);
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 600px) {
+            .hero-stats { gap: 24px; }
+            .hero-stat-number { font-size: 28px; }
+            .hero-stat-divider { height: 32px; }
+        }
+
+        /* ============================================
+           MARQUEE — Brand logos
+           ============================================ */
+
+        .marquee-section {
+            padding: 60px 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-2);
+        }
+
+        .marquee-label {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 32px;
+        }
+
+        .marquee-track {
+            display: flex;
+            gap: 64px;
+            animation: marquee 30s linear infinite;
+            width: max-content;
+        }
+
+        .marquee-track:hover {
+            animation-play-state: paused;
+        }
+
+        .marquee-item {
+            font-family: var(--font-heading);
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-muted);
+            white-space: nowrap;
+            opacity: 0.5;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .marquee-item:hover {
+            opacity: 1;
+            color: var(--text-secondary);
+        }
+
+        .marquee-item svg {
+            width: 24px;
+            height: 24px;
+            opacity: 0.5;
+        }
+
+        @keyframes marquee {
+            to { transform: translateX(-50%); }
+        }
+
+        .marquee-overflow {
+            overflow: hidden;
+        }
+
+        /* ============================================
+           SERVICES
+           ============================================ */
+
+        .services-header {
+            text-align: center;
+            margin-bottom: 64px;
+        }
+
+        .services-header .section-subtitle {
+            margin: 0 auto;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .service-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 40px 32px;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient);
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .service-card:hover {
+            border-color: rgba(178, 0, 93, 0.2);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .service-card:hover::before {
+            opacity: 1;
+        }
+
+        .service-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: var(--radius-sm);
+            background: rgba(178, 0, 93, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .service-icon svg {
+            width: 28px;
+            height: 28px;
+            color: var(--pink-light);
+        }
+
+        .service-card h3 {
+            font-family: var(--font-heading);
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .service-card p {
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        @media (max-width: 900px) {
+            .services-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ============================================
+           DUAL CTA — For Brands / For Talents
+           ============================================ */
+
+        .dual-section {
+            position: relative;
+        }
+
+        .dual-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+        }
+
+        .dual-card {
+            border-radius: var(--radius-lg);
+            padding: 56px 48px;
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .dual-card-brands {
+            background: linear-gradient(135deg, rgba(178, 0, 93, 0.12) 0%, rgba(148, 20, 224, 0.08) 100%);
+            border: 1px solid rgba(178, 0, 93, 0.2);
+        }
+
+        .dual-card-brands:hover {
+            border-color: rgba(178, 0, 93, 0.4);
+            box-shadow: 0 0 80px rgba(178, 0, 93, 0.1);
+        }
+
+        .dual-card-talents {
+            background: linear-gradient(135deg, rgba(148, 20, 224, 0.12) 0%, rgba(178, 0, 93, 0.08) 100%);
+            border: 1px solid rgba(148, 20, 224, 0.2);
+        }
+
+        .dual-card-talents:hover {
+            border-color: rgba(148, 20, 224, 0.4);
+            box-shadow: 0 0 80px rgba(148, 20, 224, 0.1);
+        }
+
+        .dual-card-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 28px;
+        }
+
+        .dual-card-brands .dual-card-tag {
+            background: rgba(178, 0, 93, 0.2);
+            color: var(--pink-light);
+        }
+
+        .dual-card-talents .dual-card-tag {
+            background: rgba(148, 20, 224, 0.2);
+            color: var(--purple-light);
+        }
+
+        .dual-card h3 {
+            font-family: var(--font-heading);
+            font-size: clamp(26px, 3vw, 34px);
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 20px;
+        }
+
+        .dual-card p {
+            color: var(--text-secondary);
+            font-size: 16px;
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+
+        .dual-card ul {
+            list-style: none;
+            margin-bottom: 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .dual-card li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        .dual-card li svg {
+            width: 20px;
+            height: 20px;
+            color: var(--pink-light);
+            flex-shrink: 0;
+        }
+
+        .dual-card-talents li svg {
+            color: var(--purple-light);
+        }
+
+        @media (max-width: 900px) {
+            .dual-grid { grid-template-columns: 1fr; }
+            .dual-card { padding: 40px 28px; }
+        }
+
+        /* ============================================
+           RESULTS / STATS
+           ============================================ */
+
+        .results-section {
+            background: var(--bg-2);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .results-section::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(178, 0, 93, 0.08) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .results-header {
+            text-align: center;
+            margin-bottom: 64px;
+            position: relative;
+        }
+
+        .results-header .section-subtitle {
+            margin: 0 auto;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 32px;
+            position: relative;
+        }
+
+        .result-card {
+            text-align: center;
+            padding: 40px 24px;
+            border-radius: var(--radius);
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+
+        .result-card:hover {
+            border-color: var(--border-2);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .result-number {
+            font-family: var(--font-heading);
+            font-size: clamp(36px, 5vw, 56px);
+            font-weight: 800;
+            background: var(--gradient-text);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .result-label {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 768px) {
+            .results-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+            .result-card { padding: 28px 16px; }
+        }
+
+        /* ============================================
+           HOW IT WORKS
+           ============================================ */
+
+        .process-header {
+            text-align: center;
+            margin-bottom: 64px;
+        }
+
+        .process-header .section-subtitle {
+            margin: 0 auto;
+        }
+
+        .process-steps {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 32px;
+            position: relative;
+        }
+
+        .process-steps::before {
+            content: '';
+            position: absolute;
+            top: 40px;
+            left: 15%;
+            right: 15%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--border-2) 20%, var(--border-2) 80%, transparent);
+        }
+
+        .process-step {
+            text-align: center;
+            position: relative;
+        }
+
+        .process-step-num {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--bg);
+            border: 2px solid var(--border-2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-family: var(--font-heading);
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--pink-light);
+            position: relative;
+            z-index: 1;
+            transition: var(--transition);
+        }
+
+        .process-step:hover .process-step-num {
+            background: var(--gradient);
+            border-color: transparent;
+            color: #fff;
+        }
+
+        .process-step h4 {
+            font-family: var(--font-heading);
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .process-step p {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .process-steps { grid-template-columns: repeat(2, 1fr); gap: 40px 24px; }
+            .process-steps::before { display: none; }
+        }
+
+        @media (max-width: 480px) {
+            .process-steps { grid-template-columns: 1fr; }
+        }
+
+        /* ============================================
+           TESTIMONIALS
+           ============================================ */
+
+        .testimonials-header {
+            text-align: center;
+            margin-bottom: 64px;
+        }
+
+        .testimonials-header .section-subtitle {
+            margin: 0 auto;
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .testimonial-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 36px;
+            transition: var(--transition);
+        }
+
+        .testimonial-card:hover {
+            border-color: var(--border-2);
+            transform: translateY(-2px);
+        }
+
+        .testimonial-stars {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+        }
+
+        .testimonial-stars svg {
+            width: 18px;
+            height: 18px;
+            color: #fbbf24;
+        }
+
+        .testimonial-text {
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 24px;
+            font-style: italic;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .testimonial-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .testimonial-name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .testimonial-role {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 900px) {
+            .testimonials-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ============================================
+           CONTACT
+           ============================================ */
+
+        .contact-section {
+            position: relative;
+        }
+
+        .contact-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 64px;
+            align-items: start;
+        }
+
+        .contact-info h2 {
+            font-family: var(--font-heading);
+            font-size: clamp(32px, 4vw, 48px);
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 20px;
+        }
+
+        .contact-info > p {
+            color: var(--text-secondary);
+            font-size: 17px;
+            line-height: 1.7;
+            margin-bottom: 40px;
+        }
+
+        .contact-details {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .contact-detail {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .contact-detail-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-sm);
+            background: rgba(178, 0, 93, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .contact-detail-icon svg {
+            width: 20px;
+            height: 20px;
+            color: var(--pink-light);
+        }
+
+        .contact-detail-text {
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        .contact-detail-text strong {
+            display: block;
+            color: var(--text);
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .contact-socials {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        .contact-social {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .contact-social:hover {
+            background: rgba(178, 0, 93, 0.15);
+            border-color: rgba(178, 0, 93, 0.3);
+        }
+
+        .contact-social svg {
+            width: 20px;
+            height: 20px;
+            color: var(--text-secondary);
+        }
+
+        .contact-form-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 44px;
+        }
+
+        .form-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: var(--radius-full);
+            margin-bottom: 32px;
+        }
+
+        .form-tab {
+            flex: 1;
+            padding: 12px 20px;
+            border-radius: var(--radius-full);
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: var(--font-body);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .form-tab.active {
+            background: var(--gradient);
+            color: #fff;
+        }
+
+        .form-tab:not(.active):hover {
+            color: var(--text);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-2);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 15px;
+            transition: var(--transition);
+            outline: none;
+        }
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--pink);
+            box-shadow: 0 0 0 3px rgba(178, 0, 93, 0.15);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-group select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236a6a7a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-submit {
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .form-success {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .form-success svg {
+            width: 56px;
+            height: 56px;
+            color: #22c55e;
+            margin: 0 auto 16px;
+        }
+
+        .form-success h4 {
+            font-family: var(--font-heading);
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+
+        .form-success p {
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 900px) {
+            .contact-wrapper { grid-template-columns: 1fr; gap: 48px; }
+            .contact-form-card { padding: 32px 24px; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+
+        /* ============================================
+           CTA BANNER
+           ============================================ */
+
+        .cta-banner {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-banner-inner {
+            background: var(--gradient);
+            border-radius: var(--radius-lg);
+            padding: 80px 60px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-banner-inner::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 400px;
+            height: 400px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 50%;
+        }
+
+        .cta-banner-inner::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 50%;
+        }
+
+        .cta-banner h2 {
+            font-family: var(--font-heading);
+            font-size: clamp(28px, 4vw, 44px);
+            font-weight: 800;
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        .cta-banner p {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 36px;
+            max-width: 520px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+        }
+
+        .cta-banner-actions {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .cta-banner .btn-white {
+            background: #fff;
+            color: var(--pink);
+            font-weight: 700;
+        }
+
+        .cta-banner .btn-white:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+        }
+
+        .cta-banner .btn-outline-white {
+            background: transparent;
+            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            color: #fff;
+        }
+
+        .cta-banner .btn-outline-white:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.6);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .cta-banner-inner { padding: 56px 28px; }
+        }
+
+        /* ============================================
+           FOOTER
+           ============================================ */
+
+        .footer {
+            padding: 80px 0 32px;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px;
+            margin-bottom: 64px;
+        }
+
+        .footer-brand p {
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.7;
+            margin-top: 16px;
+            max-width: 300px;
+        }
+
+        .footer-logo {
+            height: 28px;
+        }
+
+        .footer-col h4 {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text);
+            margin-bottom: 20px;
+        }
+
+        .footer-col ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .footer-col a {
+            font-size: 14px;
+            color: var(--text-muted);
+            transition: var(--transition-fast);
+        }
+
+        .footer-col a:hover {
+            color: var(--pink-light);
+        }
+
+        .footer-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 32px;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-bottom p {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .footer-bottom-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .footer-bottom-links a {
+            font-size: 13px;
+            color: var(--text-muted);
+            transition: var(--transition-fast);
+        }
+
+        .footer-bottom-links a:hover {
+            color: var(--text);
+        }
+
+        @media (max-width: 768px) {
+            .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+            .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+        }
+
+        @media (max-width: 480px) {
+            .footer-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ============================================
+           SCROLL ANIMATIONS
+           ============================================ */
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(32px);
+            transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Staggered children */
+        .stagger-children > * {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+
+        .stagger-children.visible > *:nth-child(1) { transition-delay: 0s; }
+        .stagger-children.visible > *:nth-child(2) { transition-delay: 0.1s; }
+        .stagger-children.visible > *:nth-child(3) { transition-delay: 0.2s; }
+        .stagger-children.visible > *:nth-child(4) { transition-delay: 0.3s; }
+        .stagger-children.visible > *:nth-child(5) { transition-delay: 0.35s; }
+        .stagger-children.visible > *:nth-child(6) { transition-delay: 0.4s; }
+
+        .stagger-children.visible > * {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ============================================
+           REDUCED MOTION
+           ============================================ */
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+            .reveal { opacity: 1; transform: none; }
+            .stagger-children > * { opacity: 1; transform: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ========== NAV ========== -->
+    <nav class="nav" id="nav">
+        <div class="container">
+            <a href="#" class="nav-logo">
+                <img src="assets/brand/logos/Beme1blanco.png" alt="BEME Agency">
+            </a>
+            <ul class="nav-links">
+                <li><a href="#servicios">Servicios</a></li>
+                <li><a href="#proceso">Proceso</a></li>
+                <li><a href="#resultados">Resultados</a></li>
+                <li><a href="#testimonios">Clientes</a></li>
+                <li><a href="#contacto">Contacto</a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="#contacto" class="btn btn-outline" data-tab="marcas">Soy Marca</a>
+                <a href="#contacto" class="btn btn-primary" data-tab="talentos">Soy Talento</a>
+            </div>
+            <button class="hamburger" id="hamburger" aria-label="Abrir menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobile-menu">
+        <button class="mobile-close" id="mobile-close" aria-label="Cerrar menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <a href="#servicios" class="mobile-link">Servicios</a>
+        <a href="#proceso" class="mobile-link">Proceso</a>
+        <a href="#resultados" class="mobile-link">Resultados</a>
+        <a href="#testimonios" class="mobile-link">Clientes</a>
+        <a href="#contacto" class="mobile-link">Contacto</a>
+        <div style="display:flex;gap:12px;margin-top:16px;">
+            <a href="#contacto" class="btn btn-outline mobile-link" data-tab="marcas">Soy Marca</a>
+            <a href="#contacto" class="btn btn-primary mobile-link" data-tab="talentos">Soy Talento</a>
+        </div>
+    </div>
+
+    <!-- ========== HERO ========== -->
+    <section class="hero">
+        <div class="hero-bg">
+            <div class="hero-grid"></div>
+        </div>
+        <div class="container">
+            <div class="hero-badge">
+                <span class="hero-badge-dot"></span>
+                Agencia de Marketing de Influencers #1
+            </div>
+            <h1>
+                Conectamos <span class="gradient-text">marcas</span> con<br>
+                los <span class="gradient-text">talentos</span> que importan
+            </h1>
+            <p class="hero-subtitle">
+                Creamos campanas de influencer marketing basadas en datos, con conexiones autenticas y resultados que puedes medir.
+            </p>
+            <div class="hero-ctas">
+                <a href="#contacto" class="btn btn-primary btn-lg" data-tab="marcas">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    Quiero impulsar mi marca
+                </a>
+                <a href="#contacto" class="btn btn-outline btn-lg" data-tab="talentos">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Quiero unirme como talento
+                </a>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <div class="hero-stat-number" data-count="350">0</div>
+                    <div class="hero-stat-label">Clientes</div>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat">
+                    <div class="hero-stat-number" data-count="500">0</div>
+                    <div class="hero-stat-label">Campanas</div>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat">
+                    <div class="hero-stat-number" data-count="120">0</div>
+                    <div class="hero-stat-label">Talentos</div>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat">
+                    <div class="hero-stat-number" data-count="15">0</div>
+                    <div class="hero-stat-label">Paises</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== MARQUEE — Brands ========== -->
+    <section class="marquee-section">
+        <p class="marquee-label">Marcas que confian en nosotros</p>
+        <div class="marquee-overflow">
+            <div class="marquee-track" id="marquee">
+                <!-- Duplicated for seamless loop -->
+                <span class="marquee-item">Nike</span>
+                <span class="marquee-item">Coca-Cola</span>
+                <span class="marquee-item">Samsung</span>
+                <span class="marquee-item">L'Oreal</span>
+                <span class="marquee-item">Spotify</span>
+                <span class="marquee-item">Adidas</span>
+                <span class="marquee-item">Netflix</span>
+                <span class="marquee-item">Zara</span>
+                <span class="marquee-item">Red Bull</span>
+                <span class="marquee-item">Amazon</span>
+                <span class="marquee-item">Apple</span>
+                <span class="marquee-item">Meta</span>
+                <!-- Duplicate -->
+                <span class="marquee-item">Nike</span>
+                <span class="marquee-item">Coca-Cola</span>
+                <span class="marquee-item">Samsung</span>
+                <span class="marquee-item">L'Oreal</span>
+                <span class="marquee-item">Spotify</span>
+                <span class="marquee-item">Adidas</span>
+                <span class="marquee-item">Netflix</span>
+                <span class="marquee-item">Zara</span>
+                <span class="marquee-item">Red Bull</span>
+                <span class="marquee-item">Amazon</span>
+                <span class="marquee-item">Apple</span>
+                <span class="marquee-item">Meta</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== SERVICES ========== -->
+    <section class="section" id="servicios">
+        <div class="container">
+            <div class="services-header reveal">
+                <div class="section-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    Servicios
+                </div>
+                <h2 class="section-title">Todo lo que tu marca <span class="gradient-text">necesita</span></h2>
+                <p class="section-subtitle">Gestionamos el ciclo completo de tus campanas de influencer marketing, desde la estrategia hasta el reporte de resultados.</p>
+            </div>
+            <div class="services-grid stagger-children">
+                <div class="service-card">
+                    <div class="service-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    </div>
+                    <h3>Prospeccion de Talentos</h3>
+                    <p>Encontramos a los influencers ideales para tu marca. Analizamos audiencias, engagement y afinidad para garantizar la mejor conexion.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    </div>
+                    <h3>Estrategia Creativa</h3>
+                    <p>Disenamos conceptos creativos y briefs detallados que alinean el mensaje de tu marca con el estilo unico de cada talento.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/><path d="M10 9.5C10 10.33 9.33 11 8.5 11h-5C2.67 11 2 10.33 2 9.5S2.67 8 3.5 8h5c.83 0 1.5.67 1.5 1.5z"/><path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"/></svg>
+                    </div>
+                    <h3>Gestion de Campanas</h3>
+                    <p>Coordinamos cada paso: desde la negociacion y contratos hasta la aprobacion de contenido y publicacion en tiempo.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    </div>
+                    <h3>Reportes y KPIs</h3>
+                    <p>Medimos alcance, interaccion, clics y conversiones. Te entregamos reportes claros con insights accionables para optimizar futuras campanas.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <h3>Talent Management</h3>
+                    <p>Representamos y gestionamos la carrera de nuestros talentos, conectandolos con las mejores oportunidades del mercado.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    </div>
+                    <h3>Produccion de Contenido</h3>
+                    <p>Desde la ideacion hasta la entrega final, supervisamos la produccion de contenido para que cada pieza conecte con tu audiencia.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== DUAL CTA — Brands & Talents ========== -->
+    <section class="section dual-section" id="para-ti">
+        <div class="container">
+            <div class="dual-grid">
+                <div class="dual-card dual-card-brands reveal">
+                    <div class="dual-card-tag">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                        Para Marcas
+                    </div>
+                    <h3>Impulsa tu marca con <span class="gradient-text">influencers reales</span></h3>
+                    <p>Dejanos encontrar los talentos perfectos para tu siguiente campana. Trabajamos con datos, no con suposiciones.</p>
+                    <ul>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Acceso a +120 talentos verificados
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Campanas en TikTok, Instagram y YouTube
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Reportes detallados de performance
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Presupuestos flexibles y transparentes
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Gestion end-to-end de la campana
+                        </li>
+                    </ul>
+                    <a href="#contacto" class="btn btn-primary" data-tab="marcas">Empezar campana</a>
+                </div>
+                <div class="dual-card dual-card-talents reveal">
+                    <div class="dual-card-tag">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Para Talentos
+                    </div>
+                    <h3>Monetiza tu <span style="background:linear-gradient(135deg,#b557f0,#ed568f);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">contenido</span> con nosotros</h3>
+                    <p>Unite a nuestra agencia y accede a las mejores campanas con marcas que conectan con tu audiencia.</p>
+                    <ul>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Acceso a campanas con marcas top
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Soporte legal y gestion de contratos
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Equipo creativo a tu disposicion
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Pagos puntuales y transparentes
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Impulso para crecer tu comunidad
+                        </li>
+                    </ul>
+                    <a href="#contacto" class="btn btn-outline" data-tab="talentos" style="border-color:rgba(148,20,224,0.4);color:var(--purple-light);">Quiero unirme</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== PROCESS ========== -->
+    <section class="section" id="proceso">
+        <div class="container">
+            <div class="process-header reveal">
+                <div class="section-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Proceso
+                </div>
+                <h2 class="section-title">Como <span class="gradient-text">trabajamos</span></h2>
+                <p class="section-subtitle">Un proceso claro y eficiente para que tu campana sea un exito desde el dia uno.</p>
+            </div>
+            <div class="process-steps stagger-children">
+                <div class="process-step">
+                    <div class="process-step-num">1</div>
+                    <h4>Briefing</h4>
+                    <p>Entendemos tu marca, objetivos y audiencia para disenar la estrategia perfecta.</p>
+                </div>
+                <div class="process-step">
+                    <div class="process-step-num">2</div>
+                    <h4>Seleccion</h4>
+                    <p>Seleccionamos los talentos ideales basandonos en datos de audiencia y afinidad.</p>
+                </div>
+                <div class="process-step">
+                    <div class="process-step-num">3</div>
+                    <h4>Ejecucion</h4>
+                    <p>Coordinamos la produccion, aprobacion y publicacion del contenido.</p>
+                </div>
+                <div class="process-step">
+                    <div class="process-step-num">4</div>
+                    <h4>Resultados</h4>
+                    <p>Medimos el impacto y te entregamos reportes con metricas reales.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== RESULTS ========== -->
+    <section class="section results-section" id="resultados">
+        <div class="container">
+            <div class="results-header reveal">
+                <div class="section-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Resultados
+                </div>
+                <h2 class="section-title">Numeros que <span class="gradient-text">hablan</span></h2>
+                <p class="section-subtitle">No solo prometemos resultados, los demostramos con data real de nuestras campanas.</p>
+            </div>
+            <div class="results-grid stagger-children">
+                <div class="result-card">
+                    <div class="result-number" data-count="350" data-suffix="+">0</div>
+                    <div class="result-label">Clientes Satisfechos</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-number" data-count="50" data-suffix="M+">0</div>
+                    <div class="result-label">Alcance Total</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-number" data-count="8" data-suffix=".5%">0</div>
+                    <div class="result-label">Engagement Promedio</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-number" data-count="15" data-suffix="+">0</div>
+                    <div class="result-label">Paises</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== TESTIMONIALS ========== -->
+    <section class="section" id="testimonios">
+        <div class="container">
+            <div class="testimonials-header reveal">
+                <div class="section-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Testimonios
+                </div>
+                <h2 class="section-title">Lo que dicen nuestros <span class="gradient-text">clientes</span></h2>
+                <p class="section-subtitle">Marcas y talentos que confian en BEME para impulsar su crecimiento.</p>
+            </div>
+            <div class="testimonials-grid stagger-children">
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    </div>
+                    <p class="testimonial-text">"BEME transformo nuestra estrategia de marketing digital. Las campanas con influencers generaron un 300% mas de engagement que nuestras acciones anteriores."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">SH</div>
+                        <div>
+                            <div class="testimonial-name">Sofia Hernandez</div>
+                            <div class="testimonial-role">Directora de Marketing, TechBrand</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    </div>
+                    <p class="testimonial-text">"Como influencer, unirme a BEME fue la mejor decision. Me conectaron con marcas increibles y me ayudaron a profesionalizar mi contenido."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">RM</div>
+                        <div>
+                            <div class="testimonial-name">Rodrigo Mendez</div>
+                            <div class="testimonial-role">Creador de Contenido, +500K seguidores</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    </div>
+                    <p class="testimonial-text">"El nivel de profesionalismo y los resultados que entrega BEME son excepcionales. Nuestro ROI en influencer marketing se triplico en 6 meses."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">JR</div>
+                        <div>
+                            <div class="testimonial-name">Jorge Ramirez</div>
+                            <div class="testimonial-role">CEO, FashionCo</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== CTA BANNER ========== -->
+    <section class="section cta-banner">
+        <div class="container">
+            <div class="cta-banner-inner reveal">
+                <h2>Listo para llevar tu marca al siguiente nivel?</h2>
+                <p>Ya seas marca o talento, tenemos el equipo y la experiencia para ayudarte a crecer.</p>
+                <div class="cta-banner-actions">
+                    <a href="#contacto" class="btn btn-lg btn-white" data-tab="marcas">Soy Marca</a>
+                    <a href="#contacto" class="btn btn-lg btn-outline-white" data-tab="talentos">Soy Talento</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== CONTACT ========== -->
+    <section class="section contact-section" id="contacto">
+        <div class="container">
+            <div class="contact-wrapper">
+                <div class="contact-info reveal">
+                    <div class="section-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        Contacto
+                    </div>
+                    <h2>Empecemos un <span class="gradient-text">proyecto juntos</span></h2>
+                    <p>Cuentanos sobre tu marca o tu perfil como talento. Nuestro equipo te respondera en menos de 24 horas.</p>
+
+                    <div class="contact-details">
+                        <div class="contact-detail">
+                            <div class="contact-detail-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                            </div>
+                            <div class="contact-detail-text">
+                                <strong>Email</strong>
+                                contacto@bemeagency.com
+                            </div>
+                        </div>
+                        <div class="contact-detail">
+                            <div class="contact-detail-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            </div>
+                            <div class="contact-detail-text">
+                                <strong>Telefono</strong>
+                                +34 662 56 87 68 (Espana)<br>
+                                +54 9 3515 60-2867 (Argentina)
+                            </div>
+                        </div>
+                        <div class="contact-detail">
+                            <div class="contact-detail-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            </div>
+                            <div class="contact-detail-text">
+                                <strong>Oficinas</strong>
+                                Mexico City, CDMX
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="contact-socials">
+                        <a href="https://instagram.com/bemeagency" target="_blank" rel="noopener noreferrer" class="contact-social" aria-label="Instagram">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                        </a>
+                        <a href="https://linkedin.com/company/bemeagency" target="_blank" rel="noopener noreferrer" class="contact-social" aria-label="LinkedIn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+                        </a>
+                        <a href="https://tiktok.com/@bemeagency" target="_blank" rel="noopener noreferrer" class="contact-social" aria-label="TikTok">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15.2a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V9.05a8.16 8.16 0 0 0 4.76 1.52v-3.4a4.85 4.85 0 0 1-1-.48z"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="contact-form-card reveal">
+                    <div class="form-tabs">
+                        <button class="form-tab active" data-form="marcas">Soy Marca</button>
+                        <button class="form-tab" data-form="talentos">Soy Talento</button>
+                    </div>
+
+                    <!-- Brand Form -->
+                    <form id="form-marcas" class="contact-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="brand-name">Nombre completo *</label>
+                                <input type="text" id="brand-name" placeholder="Tu nombre" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="brand-company">Empresa *</label>
+                                <input type="text" id="brand-company" placeholder="Nombre de tu empresa" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="brand-email">Email *</label>
+                                <input type="email" id="brand-email" placeholder="tu@empresa.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="brand-phone">Telefono</label>
+                                <input type="tel" id="brand-phone" placeholder="+34 600 000 000">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="brand-service">Servicio de interes</label>
+                            <select id="brand-service">
+                                <option value="">Selecciona un servicio</option>
+                                <option value="campana">Campana con Influencers</option>
+                                <option value="estrategia">Estrategia de Marketing</option>
+                                <option value="contenido">Produccion de Contenido</option>
+                                <option value="otro">Otro</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="brand-message">Cuentanos sobre tu proyecto</label>
+                            <textarea id="brand-message" placeholder="Objetivos, presupuesto estimado, timeline..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg form-submit">
+                            Enviar mensaje
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        </button>
+                    </form>
+
+                    <!-- Talent Form -->
+                    <form id="form-talentos" class="contact-form" style="display:none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="talent-name">Nombre completo *</label>
+                                <input type="text" id="talent-name" placeholder="Tu nombre" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="talent-email">Email *</label>
+                                <input type="email" id="talent-email" placeholder="tu@email.com" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="talent-ig">Instagram</label>
+                                <input type="text" id="talent-ig" placeholder="@tuusuario">
+                            </div>
+                            <div class="form-group">
+                                <label for="talent-tiktok">TikTok</label>
+                                <input type="text" id="talent-tiktok" placeholder="@tuusuario">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="talent-followers">Seguidores totales (aprox.)</label>
+                            <select id="talent-followers">
+                                <option value="">Selecciona un rango</option>
+                                <option value="10k-50k">10K - 50K</option>
+                                <option value="50k-100k">50K - 100K</option>
+                                <option value="100k-500k">100K - 500K</option>
+                                <option value="500k-1m">500K - 1M</option>
+                                <option value="1m+">+1M</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="talent-message">Cuentanos sobre ti</label>
+                            <textarea id="talent-message" placeholder="Tu nicho, tipo de contenido, marcas con las que has trabajado..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg form-submit" style="background:linear-gradient(135deg, #9414E0 0%, #b2005d 100%);">
+                            Quiero unirme
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        </button>
+                    </form>
+
+                    <div class="form-success" id="form-success">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <h4>Mensaje enviado</h4>
+                        <p>Te contactaremos en menos de 24 horas.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== FOOTER ========== -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <img src="assets/brand/logos/Beme1blanco.png" alt="BEME Agency" class="footer-logo">
+                    <p>Agencia de marketing de influencers. Conectamos marcas con talentos para crear campanas con impacto real y resultados medibles.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Servicios</h4>
+                    <ul>
+                        <li><a href="#servicios">Prospeccion de Talentos</a></li>
+                        <li><a href="#servicios">Estrategia Creativa</a></li>
+                        <li><a href="#servicios">Gestion de Campanas</a></li>
+                        <li><a href="#servicios">Reportes y KPIs</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Empresa</h4>
+                    <ul>
+                        <li><a href="#para-ti">Para Marcas</a></li>
+                        <li><a href="#para-ti">Para Talentos</a></li>
+                        <li><a href="#proceso">Como Trabajamos</a></li>
+                        <li><a href="#testimonios">Testimonios</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Contacto</h4>
+                    <ul>
+                        <li><a href="mailto:contacto@bemeagency.com">contacto@bemeagency.com</a></li>
+                        <li><a href="tel:+34662568768">+34 662 56 87 68</a></li>
+                        <li><a href="tel:+5493515602867">+54 9 3515 60-2867</a></li>
+                        <li><a href="#contacto">Formulario</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 BEME Agency. Todos los derechos reservados.</p>
+                <div class="footer-bottom-links">
+                    <a href="#">Politica de Privacidad</a>
+                    <a href="#">Terminos y Condiciones</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ========== JAVASCRIPT ========== -->
+    <script>
+    (function() {
+        'use strict';
+
+        // ---- Nav scroll effect ----
+        const nav = document.getElementById('nav');
+        let lastScroll = 0;
+
+        window.addEventListener('scroll', () => {
+            const scrollY = window.scrollY;
+            if (scrollY > 60) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+            lastScroll = scrollY;
+        }, { passive: true });
+
+        // ---- Mobile menu ----
+        const hamburger = document.getElementById('hamburger');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileClose = document.getElementById('mobile-close');
+        const mobileLinks = document.querySelectorAll('.mobile-link');
+
+        hamburger.addEventListener('click', () => {
+            mobileMenu.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        });
+
+        function closeMobile() {
+            mobileMenu.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        mobileClose.addEventListener('click', closeMobile);
+        mobileLinks.forEach(l => l.addEventListener('click', closeMobile));
+
+        // ---- Form tabs ----
+        const formTabs = document.querySelectorAll('.form-tab');
+        const formMarcas = document.getElementById('form-marcas');
+        const formTalentos = document.getElementById('form-talentos');
+
+        function switchFormTab(tab) {
+            formTabs.forEach(t => t.classList.remove('active'));
+            const activeTab = document.querySelector(`.form-tab[data-form="${tab}"]`);
+            if (activeTab) activeTab.classList.add('active');
+
+            if (tab === 'marcas') {
+                formMarcas.style.display = '';
+                formTalentos.style.display = 'none';
+            } else {
+                formMarcas.style.display = 'none';
+                formTalentos.style.display = '';
+            }
+        }
+
+        formTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                switchFormTab(tab.dataset.form);
+            });
+        });
+
+        // ---- CTA buttons switch form tab ----
+        document.querySelectorAll('[data-tab]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tab = btn.dataset.tab;
+                if (tab) switchFormTab(tab);
+            });
+        });
+
+        // ---- Form submission ----
+        const successMsg = document.getElementById('form-success');
+
+        document.querySelectorAll('.contact-form').forEach(form => {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const btn = form.querySelector('.form-submit');
+                btn.disabled = true;
+                btn.innerHTML = '<span style="opacity:0.7;">Enviando...</span>';
+
+                // Simulate sending (replace with real API call)
+                setTimeout(() => {
+                    form.style.display = 'none';
+                    document.querySelector('.form-tabs').style.display = 'none';
+                    successMsg.style.display = 'block';
+                    btn.disabled = false;
+                }, 1200);
+            });
+        });
+
+        // ---- Counter animation ----
+        function animateCounters() {
+            const counters = document.querySelectorAll('[data-count]');
+            counters.forEach(el => {
+                if (el.dataset.animated) return;
+
+                const rect = el.getBoundingClientRect();
+                if (rect.top > window.innerHeight || rect.bottom < 0) return;
+
+                el.dataset.animated = 'true';
+                const target = parseInt(el.dataset.count);
+                const suffix = el.dataset.suffix || '+';
+                const duration = 1800;
+                const start = performance.now();
+
+                function update(now) {
+                    const elapsed = now - start;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    const current = Math.round(target * eased);
+                    el.textContent = current + (progress >= 1 ? suffix : '');
+                    if (progress < 1) requestAnimationFrame(update);
+                }
+
+                requestAnimationFrame(update);
+            });
+        }
+
+        // ---- Scroll reveal ----
+        function revealOnScroll() {
+            const reveals = document.querySelectorAll('.reveal, .stagger-children');
+            reveals.forEach(el => {
+                const rect = el.getBoundingClientRect();
+                const trigger = window.innerHeight * 0.85;
+                if (rect.top < trigger) {
+                    el.classList.add('visible');
+                }
+            });
+            animateCounters();
+        }
+
+        window.addEventListener('scroll', revealOnScroll, { passive: true });
+        window.addEventListener('load', revealOnScroll);
+
+        // ---- Smooth scroll for anchor links ----
+        document.querySelectorAll('a[href^="#"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                const target = document.querySelector(link.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    const offset = 80;
+                    const top = target.getBoundingClientRect().top + window.scrollY - offset;
+                    window.scrollTo({ top, behavior: 'smooth' });
+                }
+            });
+        });
+
+    })();
+    </script>
+</body>
+</html>
