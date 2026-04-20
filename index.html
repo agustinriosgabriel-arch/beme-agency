@@ -1227,6 +1227,10 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
     <svg id="theme-icon-dark" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
     <svg id="theme-icon-light" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
   </button>
+  <button class="btn btn-outline" data-fn="openAuditValoresModal" title="Auditar valores de contenido" style="border-color:rgba(245,158,11,0.4);color:#b45309;">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Auditar Valores
+  </button>
   <button class="btn btn-purple" data-fn="openAIRosterModal" title="Generar roster con IA">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg>
     AI Roster
@@ -2404,6 +2408,30 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg>
           Generar
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUDIT VALORES MODAL -->
+<div class="modal-overlay" id="audit-valores-modal">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header" style="background:linear-gradient(135deg,rgba(245,158,11,0.10),rgba(180,83,9,0.06))">
+      <h2 class="modal-title" style="display:flex;align-items:center;gap:8px;color:#92400e;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Auditoría de Valores de Contenido
+      </h2>
+      <button class="modal-close" data-fn="closeAuditValoresModal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" id="audit-valores-body">
+      <div id="audit-valores-summary" style="margin-bottom:14px;font-size:13px;color:var(--text-dim);">Analizando…</div>
+      <div id="audit-valores-buckets" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <div id="audit-valores-actions" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;">
+        <button class="btn btn-primary" id="audit-mark-all-btn" data-fn="markAllAmbiguousForReview" style="background:#f59e0b;border-color:#f59e0b;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span id="audit-mark-all-label">Marcar los ambiguos para revisión</span>
+        </button>
+        <button class="btn btn-ghost" data-fn="exportAuditCSV">Exportar lista (CSV)</button>
       </div>
     </div>
   </div>

@@ -750,6 +750,10 @@ let FN_MAP = {
   clearAllFilters,
   toggleReviewFilter,
   clearReviewFilter,
+  openAuditValoresModal,
+  closeAuditValoresModal: () => closeModal('audit-valores-modal'),
+  markAllAmbiguousForReview,
+  exportAuditCSV,
   viewGrid:             () => setView('grid'),
   viewList:             () => setView('list'),
   exportCSV,
@@ -6078,4 +6082,179 @@ async function confirmAIDescs() {
   }
   btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg> Generar';
   btn.disabled = false;
+}
+
+// ===================== AUDITORÍA DE VALORES =====================
+const AUDIT_CURRENCY_REGEX = /\b(USD|ARS|MXN|EUR|GBP|BRL|CLP|COP|PEN|UYU|dolares?|d[oó]lares?|pesos?|euros?|reales?)\b|\$|€|£|R\$|U\$S/i;
+const AUDIT_CONTENT_REGEX  = /\b(tiktok|reels?|stor(?:y|ies|ia|ias|ie)|youtube|yt|shorts?|tt|ig|instagram|post|video|publicaci[oó]n|historia|historias|carrusel|pauta|espejo|derechos?|uso\s+de\s+imagen|imagen|licencia|spark(?:\s*(?:code|ad|ads))?)\b/i;
+const AUDIT_AMOUNT_REGEX   = /\d{2,}/;
+
+function classifyValores(raw) {
+  const v = (raw || '').trim();
+  if (!v) return { bucket: 'vacio', reasons: ['Campo vacío'] };
+  const hasAmount = AUDIT_AMOUNT_REGEX.test(v);
+  const hasCurrency = AUDIT_CURRENCY_REGEX.test(v);
+  const hasContent = AUDIT_CONTENT_REGEX.test(v);
+  const reasons = [];
+  if (!hasAmount) {
+    return { bucket: 'sin_precios', reasons: ['No tiene precios/números'] };
+  }
+  if (hasAmount && hasCurrency && hasContent) {
+    return { bucket: 'organizable', reasons: [] };
+  }
+  if (!hasCurrency) reasons.push('Sin moneda');
+  if (!hasContent) reasons.push('Sin tipo de contenido');
+  return { bucket: 'ambiguo', reasons };
+}
+
+let _auditResults = null;
+
+function openAuditValoresModal() {
+  openModal('audit-valores-modal');
+  runValoresAudit();
+}
+
+function runValoresAudit() {
+  const buckets = { vacio: [], sin_precios: [], ambiguo: [], organizable: [] };
+  talents.forEach(t => {
+    const c = classifyValores(t.valores);
+    buckets[c.bucket].push({ t, reasons: c.reasons });
+  });
+  _auditResults = buckets;
+
+  const total = talents.length;
+  const organizable = buckets.organizable.length;
+  const ambiguo = buckets.ambiguo.length;
+  const sinPrecios = buckets.sin_precios.length;
+  const vacio = buckets.vacio.length;
+
+  const summaryEl = document.getElementById('audit-valores-summary');
+  summaryEl.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+      <div style="padding:10px;border-radius:8px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);">
+        <div style="font-size:22px;font-weight:700;color:#15803d;">${organizable}</div>
+        <div style="font-size:11px;color:#166534;font-weight:600;">Organizables</div>
+      </div>
+      <div style="padding:10px;border-radius:8px;background:rgba(245,158,11,0.09);border:1px solid rgba(245,158,11,0.25);">
+        <div style="font-size:22px;font-weight:700;color:#b45309;">${ambiguo}</div>
+        <div style="font-size:11px;color:#92400e;font-weight:600;">Ambiguos</div>
+      </div>
+      <div style="padding:10px;border-radius:8px;background:rgba(148,163,184,0.12);border:1px solid rgba(148,163,184,0.3);">
+        <div style="font-size:22px;font-weight:700;color:#475569;">${sinPrecios}</div>
+        <div style="font-size:11px;color:#334155;font-weight:600;">Sin precios</div>
+      </div>
+      <div style="padding:10px;border-radius:8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.22);">
+        <div style="font-size:22px;font-weight:700;color:#b91c1c;">${vacio}</div>
+        <div style="font-size:11px;color:#991b1b;font-weight:600;">Vacíos</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--text-dim);">Total analizados: <strong>${total}</strong> talentos</div>
+  `;
+
+  const bucketsEl = document.getElementById('audit-valores-buckets');
+  bucketsEl.innerHTML = [
+    renderAuditBucket('organizable', '✅ Organizables', buckets.organizable, '#15803d', 'rgba(34,197,94,0.06)', 'Tienen tipo + precio + moneda. Listos para estructurar.'),
+    renderAuditBucket('ambiguo', '⚠️ Ambiguos — faltan datos', buckets.ambiguo, '#b45309', 'rgba(245,158,11,0.06)', 'Tienen precios pero falta moneda o tipo. Candidatos a revisión.'),
+    renderAuditBucket('sin_precios', 'ℹ️ Sin precios', buckets.sin_precios, '#475569', 'rgba(148,163,184,0.06)', 'No hay números. Puede ser solo descripción o falta el pricing.'),
+    renderAuditBucket('vacio', '🚫 Vacíos', buckets.vacio, '#991b1b', 'rgba(239,68,68,0.04)', 'Sin ningún dato cargado.'),
+  ].join('');
+
+  // Setup mark-all button
+  document.getElementById('audit-valores-actions').style.display = 'flex';
+  const toMark = buckets.ambiguo.length + buckets.vacio.length + buckets.sin_precios.length;
+  document.getElementById('audit-mark-all-label').textContent =
+    `Marcar los ${toMark} ambiguos/vacíos/sin precios para revisión`;
+}
+
+function renderAuditBucket(key, title, items, color, bg, hint) {
+  const count = items.length;
+  if (count === 0) return '';
+  const preview = items.slice(0, 3).map(x => {
+    const name = escapeHtml(x.t.nombre || '(sin nombre)');
+    const val = escapeHtml((x.t.valores || '').slice(0, 80));
+    const reasons = x.reasons.length ? ` <span style="color:${color};font-weight:600;">[${x.reasons.join(' · ')}]</span>` : '';
+    return `<div style="padding:5px 0;border-top:1px solid var(--border);font-size:11.5px;line-height:1.4;"><strong>${name}</strong>${reasons}<br><span style="color:var(--text-dim);">${val || '<em>—</em>'}</span></div>`;
+  }).join('');
+  const more = count > 3 ? `<div style="padding:6px 0 2px;font-size:11px;color:var(--text-dim);">…y ${count - 3} más</div>` : '';
+  return `<details style="border:1px solid var(--border);border-radius:8px;background:${bg};padding:10px 12px;">
+    <summary style="cursor:pointer;font-weight:600;color:${color};display:flex;align-items:center;justify-content:space-between;">
+      <span>${title} <span style="background:${color};color:#fff;padding:1px 8px;border-radius:10px;font-size:11px;margin-left:6px;">${count}</span></span>
+    </summary>
+    <div style="font-size:11px;color:var(--text-dim);margin:6px 0 4px;">${hint}</div>
+    ${preview}${more}
+  </details>`;
+}
+
+async function markAllAmbiguousForReview() {
+  if (!_auditResults) return;
+  const targets = [
+    ..._auditResults.ambiguo.map(x => ({ t: x.t, reason: x.reasons.join(' · ') || 'Valores ambiguos' })),
+    ..._auditResults.sin_precios.map(x => ({ t: x.t, reason: 'Valores sin precios/números' })),
+    ..._auditResults.vacio.map(x => ({ t: x.t, reason: 'Valores vacíos' })),
+  ].filter(x => !x.t.needs_review); // skip ones already marked
+
+  if (!targets.length) { showToast('No hay perfiles para marcar (ya están todos marcados o no hay ambiguos)', 'info'); return; }
+  if (!confirm(`¿Marcar ${targets.length} talentos para revisión de valores?`)) return;
+
+  const btn = document.getElementById('audit-mark-all-btn');
+  btn.disabled = true;
+  btn.innerHTML = 'Marcando...';
+
+  const nowIso = new Date().toISOString();
+  const userEmail = (currentUser && currentUser.email) || '';
+  let okCount = 0, errCount = 0;
+
+  for (const { t, reason } of targets) {
+    const comment = 'Auditoría Valores: ' + reason;
+    const update = {
+      needs_review: true,
+      review_comment: comment,
+      review_marked_by: userEmail,
+      review_marked_at: nowIso,
+    };
+    // Update local state
+    t.needs_review = true;
+    t.review_comment = comment;
+    t.review_marked_by = userEmail;
+    t.review_marked_at = nowIso;
+    // Push to Supabase
+    if (sb && currentUser) {
+      try {
+        const { error } = await sb.from('talentos').update(update).eq('id', t.id);
+        if (error) errCount++;
+        else okCount++;
+      } catch (e) { errCount++; }
+    } else {
+      okCount++;
+    }
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span id="audit-mark-all-label">Marcar los ambiguos para revisión</span>';
+
+  showToast(`${okCount} talentos marcados para revisión${errCount ? ' · ' + errCount + ' con error' : ''}`, errCount ? 'error' : 'success');
+  renderTalents();
+  updatePlatformCounts();
+  runValoresAudit();
+}
+
+function exportAuditCSV() {
+  if (!_auditResults) return;
+  const rows = [['bucket','id','nombre','paises','valores','razon']];
+  const push = (bucket, items) => items.forEach(x => rows.push([
+    bucket, x.t.id, x.t.nombre || '', (x.t.paises||[]).join(';'),
+    (x.t.valores || '').replace(/"/g,'""'),
+    x.reasons.join(' | ')
+  ]));
+  push('organizable', _auditResults.organizable);
+  push('ambiguo', _auditResults.ambiguo);
+  push('sin_precios', _auditResults.sin_precios);
+  push('vacio', _auditResults.vacio);
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'auditoria_valores.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
 }
