@@ -1,1 +1,3 @@
-nombre,tiktok,instagram,youtube,paises,email,telefono,ciudad,genero,categorias,keywords,notas
+nombre,tiktok,instagram,youtube,paises,ciudad,telefono,email,genero,categorias,keywords,notas
+Ejemplo Talento,@usuario_tt,@usuario_ig,@canal_yt,"Argentina;Chile",Buenos Aires,+5491122334455,contacto@ejemplo.com,femenino,"lifestyle;moda",palabras clave,Notas opcionales
+Otro Creador,https://tiktok.com/@otro,https://instagram.com/otro,,Argentina,Córdoba,,hola@otro.com,masculino,fitness,,
