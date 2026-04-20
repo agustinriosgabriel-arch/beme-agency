@@ -1438,7 +1438,7 @@ function clearKeywordsFilter() {
 }
 
 // ===================== GENDER FILTER =====================
-const GENDERS = ['Mujer', 'Hombre', 'Otro'];
+const GENDERS = ['Mujer', 'Hombre', 'Otro', 'SIN ASIGNAR'];
 
 function toggleGenderDropdown() {
   const panel = document.getElementById('gender-panel');
@@ -1544,7 +1544,7 @@ function getFilteredTalents() {
        !(t.tiktok||'').toLowerCase().includes(search) &&
        !(t.instagram||'').toLowerCase().includes(search) &&
        !(t.youtube||'').toLowerCase().includes(search)) return false;
-    if(selectedGenders.size > 0 && !selectedGenders.has(t.genero || '')) return false;
+    if(selectedGenders.size > 0 && !selectedGenders.has(t.genero || 'SIN ASIGNAR')) return false;
     if(selectedCountries.size > 0 && !(t.paises||[]).some(p => selectedCountries.has(p))) return false;
     if(networkFilter === 'tt' && !t.tiktok) return false;
     if(networkFilter === 'ig' && !t.instagram) return false;
@@ -3089,7 +3089,7 @@ function renderManageTalentsGrid() {
   let filtered = _manageShowSelected ? talents.filter(t => managingRosterTemp.includes(t.id)) : [...talents];
   if(q) filtered = filtered.filter(t => t.nombre.toLowerCase().includes(q) || (t.paises||[]).some(p => p.toLowerCase().includes(q)) || (t.ciudad||'').toLowerCase().includes(q) || (t.keywords||'').toLowerCase().includes(q) || (t.categorias||[]).some(c=>c.toLowerCase().includes(q)));
   if(fCat) filtered = filtered.filter(t => (t.categorias||[]).includes(fCat));
-  if(fGender) filtered = filtered.filter(t => t.genero === fGender);
+  if(fGender) filtered = filtered.filter(t => (t.genero || 'SIN ASIGNAR') === fGender);
   if(fCountry) filtered = filtered.filter(t => (t.paises||[]).includes(fCountry));
 
   if(filtered.length === 0) {
