@@ -62,6 +62,56 @@ function normalizeCountry(raw) {
   // Return original with first letter capitalized
   return raw.trim().charAt(0).toUpperCase() + raw.trim().slice(1);
 }
+// Normalize for search: NFKD unifies fancy Unicode (𝕏→X, 𝓐→A, ﬁ→fi),
+// strip combining marks (accents), remove zero-width/invisible chars, lowercase.
+function searchNormalize(s) {
+  if (!s) return '';
+  return String(s)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+// Convert fancy/stylized Unicode letters to plain Latin while preserving accents.
+// NFKC folds 𝓐→A, 𝐁→B, 𝕏→X, ﬁ→fi, etc. Accented letters (é, ñ) are kept as-is.
+function normalizeDisplayName(s) {
+  if (!s) return '';
+  return String(s)
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Console helper: scan existing talents for fancy typography and normalize them.
+// Usage from DevTools: await fixFancyNames()  (or fixFancyNames(true) to preview only)
+async function fixFancyNames(dryRun) {
+  var changes = [];
+  talents.forEach(function(t) {
+    var fixed = normalizeDisplayName(t.nombre);
+    if (fixed && fixed !== t.nombre) changes.push({id: t.id, from: t.nombre, to: fixed});
+  });
+  if (!changes.length) { console.log('[fixFancyNames] nada que corregir'); return 0; }
+  console.table(changes);
+  if (dryRun) { console.log('[fixFancyNames] dry-run, no se guardó'); return changes.length; }
+  for (var i = 0; i < changes.length; i++) {
+    var c = changes[i];
+    var t = talents.find(function(x){ return x.id === c.id; });
+    if (!t) continue;
+    t.nombre = c.to;
+    if (sb && currentUser) {
+      try { await sb.from('talentos').update({nombre: c.to}).eq('id', c.id); }
+      catch(e) { console.warn('[fixFancyNames] fallo id=' + c.id, e); }
+    }
+  }
+  if (typeof renderTalents === 'function') renderTalents();
+  console.log('[fixFancyNames] ' + changes.length + ' talento(s) actualizado(s)');
+  return changes.length;
+}
+if (typeof window !== 'undefined') window.fixFancyNames = fixFancyNames;
+
 const BASE_CATEGORIES = [
   "Profesional","Familia","Deporte","Entretenimiento","Gaming","Belleza","Moda",
   "Gastronomía","Hogar","Aventura","Creatividad/Arte","Contenido","Tecnología","Música"
@@ -916,6 +966,16 @@ function wireFormListeners() {
   // CSV file input
   const csvInput = document.getElementById('csv-file-input');
   if(csvInput) csvInput.addEventListener('change', (e) => handleCSVImport(e.target));
+
+  const tmSel = document.getElementById('f-tiene-manager');
+  if(tmSel) tmSel.addEventListener('change', () => toggleManagerFields(tmSel.value === 'true'));
+}
+
+function toggleManagerFields(show) {
+  ['f-manager-agencia-group','f-manager-telefono-group','f-manager-email-group'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = show ? '' : 'none';
+  });
 }
 
 // ===================== LOCAL STORAGE =====================
@@ -1584,15 +1644,15 @@ function clearAllFilters() {
 }
 
 function getFilteredTalents() {
-  const search = document.getElementById('search-input').value.toLowerCase().trim();
+  const search = searchNormalize(document.getElementById('search-input').value);
   return talents.filter(t => {
-    if(search && !t.nombre.toLowerCase().includes(search) &&
-       !(t.ciudad||'').toLowerCase().includes(search) &&
-       !(t.paises||[]).some(p=>p.toLowerCase().includes(search)) &&
-       !(t.email||'').toLowerCase().includes(search) &&
-       !(t.tiktok||'').toLowerCase().includes(search) &&
-       !(t.instagram||'').toLowerCase().includes(search) &&
-       !(t.youtube||'').toLowerCase().includes(search)) return false;
+    if(search && !searchNormalize(t.nombre).includes(search) &&
+       !searchNormalize(t.ciudad||'').includes(search) &&
+       !(t.paises||[]).some(p=>searchNormalize(p).includes(search)) &&
+       !searchNormalize(t.email||'').includes(search) &&
+       !searchNormalize(t.tiktok||'').includes(search) &&
+       !searchNormalize(t.instagram||'').includes(search) &&
+       !searchNormalize(t.youtube||'').includes(search)) return false;
     if(selectedGenders.size > 0 && !selectedGenders.has(t.genero || 'SIN ASIGNAR')) return false;
     if(reviewFilterActive && !t.needs_review) return false;
     if(selectedCountries.size > 0 && !(t.paises||[]).some(p => selectedCountries.has(p))) return false;
@@ -1952,6 +2012,10 @@ function clearForm() {
   var _fmp = document.getElementById('f-marcas-previas'); if(_fmp) _fmp.value = '';
   var _fni = document.getElementById('f-notas-internas'); if(_fni) _fni.value = '';
   var _ftm = document.getElementById('f-tiene-manager'); if(_ftm) _ftm.value = 'false';
+  var _fma = document.getElementById('f-manager-agencia'); if(_fma) _fma.value = '';
+  var _fmt = document.getElementById('f-manager-telefono'); if(_fmt) _fmt.value = '';
+  var _fme = document.getElementById('f-manager-email'); if(_fme) _fme.value = '';
+  toggleManagerFields(false);
   var _fnr = document.getElementById('f-needs-review'); if(_fnr) _fnr.checked = false;
   var _frc = document.getElementById('f-review-comment'); if(_frc) _frc.value = '';
   var _frb = document.getElementById('review-box'); if(_frb) _frb.style.display = 'none';
@@ -1984,6 +2048,10 @@ function fillForm(t) {
   var _fmp = document.getElementById('f-marcas-previas'); if(_fmp) _fmp.value = t.marcas_previas||'';
   var _fni = document.getElementById('f-notas-internas'); if(_fni) _fni.value = t.notas_internas||'';
   var _ftm = document.getElementById('f-tiene-manager'); if(_ftm) _ftm.value = t.tiene_manager ? 'true' : 'false';
+  var _fma = document.getElementById('f-manager-agencia'); if(_fma) _fma.value = t.manager_agencia || '';
+  var _fmt = document.getElementById('f-manager-telefono'); if(_fmt) _fmt.value = t.manager_telefono || '';
+  var _fme = document.getElementById('f-manager-email'); if(_fme) _fme.value = t.manager_email || '';
+  toggleManagerFields(!!t.tiene_manager);
   var _fnr = document.getElementById('f-needs-review');
   var _frc = document.getElementById('f-review-comment');
   var _frb = document.getElementById('review-box');
@@ -2023,22 +2091,81 @@ function handlePhotoUpload(input) {
 }
 
 // ===================== FETCH PROFILE PHOTO FROM TIKTOK / INSTAGRAM =====================
+// Strip tracking params/hash from social URLs.
+// For YouTube we keep ?v= (video id is essential) and ?list=.
+function _stripSocialTracking(url, platform) {
+  try {
+    var u = new URL(url);
+    // Force https
+    u.protocol = 'https:';
+    if (platform === 'youtube') {
+      var keep = new URLSearchParams();
+      if (u.searchParams.has('v'))    keep.set('v', u.searchParams.get('v'));
+      if (u.searchParams.has('list')) keep.set('list', u.searchParams.get('list'));
+      u.search = keep.toString() ? '?' + keep.toString() : '';
+    } else {
+      // TikTok / Instagram: no query param is meaningful for profile identity.
+      u.search = '';
+    }
+    u.hash = '';
+    var out = u.toString();
+    // Cosmetic: drop trailing slash on bare handle paths (keeps IG /user/ → /user/)
+    return out;
+  } catch(e) {
+    // Malformed URL — remove inline ?... and #... as best-effort
+    return url.split('#')[0].split('?')[0];
+  }
+}
+
+// Console helper: scan existing talents and strip tracking params from TT/IG/YT URLs.
+// Usage: await cleanSocialUrls(true)  // dry-run
+//        await cleanSocialUrls()      // apply and save to Supabase
+async function cleanSocialUrls(dryRun) {
+  var changes = [];
+  talents.forEach(function(t) {
+    var diff = {};
+    ['tiktok','instagram','youtube'].forEach(function(p) {
+      if (!t[p]) return;
+      var clean = normalizeSocialUrl(t[p], p);
+      if (clean && clean !== t[p]) diff[p] = {from: t[p], to: clean};
+    });
+    if (Object.keys(diff).length) changes.push({id: t.id, nombre: t.nombre, diff: diff});
+  });
+  if (!changes.length) { console.log('[cleanSocialUrls] nada que limpiar'); return 0; }
+  console.log('[cleanSocialUrls] ' + changes.length + ' talento(s) con URLs sucias:');
+  changes.forEach(function(c) { console.log(c.nombre, c.diff); });
+  if (dryRun) { console.log('[cleanSocialUrls] dry-run, no se guardó'); return changes.length; }
+  for (var i = 0; i < changes.length; i++) {
+    var c = changes[i];
+    var t = talents.find(function(x){ return x.id === c.id; });
+    if (!t) continue;
+    var upd = {};
+    Object.keys(c.diff).forEach(function(p) { t[p] = c.diff[p].to; upd[p] = c.diff[p].to; });
+    if (sb && currentUser) {
+      try { await sb.from('talentos').update(upd).eq('id', c.id); }
+      catch(e) { console.warn('[cleanSocialUrls] fallo id=' + c.id, e); }
+    }
+  }
+  if (typeof renderTalents === 'function') renderTalents();
+  console.log('[cleanSocialUrls] ' + changes.length + ' talento(s) actualizado(s)');
+  return changes.length;
+}
+if (typeof window !== 'undefined') window.cleanSocialUrls = cleanSocialUrls;
+
 function normalizeSocialUrl(raw, platform) {
   if(!raw) return null;
   let url = raw.trim();
   if(!url || url === '-') return '';
-  // Already a full URL — just ensure https
+  // Already a full URL — ensure https + strip tracking query/hash
   if(url.match(/^https?:\/\//)) {
-    // Validate it contains the correct domain
-    var result = url;
-    if(platform === 'tiktok' && !result.includes('tiktok.com')) return '';
-    if(platform === 'instagram' && !result.includes('instagram.com')) return '';
-    if(platform === 'youtube' && !result.includes('youtube.com') && !result.includes('youtu.be')) return '';
-    return result;
+    if(platform === 'tiktok' && !url.includes('tiktok.com')) return '';
+    if(platform === 'instagram' && !url.includes('instagram.com')) return '';
+    if(platform === 'youtube' && !url.includes('youtube.com') && !url.includes('youtu.be')) return '';
+    return _stripSocialTracking(url, platform);
   }
   // Has domain but no protocol
   if(url.includes('tiktok.com') || url.includes('instagram.com') || url.includes('youtube.com') || url.includes('youtu.be')) {
-    return 'https://' + url;
+    return _stripSocialTracking('https://' + url, platform);
   }
   // Just a handle (@user or user) — must be alphanumeric (2+ chars, no spaces)
   let username = url.replace(/^@/, '');
@@ -2178,7 +2305,7 @@ async function fetchPhotosSelected() {
 
 // ===================== TALENT CRUD =====================
 async function saveTalent() {
-  const nombre = document.getElementById('f-nombre').value.trim();
+  const nombre = normalizeDisplayName(document.getElementById('f-nombre').value);
   if(!nombre) { showToast('El nombre es obligatorio', 'error'); return; }
   const paises = [...formSelectedPaises].map(function(p){return normalizeCountry(p.replace(/^[\u{1F1E6}-\u{1FFFF}\s]+/gu,'').trim());}).filter(Boolean);
   if(paises.length === 0) { showToast('Selecciona al menos un país', 'error'); return; }
@@ -2192,9 +2319,11 @@ async function saveTalent() {
   // Compare by extracted handle to avoid URL format mismatches
   function _extractHandle(url) {
     if (!url) return '';
-    const m = url.toLowerCase().match(/@([^/?#]+)/);
+    // Strip query + hash so trackers (?igsh=, ?_t=, ?si=) don't break dedupe
+    const clean = url.toLowerCase().split('#')[0].split('?')[0].replace(/\/+$/,'');
+    const m = clean.match(/@([^/]+)/);
     if (m) return m[1];
-    const parts = url.toLowerCase().replace(/\/+$/,'').split('/');
+    const parts = clean.split('/');
     return parts[parts.length - 1] || '';
   }
   const dupeByName = talents.find(t => t.id !== editingId && t.nombre.toLowerCase().trim() === nombre.toLowerCase());
@@ -2223,6 +2352,9 @@ async function saveTalent() {
     marcas_previas: (document.getElementById('f-marcas-previas') ? document.getElementById('f-marcas-previas').value.trim() : ''),
     notas_internas: (document.getElementById('f-notas-internas') ? document.getElementById('f-notas-internas').value.trim() : ''),
     tiene_manager: (document.getElementById('f-tiene-manager') ? document.getElementById('f-tiene-manager').value === 'true' : false),
+    manager_agencia: (document.getElementById('f-manager-agencia') ? document.getElementById('f-manager-agencia').value.trim() : ''),
+    manager_telefono: (document.getElementById('f-manager-telefono') ? document.getElementById('f-manager-telefono').value.trim() : ''),
+    manager_email: (document.getElementById('f-manager-email') ? document.getElementById('f-manager-email').value.trim() : ''),
     categorias: cats,
     updated: new Date().toISOString().split('T')[0]
   };
@@ -2274,6 +2406,9 @@ async function saveTalent() {
       tipo_contenido: savedTalent.tipo_contenido||'', calidad: savedTalent.calidad||'',
       marcas_previas: savedTalent.marcas_previas||'', notas_internas: savedTalent.notas_internas||'',
       tiene_manager: savedTalent.tiene_manager||false,
+      manager_agencia: savedTalent.manager_agencia||'',
+      manager_telefono: savedTalent.manager_telefono||'',
+      manager_email: savedTalent.manager_email||'',
       needs_review: !!savedTalent.needs_review,
       review_comment: savedTalent.review_comment||'',
       review_marked_by: savedTalent.review_marked_by||'',
@@ -5031,12 +5166,10 @@ async function updateTalentAll(talentId) {
   if (btn) btn.classList.add('spinning');
   var msgs = [];
 
-  // Step 1: TT+IG — each as separate short message
-  if (ensembleToken || apifyToken) {
-    if (t.instagram) { if (await scrapeAndSave(t, 'instagram')) msgs.push('IG ✓'); else msgs.push('IG ✗'); }
-    if (t.tiktok) { if (await scrapeAndSave(t, 'tiktok')) msgs.push('TT ✓'); else msgs.push('TT ✗'); }
-    renderTalents(); updateStats();
-  }
+  // Step 1: TT+IG — server has ENSEMBLE_TOKEN / APIFY_TOKEN as env var fallback
+  if (t.instagram) { if (await scrapeAndSave(t, 'instagram')) msgs.push('IG ✓'); else msgs.push('IG ✗'); }
+  if (t.tiktok) { if (await scrapeAndSave(t, 'tiktok')) msgs.push('TT ✓'); else msgs.push('TT ✗'); }
+  if (t.instagram || t.tiktok) { renderTalents(); updateStats(); }
 
   // Step 2: YouTube — isolated with timeout
   if (t.youtube && ytApiKey) {
