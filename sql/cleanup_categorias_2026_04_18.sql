@@ -28,11 +28,11 @@ WHERE EXISTS (
   WHERE
     -- malformados (con llaves o coma)
     c LIKE '{%}' OR c LIKE '%,%'
-    -- o no está en las 14 oficiales
+    -- o no está en las 16 oficiales
     OR lower(c) NOT IN (
       'profesional','familia','deporte','entretenimiento','gaming','belleza','moda',
       'gastronomía','gastronomia','hogar','aventura','creatividad/arte','contenido',
-      'tecnología','tecnologia','música','musica','sin categoría'
+      'tecnología','tecnologia','música','musica','lifestyle','variedades','sin categoría'
     )
 )
 ORDER BY nombre;
@@ -59,7 +59,9 @@ INSERT INTO _valid_cats VALUES
   ('creatividad/arte','Creatividad/Arte'),
   ('contenido','Contenido'),
   ('tecnología','Tecnología'),('tecnologia','Tecnología'),
-  ('música','Música'),('musica','Música');
+  ('música','Música'),('musica','Música'),
+  ('lifestyle','Lifestyle'),
+  ('variedades','Variedades');
 
 -- Mapping completo de keywords fantasma → categoría padre (incluye las 7 nuevas)
 CREATE TEMP TABLE _kw_to_cat (kw TEXT PRIMARY KEY, cat TEXT NOT NULL) ON COMMIT DROP;
@@ -117,10 +119,12 @@ INSERT INTO _kw_to_cat (kw, cat) VALUES
   ('animacion','Creatividad/Arte'),('animación','Creatividad/Arte'),
   ('arte & diseño','Creatividad/Arte'),('arte','Creatividad/Arte'),
   -- Contenido
-  ('vlog','Contenido'),('variedades','Contenido'),('lifestyle','Contenido'),
-  ('lifehacks','Contenido'),('motivacional','Contenido'),('reviews','Contenido'),
+  ('vlog','Contenido'),('motivacional','Contenido'),('reviews','Contenido'),
   ('comentarista','Contenido'),('entrevistas','Contenido'),('lgbt','Contenido'),
   ('deals','Contenido'),('relationship','Contenido'),('relación','Contenido'),
+  -- Variedades (antes Contenido)
+  ('lifehack','Variedades'),('lifehacks','Variedades'),
+  ('life hack','Variedades'),('life hacks','Variedades'),
   -- Tecnología
   ('telefono','Tecnología'),('teléfono','Tecnología'),('ia','Tecnología'),
   -- Música
@@ -244,7 +248,7 @@ WHERE EXISTS (
      OR lower(c) NOT IN (
        'profesional','familia','deporte','entretenimiento','gaming','belleza','moda',
        'gastronomía','hogar','aventura','creatividad/arte','contenido',
-       'tecnología','música','sin categoría'
+       'tecnología','música','lifestyle','variedades','sin categoría'
      )
 )
 ORDER BY nombre;

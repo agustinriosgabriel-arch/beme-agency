@@ -114,7 +114,8 @@ if (typeof window !== 'undefined') window.fixFancyNames = fixFancyNames;
 
 const BASE_CATEGORIES = [
   "Profesional","Familia","Deporte","Entretenimiento","Gaming","Belleza","Moda",
-  "Gastronomía","Hogar","Aventura","Creatividad/Arte","Contenido","Tecnología","Música"
+  "Gastronomía","Hogar","Aventura","Creatividad/Arte","Contenido","Tecnología","Música",
+  "Lifestyle","Variedades"
 ];
 
 // Normalize category capitalization: match BASE_CATEGORIES or capitalize first letter
