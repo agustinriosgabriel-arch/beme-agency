@@ -130,12 +130,15 @@ body.light .logo .logo-dark{display:none;}
 .topbar-stat{display:none;}
 .topbar-search input{
   width:100%;background:var(--surface2);border:1px solid var(--border);
-  color:var(--text);border-radius:24px;padding:8px 14px 8px 36px;
+  color:var(--text);border-radius:24px;padding:8px 32px 8px 36px;
   font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border 0.2s;
 }
 .topbar-search input:focus{border-color:var(--primary);}
 .topbar-search input::placeholder{color:var(--text-dim);}
 .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-dim);pointer-events:none;}
+.search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--text-dim);cursor:pointer;width:22px;height:22px;border-radius:50%;display:none;align-items:center;justify-content:center;padding:0;transition:color .15s,background .15s;}
+.search-clear:hover{color:var(--text);background:var(--border);}
+.topbar-search input:not(:placeholder-shown) ~ .search-clear{display:inline-flex;}
 
 /* ====== BUTTONS ====== */
 .btn{
@@ -1029,7 +1032,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   .mob-menu-btn{display:flex;}
   .mob-filter-btn{display:flex;}
   .topbar-search{flex:1;}
-  .topbar-search input{font-size:14px;padding:10px 14px 10px 36px;}
+  .topbar-search input{font-size:14px;padding:10px 32px 10px 36px;}
   /* Tab nav → bottom nav */
   .tab-nav{
     position:fixed;bottom:0;left:0;right:0;top:auto;
@@ -1166,6 +1169,9 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     </span>
     <input type="text" id="search-input" placeholder="Buscar por nombre, red social, email...">
+    <button type="button" class="search-clear" aria-label="Borrar búsqueda" onclick="const i=this.previousElementSibling;i.value='';i.dispatchEvent(new Event('input',{bubbles:true}));i.focus();">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
   </div>
 
   <!-- Network update dropdown -->

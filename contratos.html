@@ -120,14 +120,17 @@ body.light .tab-nav{background:rgba(244,244,244,0.9)}
 /* ── Toolbar ───────────────────────────────────────────── */
 .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
 .search-wrap{position:relative;flex:1;min-width:200px;max-width:360px}
-.search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-dim);pointer-events:none}
+.search-wrap > svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-dim);pointer-events:none}
 .search-input{
   width:100%;background:var(--surface2);border:1px solid var(--border);
-  color:var(--text);border-radius:24px;padding:8px 14px 8px 36px;
+  color:var(--text);border-radius:24px;padding:8px 32px 8px 36px;
   font-size:13px;font-family:inherit;outline:none;transition:border 0.2s;
 }
 .search-input:focus{border-color:var(--primary)}
 .search-input::placeholder{color:var(--text-dim)}
+.search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--text-dim);cursor:pointer;width:22px;height:22px;border-radius:50%;display:none;align-items:center;justify-content:center;padding:0;transition:color .15s,background .15s}
+.search-clear:hover{color:var(--text);background:var(--border)}
+.search-input:not(:placeholder-shown) ~ .search-clear{display:inline-flex}
 .filter-select{background:var(--surface2);border:1px solid var(--border);border-radius:24px;padding:8px 14px;font-size:13px;font-family:inherit;color:var(--text);outline:none;cursor:pointer;appearance:none}
 .filter-select:focus{border-color:var(--primary)}
 
@@ -434,6 +437,9 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
     <div class="search-wrap">
       <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input type="text" class="search-input" id="search-input" placeholder="Buscar marca, talento, numero..." oninput="renderContratos()">
+      <button type="button" class="search-clear" aria-label="Borrar búsqueda" onclick="const i=this.previousElementSibling;i.value='';i.dispatchEvent(new Event('input',{bubbles:true}));i.focus();">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
     </div>
     <select class="filter-select" id="filter-tipo" onchange="renderContratos()">
       <option value="">Todos los tipos</option>
