@@ -1169,7 +1169,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     </span>
     <input type="text" id="search-input" placeholder="Buscar por nombre, red social, email...">
-    <button type="button" class="search-clear" aria-label="Borrar búsqueda" onclick="const i=this.previousElementSibling;i.value='';i.dispatchEvent(new Event('input',{bubbles:true}));i.focus();">
+    <button type="button" class="search-clear" aria-label="Borrar búsqueda" onclick="const i=this.previousElementSibling;i.value='';i.focus();requestAnimationFrame(()=>i.dispatchEvent(new Event('input',{bubbles:true})));">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
   </div>
