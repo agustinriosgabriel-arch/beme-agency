@@ -703,12 +703,12 @@ const SUPABASE_URL = 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const BEME_DATA = {
-  nombre: 'BEME IMKT SAS de CV',
+  nombre: 'BEME AGENCY',
   rfc: 'BIM2412116G7',
-  domicilio: 'Popocatepetl 233, int 808, Santa Cruz Atoyac, Benito Juarez, 03310, CDMX, Mexico',
+  domicilio: '',
   tagline: 'Talent Marketing & Influencer Agency',
   web: 'bemeagency.com',
-  email: 'hola@bemeagency.com'
+  email: 'contacto@bemeagency.com'
 };
 const BEME_LOGO_LIGHT = 'assets/brand/logos/Beme1Color.png';   // full-color logo for light bg
 const BEME_LOGO_DARK  = 'assets/brand/logos/Beme1blanco.png';  // white logo for dark bg
@@ -1182,7 +1182,6 @@ function buildProposalHtml(p) {
         <div class="pp-party-label">De</div>
         <div class="pp-party-name">${escHtml(BEME_DATA.nombre)}</div>
         <div class="pp-party-line">RFC ${escHtml(BEME_DATA.rfc)}</div>
-        <div class="pp-party-line">${escHtml(BEME_DATA.domicilio)}</div>
         <div class="pp-party-line">${escHtml(BEME_DATA.email)}</div>
       </div>
       <div>
@@ -1243,7 +1242,6 @@ function buildProposalHtml(p) {
     <div class="pp-footer">
       <div class="pp-footer-left">
         <strong>${escHtml(BEME_DATA.nombre)}</strong><br>
-        ${escHtml(BEME_DATA.domicilio)}<br>
         ${escHtml(BEME_DATA.email)} &middot; ${escHtml(BEME_DATA.web)}
       </div>
       <div class="pp-footer-right">

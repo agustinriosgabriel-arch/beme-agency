@@ -369,8 +369,8 @@ updated_at          timestamp DEFAULT now()
 ```
 
 Contract types are "mirror" contracts:
-- **marca**: Party A = Brand, Party B = BEME IMKT. Amount = fee_marca.
-- **talento**: Party A = BEME IMKT, Party B = Influencer. Amount = fee_talento.
+- **marca**: Party A = Brand, Party B = BEME AGENCY. Amount = fee_marca.
+- **talento**: Party A = BEME AGENCY, Party B = Influencer. Amount = fee_talento.
 
 ---
 
