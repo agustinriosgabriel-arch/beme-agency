@@ -704,7 +704,7 @@ const SUPABASE_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const BEME_DATA = {
   nombre: 'BEME AGENCY',
-  rfc: 'BIM2412116G7',
+  rfc: '',
   domicilio: '',
   tagline: 'Talent Marketing & Influencer Agency',
   web: 'bemeagency.com',
@@ -1181,7 +1181,6 @@ function buildProposalHtml(p) {
       <div>
         <div class="pp-party-label">De</div>
         <div class="pp-party-name">${escHtml(BEME_DATA.nombre)}</div>
-        <div class="pp-party-line">RFC ${escHtml(BEME_DATA.rfc)}</div>
         <div class="pp-party-line">${escHtml(BEME_DATA.email)}</div>
       </div>
       <div>
