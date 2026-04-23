@@ -20,6 +20,7 @@ beme_v10/
 ├── campanas.html           → Campaign management panel (list/grid/kanban)
 ├── campana-detalle.html    → Single campaign detail + 9-step workflow
 ├── contratos.html          → Contract management (generate/translate/customize)
+├── presupuestos.html       → Budget proposal generator (talents + content + price, 15-day validity)
 ├── prospecciones.html      → Brand prospection listing
 ├── prospeccion-detalle.html→ Prospection detail with kanban pipeline
 ├── talento-portal.html     → Talent-facing portal (separate login)
@@ -32,7 +33,8 @@ beme_v10/
 │   ├── HANDOFF.md          → Handoff notes
 │   └── README.md           → Project readme
 ├── sql/                    → Database migration scripts
-│   └── contratos.sql       → Contratos table + RLS + triggers
+│   ├── contratos.sql       → Contratos table + RLS + triggers
+│   └── presupuestos.sql    → Presupuestos + presupuesto_items tables + RLS + triggers
 ├── agents/                 → AI agents and skills (by module)
 │   └── contratos/          → Contract agent config
 └── netlify/functions/      → Serverless functions

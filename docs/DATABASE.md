@@ -374,6 +374,47 @@ Contract types are "mirror" contracts:
 
 ---
 
+## Budget Proposal Tables
+
+### `presupuestos`
+```sql
+id                 serial PRIMARY KEY
+numero_presupuesto text NOT NULL DEFAULT ''       -- auto-generated: P-MMYYNN
+estado             text NOT NULL DEFAULT 'borrador' -- borrador|enviado|aceptado|rechazado|vencido
+marca_nombre       text NOT NULL DEFAULT ''
+marca_contacto     text DEFAULT ''
+marca_email        text DEFAULT ''
+marca_telefono     text DEFAULT ''
+titulo             text DEFAULT ''
+producto           text DEFAULT ''
+descripcion        text DEFAULT ''
+notas              text DEFAULT ''
+moneda             text DEFAULT 'MXN'
+validez_dias       integer DEFAULT 15             -- default 15-day validity clause
+fecha              date DEFAULT CURRENT_DATE
+ciudad             text DEFAULT 'Mexico City'
+created_by         uuid
+created_at         timestamp DEFAULT now()
+updated_at         timestamp DEFAULT now()
+```
+
+### `presupuesto_items`
+```sql
+id              serial PRIMARY KEY
+presupuesto_id  integer REFERENCES presupuestos(id) ON DELETE CASCADE
+talento_id      integer REFERENCES talentos(id)
+talento_nombre  text NOT NULL DEFAULT ''          -- snapshot (survives talent delete)
+talento_foto    text DEFAULT ''
+contenido       text DEFAULT ''                   -- "1 Reel + 2 Historias IG"
+precio          numeric DEFAULT 0
+orden           integer DEFAULT 0
+created_at      timestamp DEFAULT now()
+```
+
+Triggers: `trg_presupuesto_number` auto-fills `numero_presupuesto` as `P-MMYYNN`. `trg_presupuesto_touch` bumps `updated_at` on UPDATE.
+
+---
+
 ## RLS Policies Required
 
 ```sql
@@ -387,7 +428,7 @@ CREATE POLICY "auth_all" ON <table> FOR ALL
 --   contenido_scripts, contenido_borradores, contenido_observaciones,
 --   contenido_historial, contenido_estadisticas, campana_briefs,
 --   campana_mensajes, campana_managers, campana_handlers, user_profiles,
---   contratos
+--   contratos, presupuestos, presupuesto_items
 
 -- Storage: each bucket needs
 CREATE POLICY "auth_all_<bucket>" ON storage.objects 
