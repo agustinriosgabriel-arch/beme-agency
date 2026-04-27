@@ -298,6 +298,12 @@ let campaigns = []; // [{campana, campana_talento, contenidos}]
 const PASO_LABELS = {1:'Esperando Brief',2:'Esperando Script',3:'Aprobación Script',4:'Producción',5:'Aprobación Contenido',6:'Publicar',7:'Estadísticas',8:'Completado',9:'Pagado'};
 const TIPO_LABELS = {tiktok_video:'TikTok Video',reel:'Reel',ig_story:'IG Story',youtube_video:'YouTube Video',youtube_short:'YouTube Short'};
 
+// Sanitiza un nombre de archivo para usar como key en Supabase Storage
+// (sin acentos ni caracteres especiales — solo [a-zA-Z0-9._-])
+function safeStorageName(name) {
+  return name.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9._-]/g,'_');
+}
+
 // ════════════════════════════════════════════════
 // AUTH
 // ════════════════════════════════════════════════
@@ -599,7 +605,7 @@ async function uploadScript(input, contId) {
   toast('Subiendo script(s)...','inf');
   try {
     for (const file of files) {
-      const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+      const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${safeStorageName(file.name)}`;
       const {error} = await sb.storage.from('content-scripts').upload(path, file);
       if (error) throw error;
       const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
@@ -615,7 +621,7 @@ async function replaceScript(input, contId, scriptId) {
   const file = input.files[0]; if (!file) return;
   toast('Reemplazando script...','inf');
   try {
-    const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+    const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${safeStorageName(file.name)}`;
     const {error} = await sb.storage.from('content-scripts').upload(path, file);
     if (error) throw error;
     const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
@@ -631,7 +637,7 @@ async function uploadDraft(input, contId) {
   toast('Subiendo contenido...','inf');
   try {
     for (const file of files) {
-      const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+      const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${safeStorageName(file.name)}`;
       const {error} = await sb.storage.from('content-drafts').upload(path, file);
       if (error) throw error;
       const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);
@@ -647,7 +653,7 @@ async function replaceDraft(input, contId, draftId) {
   const file = input.files[0]; if (!file) return;
   toast('Reemplazando borrador...','inf');
   try {
-    const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+    const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${safeStorageName(file.name)}`;
     const {error} = await sb.storage.from('content-drafts').upload(path, file);
     if (error) throw error;
     const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);

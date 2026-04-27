@@ -821,6 +821,12 @@ const PASO_LABELS = {
 };
 const TIPO_LABELS = {tiktok_video:'TikTok Video',reel:'Reel',reel_tiktok_espejo:'Reel/TikTok Espejo',ig_story:'IG Story',youtube_video:'YouTube Video',youtube_short:'YouTube Short'};
 
+// Sanitiza un nombre de archivo para usar como key en Supabase Storage
+// (sin acentos ni caracteres especiales — solo [a-zA-Z0-9._-])
+function safeStorageName(name) {
+  return name.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9._-]/g,'_');
+}
+
 // ════════════════════════════════════════════════
 // BOOT
 // ════════════════════════════════════════════════
@@ -1119,7 +1125,7 @@ async function uploadBriefFiles(input) {
   let uploaded = 0;
   for (const file of files) {
     try {
-      const path = `campana-${campanaId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+      const path = `campana-${campanaId}/${Date.now()}-${safeStorageName(file.name)}`;
       const {error: upErr} = await sb.storage.from('campaign-briefs').upload(path, file);
       if (upErr) throw upErr;
       const {data:{publicUrl}} = sb.storage.from('campaign-briefs').getPublicUrl(path);
@@ -1233,7 +1239,7 @@ async function uploadContentBriefs(input, contId) {
   let uploaded = 0;
   for (const file of files) {
     try {
-      const path = `campana-${campanaId}/contenido-${contId}/brief-${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+      const path = `campana-${campanaId}/contenido-${contId}/brief-${Date.now()}-${safeStorageName(file.name)}`;
       const {error} = await sb.storage.from('content-briefs').upload(path, file);
       if (error) throw error;
       const {data:{publicUrl}} = sb.storage.from('content-briefs').getPublicUrl(path);
@@ -1803,7 +1809,7 @@ async function uploadScript(input, contId) {
   toast('Subiendo script(s)...','inf');
   try {
     for (const file of files) {
-      const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+      const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${safeStorageName(file.name)}`;
       const {error} = await sb.storage.from('content-scripts').upload(path, file);
       if (error) throw error;
       const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
@@ -1823,7 +1829,7 @@ async function uploadDraft(input, contId) {
   toast('Subiendo contenido...','inf');
   try {
     for (const file of files) {
-      const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+      const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${safeStorageName(file.name)}`;
       const {error} = await sb.storage.from('content-drafts').upload(path, file);
       if (error) throw error;
       const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);
@@ -1841,7 +1847,7 @@ async function uploadDraft(input, contId) {
 async function uploadStats(input, contId) {
   const files = Array.from(input.files);
   for (const file of files) {
-    const path = `campana-${campanaId}/contenido-${contId}/stats-${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+    const path = `campana-${campanaId}/contenido-${contId}/stats-${Date.now()}-${safeStorageName(file.name)}`;
     try {
       await sb.storage.from('content-stats').upload(path, file);
       const {data:{publicUrl}} = sb.storage.from('content-stats').getPublicUrl(path);
@@ -1857,7 +1863,7 @@ async function replaceScript(input, contId, scriptId) {
   if (!file) return;
   toast('Reemplazando script...','inf');
   try {
-    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${safeStorageName(file.name)}`;
     const {error} = await sb.storage.from('content-scripts').upload(path, file);
     if (error) throw error;
     const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
@@ -1873,7 +1879,7 @@ async function replaceDraft(input, contId, draftId) {
   if (!file) return;
   toast('Reemplazando borrador...','inf');
   try {
-    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${safeStorageName(file.name)}`;
     const {error} = await sb.storage.from('content-drafts').upload(path, file);
     if (error) throw error;
     const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);

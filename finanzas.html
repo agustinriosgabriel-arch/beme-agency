@@ -391,6 +391,9 @@ let compFacturaId=null,complFacturaId=null,complPagoId=null;
 let ptCampanaTalentoId=null,ptCampanaId=null,ptTalentId=null;
 let editingClienteId=null;
 
+// Sanitiza un nombre de archivo para usar como key en Supabase Storage
+function safeStorageName(n){return n.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9._-]/g,'_');}
+
 // AUTH
 async function doLogin(){const e=(document.getElementById('login-email').value||'').trim(),p=document.getElementById('login-pass').value||'',b=document.getElementById('login-btn');if(!e||!p){showLoginErr('Completa email y contrasena.');return;}b.textContent='Ingresando...';b.disabled=true;document.getElementById('login-error').style.display='none';try{const{data,error}=await sb.auth.signInWithPassword({email:e,password:p});if(error)showLoginErr(error.message);else{currentUser=data.user;await initApp();}}catch(x){showLoginErr(x.message);}b.textContent='Ingresar';b.disabled=false;}
 function showLoginErr(m){const d=document.getElementById('login-error');d.textContent=m;d.style.display='block';}
@@ -843,7 +846,7 @@ async function saveClienteFiscal(){
 // FILE UPLOAD
 // ═══════════════════════════════════════════
 async function uploadFile(file,subfolder){
-  const path=`${subfolder}/${Date.now()}-${file.name.replace(/\s/g,'_')}`;
+  const path=`${subfolder}/${Date.now()}-${safeStorageName(file.name)}`;
   const{error}=await sb.storage.from('finanzas').upload(path,file);
   if(error)throw error;
   const{data:{publicUrl}}=sb.storage.from('finanzas').getPublicUrl(path);
