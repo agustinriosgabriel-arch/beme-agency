@@ -413,7 +413,7 @@ async function initApp(){
 
 async function loadData(){
   const[cmpR,cliR,facR,pmR,compR,ptR,ctR]=await Promise.all([
-    sb.from('campanas').select('*,marcas(id,nombre,cliente_id,clientes(id,nombre,pais))').order('created_at',{ascending:false}),
+    sb.from('campanas').select('*,marcas(id,nombre,cliente_id,clientes(id,nombre,pais))').is('deleted_at',null).order('created_at',{ascending:false}),
     sb.from('clientes').select('*').order('nombre'),
     sb.from('facturas').select('*').order('created_at',{ascending:false}),
     sb.from('pagos_marca').select('*').order('created_at',{ascending:false}),
@@ -423,7 +423,8 @@ async function loadData(){
   ]);
   campanas=cmpR.data||[];clientes=cliR.data||[];facturas=facR.data||[];
   pagosMarca=pmR.data||[];complementos=compR.data||[];pagosTalento=ptR.data||[];
-  campanasTalentos=ctR.data||[];
+  const campanasIds=new Set(campanas.map(c=>c.id));
+  campanasTalentos=(ctR.data||[]).filter(ct=>campanasIds.has(ct.campana_id));
 }
 
 function renderAll(){renderStats();renderCxC();renderCxP();renderClientes();

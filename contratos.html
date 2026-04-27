@@ -875,18 +875,20 @@ async function loadData() {
   if (cErr) throw cErr;
   contratos = cData || [];
 
-  // Load campanas with marca
-  const {data: campData} = await sb.from('campanas').select('*,marcas(id,nombre,logo_url)').order('created_at', {ascending:false}).limit(100);
+  // Load campanas with marca (excluye papelera)
+  const {data: campData} = await sb.from('campanas').select('*,marcas(id,nombre,logo_url)').is('deleted_at', null).order('created_at', {ascending:false}).limit(100);
   campanas = campData || [];
+  const campanasIds = new Set(campanas.map(c => c.id));
 
   // Load marcas
   const {data: mData} = await sb.from('marcas').select('*');
   (mData||[]).forEach(m => { marcas[m.id] = m; });
 
-  // Load campana_talentos with talent info
+  // Load campana_talentos with talent info (excluye los de campañas en papelera)
   const {data: ctData} = await sb.from('campana_talentos').select('*,talentos(id,nombre,foto,email,telefono)').limit(500);
   campanasTalentos = {};
   (ctData||[]).forEach(ct => {
+    if (!campanasIds.has(ct.campana_id)) return;
     if (!campanasTalentos[ct.campana_id]) campanasTalentos[ct.campana_id] = [];
     campanasTalentos[ct.campana_id].push(ct);
   });
@@ -912,7 +914,9 @@ function getFilteredContratos() {
   const tipo = document.getElementById('filter-tipo')?.value||'';
   const estado = document.getElementById('filter-estado')?.value||'';
 
+  const validCampanaIds = new Set(campanas.map(c => c.id));
   return contratos.filter(c => {
+    if (c.campana_id && !validCampanaIds.has(c.campana_id)) return false;
     if (tipo && c.tipo !== tipo) return false;
     if (estado && c.estado !== estado) return false;
     if (q) {
