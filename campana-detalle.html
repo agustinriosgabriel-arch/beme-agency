@@ -1642,7 +1642,18 @@ function buildActions(c, ct) {
           <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           Subir archivo(s) de script
         </label>
+        <button class="btn btn-ghost btn-sm" onclick="toggleScriptText(${c.id})">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+          Pegar texto
+        </button>
         <button class="btn btn-outline btn-sm" onclick="avanzar(${c.id})" ${hasScripts?'':'disabled style="opacity:0.5;cursor:not-allowed"'} title="${hasScripts?'':'Subí al menos un archivo antes de enviar'}">Script listo → Revisión</button>
+      </div>
+      <div id="script-text-wrap-${c.id}" style="display:none;margin-top:10px">
+        <textarea id="script-text-area-${c.id}" class="obs-textarea" placeholder="Pegá el script acá... (se va a guardar como un documento HTML formateado)" rows="8"></textarea>
+        <div class="obs-btn-row" style="margin-top:6px">
+          <button class="btn btn-primary btn-sm" onclick="saveScriptFromText(${c.id})">Guardar como script</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleScriptText(${c.id})">Cancelar</button>
+        </div>
       </div>
     </div>`;
   }
@@ -1888,6 +1899,74 @@ async function uploadScript(input, contId) {
   input.value='';
 }
 
+function toggleScriptText(contId) {
+  const wrap = document.getElementById('script-text-wrap-'+contId);
+  if (!wrap) return;
+  const showing = wrap.style.display !== 'none';
+  wrap.style.display = showing ? 'none' : 'block';
+  if (!showing) document.getElementById('script-text-area-'+contId)?.focus();
+}
+
+function buildScriptHtml(text, contId) {
+  const safe = String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const fecha = new Date().toLocaleString('es-AR',{dateStyle:'long',timeStyle:'short'});
+  const camp = esc(campana?.nombre||'');
+  const cont = findCont(contId)||{};
+  const titulo = esc(cont.titulo||'');
+  const tipo = esc(TIPO_LABELS[cont.tipo]||cont.tipo||'');
+  return `<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><title>Script — ${titulo||camp}</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:780px;margin:40px auto;padding:0 28px;color:#1a1a1a;line-height:1.7;background:#fff}
+header{border-bottom:2px solid #9414E0;padding-bottom:14px;margin-bottom:28px}
+h1{margin:0 0 4px;font-size:22px;color:#9414E0;font-weight:700}
+.meta{font-size:12px;color:#666;display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.meta span b{color:#333}
+pre{font-family:inherit;white-space:pre-wrap;word-break:break-word;font-size:15px;margin:0}
+@media print{body{margin:0;max-width:none}header{page-break-after:avoid}}
+</style></head>
+<body>
+<header>
+  <h1>Script</h1>
+  <div class="meta">
+    ${camp?`<span><b>Campaña:</b> ${camp}</span>`:''}
+    ${titulo?`<span><b>Contenido:</b> ${titulo}</span>`:''}
+    ${tipo?`<span><b>Tipo:</b> ${tipo}</span>`:''}
+    <span><b>Generado:</b> ${fecha}</span>
+  </div>
+</header>
+<pre>${safe}</pre>
+</body></html>`;
+}
+
+async function saveScriptFromText(contId) {
+  const ta = document.getElementById('script-text-area-'+contId);
+  const text = (ta?.value||'').trim();
+  if (!text) { toast('Pegá el script primero','err'); return; }
+  toast('Guardando script...','inf');
+  try {
+    const html = buildScriptHtml(text, contId);
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-script.html`;
+    const {error: upErr} = await sb.storage.from('content-scripts').upload(path, blob, {
+      contentType: 'text/html; charset=utf-8'
+    });
+    if (upErr) throw upErr;
+    const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
+    const {error: dbErr} = await sb.from('contenido_scripts').insert({
+      contenido_id: contId, url_archivo: publicUrl||path, subido_por: currentUser.id
+    });
+    if (dbErr) throw dbErr;
+    if (ta) ta.value = '';
+    toggleScriptText(contId);
+    await loadCampana(); renderAll();
+    toast('Script guardado ✓','ok');
+  } catch(e) {
+    console.error('saveScriptFromText:', e);
+    toast('Error: '+e.message,'err');
+  }
+}
+
 async function uploadDraft(input, contId) {
   const files = Array.from(input.files);
   if (!files.length) return;
@@ -2124,10 +2203,12 @@ async function saveContenido() {
       toast('Contenido actualizado ✓','ok');
     } else {
       if (!_mcCtId) throw new Error('Sin talento seleccionado');
-      // Auto-set paso_actual based on brief
+      // Auto-set paso_actual: si ya hay brief saltea paso 1; si no requiere script, saltea hasta paso 4
       const hasBrief = (campana.campana_briefs||[]).length > 0;
       payload.campana_talento_id = _mcCtId;
-      payload.paso_actual = hasBrief ? 2 : 1;
+      if (!hasBrief)               payload.paso_actual = 1;
+      else if (payload.script_requerido) payload.paso_actual = 2;
+      else                         payload.paso_actual = 4;
       await sb.from('contenidos').insert(payload);
       toast('Contenido agregado ✓','ok');
     }
