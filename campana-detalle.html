@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beme — Detalle de Campaña</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="icon" href="favicon.ico" sizes="32x32">
 <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -1907,33 +1908,82 @@ function toggleScriptText(contId) {
   if (!showing) document.getElementById('script-text-area-'+contId)?.focus();
 }
 
-function buildScriptText(text, contId) {
-  const fecha = new Date().toLocaleString('es-AR',{dateStyle:'long',timeStyle:'short'});
-  const camp = campana?.nombre||'';
+function buildScriptPdf(text, contId) {
+  const { jsPDF } = window.jspdf || {};
+  if (!jsPDF) throw new Error('jsPDF no disponible (cargá la página de nuevo)');
+
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 56;
+  const maxW = pageW - margin*2;
+
+  // Barra superior color BEME
+  doc.setFillColor(148, 20, 224);
+  doc.rect(0, 0, pageW, 6, 'F');
+
+  // Título
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(24);
+  doc.setTextColor(148, 20, 224);
+  doc.text('Script', margin, 60);
+
+  // Metadata
   const cont = findCont(contId)||{};
-  const titulo = cont.titulo||'';
-  const tipo = TIPO_LABELS[cont.tipo]||cont.tipo||'';
-  const sep = '═══════════════════════════════════════════════════════════';
-  const sub = '───────────────────────────────────────────────────────────';
   const meta = [];
-  if (camp)   meta.push(`Campaña:    ${camp}`);
-  if (titulo) meta.push(`Contenido:  ${titulo}`);
-  if (tipo)   meta.push(`Tipo:       ${tipo}`);
-  meta.push(`Generado:   ${fecha}`);
-  return `${sep}\n  SCRIPT\n${sep}\n\n${meta.join('\n')}\n\n${sub}\n\n${String(text).trim()}\n`;
+  if (campana?.nombre) meta.push(['Campaña', campana.nombre]);
+  if (cont.titulo)     meta.push(['Contenido', cont.titulo]);
+  if (cont.tipo)       meta.push(['Tipo', TIPO_LABELS[cont.tipo]||cont.tipo]);
+  meta.push(['Generado', new Date().toLocaleString('es-AR',{dateStyle:'long',timeStyle:'short'})]);
+
+  let y = 92;
+  doc.setFontSize(10);
+  meta.forEach(([k,v]) => {
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(60,60,70);
+    doc.text(k+':', margin, y);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(90,90,100);
+    const lines = doc.splitTextToSize(String(v), maxW - 80);
+    doc.text(lines, margin+78, y);
+    y += 14 * lines.length;
+  });
+
+  // Separador
+  y += 12;
+  doc.setDrawColor(225,225,232);
+  doc.setLineWidth(0.6);
+  doc.line(margin, y, pageW-margin, y);
+  y += 28;
+
+  // Cuerpo
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(12);
+  doc.setTextColor(25,25,30);
+  const bodyLines = doc.splitTextToSize(String(text), maxW);
+  const lineHeight = 18;
+  bodyLines.forEach(line => {
+    if (y > pageH - margin) {
+      doc.addPage();
+      y = margin;
+    }
+    doc.text(line, margin, y);
+    y += lineHeight;
+  });
+
+  return doc.output('blob');
 }
 
 async function saveScriptFromText(contId) {
   const ta = document.getElementById('script-text-area-'+contId);
   const text = (ta?.value||'').trim();
   if (!text) { toast('Pegá el script primero','err'); return; }
-  toast('Guardando script...','inf');
+  toast('Generando PDF...','inf');
   try {
-    const body = buildScriptText(text, contId);
-    const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
-    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-script.txt`;
+    const blob = buildScriptPdf(text, contId);
+    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-script.pdf`;
     const {error: upErr} = await sb.storage.from('content-scripts').upload(path, blob, {
-      contentType: 'text/plain; charset=utf-8'
+      contentType: 'application/pdf'
     });
     if (upErr) throw upErr;
     const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
@@ -1944,7 +1994,7 @@ async function saveScriptFromText(contId) {
     if (ta) ta.value = '';
     toggleScriptText(contId);
     await loadCampana(); renderAll();
-    toast('Script guardado ✓','ok');
+    toast('Script PDF generado ✓','ok');
   } catch(e) {
     console.error('saveScriptFromText:', e);
     toast('Error: '+e.message,'err');
