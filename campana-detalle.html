@@ -1383,6 +1383,9 @@ function renderTalentoCard(ct) {
         </div>
       </div>
       ${isInternal()?`<button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openEditContenidoBtn(${ct.id})" style="flex-shrink:0">+ Contenido</button>`:''}
+      ${isInternal()?`<button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();deleteCampanaTalento(${ct.id})" title="Eliminar talento de la campaña" style="flex-shrink:0;color:var(--red)">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+      </button>`:''}
       <svg class="t-expand" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
 
@@ -2116,6 +2119,30 @@ async function saveTalento() {
     toast('Talento agregado ✓','ok');
   } catch(e) {
     console.error('saveTalento exception:', e);
+    toast('Error: '+e.message,'err');
+  }
+}
+
+async function deleteCampanaTalento(ctId) {
+  const ct = campana.campana_talentos?.find(x => x.id === ctId);
+  if (!ct) return;
+  const nombre = ct.talentos?.nombre || 'el talento';
+  const cantContenidos = (ct.contenidos||[]).length;
+  const aviso = cantContenidos > 0
+    ? `¿Eliminar a ${nombre} de la campaña?\n\nSe van a borrar también ${cantContenidos} contenido${cantContenidos!==1?'s':''} asociado${cantContenidos!==1?'s':''}. Esta acción no se puede deshacer.`
+    : `¿Eliminar a ${nombre} de la campaña?`;
+  if (!confirm(aviso)) return;
+  try {
+    const {error} = await sb.from('campana_talentos').delete().eq('id', ctId);
+    if (error) {
+      console.error('deleteCampanaTalento error:', error);
+      toast('Error: '+(error.message||'no se pudo eliminar'),'err');
+      return;
+    }
+    await loadCampana(); renderAll();
+    toast('Talento eliminado de la campaña','inf');
+  } catch(e) {
+    console.error('deleteCampanaTalento exception:', e);
     toast('Error: '+e.message,'err');
   }
 }
