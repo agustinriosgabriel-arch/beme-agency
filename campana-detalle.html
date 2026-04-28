@@ -560,6 +560,12 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
         <div class="upload-area-sub">PDF, Word, imágenes — máx 50MB</div>
       </label>
 
+      <!-- Agregar link -->
+      <div class="link-group" style="margin-top:8px">
+        <input type="url" id="brief-link-url" class="link-input" placeholder="Pegar link (Drive, Notion, Figma…)" onkeydown="if(event.key==='Enter'){event.preventDefault();addBriefLink()}">
+        <button class="btn btn-primary btn-sm" onclick="addBriefLink()">+ Link</button>
+      </div>
+
       <!-- Notas del Brief -->
       <div class="brief-notes-wrap" id="brief-notes-wrap">
         <div class="brief-notes-title" onclick="toggleBriefNotes()">
@@ -1089,6 +1095,10 @@ function renderHeader() {
 // ════════════════════════════════════════════════
 // BRIEF FILES
 // ════════════════════════════════════════════════
+function isBriefLink(f) {
+  return !f.size_bytes && !(f.url||'').includes('/campaign-briefs/');
+}
+
 function renderBriefFiles() {
   const files = campana.campana_briefs || [];
   const list = document.getElementById('brief-file-list');
@@ -1096,25 +1106,33 @@ function renderBriefFiles() {
     list.innerHTML = '<div style="font-size:12px;color:var(--text-dim);padding:4px 0">Sin archivos adjuntos</div>';
     return;
   }
-  list.innerHTML = files.map(f => `
-    <div class="file-item">
-      <div class="file-icon">
-        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      </div>
-      <span class="file-name" title="${esc(f.nombre)}">${esc(f.nombre)}</span>
-      <span class="file-size">${f.size_bytes ? fmtSize(f.size_bytes) : ''}</span>
-      <div class="file-actions">
+  list.innerHTML = files.map(f => {
+    const isLink = isBriefLink(f);
+    const icon = isLink
+      ? `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`
+      : `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+    const sizeOrLabel = isLink ? '<span class="file-size" style="color:#22c55e">Link</span>' : `<span class="file-size">${f.size_bytes ? fmtSize(f.size_bytes) : ''}</span>`;
+    const dlBtn = isLink ? '' : `
         <a href="${esc(f.url)}" target="_blank" download class="file-action-btn dl" title="Descargar">
           <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </a>
-        <a href="${esc(f.url)}" target="_blank" class="file-action-btn dl" title="Ver">
-          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </a>`;
+    return `
+    <div class="file-item">
+      <div class="file-icon" ${isLink?'style="color:#22c55e"':''}>${icon}</div>
+      <span class="file-name" title="${esc(f.nombre)}">${esc(f.nombre)}</span>
+      ${sizeOrLabel}
+      <div class="file-actions">${dlBtn}
+        <a href="${esc(f.url)}" target="_blank" rel="noopener" class="file-action-btn dl" title="${isLink?'Abrir':'Ver'}">
+          ${isLink
+            ? `<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`
+            : `<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`}
         </a>
         ${isInternal()?`<button class="file-action-btn del" onclick="deleteBriefFile(${f.id},'${esc(f.url)}')" title="Eliminar">
           <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>`:''}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function uploadBriefFiles(input) {
@@ -1156,12 +1174,59 @@ async function uploadBriefFiles(input) {
 }
 
 async function deleteBriefFile(id, url) {
-  if (!confirm('¿Eliminar este archivo?')) return;
+  const isLink = !(url||'').includes('/campaign-briefs/');
+  if (!confirm(isLink ? '¿Eliminar este link?' : '¿Eliminar este archivo?')) return;
   await sb.from('campana_briefs').delete().eq('id', id);
-  const path = url.split('/campaign-briefs/')[1];
-  if (path) await sb.storage.from('campaign-briefs').remove([decodeURIComponent(path)]);
+  if (!isLink) {
+    const path = url.split('/campaign-briefs/')[1];
+    if (path) await sb.storage.from('campaign-briefs').remove([decodeURIComponent(path)]);
+  }
   await loadCampana(); renderBriefFiles();
-  toast('Archivo eliminado','inf');
+  toast(isLink ? 'Link eliminado' : 'Archivo eliminado','inf');
+}
+
+async function addBriefLink() {
+  const input = document.getElementById('brief-link-url');
+  let url = (input.value||'').trim();
+  if (!url) { toast('Pegá un link primero','err'); return; }
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  try { new URL(url); } catch { toast('Link inválido','err'); return; }
+
+  let nombre = url;
+  try {
+    const u = new URL(url);
+    nombre = u.hostname.replace(/^www\./,'') + (u.pathname && u.pathname !== '/' ? u.pathname : '');
+    if (nombre.length > 60) nombre = nombre.slice(0,57) + '…';
+  } catch {}
+
+  const btn = document.querySelector('.link-group .btn');
+  if (btn) btn.disabled = true;
+  try {
+    const {error} = await sb.from('campana_briefs').insert({
+      campana_id: campanaId, nombre, url, size_bytes: null, uploaded_by: currentUser.id
+    });
+    if (error) {
+      console.error('addBriefLink error:', error);
+      toast('Error al guardar link: '+(error.message||''), 'err');
+      return;
+    }
+    input.value = '';
+    await loadCampana();
+    renderBriefFiles();
+    // Auto-advance contenidos en paso 1 → paso 2 (igual que con archivos)
+    const en1 = campana.campana_talentos?.flatMap(ct=>ct.contenidos||[]).filter(c=>c.paso_actual===1)||[];
+    for (const c of en1) {
+      await sb.rpc('avanzar_paso_contenido',{
+        p_contenido_id:c.id, p_autor_id:currentUser.id,
+        p_autor_nombre:currentProfile.nombre, p_accion:'Brief cargado (link)'
+      });
+    }
+    if (en1.length) { await loadCampana(); renderTalentos(); }
+    toast('Link agregado ✓','ok');
+    if (en1.length) toast(`${en1.length} contenido${en1.length>1?'s':''} avanzado${en1.length>1?'s':''} a "Esperando Script"`,'inf');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // ════════════════════════════════════════════════
@@ -1908,17 +1973,29 @@ async function saveTalento() {
   const tid = parseInt(document.getElementById('at-id').value);
   if (!tid) { toast('Seleccioná un talento','err'); return; }
   try {
-    await sb.from('campana_talentos').insert({
+    const {data, error} = await sb.from('campana_talentos').insert({
       campana_id: campanaId, talent_id: tid,
       fee_marca: parseFloat(document.getElementById('at-fee-marca').value)||null,
       fee_talento: parseFloat(document.getElementById('at-fee-talento').value)||null,
       moneda: document.getElementById('at-moneda').value,
       metodo_pago: document.getElementById('at-metodo').value.trim()
-    });
+    }).select().single();
+    if (error) {
+      console.error('saveTalento insert error:', error);
+      toast('Error al agregar talento: ' + (error.message || 'RLS o constraint'), 'err');
+      return;
+    }
+    if (!data) {
+      toast('No se insertó el talento (posible bloqueo RLS)','err');
+      return;
+    }
     closeModal('modal-talento');
     await loadCampana(); renderAll();
     toast('Talento agregado ✓','ok');
-  } catch(e) { toast('Error: '+e.message,'err'); }
+  } catch(e) {
+    console.error('saveTalento exception:', e);
+    toast('Error: '+e.message,'err');
+  }
 }
 
 function toggleFeeEdit(ctId, type) {
