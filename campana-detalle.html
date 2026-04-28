@@ -1907,36 +1907,20 @@ function toggleScriptText(contId) {
   if (!showing) document.getElementById('script-text-area-'+contId)?.focus();
 }
 
-function buildScriptHtml(text, contId) {
-  const safe = String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function buildScriptText(text, contId) {
   const fecha = new Date().toLocaleString('es-AR',{dateStyle:'long',timeStyle:'short'});
-  const camp = esc(campana?.nombre||'');
+  const camp = campana?.nombre||'';
   const cont = findCont(contId)||{};
-  const titulo = esc(cont.titulo||'');
-  const tipo = esc(TIPO_LABELS[cont.tipo]||cont.tipo||'');
-  return `<!DOCTYPE html>
-<html lang="es"><head><meta charset="UTF-8"><title>Script — ${titulo||camp}</title>
-<style>
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:780px;margin:40px auto;padding:0 28px;color:#1a1a1a;line-height:1.7;background:#fff}
-header{border-bottom:2px solid #9414E0;padding-bottom:14px;margin-bottom:28px}
-h1{margin:0 0 4px;font-size:22px;color:#9414E0;font-weight:700}
-.meta{font-size:12px;color:#666;display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
-.meta span b{color:#333}
-pre{font-family:inherit;white-space:pre-wrap;word-break:break-word;font-size:15px;margin:0}
-@media print{body{margin:0;max-width:none}header{page-break-after:avoid}}
-</style></head>
-<body>
-<header>
-  <h1>Script</h1>
-  <div class="meta">
-    ${camp?`<span><b>Campaña:</b> ${camp}</span>`:''}
-    ${titulo?`<span><b>Contenido:</b> ${titulo}</span>`:''}
-    ${tipo?`<span><b>Tipo:</b> ${tipo}</span>`:''}
-    <span><b>Generado:</b> ${fecha}</span>
-  </div>
-</header>
-<pre>${safe}</pre>
-</body></html>`;
+  const titulo = cont.titulo||'';
+  const tipo = TIPO_LABELS[cont.tipo]||cont.tipo||'';
+  const sep = '═══════════════════════════════════════════════════════════';
+  const sub = '───────────────────────────────────────────────────────────';
+  const meta = [];
+  if (camp)   meta.push(`Campaña:    ${camp}`);
+  if (titulo) meta.push(`Contenido:  ${titulo}`);
+  if (tipo)   meta.push(`Tipo:       ${tipo}`);
+  meta.push(`Generado:   ${fecha}`);
+  return `${sep}\n  SCRIPT\n${sep}\n\n${meta.join('\n')}\n\n${sub}\n\n${String(text).trim()}\n`;
 }
 
 async function saveScriptFromText(contId) {
@@ -1945,11 +1929,11 @@ async function saveScriptFromText(contId) {
   if (!text) { toast('Pegá el script primero','err'); return; }
   toast('Guardando script...','inf');
   try {
-    const html = buildScriptHtml(text, contId);
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-script.html`;
+    const body = buildScriptText(text, contId);
+    const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
+    const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-script.txt`;
     const {error: upErr} = await sb.storage.from('content-scripts').upload(path, blob, {
-      contentType: 'text/html; charset=utf-8'
+      contentType: 'text/plain; charset=utf-8'
     });
     if (upErr) throw upErr;
     const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
