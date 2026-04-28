@@ -834,6 +834,15 @@ function safeStorageName(name) {
   return name.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9._-]/g,'_');
 }
 
+// Asegura que la URL tenga protocolo (sino el browser la trata como ruta relativa)
+function normalizeUrl(url) {
+  const u = (url||'').trim();
+  if (!u) return '';
+  if (/^https?:\/\//i.test(u)) return u;
+  if (/^\/\//.test(u)) return 'https:' + u;
+  return 'https://' + u.replace(/^\/+/, '');
+}
+
 // ════════════════════════════════════════════════
 // BOOT
 // ════════════════════════════════════════════════
@@ -1495,10 +1504,10 @@ function renderContenido(c, ct) {
   // Link publicado
   if (c.url_publicacion) {
     const labelLink = c.tipo === 'reel_tiktok_espejo' ? '🔗 Reel' : '🔗 Ver publicación';
-    fileButtonsHTML += `<a href="${esc(c.url_publicacion)}" target="_blank" class="file-access-btn link">${labelLink}</a>`;
+    fileButtonsHTML += `<a href="${esc(normalizeUrl(c.url_publicacion))}" target="_blank" rel="noopener" class="file-access-btn link">${labelLink}</a>`;
   }
   if (c.url_publicacion_2) {
-    fileButtonsHTML += `<a href="${esc(c.url_publicacion_2)}" target="_blank" class="file-access-btn link">🔗 TikTok</a>`;
+    fileButtonsHTML += `<a href="${esc(normalizeUrl(c.url_publicacion_2))}" target="_blank" rel="noopener" class="file-access-btn link">🔗 TikTok</a>`;
   }
   fileButtonsHTML += '</div>';
   // Only show section if there are files
@@ -1868,13 +1877,13 @@ async function rechazarPaso(contId, paso, obsId) {
 }
 
 async function saveLink(contId, isDual) {
-  const link = document.getElementById('link-'+contId)?.value.trim();
-  if (!link) { toast('Ingresá el link de publicación','err'); return; }
-  const updateData = {url_publicacion: link};
+  const rawLink = document.getElementById('link-'+contId)?.value.trim();
+  if (!rawLink) { toast('Ingresá el link de publicación','err'); return; }
+  const updateData = {url_publicacion: normalizeUrl(rawLink)};
   if (isDual) {
-    const link2 = document.getElementById('link2-'+contId)?.value.trim();
-    if (!link2) { toast('Ingresá el segundo link (TikTok)','err'); return; }
-    updateData.url_publicacion_2 = link2;
+    const rawLink2 = document.getElementById('link2-'+contId)?.value.trim();
+    if (!rawLink2) { toast('Ingresá el segundo link (TikTok)','err'); return; }
+    updateData.url_publicacion_2 = normalizeUrl(rawLink2);
   }
   await sb.from('contenidos').update(updateData).eq('id', contId);
   await avanzar(contId);
