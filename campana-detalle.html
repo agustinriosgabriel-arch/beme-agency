@@ -1423,6 +1423,17 @@ function renderTalentoCard(ct) {
           ${isAdmin()?`<button class="btn btn-ghost btn-xs" style="margin-top:6px" onclick="openDerechos(${ct.id})">Editar</button>`:''}
         </div>
       </div>
+      ${isInternal()?`<div style="padding:0 18px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12px;font-weight:700;color:var(--text-muted)">Conversación:</span>
+        ${ct.email_thread_url
+          ? `<a href="${esc(normalizeUrl(ct.email_thread_url))}" target="_blank" rel="noopener" class="btn btn-ghost btn-xs" style="color:#0ea5e9;border:1px solid rgba(14,165,233,0.3)">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-.9.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              Abrir mail
+            </a>
+            <button class="btn btn-ghost btn-xs" onclick="setEmailThread(${ct.id})" title="Editar URL">✎</button>
+            <button class="btn btn-ghost btn-xs" onclick="clearEmailThread(${ct.id})" title="Quitar vinculación" style="color:var(--red)">✕</button>`
+          : `<button class="btn btn-ghost btn-xs" onclick="setEmailThread(${ct.id})">+ Vincular hilo de email</button>`}
+      </div>`:''}
       ${isAdmin()?`<div style="padding:0 18px 10px;display:flex;align-items:center;gap:10px">
         <span style="font-size:12px;font-weight:700;color:var(--text-muted)">Pago:</span>
         <select class="form-input" style="width:auto;font-size:12px;padding:4px 24px 4px 8px" onchange="savePago(${ct.id},this.value)">
@@ -2121,6 +2132,43 @@ async function saveTalento() {
     console.error('saveTalento exception:', e);
     toast('Error: '+e.message,'err');
   }
+}
+
+async function setEmailThread(ctId) {
+  const ct = campana.campana_talentos?.find(x => x.id === ctId);
+  if (!ct) return;
+  const current = ct.email_thread_url || '';
+  const raw = prompt(
+    'Pegá el link del hilo de email (Gmail/Outlook web).\n\n' +
+    'En Gmail: abrí la conversación, click en el menú "..." → "Abrir en una ventana nueva" o copiá la URL del navegador.\n' +
+    'En Outlook web: copiá la URL del navegador con la conversación abierta.',
+    current
+  );
+  if (raw === null) return; // cancel
+  const url = raw.trim();
+  if (!url) { toast('Link vacío — usá la X para quitar la vinculación','err'); return; }
+  const finalUrl = normalizeUrl(url);
+  try { new URL(finalUrl); } catch { toast('Link inválido','err'); return; }
+
+  const {error} = await sb.from('campana_talentos')
+    .update({email_thread_url: finalUrl})
+    .eq('id', ctId);
+  if (error) { console.error(error); toast('Error: '+error.message,'err'); return; }
+  ct.email_thread_url = finalUrl;
+  renderTalentos();
+  toast('Hilo de email vinculado ✓','ok');
+}
+
+async function clearEmailThread(ctId) {
+  if (!confirm('¿Quitar la vinculación del hilo de email?')) return;
+  const {error} = await sb.from('campana_talentos')
+    .update({email_thread_url: null})
+    .eq('id', ctId);
+  if (error) { console.error(error); toast('Error: '+error.message,'err'); return; }
+  const ct = campana.campana_talentos?.find(x => x.id === ctId);
+  if (ct) ct.email_thread_url = null;
+  renderTalentos();
+  toast('Vinculación quitada','inf');
 }
 
 async function deleteCampanaTalento(ctId) {
