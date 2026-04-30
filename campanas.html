@@ -1092,7 +1092,9 @@ let showTrash = false;
 async function loadCampanas() {
   let query = sb.from('campanas').select(`
     id,nombre,estado,fecha_inicio,fecha_fin,created_at,deleted_at,
-    marcas(id,nombre,logo_url,numero,clientes(nombre,numero)),
+    marca_id,cliente_id,descripcion,
+    metodo_pago_marca,pais_facturacion,requiere_factura,notas_finanzas,
+    marcas(id,nombre,logo_url,numero,clientes(id,nombre,numero)),
     campana_managers(user_id),
     campana_handlers(user_id),
     campana_talentos(
@@ -1468,14 +1470,14 @@ function editCampana(id) {
   document.getElementById('c-fecha-fin').value = c.fecha_fin||'';
   document.getElementById('c-descripcion').value = c.descripcion||'';
 
-  // Cliente / Marca
-  if (c.marca_id) {
-    const marca = marcas.find(m=>m.id===c.marca_id);
-    if (marca) {
-      document.getElementById('c-cliente').value = marca.cliente_id||'';
-      onClienteChange();
-      setTimeout(()=>{ document.getElementById('c-marca').value = c.marca_id; }, 50);
-    }
+  // Cliente / Marca — usa marca_id (FK) y cae al join si falta
+  const marcaId = c.marca_id || c.marcas?.id || null;
+  if (marcaId) {
+    const marca = marcas.find(m=>m.id===marcaId);
+    const clienteId = marca?.cliente_id || c.cliente_id || c.marcas?.clientes?.id || '';
+    document.getElementById('c-cliente').value = clienteId;
+    onClienteChange();
+    document.getElementById('c-marca').value = marcaId;
   }
 
   // Managers — resolve names from loaded usuarios array
