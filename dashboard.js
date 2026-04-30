@@ -267,11 +267,14 @@ async function initAuth() {
       currentUser = session.user;
       hideLoginOverlay();
       await loadFromSupabase();
-      // Ocultar tab "Finanzas" si no es admin
+      // Talentos van al portal; ocultar tab "Finanzas" si no es admin
       try {
         var prof = await sb.from('user_profiles').select('role').eq('id', currentUser.id).single();
-        if (prof && prof.data && prof.data.role !== 'admin') {
-          document.querySelectorAll('.tab-btn[href="finanzas.html"], .nav-tab[href="finanzas.html"]').forEach(function(el){ el.style.display = 'none'; });
+        if (prof && prof.data) {
+          if (prof.data.role === 'talent') { location.href = 'talento-portal.html'; return; }
+          if (prof.data.role !== 'admin') {
+            document.querySelectorAll('.tab-btn[href="finanzas.html"], .nav-tab[href="finanzas.html"]').forEach(function(el){ el.style.display = 'none'; });
+          }
         }
       } catch(e) { /* ignore */ }
     } else {

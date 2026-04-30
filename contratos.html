@@ -850,6 +850,8 @@ async function initApp() {
       showLoginErr('Tu usuario no tiene perfil configurado. Contacta al administrador.');
       return;
     }
+    // Talentos van al portal
+    if (currentProfile.role === 'talent') { location.href = 'talento-portal.html'; return; }
     if (currentProfile.role !== 'admin') {
       document.querySelectorAll('.nav-tab[href="finanzas.html"]').forEach(el => el.style.display = 'none');
     }

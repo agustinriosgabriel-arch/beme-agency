@@ -734,8 +734,21 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
       </button>
     </div>
     <div class="modal-body">
-      <div style="margin-bottom:14px">
+      <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-primary btn-sm" onclick="openNuevoUsuario()">+ Nuevo Usuario</button>
+        <input type="text" id="usuarios-search" class="form-input" placeholder="Buscar nombre o email..." style="flex:1;min-width:180px;font-size:13px;padding:7px 10px" oninput="renderUsuariosLista()">
+        <select id="usuarios-filter-rol" class="form-input" style="width:auto;font-size:13px;padding:7px 24px 7px 10px" onchange="renderUsuariosLista()">
+          <option value="">Todos los roles</option>
+          <option value="admin">Admin</option>
+          <option value="campaign_manager">Manager</option>
+          <option value="brand_handler">Handler</option>
+          <option value="talent">Talento</option>
+        </select>
+        <select id="usuarios-filter-activo" class="form-input" style="width:auto;font-size:13px;padding:7px 24px 7px 10px" onchange="renderUsuariosLista()">
+          <option value="">Activos e inactivos</option>
+          <option value="1">Solo activos</option>
+          <option value="0">Solo inactivos</option>
+        </select>
       </div>
       <div id="usuarios-lista"></div>
     </div>
@@ -958,6 +971,8 @@ async function initApp() {
       showLoginErr('Tu usuario no tiene perfil configurado. Contactá al administrador.');
       return;
     }
+    // Talentos van al portal
+    if (currentProfile.role === 'talent') { location.href = 'talento-portal.html'; return; }
 
     // Mostrar UI de usuario
     setupUserUI();
@@ -1062,7 +1077,8 @@ async function loadClientes() {
 
 async function loadUsuarios() {
   if (!isInternal()) return;
-  const {data} = await sb.from('user_profiles').select('*').eq('activo', true).order('nombre');
+  // Cargar TODOS los usuarios (incluyendo inactivos) para que la gestión los muestre.
+  const {data} = await sb.from('user_profiles').select('*').order('nombre');
   usuarios = data || [];
 }
 
@@ -1932,27 +1948,96 @@ function openUsuariosModal() {
 
 function renderUsuariosLista() {
   const container = document.getElementById('usuarios-lista');
-  if (!usuarios.length) { container.innerHTML='<p style="color:var(--text-muted);font-size:13px">No hay usuarios.</p>'; return; }
   const roleLabels = {admin:'Admin',campaign_manager:'Manager',brand_handler:'Handler',talent:'Talento'};
   const roleColors = {admin:'admin',campaign_manager:'manager',brand_handler:'handler',talent:'talent'};
+
+  const q = (document.getElementById('usuarios-search')?.value||'').toLowerCase().trim();
+  const filterRol = document.getElementById('usuarios-filter-rol')?.value||'';
+  const filterActivo = document.getElementById('usuarios-filter-activo')?.value||'';
+
+  let list = usuarios.slice();
+  if (filterRol) list = list.filter(u => u.role === filterRol);
+  if (filterActivo === '1') list = list.filter(u => !!u.activo);
+  if (filterActivo === '0') list = list.filter(u => !u.activo);
+  if (q) list = list.filter(u =>
+    (u.nombre||'').toLowerCase().includes(q) ||
+    (u.email||'').toLowerCase().includes(q)
+  );
+
+  if (!list.length) { container.innerHTML='<p style="color:var(--text-muted);font-size:13px;padding:8px">Sin resultados.</p>'; return; }
+
   container.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px">
-    ${usuarios.map(u=>`
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm)">
+    ${list.map(u=>{
+      const talentoNombre = u.talent_id ? (talentosList.find(t=>t.id===u.talent_id)?.nombre||'(talento eliminado)') : '';
+      return `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);${u.activo?'':'opacity:0.55'}">
         <div class="option-avatar">${(u.nombre||'?').substring(0,1).toUpperCase()}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600">${escHtml(u.nombre)}</div>
-          <div style="font-size:12px;color:var(--text-dim)">${escHtml(u.email)}</div>
+          <div style="font-size:12px;color:var(--text-dim)">${escHtml(u.email)}${talentoNombre?' · '+escHtml(talentoNombre):''}</div>
         </div>
         <span class="role-badge ${roleColors[u.role]||''}">${roleLabels[u.role]||u.role}</span>
-        <div style="width:8px;height:8px;border-radius:50%;background:${u.activo?'#22c55e':'#ef4444'}"></div>
-      </div>`).join('')}
+        <button class="btn btn-ghost btn-sm" title="${u.activo?'Desactivar':'Activar'}" onclick="toggleActivoUsuario('${u.id}')" style="padding:4px 8px;font-size:11px">${u.activo?'● Activo':'○ Inactivo'}</button>
+        <button class="btn btn-ghost btn-sm" title="Editar" onclick="editUsuario('${u.id}')" style="padding:4px 8px">✎</button>
+        <button class="btn btn-ghost btn-sm" title="Eliminar" onclick="deleteUsuario('${u.id}')" style="padding:4px 8px;color:var(--red,#dc2626)">✕</button>
+      </div>`;
+    }).join('')}
   </div>`;
 }
 
+let editingUsuarioId = null;
+
+function editUsuario(userId) {
+  const u = usuarios.find(x => x.id === userId);
+  if (!u) { showToast('Usuario no encontrado','error'); return; }
+  editingUsuarioId = userId;
+  document.getElementById('modal-user-title').textContent = 'Editar Usuario';
+  document.getElementById('u-nombre').value = u.nombre || '';
+  document.getElementById('u-email').value = u.email || '';
+  document.getElementById('u-password').value = '';
+  document.getElementById('u-password').placeholder = 'Dejar vacío para no cambiar';
+  document.getElementById('u-rol').value = u.role || 'campaign_manager';
+  document.getElementById('u-telefono').value = u.telefono || '';
+  // Populate talento select
+  const sel = document.getElementById('u-talent-id');
+  sel.innerHTML = '<option value="">Seleccionar talento...</option>' +
+    talentosList.map(t=>`<option value="${t.id}" ${t.id===u.talent_id?'selected':''}>${escHtml(t.nombre)}</option>`).join('');
+  onRolChange();
+  document.querySelector('#modal-nuevo-usuario .btn-primary').textContent = 'Guardar cambios';
+  openModal('modal-nuevo-usuario');
+}
+
+async function toggleActivoUsuario(userId) {
+  const u = usuarios.find(x => x.id === userId);
+  if (!u) return;
+  const nuevo = !u.activo;
+  const {error} = await sb.from('user_profiles').update({activo: nuevo}).eq('id', userId);
+  if (error) { showToast('Error: '+error.message,'error'); return; }
+  u.activo = nuevo;
+  renderUsuariosLista();
+  showToast(`Usuario ${nuevo?'activado':'desactivado'} ✓`,'success');
+}
+
+async function deleteUsuario(userId) {
+  const u = usuarios.find(x => x.id === userId);
+  if (!u) return;
+  if (u.id === currentUser.id) { showToast('No te podés eliminar a vos mismo','error'); return; }
+  if (!confirm(`¿Eliminar el perfil de "${u.nombre}"?\n\nEsto borra el perfil de la app. La cuenta de auth (login) queda en Supabase y debe limpiarse manualmente desde el dashboard de Supabase si querés que no pueda volver a loguearse.`)) return;
+  const {error} = await sb.from('user_profiles').delete().eq('id', userId);
+  if (error) { showToast('Error: '+error.message,'error'); return; }
+  await loadUsuarios();
+  renderUsuariosLista();
+  showToast('Perfil eliminado ✓','success');
+}
+
 function openNuevoUsuario() {
+  editingUsuarioId = null;
+  document.getElementById('modal-user-title').textContent = 'Nuevo Usuario';
   ['u-nombre','u-email','u-password','u-telefono'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('u-password').placeholder = 'Mín 6 caracteres';
   document.getElementById('u-rol').value = 'campaign_manager';
   document.getElementById('u-talent-group').style.display = 'none';
+  document.querySelector('#modal-nuevo-usuario .btn-primary').textContent = 'Crear Usuario';
   // Populate talento select
   const sel = document.getElementById('u-talent-id');
   sel.innerHTML = '<option value="">Seleccionar talento...</option>' +
@@ -1970,14 +2055,46 @@ async function saveUsuario() {
   const email    = document.getElementById('u-email').value.trim();
   const password = document.getElementById('u-password').value;
   const rol      = document.getElementById('u-rol').value;
+  const isEdit   = !!editingUsuarioId;
 
-  if (!nombre||!email||!password) { showToast('Nombre, email y contraseña son obligatorios','error'); return; }
-  if (password.length < 6) { showToast('La contraseña debe tener al menos 6 caracteres','error'); return; }
+  if (!nombre||!email) { showToast('Nombre y email son obligatorios','error'); return; }
+  // En modo creación, contraseña obligatoria. En edición es opcional (solo si querés cambiarla).
+  if (!isEdit && !password) { showToast('Contraseña obligatoria para nuevo usuario','error'); return; }
+  if (password && password.length < 6) { showToast('La contraseña debe tener al menos 6 caracteres','error'); return; }
 
   // Validación específica para rol talent: requiere talento vinculado
   if (rol === 'talent' && !document.getElementById('u-talent-id').value) {
     showToast('Para rol Talento, seleccioná un talento de la lista','error'); return;
   }
+
+  // ── EDICIÓN ────────────────────────────────────────
+  if (isEdit) {
+    try {
+      const payload = {
+        nombre,
+        email,
+        role: rol,
+        telefono: document.getElementById('u-telefono').value.trim(),
+        talent_id: rol==='talent' ? (parseInt(document.getElementById('u-talent-id').value)||null) : null,
+      };
+      const {error} = await sb.from('user_profiles').update(payload).eq('id', editingUsuarioId);
+      if (error) throw error;
+      // Cambio de contraseña no es posible desde frontend con anon key.
+      if (password) {
+        showToast('Perfil actualizado ✓. La contraseña no se puede cambiar desde la app — usá el dashboard de Supabase.','info');
+      } else {
+        showToast('Perfil actualizado ✓','success');
+      }
+      await loadUsuarios();
+      renderUsuariosLista();
+      closeModal('modal-nuevo-usuario');
+    } catch(e) {
+      console.error('saveUsuario edit:', e);
+      showToast('Error al actualizar: '+e.message,'error');
+    }
+    return;
+  }
+  // ── CREACIÓN ────────────────────────────────────────
 
   try {
     // Guardar sesión admin antes de signUp (signUp limpia la sesión si Supabase

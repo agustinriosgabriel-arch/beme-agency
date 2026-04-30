@@ -873,6 +873,8 @@ async function init() {
       return; 
     }
     currentProfile = p;
+    // Talentos van al portal
+    if (currentProfile.role === 'talent') { location.href = 'talento-portal.html'; return; }
 
     await Promise.all([loadCampanaCore(), loadTalentos()]);
 
