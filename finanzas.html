@@ -260,7 +260,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
 
   <div id="section-cxc">
     <div class="toolbar">
-      <div class="search-wrap"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" class="search-input" id="cxc-search" placeholder="Buscar campana, cliente..." oninput="renderCxC()"></div>
+      <div class="search-wrap"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" class="search-input" id="cxc-search" placeholder="Buscar campana, cliente, marca, talento, identificador, folio..." oninput="renderCxC()"></div>
       <select class="filter-select" id="cxc-filter" onchange="renderCxC()"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="emitida">Emitida</option><option value="enviada">Enviada</option><option value="cobrada">Cobrada</option></select>
     </div>
     <div id="cxc-container"></div>
@@ -268,7 +268,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
 
   <div id="section-cxp" style="display:none">
     <div class="toolbar">
-      <div class="search-wrap"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" class="search-input" id="cxp-search" placeholder="Buscar talento, campana..." oninput="renderCxP()"></div>
+      <div class="search-wrap"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" class="search-input" id="cxp-search" placeholder="Buscar talento, campana, identificador, marca..." oninput="renderCxP()"></div>
       <select class="filter-select" id="cxp-filter" onchange="renderCxP()"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="pagado">Pagado</option></select>
     </div>
     <div id="cxp-container"></div>
@@ -488,7 +488,7 @@ function switchSection(s){
 // CxC COBROS
 // ═══════════════════════════════════════════
 function renderCxC(){
-  const q=(document.getElementById('cxc-search')?.value||'').toLowerCase();
+  const q=(document.getElementById('cxc-search')?.value||'').toLowerCase().trim();
   const filt=document.getElementById('cxc-filter')?.value||'';
   const container=document.getElementById('cxc-container');
 
@@ -498,8 +498,23 @@ function renderCxC(){
     const cli=c.marcas?.clientes;
     if(!cli)return;
     const cliName=cli.nombre||'Sin cliente';
-    if(q&&!(c.nombre||'').toLowerCase().includes(q)&&!cliName.toLowerCase().includes(q))return;
+    const marcaName=(c.marcas?.nombre||'').toLowerCase();
+    const cts = campanasTalentos.filter(ct=>ct.campana_id===c.id);
+    const ids = cts.map(ct=>(ct.identificador||'').toLowerCase());
+    const tals = cts.map(ct=>(ct.talentos?.nombre||'').toLowerCase());
     const facs=facturas.filter(f=>f.campana_id===c.id);
+    const folios = facs.map(f=>(f.numero_factura||'').toLowerCase());
+    const ocs    = facs.map(f=>(f.orden_compra||'').toLowerCase());
+    if(q){
+      const match = (c.nombre||'').toLowerCase().includes(q)
+                 || cliName.toLowerCase().includes(q)
+                 || marcaName.includes(q)
+                 || ids.some(x=>x.includes(q))
+                 || tals.some(x=>x.includes(q))
+                 || folios.some(x=>x.includes(q))
+                 || ocs.some(x=>x.includes(q));
+      if(!match) return;
+    }
     if(filt){if(!facs.length&&filt!=='pendiente')return;if(facs.length&&!facs.some(f=>f.estado===filt))return;}
     if(!byClient[cli.id])byClient[cli.id]={cliente:cli,campanas:[]};
     byClient[cli.id].campanas.push({...c,facs});
@@ -759,7 +774,7 @@ async function saveComplemento(){
 // CxP PAGOS
 // ═══════════════════════════════════════════
 function renderCxP(){
-  const q=(document.getElementById('cxp-search')?.value||'').toLowerCase();
+  const q=(document.getElementById('cxp-search')?.value||'').toLowerCase().trim();
   const filt=document.getElementById('cxp-filter')?.value||'';
   const container=document.getElementById('cxp-container');
 
@@ -768,7 +783,10 @@ function renderCxP(){
     const camp=campanas.find(c=>c.id===ct.campana_id);
     const tName=(ct.talentos?.nombre||'').toLowerCase();
     const cName=(camp?.nombre||'').toLowerCase();
-    if(q&&!tName.includes(q)&&!cName.includes(q))return false;
+    const ident=(ct.identificador||'').toLowerCase();
+    const marca=(camp?.marcas?.nombre||'').toLowerCase();
+    const cli  =(camp?.marcas?.clientes?.nombre||'').toLowerCase();
+    if(q && !tName.includes(q) && !cName.includes(q) && !ident.includes(q) && !marca.includes(q) && !cli.includes(q)) return false;
     return true;
   });
 
@@ -779,7 +797,9 @@ function renderCxP(){
     const pt=pagosTalento.find(p=>p.campana_talento_id===ct.id);
     const isPaid=ct.pago_estado==='pagado';
     return `<div class="fin-row">
-      <div class="fin-row-name">${esc(ct.talentos?.nombre||'—')}</div>
+      <div class="fin-row-name">${esc(ct.talentos?.nombre||'—')}
+        ${ct.identificador?`<span title="Identificador / OC" style="margin-left:6px;font-size:10px;font-family:'SF Mono',monospace;font-weight:700;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px;cursor:pointer" onclick="event.stopPropagation();navigator.clipboard.writeText('${esc(ct.identificador)}');showToast('Copiado: ${esc(ct.identificador)}','success')">${esc(ct.identificador)}</span>`:''}
+      </div>
       <div class="fin-row-meta">${esc(camp?.nombre||'—')}</div>
       <span class="status-pill ${isPaid?'st-pagado':'st-pendiente'}">${isPaid?'Pagado':'Pendiente'}</span>
       ${pt?`<span style="font-size:10px;color:var(--text-dim);text-transform:uppercase;font-weight:700">${pt.corredor||''}</span>`:''}
