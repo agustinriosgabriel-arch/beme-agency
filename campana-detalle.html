@@ -706,7 +706,7 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
             <select id="mc-spark-dias" class="form-input">
               <option value="">Sin spark</option>
               <option value="3">3d</option><option value="7">7d</option><option value="30">30d</option>
-              <option value="60">60d</option><option value="180">180d</option><option value="360">360d</option>
+              <option value="60">60d</option><option value="90">90d</option><option value="180">180d</option><option value="360">360d</option>
             </select>
           </div>
           <div class="form-group">
@@ -882,15 +882,22 @@ async function init() {
     document.getElementById('load-overlay').style.display = 'none';
     document.getElementById('app').style.display = 'grid';
 
+    // Manager = mismos permisos que Admin EXCEPTO ver precios + Finanzas.
+    // Cobro y eliminar campaña ahora son para todo rol interno.
     if (isInternal()) {
       document.getElementById('btn-editar').style.display = 'inline-flex';
       document.getElementById('btn-add-t').style.display = 'inline-flex';
       document.getElementById('side-chat').style.display = 'block';
-    }
-    if (isAdmin()) {
-      document.getElementById('side-fin').style.display = 'block';
       document.getElementById('side-cobro').style.display = 'block';
       document.getElementById('btn-del-camp').style.display = 'inline-flex';
+    }
+    // side-fin (sidebar de Finanzas con totales y desglose de plata) sigue siendo solo Admin
+    if (isAdmin()) {
+      document.getElementById('side-fin').style.display = 'block';
+    }
+    // Ocultar tab "Finanzas" para no-admin
+    if (!isAdmin()) {
+      document.querySelectorAll('.nav-tab[href="finanzas.html"]').forEach(el => el.style.display = 'none');
     }
 
     // Diferido: hijos pesados de contenidos (observaciones, scripts, borradores, historial, briefs)

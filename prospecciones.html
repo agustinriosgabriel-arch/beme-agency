@@ -705,6 +705,9 @@ async function initApp() {
       showLoginErr('Tu usuario no tiene perfil configurado. Contacta al administrador.');
       return;
     }
+    if (currentProfile.role !== 'admin') {
+      document.querySelectorAll('.nav-tab[href="finanzas.html"]').forEach(el => el.style.display = 'none');
+    }
 
     await loadAppConfig();
     await loadProspecciones();

@@ -408,6 +408,8 @@ async function initApp(){
     const{data:profile}=await sb.from('user_profiles').select('*').eq('id',currentUser.id).single();
     currentProfile=profile;
     if(!currentProfile){document.getElementById('load-overlay').style.display='none';document.getElementById('login-overlay').style.display='flex';showLoginErr('Sin perfil.');return;}
+    // Solo admin puede acceder a Finanzas
+    if(currentProfile.role!=='admin'){document.getElementById('load-overlay').style.display='none';showToast('Acceso restringido: solo administradores','error');setTimeout(()=>{location.href='campanas.html';},1500);return;}
     await loadData();
     document.getElementById('login-overlay').style.display='none';
     document.getElementById('app').style.display='block';

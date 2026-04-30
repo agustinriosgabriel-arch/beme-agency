@@ -976,14 +976,17 @@ async function initApp() {
     document.getElementById('app').style.display = 'flex';
     const _lo=document.getElementById('load-overlay'); _lo.style.display='none';
 
-    // Mostrar botones según rol
-    if (isAdmin()) {
+    // Mostrar botones según rol — Manager tiene los mismos permisos que Admin
+    // excepto: ver precios en campaña + acceder a Finanzas.
+    if (isInternal()) {
       document.getElementById('btn-nueva').style.display = 'inline-flex';
       document.getElementById('btn-clientes').style.display = 'inline-flex';
       document.getElementById('btn-usuarios').style.display = 'inline-flex';
       document.getElementById('btn-trash').style.display = 'inline-flex';
-    } else if (isInternal()) {
-      document.getElementById('btn-nueva').style.display = 'inline-flex';
+    }
+    // Ocultar tab "Finanzas" para no-admin
+    if (!isAdmin()) {
+      document.querySelectorAll('.nav-tab[href="finanzas.html"]').forEach(el => el.style.display = 'none');
     }
 
     renderCampanas();
@@ -1971,18 +1974,34 @@ async function saveUsuario() {
   if (!nombre||!email||!password) { showToast('Nombre, email y contraseña son obligatorios','error'); return; }
   if (password.length < 6) { showToast('La contraseña debe tener al menos 6 caracteres','error'); return; }
 
+  // Validación específica para rol talent: requiere talento vinculado
+  if (rol === 'talent' && !document.getElementById('u-talent-id').value) {
+    showToast('Para rol Talento, seleccioná un talento de la lista','error'); return;
+  }
+
   try {
-    // Save current admin session before creating new user
+    // Guardar sesión admin antes de signUp (signUp limpia la sesión si Supabase
+    // requiere confirmación de email — y ahí el INSERT siguiente corre como anon
+    // y RLS lo rechaza silenciosamente).
     const {data:{session: adminSession}} = await sb.auth.getSession();
 
-    // Create user via signUp (admin API not available with anon key)
+    // Crear el auth user
     const {data: authData, error: authError} = await sb.auth.signUp({email, password});
     if (authError) throw authError;
 
     const userId = authData?.user?.id;
     if (!userId) throw new Error('No se pudo obtener el ID. Puede que el email ya esté registrado.');
 
-    // Create profile
+    // RESTAURAR sesión admin ANTES del insert para que el INSERT corra como admin
+    // (necesario para pasar la RLS user_profiles_insert).
+    if (adminSession) {
+      await sb.auth.setSession({
+        access_token: adminSession.access_token,
+        refresh_token: adminSession.refresh_token
+      });
+    }
+
+    // Insertar perfil — ahora con privilegios de admin
     const {error: profileError} = await sb.from('user_profiles').insert({
       id: userId,
       nombre,
@@ -1992,15 +2011,7 @@ async function saveUsuario() {
       talent_id: rol==='talent' ? (parseInt(document.getElementById('u-talent-id').value)||null) : null,
       activo: true,
     });
-    if (profileError) console.warn('Profile insert error:', profileError.message);
-
-    // Restore admin session (signUp may have switched sessions)
-    if (adminSession) {
-      await sb.auth.setSession({
-        access_token: adminSession.access_token,
-        refresh_token: adminSession.refresh_token
-      });
-    }
+    if (profileError) throw new Error('Auth creado pero el perfil no se guardó: ' + profileError.message);
 
     await loadUsuarios();
     renderUsuariosLista();
@@ -2009,7 +2020,7 @@ async function saveUsuario() {
   } catch(e) {
     console.error('saveUsuario:', e);
     showToast('Error al crear usuario: '+e.message,'error');
-    // Make sure admin stays logged in
+    // Asegurar que el admin sigue logueado
     try { const {data:{session}} = await sb.auth.getSession(); if (!session) location.reload(); } catch(x){}
   }
 }
