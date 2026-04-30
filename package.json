@@ -2,6 +2,7 @@
   "name": "beme-agency",
   "private": true,
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
     "nodemailer": "^6.9.0"
   }
 }

@@ -2079,9 +2079,22 @@ async function saveUsuario() {
       };
       const {error} = await sb.from('user_profiles').update(payload).eq('id', editingUsuarioId);
       if (error) throw error;
-      // Cambio de contraseña no es posible desde frontend con anon key.
+
+      // Cambio de contraseña vía Netlify function (usa service_role server-side)
       if (password) {
-        showToast('Perfil actualizado ✓. La contraseña no se puede cambiar desde la app — usá el dashboard de Supabase.','info');
+        const {data:{session}} = await sb.auth.getSession();
+        const resp = await fetch('/.netlify/functions/admin-set-password', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            userId: editingUsuarioId,
+            newPassword: password,
+            callerToken: session?.access_token
+          })
+        });
+        const result = await resp.json();
+        if (!resp.ok) throw new Error('Contraseña: ' + (result.error || 'error desconocido'));
+        showToast('Perfil y contraseña actualizados ✓','success');
       } else {
         showToast('Perfil actualizado ✓','success');
       }
