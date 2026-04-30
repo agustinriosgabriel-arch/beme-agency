@@ -748,18 +748,27 @@ async function loadProspecciones() {
   if (error) throw error;
   prospecciones = data || [];
 
-  const {data: contactos} = await sb.from('prospeccion_contactos').select('id,prospeccion_id,etapa,nombre,tiktok,instagram,youtube,email,telefono,ciudad,paises,seguidores,categorias,foto,genero,keywords,valores,talento_id');
+  // Dos queries livianas en paralelo:
+  //  1) solo prospeccion_id+etapa para contar (payload mínimo)
+  //  2) solo no_interesados con las columnas que usa la tabla
+  const [countsRes, niRes] = await Promise.all([
+    sb.from('prospeccion_contactos').select('prospeccion_id, etapa'),
+    sb.from('prospeccion_contactos')
+      .select('id, prospeccion_id, etapa, nombre, tiktok, instagram, seguidores, talento_id')
+      .eq('etapa', 'no_interesado'),
+  ]);
+
   contactosCounts = {};
-  noInteresadosGlobal = [];
-  (contactos||[]).forEach(c => {
+  (countsRes.data||[]).forEach(c => {
     if (!contactosCounts[c.prospeccion_id]) contactosCounts[c.prospeccion_id] = {total:0, interesados:0};
     contactosCounts[c.prospeccion_id].total++;
     if (c.etapa === 'interesado') contactosCounts[c.prospeccion_id].interesados++;
-    if (c.etapa === 'no_interesado') {
-      var prosp = prospecciones.find(function(p){return p.id===c.prospeccion_id;});
-      c._prospeccion_nombre = prosp ? (prosp.marca || prosp.nombre || '') : '';
-      noInteresadosGlobal.push(c);
-    }
+  });
+
+  noInteresadosGlobal = (niRes.data||[]).map(c => {
+    var prosp = prospecciones.find(function(p){return p.id===c.prospeccion_id;});
+    c._prospeccion_nombre = prosp ? (prosp.marca || prosp.nombre || '') : '';
+    return c;
   });
 }
 

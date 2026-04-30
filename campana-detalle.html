@@ -874,10 +874,10 @@ async function init() {
     }
     currentProfile = p;
 
-    await Promise.all([loadCampana(), loadTalentos()]);
-    
-    if (!campana) return; // loadCampana showed toast and returned
-    
+    await Promise.all([loadCampanaCore(), loadTalentos()]);
+
+    if (!campana) return; // loadCampanaCore showed toast and returned
+
     renderAll();
     document.getElementById('load-overlay').style.display = 'none';
     document.getElementById('app').style.display = 'grid';
@@ -886,12 +886,23 @@ async function init() {
       document.getElementById('btn-editar').style.display = 'inline-flex';
       document.getElementById('btn-add-t').style.display = 'inline-flex';
       document.getElementById('side-chat').style.display = 'block';
-      subscribeChat();
     }
     if (isAdmin()) {
       document.getElementById('side-fin').style.display = 'block';
       document.getElementById('side-cobro').style.display = 'block';
       document.getElementById('btn-del-camp').style.display = 'inline-flex';
+    }
+
+    // Diferido: hijos pesados de contenidos (observaciones, scripts, borradores, historial, briefs)
+    loadCampanaChildren()
+      .then(() => { if (campana) renderAll(); })
+      .catch(e => console.warn('loadCampanaChildren:', e));
+
+    // Diferido: mensajes de chat (cargar antes de suscribir para evitar duplicados)
+    if (isInternal()) {
+      loadCampanaMensajes()
+        .then(() => { if (campana) renderChat(); subscribeChat(); })
+        .catch(e => console.warn('loadCampanaMensajes:', e));
     }
 
     // Auto-refresh: re-fetch cada 4s para reflejar cambios de otros usuarios.
@@ -945,30 +956,79 @@ function isTalentOf(ct) { return currentProfile?.role === 'talent' && currentPro
 // ════════════════════════════════════════════════
 // LOAD
 // ════════════════════════════════════════════════
-async function loadCampana() {
+// Carga liviana para el primer paint: campaña + marcas + equipo + briefs de campaña + talentos + contenidos (sin hijos)
+async function loadCampanaCore() {
   const {data, error} = await sb.from('campanas').select(`
     *,
     marcas(id,nombre,logo_url,clientes(nombre)),
     campana_managers(user_id),
     campana_handlers(user_id),
     campana_briefs(*),
-    campana_mensajes(*),
     campana_talentos(
       *,
       talentos(id,nombre,foto),
-      contenidos(*,contenido_observaciones(*),contenido_scripts(*),contenido_borradores(*),contenido_historial(*),contenido_briefs(*))
+      contenidos(*)
     )
   `).eq('id', campanaId).single();
   if (error) {
-    console.error('loadCampana error:', error);
+    console.error('loadCampanaCore error:', error);
     toast('Error al cargar campaña: ' + error.message, 'err');
     return;
   }
   if (!data) { location.href = 'campanas.html'; return; }
   campana = data;
-  
-  // Load team names separately (avoids RLS join issues)
+  campana.campana_mensajes = campana.campana_mensajes || [];
   await loadEquipoNames();
+}
+
+// Carga diferida de hijos pesados (se hace en background tras el primer paint)
+async function loadCampanaChildren() {
+  if (!campana) return;
+  const contIds = (campana.campana_talentos||[]).flatMap(ct => (ct.contenidos||[]).map(c => c.id));
+  if (!contIds.length) return;
+  const [obs, scripts, drafts, hist, cbriefs] = await Promise.all([
+    sb.from('contenido_observaciones').select('*').in('contenido_id', contIds),
+    sb.from('contenido_scripts').select('*').in('contenido_id', contIds),
+    sb.from('contenido_borradores').select('*').in('contenido_id', contIds),
+    sb.from('contenido_historial').select('*').in('contenido_id', contIds),
+    sb.from('contenido_briefs').select('*').in('contenido_id', contIds),
+  ]);
+  const groupBy = (rows) => {
+    const m = {};
+    (rows.data||[]).forEach(r => { (m[r.contenido_id] = m[r.contenido_id] || []).push(r); });
+    return m;
+  };
+  const obsMap = groupBy(obs), scrMap = groupBy(scripts), drfMap = groupBy(drafts), hisMap = groupBy(hist), brMap = groupBy(cbriefs);
+  for (const ct of (campana.campana_talentos||[])) {
+    for (const c of (ct.contenidos||[])) {
+      c.contenido_observaciones = obsMap[c.id] || [];
+      c.contenido_scripts = scrMap[c.id] || [];
+      c.contenido_borradores = drfMap[c.id] || [];
+      c.contenido_historial = hisMap[c.id] || [];
+      c.contenido_briefs = brMap[c.id] || [];
+    }
+  }
+}
+
+// Carga diferida de mensajes de chat
+async function loadCampanaMensajes() {
+  if (!campana) return;
+  const {data} = await sb.from('campana_mensajes')
+    .select('*')
+    .eq('campana_id', campanaId)
+    .order('created_at', {ascending:true});
+  campana.campana_mensajes = data || [];
+}
+
+// Recarga completa: usado por callbacks tras acciones (insert, update, delete) y por autoRefresh.
+// Core primero (lo necesita children para los IDs de contenidos); después hijos + mensajes en paralelo.
+async function loadCampana() {
+  await loadCampanaCore();
+  if (!campana) return;
+  await Promise.all([
+    loadCampanaChildren(),
+    isInternal() ? loadCampanaMensajes() : Promise.resolve(),
+  ]);
 }
 async function loadTalentos() {
   const {data} = await sb.from('talentos').select('id,nombre,foto').order('nombre');
