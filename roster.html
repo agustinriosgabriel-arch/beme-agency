@@ -143,11 +143,12 @@ async function init() {
   try {
     document.getElementById('load-msg').textContent = 'Cargando roster...';
 
-    // Check if user is logged in (internal team)
+    // Check if user is logged in (internal team) — y redirigir talentos al portal
     try {
       const {data:{session}} = await sb.auth.getSession();
       if (session) {
         const {data:profile} = await sb.from('user_profiles').select('role').eq('id', session.user.id).single();
+        if (profile && profile.role === 'talent') { location.href = 'talento-portal.html'; return; }
         if (profile && ['admin','campaign_manager'].includes(profile.role)) IS_INTERNAL = true;
       }
     } catch(e) {}

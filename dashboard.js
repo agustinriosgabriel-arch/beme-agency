@@ -257,6 +257,20 @@ async function doLogout() {
   showLoginOverlay();
 }
 
+async function gateRoleAndMaybeRedirect(userId) {
+  // Devuelve true si esta página es válida para el rol; false si redirigió.
+  try {
+    var prof = await sb.from('user_profiles').select('role').eq('id', userId).single();
+    if (prof && prof.data) {
+      if (prof.data.role === 'talent') { location.href = 'talento-portal.html'; return false; }
+      if (prof.data.role !== 'admin') {
+        document.querySelectorAll('.tab-btn[href="finanzas.html"], .nav-tab[href="finanzas.html"]').forEach(function(el){ el.style.display = 'none'; });
+      }
+    }
+  } catch(e) { /* ignore */ }
+  return true;
+}
+
 async function initAuth() {
   if (!sb) initSupabase();
   if (!sb) { showLoginOverlay(); return; }
@@ -265,18 +279,11 @@ async function initAuth() {
     var session = res.data && res.data.session;
     if (session) {
       currentUser = session.user;
+      // Gate ANTES de cargar datos para que el talento no vea el dashboard interno
+      var ok = await gateRoleAndMaybeRedirect(currentUser.id);
+      if (!ok) return;
       hideLoginOverlay();
       await loadFromSupabase();
-      // Talentos van al portal; ocultar tab "Finanzas" si no es admin
-      try {
-        var prof = await sb.from('user_profiles').select('role').eq('id', currentUser.id).single();
-        if (prof && prof.data) {
-          if (prof.data.role === 'talent') { location.href = 'talento-portal.html'; return; }
-          if (prof.data.role !== 'admin') {
-            document.querySelectorAll('.tab-btn[href="finanzas.html"], .nav-tab[href="finanzas.html"]').forEach(function(el){ el.style.display = 'none'; });
-          }
-        }
-      } catch(e) { /* ignore */ }
     } else {
       showLoginOverlay();
     }
@@ -287,6 +294,8 @@ async function initAuth() {
   sb.auth.onAuthStateChange(async function(event, session) {
     if (event === 'SIGNED_IN' && !currentUser) {
       currentUser = session.user;
+      var ok = await gateRoleAndMaybeRedirect(currentUser.id);
+      if (!ok) return;
       hideLoginOverlay();
       await loadFromSupabase();
     } else if (event === 'SIGNED_OUT') {

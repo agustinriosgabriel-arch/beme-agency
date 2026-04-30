@@ -192,6 +192,15 @@ async function init() {
   const token = new URLSearchParams(window.location.search).get('token');
   if (!token) { showError('URL inv\u00e1lida \u2014 falta el token.'); return; }
 
+  // Si hay un user logueado con rol=talent, redirigirlo al portal
+  try {
+    const {data:{session}} = await sb.auth.getSession();
+    if (session) {
+      const {data:profile} = await sb.from('user_profiles').select('role').eq('id', session.user.id).single();
+      if (profile && profile.role === 'talent') { location.href = 'talento-portal.html'; return; }
+    }
+  } catch(e) {}
+
   try {
     document.getElementById('load-msg').textContent = 'Cargando roster...';
     const { data: roster, error: rErr } = await sb.from('rosters_generales').select('*').eq('public_token', token).single();
