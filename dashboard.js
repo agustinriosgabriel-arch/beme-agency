@@ -5906,7 +5906,7 @@ async function generateAIRoster() {
     ].filter(Boolean),
     seguidores_min: parseInt(document.getElementById('air-seg-min').value) || 0,
     seguidores_max: parseInt(document.getElementById('air-seg-max').value) || 0,
-    cantidad: parseInt(document.getElementById('air-cantidad').value) || 10,
+    cantidad: parseInt(document.getElementById('air-cantidad').value) || 0,
     notas: document.getElementById('air-notas').value.trim(),
   };
 
