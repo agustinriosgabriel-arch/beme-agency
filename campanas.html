@@ -1470,14 +1470,29 @@ function editCampana(id) {
   document.getElementById('c-fecha-fin').value = c.fecha_fin||'';
   document.getElementById('c-descripcion').value = c.descripcion||'';
 
-  // Cliente / Marca — usa marca_id (FK) y cae al join si falta
+  // Cliente / Marca — resolver de forma independiente y tolerante
   const marcaId = c.marca_id || c.marcas?.id || null;
-  if (marcaId) {
-    const marca = marcas.find(m=>m.id===marcaId);
-    const clienteId = marca?.cliente_id || c.cliente_id || c.marcas?.clientes?.id || '';
-    document.getElementById('c-cliente').value = clienteId;
+  const marcaObj = marcaId ? marcas.find(m=>m.id===marcaId) : null;
+  const clienteId = c.cliente_id || marcaObj?.cliente_id || c.marcas?.clientes?.id || null;
+
+  if (clienteId) {
+    const selCli = document.getElementById('c-cliente');
+    // Si el cliente no esta en el dropdown (RLS / borrado / no cargado), inyectarlo
+    if (!selCli.querySelector(`option[value="${clienteId}"]`)) {
+      const nombre = c.marcas?.clientes?.nombre || marcaObj?.cliente_nombre || `Cliente #${clienteId}`;
+      selCli.insertAdjacentHTML('beforeend', `<option value="${clienteId}">${escHtml(nombre)}</option>`);
+    }
+    selCli.value = String(clienteId);
     onClienteChange();
-    document.getElementById('c-marca').value = marcaId;
+  }
+
+  if (marcaId) {
+    const selM = document.getElementById('c-marca');
+    if (!selM.querySelector(`option[value="${marcaId}"]`)) {
+      const nombre = c.marcas?.nombre || marcaObj?.nombre || `Marca #${marcaId}`;
+      selM.insertAdjacentHTML('beforeend', `<option value="${marcaId}">${escHtml(nombre)}</option>`);
+    }
+    selM.value = String(marcaId);
   }
 
   // Managers — resolve names from loaded usuarios array
