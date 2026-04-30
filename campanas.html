@@ -542,6 +542,10 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
         <option value="">Todas las marcas</option>
       </select>
       <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost btn-sm" id="btn-mis-campanas" onclick="toggleMisCampanas()" style="display:none" title="Alternar entre tus campañas y todas las activas">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span id="mis-campanas-label">Solo mis campañas</span>
+        </button>
         <button class="btn btn-ghost btn-sm" id="btn-trash" onclick="toggleTrash()" style="display:none" title="Papelera">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           <span id="trash-label">Papelera</span>
@@ -992,7 +996,7 @@ async function initApp() {
     const _lo=document.getElementById('load-overlay'); _lo.style.display='none';
 
     // Mostrar botones según rol — Manager tiene los mismos permisos que Admin
-    // excepto: ver precios en campaña + acceder a Finanzas.
+    // excepto: eliminar usuarios + ver precios en campaña + acceder a Finanzas.
     if (isInternal()) {
       document.getElementById('btn-nueva').style.display = 'inline-flex';
       document.getElementById('btn-clientes').style.display = 'inline-flex';
@@ -1002,6 +1006,14 @@ async function initApp() {
     // Ocultar tab "Finanzas" para no-admin
     if (!isAdmin()) {
       document.querySelectorAll('.nav-tab[href="finanzas.html"]').forEach(el => el.style.display = 'none');
+    }
+    // Toggle "Mis campañas / Todas" — solo para campaign_manager (admin siempre ve todas)
+    if (currentProfile.role === 'campaign_manager') {
+      onlyMyCampanas = true;
+      const btn = document.getElementById('btn-mis-campanas');
+      btn.style.display = 'inline-flex';
+      btn.style.color = 'var(--primary)';
+      document.getElementById('mis-campanas-label').textContent = 'Solo mis campañas';
     }
 
     renderCampanas();
@@ -1088,10 +1100,11 @@ async function loadTalentosBD() {
 }
 
 let showTrash = false;
+let onlyMyCampanas = false; // Para campaign_manager: por defecto sólo ver sus campañas
 
 async function loadCampanas() {
   let query = sb.from('campanas').select(`
-    id,nombre,estado,fecha_inicio,fecha_fin,created_at,deleted_at,
+    id,nombre,estado,fecha_inicio,fecha_fin,created_at,deleted_at,created_by,
     marca_id,cliente_id,descripcion,
     metodo_pago_marca,pais_facturacion,requiere_factura,notas_finanzas,
     marcas(id,nombre,logo_url,numero,clientes(id,nombre,numero)),
@@ -1134,8 +1147,16 @@ function getFilteredCampanas() {
   const q = (document.getElementById('search-input')?.value||'').toLowerCase().trim();
   const estado = document.getElementById('filter-estado')?.value||'';
   const marcaId = parseInt(document.getElementById('filter-marca')?.value)||0;
+  const filterMine = onlyMyCampanas && currentProfile?.role === 'campaign_manager';
+  const myId = currentUser?.id;
 
   return campanas.filter(c => {
+    if (filterMine) {
+      const isMine = c.created_by === myId
+        || (c.campana_managers||[]).some(m => m.user_id === myId)
+        || (c.campana_handlers||[]).some(h => h.user_id === myId);
+      if (!isMine) return false;
+    }
     if (estado && c.estado !== estado) return false;
     if (marcaId && c.marca_id !== marcaId) return false;
     if (q) {
@@ -1150,6 +1171,20 @@ function getFilteredCampanas() {
     }
     return true;
   });
+}
+
+function toggleMisCampanas() {
+  onlyMyCampanas = !onlyMyCampanas;
+  const lbl = document.getElementById('mis-campanas-label');
+  const btn = document.getElementById('btn-mis-campanas');
+  if (onlyMyCampanas) {
+    lbl.textContent = 'Solo mis campañas';
+    btn.style.color = 'var(--primary)';
+  } else {
+    lbl.textContent = 'Todas las campañas';
+    btn.style.color = '';
+  }
+  renderCampanas();
 }
 
 async function toggleTrash() {
@@ -2011,7 +2046,7 @@ function renderUsuariosLista() {
         <span class="role-badge ${roleColors[u.role]||''}">${roleLabels[u.role]||u.role}</span>
         <button class="btn btn-ghost btn-sm" title="${u.activo?'Desactivar':'Activar'}" onclick="toggleActivoUsuario('${u.id}')" style="padding:4px 8px;font-size:11px">${u.activo?'● Activo':'○ Inactivo'}</button>
         <button class="btn btn-ghost btn-sm" title="Editar" onclick="editUsuario('${u.id}')" style="padding:4px 8px">✎</button>
-        <button class="btn btn-ghost btn-sm" title="Eliminar" onclick="deleteUsuario('${u.id}')" style="padding:4px 8px;color:var(--red,#dc2626)">✕</button>
+        ${isAdmin()?`<button class="btn btn-ghost btn-sm" title="Eliminar" onclick="deleteUsuario('${u.id}')" style="padding:4px 8px;color:var(--red,#dc2626)">✕</button>`:''}
       </div>`;
     }).join('')}
   </div>`;
@@ -2051,6 +2086,7 @@ async function toggleActivoUsuario(userId) {
 }
 
 async function deleteUsuario(userId) {
+  if (!isAdmin()) { showToast('Solo el Administrador puede eliminar usuarios','error'); return; }
   const u = usuarios.find(x => x.id === userId);
   if (!u) return;
   if (u.id === currentUser.id) { showToast('No te podés eliminar a vos mismo','error'); return; }

@@ -709,7 +709,7 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
               <option value="60">60d</option><option value="90">90d</option><option value="180">180d</option><option value="360">360d</option>
             </select>
           </div>
-          <div class="form-group">
+          <div class="form-group" id="mc-spark-valor-group">
             <label class="form-label">Valor</label>
             <input type="number" id="mc-spark-valor" class="form-input" placeholder="0.00">
           </div>
@@ -726,7 +726,7 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
               <option value="60">60d</option><option value="180">180d</option><option value="360">360d</option>
             </select>
           </div>
-          <div class="form-group">
+          <div class="form-group" id="mc-pauta-valor-group">
             <label class="form-label">Valor</label>
             <input type="number" id="mc-pauta-valor" class="form-input" placeholder="0.00">
           </div>
@@ -758,7 +758,7 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
             <option value="180">180d</option><option value="360">360d</option>
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="dr-valor-group">
           <label class="form-label">Valor</label>
           <input type="number" id="dr-valor" class="form-input" placeholder="0.00">
         </div>
@@ -1538,10 +1538,10 @@ function renderTalentoCard(ct) {
         <div class="extra-box">
           <div class="extra-title">Derechos de Imagen</div>
           ${ct.derechos_imagen_dias
-            ? `<div style="font-size:12px;font-weight:600">${ct.derechos_imagen_dias}d · ${fmtMoney(ct.derechos_imagen_valor||0,mon)}</div>
+            ? `<div style="font-size:12px;font-weight:600">${ct.derechos_imagen_dias}d${isAdmin()?` · ${fmtMoney(ct.derechos_imagen_valor||0,mon)}`:''}</div>
                <div style="font-size:11px;color:var(--text-dim)">Desde ${ct.derechos_imagen_desde?fmtDate(ct.derechos_imagen_desde):'—'}</div>`
             : `<div style="font-size:12px;color:var(--text-dim)">Sin derechos</div>`}
-          ${isAdmin()?`<button class="btn btn-ghost btn-xs" style="margin-top:6px" onclick="openDerechos(${ct.id})">Editar</button>`:''}
+          ${isInternal()?`<button class="btn btn-ghost btn-xs" style="margin-top:6px" onclick="openDerechos(${ct.id})">Editar</button>`:''}
         </div>
       </div>
       ${isInternal()?`<div style="padding:0 18px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -1664,7 +1664,7 @@ function renderContenido(c, ct) {
   const extras = [];
   if (c.spark_code_dias) {
     extras.push(`<div class="extra-box" style="grid-column:1/-1">
-      <div class="extra-title">Spark Code — ${c.spark_code_dias} días · ${fmtMoney(c.spark_code_valor||0,ct.moneda||'USD')}</div>
+      <div class="extra-title">Spark Code — ${c.spark_code_dias} días${isAdmin()?` · ${fmtMoney(c.spark_code_valor||0,ct.moneda||'USD')}`:''}</div>
       ${c.spark_code_desde?`<div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">Desde ${fmtDate(c.spark_code_desde)}</div>`:''}
       <div style="display:flex;gap:8px;align-items:center">
         <input type="text" class="form-input" style="flex:1;font-size:13px;padding:7px 10px;font-family:monospace" 
@@ -1676,7 +1676,7 @@ function renderContenido(c, ct) {
     </div>`);
   }
   if (c.pauta_dias) {
-    extras.push(`<div class="extra-box"><div class="extra-title">Pauta</div><div style="font-size:12px;font-weight:600">${c.pauta_dias}d · ${fmtMoney(c.pauta_valor||0,ct.moneda||'USD')}</div>${c.pauta_desde?`<div style="font-size:11px;color:var(--text-dim)">Desde ${fmtDate(c.pauta_desde)}</div>`:''}</div>`);
+    extras.push(`<div class="extra-box"><div class="extra-title">Pauta</div><div style="font-size:12px;font-weight:600">${c.pauta_dias}d${isAdmin()?` · ${fmtMoney(c.pauta_valor||0,ct.moneda||'USD')}`:''}</div>${c.pauta_desde?`<div style="font-size:11px;color:var(--text-dim)">Desde ${fmtDate(c.pauta_desde)}</div>`:''}</div>`);
   }
 
   return `<div class="contenido-item ${isDone?'done':''}" id="cont-${c.id}">
@@ -2370,6 +2370,14 @@ async function savePago(ctId, estado) {
 // ════════════════════════════════════════════════
 let _mcCtId = null;
 
+function applyContenidoPriceVisibility() {
+  const show = isAdmin();
+  const sg = document.getElementById('mc-spark-valor-group');
+  const pg = document.getElementById('mc-pauta-valor-group');
+  if (sg) sg.style.display = show ? '' : 'none';
+  if (pg) pg.style.display = show ? '' : 'none';
+}
+
 function openEditContenidoBtn(ctId) {
   _mcCtId = ctId;
   document.getElementById('mc-cont-id').value = '';
@@ -2383,6 +2391,7 @@ function openEditContenidoBtn(ctId) {
   document.getElementById('mc-stats').checked=false;
   document.getElementById('mc-spark-dias').value='';
   document.getElementById('mc-pauta-dias').value='';
+  applyContenidoPriceVisibility();
   onMcTipoChange();
   openModal('modal-contenido');
 }
@@ -2404,6 +2413,7 @@ function openEditCont(contId) {
   document.getElementById('mc-spark-valor').value = c.spark_code_valor||'';
   document.getElementById('mc-pauta-dias').value = c.pauta_dias||'';
   document.getElementById('mc-pauta-valor').value = c.pauta_valor||'';
+  applyContenidoPriceVisibility();
   onMcTipoChange();
   openModal('modal-contenido');
 }
@@ -2429,11 +2439,11 @@ async function saveContenido() {
     };
     if (tipo==='tiktok_video' || tipo==='reel_tiktok_espejo') {
       payload.spark_code_dias = parseInt(document.getElementById('mc-spark-dias').value)||null;
-      payload.spark_code_valor = parseFloat(document.getElementById('mc-spark-valor').value)||null;
+      if (isAdmin()) payload.spark_code_valor = parseFloat(document.getElementById('mc-spark-valor').value)||null;
     }
     if (tipo==='reel' || tipo==='reel_tiktok_espejo') {
       payload.pauta_dias = parseInt(document.getElementById('mc-pauta-dias').value)||null;
-      payload.pauta_valor = parseFloat(document.getElementById('mc-pauta-valor').value)||null;
+      if (isAdmin()) payload.pauta_valor = parseFloat(document.getElementById('mc-pauta-valor').value)||null;
     }
 
     const editId = document.getElementById('mc-cont-id').value;
@@ -2482,14 +2492,16 @@ function openDerechos(ctId) {
   document.getElementById('dr-dias').value = ct.derechos_imagen_dias||'';
   document.getElementById('dr-valor').value = ct.derechos_imagen_valor||'';
   document.getElementById('dr-desde').value = ct.derechos_imagen_desde||'';
+  document.getElementById('dr-valor-group').style.display = isAdmin() ? '' : 'none';
   openModal('modal-derechos');
 }
 async function saveDerechos() {
-  await sb.from('campana_talentos').update({
+  const payload = {
     derechos_imagen_dias: parseInt(document.getElementById('dr-dias').value)||null,
-    derechos_imagen_valor: parseFloat(document.getElementById('dr-valor').value)||null,
     derechos_imagen_desde: document.getElementById('dr-desde').value||null
-  }).eq('id',editingDrCtId);
+  };
+  if (isAdmin()) payload.derechos_imagen_valor = parseFloat(document.getElementById('dr-valor').value)||null;
+  await sb.from('campana_talentos').update(payload).eq('id',editingDrCtId);
   closeModal('modal-derechos');
   await loadCampana(); renderAll();
   toast('Derechos actualizados ✓','ok');
