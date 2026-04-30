@@ -859,11 +859,33 @@ async function initApp() {
 
     renderContratos();
     renderStats();
+    startAutoRefresh();
   } catch(e) {
     console.error('initApp error:', e);
     showToast('Error al cargar: '+e.message, 'error');
     document.getElementById('load-overlay').style.display='none';
   }
+}
+
+// AUTO-REFRESH (multi-usuario)
+let _autoRefreshTimer = null, _autoRefreshing = false;
+function shouldSkipRefresh() {
+  if (document.hidden) return true;
+  if (document.querySelector('.modal-overlay.open')) return true;
+  const a = document.activeElement;
+  if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable)) return true;
+  return false;
+}
+async function autoRefreshTick() {
+  if (_autoRefreshing || shouldSkipRefresh()) return;
+  _autoRefreshing = true;
+  try { await loadData(); renderContratos(); renderStats(); }
+  catch(e) { console.warn('autoRefresh:', e); }
+  finally { _autoRefreshing = false; }
+}
+function startAutoRefresh() {
+  if (_autoRefreshTimer) return;
+  _autoRefreshTimer = setInterval(autoRefreshTick, 4000);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -920,7 +942,15 @@ function getFilteredContratos() {
     if (tipo && c.tipo !== tipo) return false;
     if (estado && c.estado !== estado) return false;
     if (q) {
-      const searchStr = [c.parte_a_nombre, c.parte_b_nombre, c.influencer_nombre, c.marca_producto, c.numero_contrato].join(' ').toLowerCase();
+      // Incluir el identificador del campana_talento asociado
+      let identificador = '';
+      if (c.campana_talento_id) {
+        for (const cId in campanasTalentos) {
+          const ct = (campanasTalentos[cId]||[]).find(x=>x.id===c.campana_talento_id);
+          if (ct && ct.identificador) { identificador = ct.identificador; break; }
+        }
+      }
+      const searchStr = [c.parte_a_nombre, c.parte_b_nombre, c.influencer_nombre, c.marca_producto, c.numero_contrato, identificador].join(' ').toLowerCase();
       if (!searchStr.includes(q)) return false;
     }
     return true;
@@ -946,6 +976,14 @@ function renderContratos() {
     const tipoLabel = c.tipo === 'marca' ? 'Marca ↔ Agencia' : 'Agencia ↔ Talento';
     const estadoLabels = {borrador:'Borrador',enviado:'Enviado',firmado:'Firmado',cancelado:'Cancelado'};
     const monedaSymbol = {MXN:'$',USD:'US$',ARS:'AR$',COP:'CO$',EUR:'EUR'}[c.moneda]||'$';
+    // Buscar identificador del campana_talento asociado
+    let identificador = '';
+    if (c.campana_talento_id) {
+      for (const cId in campanasTalentos) {
+        const ct = (campanasTalentos[cId]||[]).find(x=>x.id===c.campana_talento_id);
+        if (ct && ct.identificador) { identificador = ct.identificador; break; }
+      }
+    }
     return `<div class="contrato-card" onclick="openPreview(${c.id})">
       <div class="contrato-card-header">
         <div class="contrato-icon ${c.tipo}">
@@ -957,6 +995,7 @@ function renderContratos() {
         <div class="contrato-card-meta">
           <div class="contrato-nombre">${escHtml(c.influencer_nombre || c.parte_b_nombre)}</div>
           <div class="contrato-info">${escHtml(tipoLabel)} &middot; ${escHtml(c.marca_producto||'')}</div>
+          ${identificador?`<div style="margin-top:3px"><span title="Identificador / Orden de Compra" style="font-size:10px;font-family:'SF Mono',monospace;font-weight:700;color:var(--primary);background:rgba(178,0,93,0.08);padding:2px 8px;border-radius:6px">${escHtml(identificador)}</span></div>`:''}
         </div>
         <span class="estado-badge estado-${c.estado}">${estadoLabels[c.estado]||c.estado}</span>
       </div>

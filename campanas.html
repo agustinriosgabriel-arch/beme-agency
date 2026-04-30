@@ -525,7 +525,7 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
     <div class="toolbar">
       <div class="search-wrap">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="text" class="search-input" id="search-input" placeholder="Buscar campaña, marca, cliente..." oninput="renderCampanas()">
+        <input type="text" class="search-input" id="search-input" placeholder="Buscar campaña, marca, cliente, talento o ID 001/0042/00125/01..." oninput="renderCampanas()">
         <button type="button" class="search-clear" aria-label="Borrar búsqueda" onclick="const i=this.previousElementSibling;i.value='';i.focus();requestAnimationFrame(()=>i.dispatchEvent(new Event('input',{bubbles:true})));">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
@@ -760,6 +760,10 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
           <input type="text" id="cl-nombre" class="form-input" placeholder="Nombre del cliente o agencia">
         </div>
         <div class="form-group">
+          <label class="form-label">Número Cliente (0–200) <span style="font-weight:400;color:var(--text-dim);font-size:11px">— se asigna automáticamente si lo dejás vacío</span></label>
+          <input type="number" id="cl-numero" class="form-input" min="0" max="200" placeholder="Ej: 42">
+        </div>
+        <div class="form-group">
           <label class="form-label">Tipo</label>
           <select id="cl-tipo" class="form-input">
             <option value="marca">Marca directa</option>
@@ -803,6 +807,10 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
         <div class="form-group">
           <label class="form-label">Nombre de la Marca *</label>
           <input type="text" id="m-nombre" class="form-input" placeholder="Ej: Coca-Cola">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Número Marca (0–2000) <span style="font-weight:400;color:var(--text-dim);font-size:11px">— se asigna automáticamente si lo dejás vacío</span></label>
+          <input type="number" id="m-numero" class="form-input" min="0" max="2000" placeholder="Ej: 142">
         </div>
         <div class="form-group">
           <label class="form-label">Notas</label>
@@ -989,11 +997,39 @@ async function initApp() {
       if (c) { setTimeout(()=>editCampana(editId), 300); }
     }
 
+    startAutoRefresh();
   } catch(e) {
     console.error('initApp error:', e);
     showToast('Error al cargar: '+e.message, 'error');
     const _lo=document.getElementById('load-overlay'); _lo.style.display='none';
   }
+}
+
+// ════════════════════════════════════════════════
+// AUTO-REFRESH (multi-usuario)
+// ════════════════════════════════════════════════
+let _autoRefreshTimer = null;
+let _autoRefreshing = false;
+function shouldSkipRefresh() {
+  if (document.hidden) return true;
+  if (document.querySelector('.modal-overlay.open')) return true;
+  const a = document.activeElement;
+  if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable)) return true;
+  return false;
+}
+async function autoRefreshTick() {
+  if (_autoRefreshing || shouldSkipRefresh()) return;
+  _autoRefreshing = true;
+  try {
+    await loadCampanas();
+    renderCampanas();
+    renderStats();
+  } catch(e) { console.warn('autoRefresh:', e); }
+  finally { _autoRefreshing = false; }
+}
+function startAutoRefresh() {
+  if (_autoRefreshTimer) return;
+  _autoRefreshTimer = setInterval(autoRefreshTick, 4000);
 }
 
 function setupUserUI() {
@@ -1037,12 +1073,12 @@ let showTrash = false;
 async function loadCampanas() {
   let query = sb.from('campanas').select(`
     id,nombre,estado,fecha_inicio,fecha_fin,created_at,deleted_at,
-    marcas(id,nombre,logo_url,clientes(nombre)),
+    marcas(id,nombre,logo_url,numero,clientes(nombre,numero)),
     campana_managers(user_id),
     campana_handlers(user_id),
     campana_talentos(
-      id,talent_id,fee_marca,fee_talento,moneda,pago_estado,
-      talentos(id,nombre,foto),
+      id,talent_id,fee_marca,fee_talento,moneda,pago_estado,orden_trabajo,identificador,
+      talentos(id,nombre,foto,numero),
       contenidos(id,paso_actual,tipo)
     )
   `).order('created_at', {ascending:false}).limit(50);
@@ -1085,7 +1121,11 @@ function getFilteredCampanas() {
       const nombre = (c.nombre||'').toLowerCase();
       const marca  = (c.marcas?.nombre||'').toLowerCase();
       const cliente= (c.marcas?.clientes?.nombre||'').toLowerCase();
-      if (!nombre.includes(q) && !marca.includes(q) && !cliente.includes(q)) return false;
+      const ids    = (c.campana_talentos||[]).map(ct=>(ct.identificador||'').toLowerCase());
+      const talents= (c.campana_talentos||[]).map(ct=>(ct.talentos?.nombre||'').toLowerCase());
+      const matchId = ids.some(id=>id.includes(q));
+      const matchTal = talents.some(t=>t.includes(q));
+      if (!nombre.includes(q) && !marca.includes(q) && !cliente.includes(q) && !matchId && !matchTal) return false;
     }
     return true;
   });
@@ -1174,12 +1214,14 @@ function renderGrid(container, filtered) {
     const managers = c.campana_managers||[];
     const talentos = c.campana_talentos||[];
     const totalContenidos = talentos.flatMap(ct=>ct.contenidos||[]).length;
+    const ids = (talentos||[]).map(ct=>ct.identificador).filter(Boolean);
     return `<div class="campana-card" onclick="openCampana(${c.id})">
       <div class="campana-card-header">
         <div class="marca-logo">${getMarcaInitials(c)}</div>
         <div class="campana-card-meta">
           <div class="campana-nombre">${escHtml(c.nombre)}</div>
           <div class="campana-cliente">${escHtml(c.marcas?.clientes?.nombre||'')} ${c.marcas?.nombre?'· '+escHtml(c.marcas.nombre):''}</div>
+          ${ids.length?`<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px">${ids.slice(0,3).map(id=>`<span style="font-size:10px;font-family:'SF Mono',monospace;font-weight:600;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px">${escHtml(id)}</span>`).join('')}${ids.length>3?`<span style="font-size:10px;color:var(--text-dim)">+${ids.length-3}</span>`:''}</div>`:''}
         </div>
         ${estadoBadgeHTML(c.estado)}
       </div>
@@ -1242,10 +1284,12 @@ function renderList(container, filtered) {
       ${filtered.map(c => {
         const talentos = c.campana_talentos||[];
         const progress = calcProgress(c);
+        const ids = (talentos||[]).map(ct=>ct.identificador).filter(Boolean);
         return `<div class="campana-row" onclick="openCampana(${c.id})">
           <div class="marca-logo">${getMarcaInitials(c)}</div>
           <div>
             <div class="campana-nombre">${escHtml(c.nombre)}</div>
+            ${ids.length?`<div style="margin-top:2px;display:flex;flex-wrap:wrap;gap:4px">${ids.slice(0,3).map(id=>`<span style="font-size:10px;font-family:'SF Mono',monospace;font-weight:600;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px">${escHtml(id)}</span>`).join('')}${ids.length>3?`<span style="font-size:10px;color:var(--text-dim)">+${ids.length-3}</span>`:''}</div>`:''}
             ${c.fecha_fin?`<div class="campana-cliente">${formatDate(c.fecha_fin)}</div>`:''}
           </div>
           <div>
@@ -1701,22 +1745,83 @@ function renderClientesLista() {
   container.innerHTML = clientes.map(c=>`
     <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        ${c.numero!=null?`<span style="font-size:11px;font-weight:700;color:var(--primary);background:rgba(178,0,93,0.08);padding:2px 8px;border-radius:6px;font-family:'SF Mono',monospace">#${String(c.numero).padStart(3,'0')}</span>`:''}
         <span style="font-weight:700;font-size:14px">${escHtml(c.nombre)}</span>
         <span style="font-size:11px;color:var(--text-muted);background:var(--surface3);padding:2px 8px;border-radius:20px">${c.tipo==='agencia'?'Agencia':'Marca directa'}</span>
         ${c.pais?`<span style="font-size:12px;color:var(--text-dim)">${escHtml(c.pais)}</span>`:''}
-        <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="editCliente(${c.id})">Editar</button>
+        <div style="margin-left:auto;display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm" onclick="editCliente(${c.id})">Editar</button>
+          <button class="btn btn-ghost btn-sm" style="color:#ef4444" onclick="deleteCliente(${c.id})" title="Eliminar cliente">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          </button>
+        </div>
       </div>
       ${(c.marcas||[]).length ? `
         <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${c.marcas.map(m=>`<span style="font-size:12px;background:rgba(178,0,93,0.08);color:var(--primary-light);padding:3px 10px;border-radius:20px;cursor:pointer" onclick="editMarca(${m.id})">${escHtml(m.nombre)}</span>`).join('')}
+          ${c.marcas.map(m=>`
+            <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;background:rgba(178,0,93,0.08);color:var(--primary-light);padding:3px 4px 3px 10px;border-radius:20px">
+              ${m.numero!=null?`<span style="font-size:10px;font-weight:700;opacity:0.7;font-family:'SF Mono',monospace">#${String(m.numero).padStart(4,'0')}</span>`:''}
+              <span style="cursor:pointer" onclick="editMarca(${m.id})">${escHtml(m.nombre)}</span>
+              <button onclick="deleteMarca(${m.id})" title="Eliminar marca" style="background:none;border:none;cursor:pointer;color:inherit;opacity:0.5;padding:0 4px;display:flex;align-items:center" onmouseover="this.style.opacity=1;this.style.color='#ef4444'" onmouseout="this.style.opacity=0.5;this.style.color='inherit'">
+                <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </span>`).join('')}
         </div>` : `<span style="font-size:12px;color:var(--text-dim)">Sin marcas</span>`}
     </div>`).join('');
+}
+
+async function deleteCliente(id) {
+  const c = clientes.find(x=>x.id===id);
+  if (!c) return;
+  const marcasCount = (c.marcas||[]).length;
+  let msg = `¿Eliminar cliente "${c.nombre}"?`;
+  if (marcasCount > 0) msg += `\n\nEsto también eliminará ${marcasCount} marca${marcasCount!==1?'s':''} asociada${marcasCount!==1?'s':''}.`;
+  if (!confirm(msg)) return;
+  try {
+    // Verificar si hay campañas usando marcas de este cliente
+    const marcaIds = (c.marcas||[]).map(m=>m.id);
+    if (marcaIds.length) {
+      const {data: camp} = await sb.from('campanas').select('id').in('marca_id', marcaIds).limit(1);
+      if (camp && camp.length) {
+        showToast('No se puede eliminar: existen campañas asociadas a sus marcas','error');
+        return;
+      }
+      // Borrar marcas primero
+      await sb.from('marcas').delete().in('id', marcaIds);
+    }
+    const {error} = await sb.from('clientes').delete().eq('id', id);
+    if (error) throw error;
+    await loadClientes();
+    populateFiltroMarcas();
+    renderClientesLista();
+    showToast('Cliente eliminado ✓','success');
+  } catch(e) { showToast('Error: '+e.message,'error'); }
+}
+
+async function deleteMarca(id) {
+  const m = marcas.find(x=>x.id===id);
+  if (!m) return;
+  if (!confirm(`¿Eliminar marca "${m.nombre}"?`)) return;
+  try {
+    // Verificar si hay campañas usando esta marca
+    const {data: camp} = await sb.from('campanas').select('id').eq('marca_id', id).limit(1);
+    if (camp && camp.length) {
+      showToast('No se puede eliminar: existen campañas asociadas a esta marca','error');
+      return;
+    }
+    const {error} = await sb.from('marcas').delete().eq('id', id);
+    if (error) throw error;
+    await loadClientes();
+    populateFiltroMarcas();
+    renderClientesLista();
+    showToast('Marca eliminada ✓','success');
+  } catch(e) { showToast('Error: '+e.message,'error'); }
 }
 
 function openNuevoCliente() {
   editingClienteId = null;
   document.getElementById('modal-cliente-title').textContent = 'Nuevo Cliente';
-  ['cl-nombre','cl-pais','cl-notas'].forEach(id=>{ document.getElementById(id).value=''; });
+  ['cl-nombre','cl-pais','cl-notas','cl-numero'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('cl-tipo').value = 'marca';
   openModal('modal-nuevo-cliente');
 }
@@ -1730,18 +1835,25 @@ function editCliente(id) {
   document.getElementById('cl-tipo').value = c.tipo||'marca';
   document.getElementById('cl-pais').value = c.pais||'';
   document.getElementById('cl-notas').value = c.notas||'';
+  const numEl = document.getElementById('cl-numero'); if (numEl) numEl.value = c.numero!=null ? c.numero : '';
   openModal('modal-nuevo-cliente');
 }
 
 async function saveCliente() {
   const nombre = document.getElementById('cl-nombre').value.trim();
   if (!nombre) { showToast('El nombre es obligatorio','error'); return; }
+  const numRaw = document.getElementById('cl-numero')?.value;
   const payload = {
     nombre,
     tipo: document.getElementById('cl-tipo').value,
     pais: document.getElementById('cl-pais').value.trim(),
     notas: document.getElementById('cl-notas').value.trim(),
   };
+  if (numRaw !== '' && numRaw != null) {
+    const n = parseInt(numRaw);
+    if (isNaN(n) || n < 0 || n > 200) { showToast('El número debe estar entre 0 y 200','error'); return; }
+    payload.numero = n;
+  }
   try {
     if (editingClienteId) {
       await sb.from('clientes').update(payload).eq('id', editingClienteId);
@@ -1761,6 +1873,7 @@ function openNuevaMarca() {
   document.getElementById('modal-marca-title').textContent = 'Nueva Marca';
   document.getElementById('m-nombre').value='';
   document.getElementById('m-notas').value='';
+  const numEl = document.getElementById('m-numero'); if (numEl) numEl.value='';
   const sel = document.getElementById('m-cliente');
   sel.innerHTML = clientes.map(c=>`<option value="${c.id}">${escHtml(c.nombre)}</option>`).join('');
   openModal('modal-nueva-marca');
@@ -1773,6 +1886,7 @@ function editMarca(id) {
   document.getElementById('modal-marca-title').textContent = 'Editar Marca';
   document.getElementById('m-nombre').value = m.nombre||'';
   document.getElementById('m-notas').value = m.notas||'';
+  const numEl = document.getElementById('m-numero'); if (numEl) numEl.value = m.numero!=null ? m.numero : '';
   const sel = document.getElementById('m-cliente');
   sel.innerHTML = clientes.map(c=>`<option value="${c.id}">${escHtml(c.nombre)}</option>`).join('');
   sel.value = m.cliente_id||'';
@@ -1784,6 +1898,12 @@ async function saveMarca() {
   const clienteId = parseInt(document.getElementById('m-cliente').value)||0;
   if (!nombre||!clienteId) { showToast('Nombre y cliente son obligatorios','error'); return; }
   const payload = { nombre, cliente_id: clienteId, notas: document.getElementById('m-notas').value.trim() };
+  const numRaw = document.getElementById('m-numero')?.value;
+  if (numRaw !== '' && numRaw != null) {
+    const n = parseInt(numRaw);
+    if (isNaN(n) || n < 0 || n > 2000) { showToast('El número debe estar entre 0 y 2000','error'); return; }
+    payload.numero = n;
+  }
   try {
     if (editingMarcaId) {
       await sb.from('marcas').update(payload).eq('id', editingMarcaId);

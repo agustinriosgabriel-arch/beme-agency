@@ -893,12 +893,48 @@ async function init() {
       document.getElementById('side-cobro').style.display = 'block';
       document.getElementById('btn-del-camp').style.display = 'inline-flex';
     }
+
+    // Auto-refresh: re-fetch cada 4s para reflejar cambios de otros usuarios.
+    // Pausa cuando hay un modal abierto, un input con foco, o la pestaña no es visible.
+    startAutoRefresh();
   } catch(e) {
     console.error('init error:', e);
     document.getElementById('load-overlay').style.display = 'none';
     document.getElementById('err-overlay').style.display = 'flex';
     document.getElementById('err-msg').textContent = 'Error: ' + e.message;
   }
+}
+
+// ════════════════════════════════════════════════
+// AUTO-REFRESH (multi-usuario en tiempo casi-real)
+// ════════════════════════════════════════════════
+let _autoRefreshTimer = null;
+let _autoRefreshing = false;
+function shouldSkipRefresh() {
+  if (document.hidden) return true;
+  // Hay modal abierto?
+  if (document.querySelector('.modal-overlay.open')) return true;
+  // Foco en input/textarea editable?
+  const a = document.activeElement;
+  if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable)) return true;
+  return false;
+}
+async function autoRefreshTick() {
+  if (_autoRefreshing) return;
+  if (shouldSkipRefresh()) return;
+  _autoRefreshing = true;
+  try {
+    await loadCampana();
+    if (campana) renderAll();
+  } catch(e) {
+    console.warn('autoRefresh failed:', e);
+  } finally {
+    _autoRefreshing = false;
+  }
+}
+function startAutoRefresh() {
+  if (_autoRefreshTimer) return;
+  _autoRefreshTimer = setInterval(autoRefreshTick, 4000);
 }
 
 function isAdmin() { return currentProfile?.role === 'admin'; }
@@ -1083,6 +1119,11 @@ function renderHeader() {
       <div style="flex:1;min-width:0">
         <div class="camp-title">${esc(campana.nombre)}</div>
         <div class="camp-sub">${esc(campana.marcas?.clientes?.nombre||'')} ${campana.marcas?.nombre ? '· '+esc(campana.marcas.nombre) : ''}</div>
+        ${(campana.campana_talentos||[]).some(ct=>ct.identificador)?`
+        <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+          <span style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;font-weight:700">IDs:</span>
+          ${(campana.campana_talentos||[]).filter(ct=>ct.identificador).map(ct=>`<span title="${esc(ct.talentos?.nombre||'')} — Click para copiar" onclick="navigator.clipboard.writeText('${esc(ct.identificador)}');toast('Copiado: ${esc(ct.identificador)}','ok')" style="font-size:10px;font-family:'SF Mono',monospace;font-weight:700;color:var(--primary);background:rgba(178,0,93,0.08);padding:2px 8px;border-radius:6px;cursor:pointer">${esc(ct.identificador)}</span>`).join('')}
+        </div>`:''}
       </div>
       <div class="estado-wrap">
         <select class="estado-select ${estadoClass[campana.estado]||'es-sin_iniciar'}" onchange="updateEstado(this.value)" ${disabled}>
@@ -1315,16 +1356,20 @@ async function uploadContentBriefs(input, contId) {
   let uploaded = 0;
   for (const file of files) {
     try {
-      const path = `campana-${campanaId}/contenido-${contId}/brief-${Date.now()}-${safeStorageName(file.name)}`;
-      const {error} = await sb.storage.from('content-briefs').upload(path, file);
-      if (error) throw error;
-      const {data:{publicUrl}} = sb.storage.from('content-briefs').getPublicUrl(path);
-      await sb.from('contenido_briefs').insert({
+      const path = `contenido-${contId}/brief-${Date.now()}-${safeStorageName(file.name)}`;
+      const {error: upErr} = await sb.storage.from('campaign-briefs').upload(path, file);
+      if (upErr) throw upErr;
+      const {data:{publicUrl}} = sb.storage.from('campaign-briefs').getPublicUrl(path);
+      const {error: insErr} = await sb.from('contenido_briefs').insert({
         contenido_id: contId, nombre: file.name,
         url: publicUrl || path, size_bytes: file.size, uploaded_by: currentUser.id
       });
+      if (insErr) throw insErr;
       uploaded++;
-    } catch(e) { toast('Error: '+e.message,'err'); }
+    } catch(e) {
+      console.error('uploadContentBriefs error:', e);
+      toast('Error subiendo "'+file.name+'": '+(e.message||e.error_description||JSON.stringify(e)),'err');
+    }
   }
   input.value='';
   if (uploaded > 0) {
@@ -1336,8 +1381,12 @@ async function uploadContentBriefs(input, contId) {
 async function deleteContentBrief(id, url, contId) {
   if (!confirm('¿Eliminar este brief del contenido?')) return;
   await sb.from('contenido_briefs').delete().eq('id', id);
-  const path = url.split('/content-briefs/')[1];
-  if (path) await sb.storage.from('content-briefs').remove([decodeURIComponent(path)]);
+  // Soporta ambos buckets antiguos y el actual
+  let path = null;
+  let bucket = 'campaign-briefs';
+  if (url.includes('/content-briefs/')) { path = url.split('/content-briefs/')[1]; bucket = 'content-briefs'; }
+  else if (url.includes('/campaign-briefs/')) { path = url.split('/campaign-briefs/')[1]; bucket = 'campaign-briefs'; }
+  if (path) await sb.storage.from(bucket).remove([decodeURIComponent(path)]);
   await loadCampana(); renderAll();
   toast('Brief eliminado','inf');
 }
@@ -1378,7 +1427,9 @@ function renderTalentoCard(ct) {
     <div class="talento-head" onclick="toggleCard('tc-${ct.id}')">
       <div class="t-avatar">${t.foto?`<img src="${esc(t.foto)}" loading="lazy">`:ini}</div>
       <div class="t-info">
-        <div class="t-name">${esc(t.nombre||'—')}</div>
+        <div class="t-name">${esc(t.nombre||'—')}
+          ${ct.identificador?`<span title="Orden de Compra / Identificador de campaña" style="margin-left:8px;font-size:10px;font-family:'SF Mono',monospace;font-weight:700;color:var(--primary);background:rgba(178,0,93,0.08);padding:2px 8px;border-radius:6px;cursor:pointer" onclick="event.stopPropagation();navigator.clipboard.writeText('${esc(ct.identificador)}');toast('Identificador copiado: ${esc(ct.identificador)}','ok')">${esc(ct.identificador)}</span>`:''}
+        </div>
         <div class="t-meta">${contenidos.length} contenido${contenidos.length!==1?'s':''} · ${done} completado${done!==1?'s':''}
           <span class="pago-badge ${ct.pago_estado==='pagado'?'pago-pagado':'pago-pendiente'}" style="margin-left:6px">${ct.pago_estado==='pagado'?'✓ Pagado':'Pago pendiente'}</span>
         </div>
@@ -2318,7 +2369,8 @@ async function saveContenido() {
 
     const editId = document.getElementById('mc-cont-id').value;
     if (editId) {
-      await sb.from('contenidos').update(payload).eq('id', parseInt(editId));
+      const {error} = await sb.from('contenidos').update(payload).eq('id', parseInt(editId));
+      if (error) throw error;
       toast('Contenido actualizado ✓','ok');
     } else {
       if (!_mcCtId) throw new Error('Sin talento seleccionado');
@@ -2328,14 +2380,19 @@ async function saveContenido() {
       if (!hasBrief)               payload.paso_actual = 1;
       else if (payload.script_requerido) payload.paso_actual = 2;
       else                         payload.paso_actual = 4;
-      await sb.from('contenidos').insert(payload);
+      const {error} = await sb.from('contenidos').insert(payload);
+      if (error) throw error;
       toast('Contenido agregado ✓','ok');
     }
     closeModal('modal-contenido');
     await loadCampana(); renderAll();
     if (_mcCtId) document.getElementById('tc-'+_mcCtId)?.classList.add('open');
-  } catch(e) { toast('Error: '+e.message,'err'); }
-  _savingContenido = false; btn.disabled = false;
+  } catch(e) {
+    console.error('saveContenido error:', e);
+    toast('Error: '+(e.message||e.details||e.hint||JSON.stringify(e)),'err');
+  } finally {
+    _savingContenido = false; btn.disabled = false;
+  }
 }
 
 async function deleteContenido() {
