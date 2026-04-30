@@ -1,5 +1,5 @@
 [build]
-  environment = { NODE_VERSION = "18" }
+  environment = { NODE_VERSION = "18", SECRETS_SCAN_OMIT_KEYS = "CAMPAIGN_SUMMARY_EMAILS", SECRETS_SCAN_OMIT_PATHS = ".env.example,docs/**" }
 
 [functions]
   directory = "netlify/functions"
