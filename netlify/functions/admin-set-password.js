@@ -30,26 +30,26 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'La contraseña debe tener al menos 6 caracteres' }) };
   }
 
-  const SB_URL = process.env.SUPABASE_URL;
-  const SB_ANON = process.env.SUPABASE_ANON_KEY;
+  const SB_URL = process.env.SUPABASE_URL || 'https://ngstqwbzvnpggpklifat.supabase.co';
   const SB_SERVICE = process.env.SUPABASE_SERVICE_KEY;
 
-  if (!SB_URL || !SB_ANON || !SB_SERVICE) {
+  if (!SB_SERVICE) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Faltan env vars en Netlify (SUPABASE_URL/ANON_KEY/SERVICE_KEY)' })
+      body: JSON.stringify({ error: 'Falta SUPABASE_SERVICE_KEY en Netlify env vars' })
     };
   }
 
   try {
+    // El service key sirve también para validar tokens de usuarios.
+    const sbAdmin = createClient(SB_URL, SB_SERVICE);
+
     // 1) Verificar que el token del caller es válido y pertenece a un admin
-    const sbAnon = createClient(SB_URL, SB_ANON);
-    const { data: userData, error: uErr } = await sbAnon.auth.getUser(callerToken);
+    const { data: userData, error: uErr } = await sbAdmin.auth.getUser(callerToken);
     if (uErr || !userData?.user) {
       return { statusCode: 401, body: JSON.stringify({ error: 'Token de sesión inválido' }) };
     }
 
-    const sbAdmin = createClient(SB_URL, SB_SERVICE);
     const { data: profile, error: pErr } = await sbAdmin
       .from('user_profiles')
       .select('role')
