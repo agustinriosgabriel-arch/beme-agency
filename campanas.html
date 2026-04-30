@@ -1236,11 +1236,14 @@ function renderGrid(container, filtered) {
     const ids = (talentos||[]).map(ct=>ct.identificador).filter(Boolean);
     const cliNum = c.marcas?.clientes?.numero, mNum = c.marcas?.numero;
     const prefix = (cliNum!=null && mNum!=null) ? `${String(cliNum).padStart(3,'0')}/${String(mNum).padStart(4,'0')}` : '';
+    const cliNombre = c.marcas?.clientes?.nombre || '';
+    const marcaNombre = c.marcas?.nombre || '';
+    const clienteMarca = [cliNombre, marcaNombre].filter(Boolean).join(' · ') || '-';
     return `<div class="campana-card" onclick="openCampana(${c.id})">
       <div class="campana-card-header">
         <div class="campana-card-meta">
           <div class="campana-nombre">${escHtml(c.nombre)}</div>
-          <div class="campana-cliente">${escHtml(c.marcas?.clientes?.nombre||'')} ${c.marcas?.nombre?'· '+escHtml(c.marcas.nombre):''}</div>
+          <div class="campana-cliente" title="${escHtml(clienteMarca)}">${escHtml(clienteMarca)}</div>
           ${prefix?`<div style="margin-top:4px"><span style="font-size:10px;font-family:'SF Mono',monospace;font-weight:600;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px">${prefix}</span></div>`:''}
         </div>
         ${estadoBadgeHTML(c.estado)}
@@ -1353,12 +1356,24 @@ function renderKanban(container, filtered) {
           <div class="kanban-count">${items.length}</div>
         </div>
         <div class="kanban-items">
-          ${items.length ? items.map(c=>`
+          ${items.length ? items.map(c=>{
+            const cliNombre = c.marcas?.clientes?.nombre || '';
+            const marcaNombre = c.marcas?.nombre || '';
+            const clienteMarca = [cliNombre, marcaNombre].filter(Boolean).join(' · ');
+            const cliNum = c.marcas?.clientes?.numero, mNum = c.marcas?.numero;
+            const prefix = (cliNum!=null && mNum!=null) ? `${String(cliNum).padStart(3,'0')}/${String(mNum).padStart(4,'0')}` : '';
+            const tCount = c.campana_talentos?.length||0;
+            return `
             <div class="kanban-card" onclick="openCampana(${c.id})">
               <div class="kanban-card-nombre">${escHtml(c.nombre)}</div>
-              <div class="kanban-card-meta">${escHtml(c.marcas?.nombre||'')}${c.campana_talentos?.length?' · '+c.campana_talentos.length+' talento'+(c.campana_talentos.length!==1?'s':''):''}</div>
+              ${clienteMarca?`<div class="kanban-card-meta" title="${escHtml(clienteMarca)}">${escHtml(clienteMarca)}</div>`:''}
+              <div class="kanban-card-meta" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
+                ${prefix?`<span style="font-size:10px;font-family:'SF Mono',monospace;font-weight:600;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px">${prefix}</span>`:''}
+                ${tCount?`<span>${tCount} talento${tCount!==1?'s':''}</span>`:''}
+              </div>
               ${c.fecha_fin?`<div class="kanban-card-meta" style="margin-top:4px">${formatDate(c.fecha_fin)}</div>`:''}
-            </div>`).join('') :
+            </div>`;
+          }).join('') :
           `<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:20px">Sin campañas</div>`}
         </div>
       </div>`;
