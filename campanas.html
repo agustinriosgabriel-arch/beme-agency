@@ -176,7 +176,7 @@ body.dark .logo .logo-dark{display:block}
 .campana-row{
   background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
   padding:14px 18px;display:grid;
-  grid-template-columns:40px 1fr 180px 120px 100px 120px auto;
+  grid-template-columns:1fr 180px 120px 100px 120px auto;
   gap:14px;align-items:center;cursor:pointer;transition:all 0.15s;
 }
 .campana-row:hover{border-color:var(--border2);background:var(--surface2)}
@@ -333,7 +333,7 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
 @media(max-width:900px){
   .stats-strip{grid-template-columns:repeat(3,1fr)}
   .campanas-grid{grid-template-columns:1fr}
-  .campana-row{grid-template-columns:36px 1fr auto}
+  .campana-row{grid-template-columns:1fr auto}
   .kanban-wrap{grid-template-columns:repeat(5,1fr);min-width:0}
 }
 @media(max-width:768px){
@@ -1215,13 +1215,14 @@ function renderGrid(container, filtered) {
     const talentos = c.campana_talentos||[];
     const totalContenidos = talentos.flatMap(ct=>ct.contenidos||[]).length;
     const ids = (talentos||[]).map(ct=>ct.identificador).filter(Boolean);
+    const cliNum = c.marcas?.clientes?.numero, mNum = c.marcas?.numero;
+    const prefix = (cliNum!=null && mNum!=null) ? `${String(cliNum).padStart(3,'0')}/${String(mNum).padStart(4,'0')}` : '';
     return `<div class="campana-card" onclick="openCampana(${c.id})">
       <div class="campana-card-header">
-        <div class="marca-logo">${getMarcaInitials(c)}</div>
         <div class="campana-card-meta">
           <div class="campana-nombre">${escHtml(c.nombre)}</div>
           <div class="campana-cliente">${escHtml(c.marcas?.clientes?.nombre||'')} ${c.marcas?.nombre?'· '+escHtml(c.marcas.nombre):''}</div>
-          ${ids.length?`<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px">${ids.slice(0,3).map(id=>`<span style="font-size:10px;font-family:'SF Mono',monospace;font-weight:600;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px">${escHtml(id)}</span>`).join('')}${ids.length>3?`<span style="font-size:10px;color:var(--text-dim)">+${ids.length-3}</span>`:''}</div>`:''}
+          ${prefix?`<div style="margin-top:4px"><span style="font-size:10px;font-family:'SF Mono',monospace;font-weight:600;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px">${prefix}</span></div>`:''}
         </div>
         ${estadoBadgeHTML(c.estado)}
       </div>
@@ -1276,20 +1277,20 @@ function renderList(container, filtered) {
   }
   container.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:6px">
-      <div style="display:grid;grid-template-columns:40px 1fr 180px 120px 100px 120px auto;gap:14px;padding:6px 18px;font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">
-        <div></div><div>Campaña</div><div>Marca / Cliente</div>
+      <div style="display:grid;grid-template-columns:1fr 180px 120px 100px 120px auto;gap:14px;padding:6px 18px;font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">
+        <div>Campaña</div><div>Marca / Cliente</div>
         <div class="col-center">Estado</div><div class="col-center">Talentos</div>
         <div class="col-center">Progreso</div><div></div>
       </div>
       ${filtered.map(c => {
         const talentos = c.campana_talentos||[];
         const progress = calcProgress(c);
-        const ids = (talentos||[]).map(ct=>ct.identificador).filter(Boolean);
+        const cliNum = c.marcas?.clientes?.numero, mNum = c.marcas?.numero;
+        const prefix = (cliNum!=null && mNum!=null) ? `${String(cliNum).padStart(3,'0')}/${String(mNum).padStart(4,'0')}` : '';
         return `<div class="campana-row" onclick="openCampana(${c.id})">
-          <div class="marca-logo">${getMarcaInitials(c)}</div>
           <div>
             <div class="campana-nombre">${escHtml(c.nombre)}</div>
-            ${ids.length?`<div style="margin-top:2px;display:flex;flex-wrap:wrap;gap:4px">${ids.slice(0,3).map(id=>`<span style="font-size:10px;font-family:'SF Mono',monospace;font-weight:600;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px">${escHtml(id)}</span>`).join('')}${ids.length>3?`<span style="font-size:10px;color:var(--text-dim)">+${ids.length-3}</span>`:''}</div>`:''}
+            ${prefix?`<div style="margin-top:2px"><span style="font-size:10px;font-family:'SF Mono',monospace;font-weight:600;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px">${prefix}</span></div>`:''}
             ${c.fecha_fin?`<div class="campana-cliente">${formatDate(c.fecha_fin)}</div>`:''}
           </div>
           <div>

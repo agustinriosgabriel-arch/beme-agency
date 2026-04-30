@@ -1206,6 +1206,7 @@ function collectFormData() {
   return {
     campana_id: selectedCampaignId,
     campana_talento_id: selectedTalentCT?.id || null,
+    numero_contrato: selectedTalentCT?.identificador || '',
     tipo: document.getElementById('c-tipo').value,
     idioma: document.getElementById('c-idioma').value,
     estado: 'borrador',
@@ -1411,7 +1412,8 @@ async function translateContract() {
     // Save as new contract
     const newContract = { ...c };
     delete newContract.id;
-    delete newContract.numero_contrato;
+    // Preserva el identificador y le sufija el idioma
+    newContract.numero_contrato = c.numero_contrato ? `${c.numero_contrato}-${newLang.toUpperCase()}` : '';
     newContract.idioma = newLang;
     newContract.contenido_html = html;
     newContract.created_at = new Date().toISOString();
@@ -1445,8 +1447,13 @@ async function generateMirrorContract() {
   // Build mirror data
   const mirrorData = { ...c };
   delete mirrorData.id;
-  delete mirrorData.numero_contrato;
   delete mirrorData.contenido_html;
+  // Preserva el identificador del contrato origen y le sufija el tipo del espejo
+  // (M = Marca↔Agencia, T = Agencia↔Talento). Si el origen ya tenia sufijo,
+  // se reemplaza para evitar -M-T encadenados.
+  const baseId = (c.numero_contrato||'').replace(/-(M|T)(-EN|-ES)?$/, '');
+  const langSuffix = c.idioma && c.idioma !== 'es' ? `-${c.idioma.toUpperCase()}` : '';
+  mirrorData.numero_contrato = baseId ? `${baseId}-${mirrorTipo==='talento'?'T':'M'}${langSuffix}` : '';
   mirrorData.tipo = mirrorTipo;
   mirrorData.created_at = new Date().toISOString();
   mirrorData.updated_at = new Date().toISOString();

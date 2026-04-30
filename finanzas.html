@@ -288,8 +288,9 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   <div class="modal-body">
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Tipo *</label><select id="fac-tipo" class="form-input"><option value="PUE">PUE</option><option value="PPD">PPD</option><option value="invoice">Invoice (Internacional)</option></select></div>
-      <div class="form-group"><label class="form-label">Numero</label><input type="text" id="fac-numero" class="form-input" placeholder="Folio o numero"></div>
-      <div class="form-group full"><label class="form-label">Orden de Compra (identificador campaña)</label><input type="text" id="fac-orden-compra" class="form-input" placeholder="Ej: 001/0042/00125/01 — separar varias con coma"></div>
+      <div class="form-group full" id="fac-talento-group" style="display:none"><label class="form-label">Talento de la campaña *</label><select id="fac-talento" class="form-input" onchange="onFacTalentoChange()"></select><div style="font-size:11px;color:var(--text-dim);margin-top:4px">Al elegir el talento, se autoasigna el Folio = identificador de ese talento.</div></div>
+      <div class="form-group"><label class="form-label">Folio (Numero)</label><input type="text" id="fac-numero" class="form-input" placeholder="Se autoasigna con el identificador" readonly style="background:var(--surface2);font-family:'SF Mono',monospace;font-weight:600;color:var(--primary)"></div>
+      <div class="form-group full"><label class="form-label">Orden de Compra (identificador campaña)</label><input type="text" id="fac-orden-compra" class="form-input" placeholder="Ej: 001/0042/00125/01" readonly style="background:var(--surface2);font-family:'SF Mono',monospace;color:var(--text-muted)"></div>
       <div class="form-group"><label class="form-label">Monto *</label><input type="number" id="fac-monto" class="form-input" placeholder="0.00" step="0.01"></div>
       <div class="form-group"><label class="form-label">Moneda</label><select id="fac-moneda" class="form-input"><option value="MXN">MXN</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
       <div class="form-group"><label class="form-label">Fecha Emision</label><input type="date" id="fac-fecha-emision" class="form-input"></div>
@@ -593,20 +594,47 @@ function renderFacturaDetail(f,c){
 function toggleDetail(id){document.getElementById(id)?.classList.toggle('open');}
 
 // Factura CRUD
+function populateFacTalentos(campanaId, selectedCtId){
+  const cts = campanasTalentos.filter(ct=>ct.campana_id===campanaId);
+  const sel = document.getElementById('fac-talento');
+  const grp = document.getElementById('fac-talento-group');
+  if(!sel || !grp) return cts;
+  sel.innerHTML = cts.map(ct=>{
+    const nombre = ct.talentos?.nombre || 'Talento '+ct.id;
+    const id = ct.identificador ? ` — ${ct.identificador}` : '';
+    return `<option value="${ct.id}">${nombre}${id}</option>`;
+  }).join('');
+  // Mostrar siempre el selector (también con un solo talento, para claridad)
+  grp.style.display = cts.length ? '' : 'none';
+  if (selectedCtId) sel.value = selectedCtId;
+  return cts;
+}
+function onFacTalentoChange(){
+  const ctId = parseInt(document.getElementById('fac-talento').value)||0;
+  const ct = campanasTalentos.find(x=>x.id===ctId);
+  if(!ct) return;
+  const numEl = document.getElementById('fac-numero');
+  const ocEl  = document.getElementById('fac-orden-compra');
+  const montoEl = document.getElementById('fac-monto');
+  if(numEl && ct.identificador) numEl.value = ct.identificador;
+  if(ocEl  && ct.identificador) ocEl.value  = ct.identificador;
+  if(montoEl && (!montoEl.value || montoEl.dataset.autofilled==='1')) {
+    montoEl.value = Number(ct.fee_marca)||0;
+    montoEl.dataset.autofilled = '1';
+  }
+}
 function openNuevaFactura(campanaId,clienteId){
   editingFacturaId=null;editingFacturaCampanaId=campanaId;editingFacturaClienteId=clienteId;
   document.getElementById('modal-factura-title').textContent='Nueva Factura';
-  ['fac-numero','fac-notas'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['fac-numero','fac-notas','fac-orden-compra'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('fac-tipo').value='PUE';document.getElementById('fac-moneda').value='MXN';
   document.getElementById('fac-estado').value='pendiente';document.getElementById('fac-fecha-emision').value='';
-  // Pre-fill monto from campaign fees
-  const cts = campanasTalentos.filter(ct=>ct.campana_id===campanaId);
-  const total=cts.reduce((s,ct)=>s+(Number(ct.fee_marca)||0),0);
-  document.getElementById('fac-monto').value=total||'';
-  // Pre-fill orden de compra con TODOS los identificadores de la campaña
-  const ocEl=document.getElementById('fac-orden-compra');
-  if(ocEl) ocEl.value = cts.map(ct=>ct.identificador).filter(Boolean).join(', ');
-  // Check if international
+  const montoEl = document.getElementById('fac-monto');
+  if (montoEl) { montoEl.value = ''; montoEl.dataset.autofilled = '1'; }
+  // Selector de talento + autoasignación de folio/OC con el identificador
+  const cts = populateFacTalentos(campanaId);
+  if (cts.length) onFacTalentoChange();
+  // Internacional?
   const cli=clientes.find(c=>c.id===clienteId);
   if(cli&&cli.pais&&cli.pais!=='Mexico'&&cli.pais!=='México')document.getElementById('fac-tipo').value='invoice';
   openModal('modal-factura');
@@ -618,19 +646,22 @@ function editFactura(id){
   document.getElementById('fac-tipo').value=f.tipo||'PUE';
   document.getElementById('fac-numero').value=f.numero_factura||'';
   document.getElementById('fac-monto').value=f.monto||'';
+  const me=document.getElementById('fac-monto'); if(me) me.dataset.autofilled='0';
   document.getElementById('fac-moneda').value=f.moneda||'MXN';
   document.getElementById('fac-estado').value=f.estado||'pendiente';
   document.getElementById('fac-fecha-emision').value=f.fecha_emision||'';
   document.getElementById('fac-notas').value=f.notas||'';
-  const ocEl=document.getElementById('fac-orden-compra');
-  if(ocEl){
-    if(f.orden_compra) ocEl.value = f.orden_compra;
-    else {
-      // Fallback: pre-fill desde campana_talentos
-      const cts = campanasTalentos.filter(ct=>ct.campana_id===f.campana_id);
-      ocEl.value = cts.map(ct=>ct.identificador).filter(Boolean).join(', ');
-    }
+  // Resolver el campana_talento por identificador (orden_compra) si existe
+  const cts = campanasTalentos.filter(ct=>ct.campana_id===f.campana_id);
+  let matchedCt = null;
+  if (f.orden_compra) {
+    matchedCt = cts.find(ct => ct.identificador === f.orden_compra);
   }
+  if (!matchedCt && f.numero_factura) {
+    matchedCt = cts.find(ct => ct.identificador === f.numero_factura);
+  }
+  populateFacTalentos(f.campana_id, matchedCt?.id);
+  document.getElementById('fac-orden-compra').value = f.orden_compra || matchedCt?.identificador || '';
   openModal('modal-factura');
 }
 async function saveFactura(){
