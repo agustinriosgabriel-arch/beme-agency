@@ -1619,20 +1619,43 @@ async function saveCampana() {
       campanaId = data.id;
     }
 
-    // Sync managers
-    await sb.from('campana_managers').delete().eq('campana_id', campanaId);
-    if (selectedManagers.length) {
-      await sb.from('campana_managers').insert(
-        selectedManagers.map(m=>({campana_id: campanaId, user_id: m.id}))
+    // Sync managers — diff para no borrar+reinsertar al propio usuario
+    // (si lo hicieramos, el INSERT post-DELETE falla por RLS porque
+    //  cm_internal_insert exige estar ya en campana_managers o ser creador)
+    const existingCampana = campanas.find(x=>x.id===campanaId);
+    const existingMgrIds = (existingCampana?.campana_managers||[]).map(m=>m.user_id);
+    const selectedMgrIds = selectedManagers.map(m=>m.id);
+    const mgrsToRemove = existingMgrIds.filter(id=>!selectedMgrIds.includes(id));
+    const mgrsToAdd = selectedMgrIds.filter(id=>!existingMgrIds.includes(id));
+
+    if (mgrsToRemove.length) {
+      const {error: e1} = await sb.from('campana_managers').delete()
+        .eq('campana_id', campanaId).in('user_id', mgrsToRemove);
+      if (e1) throw new Error('Quitar managers: '+e1.message);
+    }
+    if (mgrsToAdd.length) {
+      const {error: e2} = await sb.from('campana_managers').insert(
+        mgrsToAdd.map(uid=>({campana_id: campanaId, user_id: uid}))
       );
+      if (e2) throw new Error('Agregar managers: '+e2.message);
     }
 
-    // Sync handlers
-    await sb.from('campana_handlers').delete().eq('campana_id', campanaId);
-    if (selectedHandlers.length) {
-      await sb.from('campana_handlers').insert(
-        selectedHandlers.map(h=>({campana_id: campanaId, user_id: h.id}))
+    // Sync handlers — mismo diff
+    const existingHndIds = (existingCampana?.campana_handlers||[]).map(h=>h.user_id);
+    const selectedHndIds = selectedHandlers.map(h=>h.id);
+    const hndsToRemove = existingHndIds.filter(id=>!selectedHndIds.includes(id));
+    const hndsToAdd = selectedHndIds.filter(id=>!existingHndIds.includes(id));
+
+    if (hndsToRemove.length) {
+      const {error: e3} = await sb.from('campana_handlers').delete()
+        .eq('campana_id', campanaId).in('user_id', hndsToRemove);
+      if (e3) throw new Error('Quitar handlers: '+e3.message);
+    }
+    if (hndsToAdd.length) {
+      const {error: e4} = await sb.from('campana_handlers').insert(
+        hndsToAdd.map(uid=>({campana_id: campanaId, user_id: uid}))
       );
+      if (e4) throw new Error('Agregar handlers: '+e4.message);
     }
 
     // Sync talentos (solo agregar nuevos, no borrar los existentes para no perder datos)
