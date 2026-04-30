@@ -254,6 +254,24 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
     <input type="email" id="login-email" class="login-input" placeholder="Email" onkeydown="if(event.key==='Enter')doLogin()">
     <input type="password" id="login-pass" class="login-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px" onclick="doLogin()" id="login-btn">Ingresar</button>
+    <div style="text-align:center;margin-top:14px">
+      <a href="#" onclick="event.preventDefault();doForgotPassword()" style="font-size:12px;color:var(--text-muted);text-decoration:none">¿Olvidaste tu contraseña?</a>
+    </div>
+  </div>
+</div>
+
+<!-- RESET PASSWORD (cuando el talento llega con un link de recovery) -->
+<div id="reset-overlay" style="display:none;position:fixed;inset:0;background:rgba(247,247,250,0.97);align-items:center;justify-content:center;z-index:9998">
+  <div class="login-card" style="max-width:380px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:40px;width:100%">
+    <div style="text-align:center;margin-bottom:24px">
+      <div class="loader-logo"><img src="assets/brand/logos/Beme1Color.png" alt="Beme"></div>
+      <p style="font-size:14px;font-weight:600;margin-top:10px">Nueva contraseña</p>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:4px">Elegí una nueva contraseña para tu cuenta.</p>
+    </div>
+    <div class="login-error" id="reset-error"></div>
+    <input type="password" id="reset-pass" class="login-input" placeholder="Nueva contraseña (mín 6)" onkeydown="if(event.key==='Enter')doResetPassword()">
+    <input type="password" id="reset-pass2" class="login-input" placeholder="Repetir contraseña" onkeydown="if(event.key==='Enter')doResetPassword()">
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px" onclick="doResetPassword()" id="reset-btn">Guardar contraseña</button>
   </div>
 </div>
 
@@ -321,10 +339,77 @@ async function doLogin() {
   } catch(e) { showLoginErr('Error: '+e.message); }
   btn.textContent='Ingresar'; btn.disabled=false;
 }
-function showLoginErr(msg) { const d=document.getElementById('login-error'); d.textContent=msg; d.style.display='block'; }
+function showLoginErr(msg) {
+  const d=document.getElementById('login-error');
+  d.textContent=msg;
+  d.style.color='';
+  d.style.display='block';
+}
+function showLoginOk(msg) {
+  const d=document.getElementById('login-error');
+  d.textContent=msg;
+  d.style.color='#16a34a';
+  d.style.display='block';
+}
 async function doLogout() { await sb.auth.signOut(); location.reload(); }
 
+// ── Olvidé mi contraseña ──────────────────────────────────────
+async function doForgotPassword() {
+  const email = (document.getElementById('login-email').value||'').trim();
+  if (!email) { showLoginErr('Escribí tu email arriba primero.'); return; }
+  try {
+    const {error} = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/talento-portal.html'
+    });
+    if (error) throw error;
+    showLoginOk('Te enviamos un mail con el link para reiniciar la contraseña. Revisá tu bandeja (y spam).');
+  } catch(e) {
+    showLoginErr('No se pudo enviar el mail: '+e.message);
+  }
+}
+
+// ── Detectar link de recovery y mostrar form de nueva contraseña ──
+let _recoveryMode = false;
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    _recoveryMode = true;
+    document.getElementById('load-overlay').style.display='none';
+    document.getElementById('login-overlay').style.display='none';
+    document.getElementById('app').style.display='none';
+    document.getElementById('reset-overlay').style.display='flex';
+  }
+});
+
+async function doResetPassword() {
+  const p1 = document.getElementById('reset-pass').value;
+  const p2 = document.getElementById('reset-pass2').value;
+  const btn = document.getElementById('reset-btn');
+  const err = document.getElementById('reset-error');
+  err.style.display='none';
+  if (!p1 || p1.length < 6) { err.textContent='Mínimo 6 caracteres.'; err.style.display='block'; return; }
+  if (p1 !== p2) { err.textContent='Las contraseñas no coinciden.'; err.style.display='block'; return; }
+  btn.textContent='Guardando...'; btn.disabled=true;
+  try {
+    const {error} = await sb.auth.updateUser({password: p1});
+    if (error) throw error;
+    document.getElementById('reset-overlay').style.display='none';
+    // Cerrar sesión recovery y volver a login limpio
+    await sb.auth.signOut();
+    location.href = location.pathname; // sin hash
+  } catch(e) {
+    err.textContent = 'Error: '+e.message;
+    err.style.display='block';
+    btn.textContent='Guardar contraseña'; btn.disabled=false;
+  }
+}
+
 async function checkAuth() {
+  // Si la URL trae el hash de recovery, esperá al evento PASSWORD_RECOVERY (lo dispara onAuthStateChange).
+  // No iniciar la sesión normal mientras el usuario está reseteando.
+  if (location.hash && location.hash.includes('type=recovery')) {
+    document.getElementById('load-overlay').style.display='none';
+    return;
+  }
   const {data:{session}} = await sb.auth.getSession();
   if (session) { currentUser=session.user; await initApp(); }
   else { document.getElementById('load-overlay').style.display='none'; document.getElementById('login-overlay').style.display='flex'; }
