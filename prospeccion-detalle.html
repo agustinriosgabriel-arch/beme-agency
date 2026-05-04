@@ -1048,8 +1048,12 @@ async function saveContacto() {
 
   // Duplicate check (skip if editing)
   if (!editingContactoId) {
-    const dupes = await checkDuplicates(tiktok, instagram, youtube);
-    if (dupes.length && !confirm(dupes.join('\n') + '\n\nAgregar de todas formas?')) return;
+    const { warnings, blockers } = await checkDuplicates(tiktok, instagram, youtube);
+    if (blockers.length) {
+      alert(blockers.join('\n') + '\n\nNo se puede agregar a prospeccion: ya esta en la Base de Talentos.');
+      return;
+    }
+    if (warnings.length && !confirm(warnings.join('\n') + '\n\nAgregar de todas formas?')) return;
   }
 
   const payload = {
@@ -1359,9 +1363,10 @@ document.addEventListener('click', function(e) {
 // ══════════════════════════════════════════════════════════
 async function checkDuplicates(tiktok, instagram, youtube) {
   const warnings = [];
+  const blockers = [];
   const normalize = u => String(u||'').toLowerCase().replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'').trim();
   const nTT = normalize(tiktok), nIG = normalize(instagram), nYT = normalize(youtube);
-  if (!nTT && !nIG && !nYT) return warnings;
+  if (!nTT && !nIG && !nYT) return { warnings, blockers };
 
   // Check within this prospeccion
   contactos.forEach(c => {
@@ -1371,17 +1376,17 @@ async function checkDuplicates(tiktok, instagram, youtube) {
     if (nYT && normalize(c.youtube) === nYT) warnings.push(`Duplicado en prospeccion: ${c.nombre} (YouTube)`);
   });
 
-  // Check against talentos table
+  // Check against talentos table — hard block
   try {
     const {data: talentos} = await sb.from('talentos').select('id, nombre, tiktok, instagram, youtube');
     (talentos||[]).forEach(t => {
-      if (nTT && normalize(t.tiktok) === nTT) warnings.push(`Ya existe en Talentos: ${t.nombre} (TikTok)`);
-      if (nIG && normalize(t.instagram) === nIG) warnings.push(`Ya existe en Talentos: ${t.nombre} (Instagram)`);
-      if (nYT && normalize(t.youtube) === nYT) warnings.push(`Ya existe en Talentos: ${t.nombre} (YouTube)`);
+      if (nTT && normalize(t.tiktok) === nTT) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (TikTok)`);
+      if (nIG && normalize(t.instagram) === nIG) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (Instagram)`);
+      if (nYT && normalize(t.youtube) === nYT) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (YouTube)`);
     });
   } catch(e) { console.warn('Duplicate check against talentos failed:', e); }
 
-  return warnings;
+  return { warnings, blockers };
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1899,7 +1904,7 @@ function showCSVPreview(rows, skippedEmpty) {
 
   document.getElementById('csv-summary').innerHTML =
     `<strong>${rows.length}</strong> contactos encontrados: <span style="color:#4ade80">${nuevos} nuevos</span>` +
-    (yaEnTalentos ? `, <span style="color:#fbbf24">${yaEnTalentos} ya en Talentos</span>` : '') +
+    (yaEnTalentos ? `, <span style="color:#fbbf24">${yaEnTalentos} ya en Talentos (se excluyen)</span>` : '') +
     (dupes ? `, <span style="color:#f87171">${dupes} duplicados (se excluyen)</span>` : '') +
     (skippedEmpty ? `, ${skippedEmpty} filas vacias omitidas` : '');
 
@@ -1912,7 +1917,7 @@ function showCSVPreview(rows, skippedEmpty) {
 
   const tdStyle = 'padding:5px 8px;font-size:12px;border-bottom:1px solid var(--border);white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis';
   document.getElementById('csv-tbody').innerHTML = rows.map((r, i) =>
-    `<tr style="${r.badge!=='nuevo'&&r.badge!=='ya_en_talentos'?'opacity:0.4':''}">
+    `<tr style="${r.badge!=='nuevo'?'opacity:0.4':''}">
       <td style="${tdStyle}">${i+1}</td>
       <td style="${tdStyle}"><span style="padding:2px 6px;border-radius:12px;font-size:10px;font-weight:700;background:${r.badgeColor}22;color:${r.badgeColor}">${badgeLabels[r.badge]}</span></td>
       <td style="${tdStyle}">${esc(r.nombre)}</td>
@@ -1928,8 +1933,8 @@ function showCSVPreview(rows, skippedEmpty) {
 }
 
 async function confirmCSVImport() {
-  // Only import "nuevo" and "ya_en_talentos" (skip duplicates)
-  const toImport = _csvParsedRows.filter(r => r.badge === 'nuevo' || r.badge === 'ya_en_talentos');
+  // Only import "nuevo" — exclude duplicates and contactos que ya estan en la Base de Talentos
+  const toImport = _csvParsedRows.filter(r => r.badge === 'nuevo');
   if (!toImport.length) { showToast('No hay contactos nuevos para importar', 'info'); closeModal('modal-csv'); return; }
 
   const btn = document.getElementById('btn-csv-import');
