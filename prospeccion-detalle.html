@@ -182,6 +182,16 @@ select.form-input{cursor:pointer;-webkit-appearance:none}
 .historial-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .hist-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm)}
 .hist-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);flex-shrink:0}
+.email-log-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.email-log-item{display:flex;flex-direction:column;gap:4px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px}
+.email-log-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.email-log-status{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 6px;border-radius:4px}
+.email-log-status.s-sent{background:#10b98122;color:#10b981}
+.email-log-status.s-rejected{background:#f59e0b22;color:#f59e0b}
+.email-log-status.s-failed{background:#ef444422;color:#ef4444}
+.email-log-asunto{font-weight:600;color:var(--text)}
+.email-log-meta{font-size:11px;color:var(--text-dim)}
+.email-log-error{font-size:11px;color:#ef4444;margin-top:2px}
 
 /* ── Toast ── */
 .toast-container{position:fixed;top:76px;right:20px;z-index:999;display:flex;flex-direction:column;gap:6px}
@@ -605,7 +615,7 @@ const ETAPAS = [
 const ALL_ETAPAS = [...ETAPAS];
 
 let currentUser = null, currentProfile = null;
-let prospeccion = null, contactos = [], historial = [];
+let prospeccion = null, contactos = [], historial = [], emailLog = [];
 let editingContactoId = null, pendingMedioContactoId = null, pendingMedioNextEtapa = null;
 let selectedMedios = [];
 let isDark = false;
@@ -715,7 +725,9 @@ async function loadData() {
   if (ids.length) {
     const {data:h} = await sb.from('prospeccion_historial').select('*').in('contacto_id', ids).order('created_at', {ascending:false});
     historial = h || [];
-  } else { historial = []; }
+    const {data:el} = await sb.from('prospeccion_email_log').select('*').in('contacto_id', ids).order('created_at', {ascending:false});
+    emailLog = el || [];
+  } else { historial = []; emailLog = []; }
 
   // Load rosters for "Agregar a Roster"
   const {data:r} = await sb.from('rosters').select('*').order('created_at', {ascending:false});
@@ -1045,10 +1057,11 @@ async function saveContacto() {
   const tiktok = document.getElementById('c-tiktok').value.trim();
   const instagram = document.getElementById('c-instagram').value.trim();
   const youtube = document.getElementById('c-youtube').value.trim();
+  const email = document.getElementById('c-email').value.trim();
 
   // Duplicate check (skip if editing)
   if (!editingContactoId) {
-    const { warnings, blockers } = await checkDuplicates(tiktok, instagram, youtube);
+    const { warnings, blockers } = await checkDuplicates(tiktok, instagram, youtube, nombre, email);
     if (blockers.length) {
       alert(blockers.join('\n') + '\n\nNo se puede agregar a prospeccion: ya esta en la Base de Talentos.');
       return;
@@ -1061,7 +1074,7 @@ async function saveContacto() {
     nombre,
     paises: [...selectedCPaises],
     ciudad: document.getElementById('c-ciudad').value.trim(),
-    email: document.getElementById('c-email').value.trim(),
+    email,
     telefono: document.getElementById('c-telefono').value.trim(),
     tiktok,
     instagram,
@@ -1104,6 +1117,7 @@ function openDetalle(id) {
   if (!c) return;
   document.getElementById('modal-detalle-title').textContent = c.nombre;
   const hist = historial.filter(h=>h.contacto_id===id);
+  const elog = emailLog.filter(x=>x.contacto_id===id);
   const handle = c.tiktok||c.instagram||c.youtube;
 
   document.getElementById('modal-detalle-body').innerHTML = `
@@ -1120,6 +1134,21 @@ function openDetalle(id) {
     ${c.notas?`<div class="detail-row"><div class="detail-label">Notas</div><div class="detail-value">${esc(c.notas)}</div></div>`:''}
     <div class="detail-row"><div class="detail-label">Etapa</div><div class="detail-value"><span class="estado-badge es-${c.etapa==='activa'?'activa':''}" style="background:${ETAPAS.find(e=>e.key===c.etapa)?.color||'#888'}22;color:${ETAPAS.find(e=>e.key===c.etapa)?.color||'#888'}">${ETAPAS.find(e=>e.key===c.etapa)?.label||c.etapa}</span></div></div>
     ${c.medio_contacto?`<div class="detail-row"><div class="detail-label">Medio</div><div class="detail-value"><span class="k-medio">${c.medio_contacto.toUpperCase()}</span></div></div>`:''}
+    ${elog.length?`
+    <div style="margin-top:16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:8px">Emails enviados (${elog.length})</div>
+      <div class="email-log-list">
+        ${elog.map(le=>`<div class="email-log-item">
+          <div class="email-log-head">
+            <span class="email-log-status s-${le.status}">${le.status==='sent'?'Enviado':le.status==='rejected'?'Rechazado':'Falló'}</span>
+            ${le.asunto?`<span class="email-log-asunto">${esc(le.asunto)}</span>`:''}
+            <span class="email-log-meta" style="margin-left:auto">${formatDateTime(le.created_at)}</span>
+          </div>
+          <div class="email-log-meta">a ${esc(le.email_to||'')}</div>
+          ${le.error?`<div class="email-log-error">${esc(le.error)}</div>`:''}
+        </div>`).join('')}
+      </div>
+    </div>`:''}
     ${hist.length?`
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:8px">Historial</div>
@@ -1361,28 +1390,48 @@ document.addEventListener('click', function(e) {
 // ══════════════════════════════════════════════════════════
 // DUPLICATE CHECK
 // ══════════════════════════════════════════════════════════
-async function checkDuplicates(tiktok, instagram, youtube) {
+// Extract just the handle/username from a social URL — strips query/hash so
+// trackers (?igsh=, ?_t=, ?si=) don't break dedupe, and matches handle-only
+// inputs against full URLs.
+function extractSocialHandle(url) {
+  if (!url) return '';
+  const clean = String(url).toLowerCase().split('#')[0].split('?')[0].replace(/\/+$/,'').trim();
+  if (!clean) return '';
+  const m = clean.match(/@([^/]+)/);
+  if (m) return m[1];
+  const parts = clean.split('/');
+  return parts[parts.length - 1] || '';
+}
+function normalizeEmail(e) { return String(e||'').toLowerCase().trim(); }
+function normalizeName(n) { return String(n||'').toLowerCase().replace(/\s+/g,' ').trim(); }
+
+async function checkDuplicates(tiktok, instagram, youtube, nombre, email) {
   const warnings = [];
   const blockers = [];
-  const normalize = u => String(u||'').toLowerCase().replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'').trim();
-  const nTT = normalize(tiktok), nIG = normalize(instagram), nYT = normalize(youtube);
-  if (!nTT && !nIG && !nYT) return { warnings, blockers };
+  const hTT = extractSocialHandle(tiktok);
+  const hIG = extractSocialHandle(instagram);
+  const hYT = extractSocialHandle(youtube);
+  const nName = normalizeName(nombre);
+  const nEmail = normalizeEmail(email);
 
-  // Check within this prospeccion
+  // Check within this prospeccion (warning only)
   contactos.forEach(c => {
     if (c.id === editingContactoId) return;
-    if (nTT && normalize(c.tiktok) === nTT) warnings.push(`Duplicado en prospeccion: ${c.nombre} (TikTok)`);
-    if (nIG && normalize(c.instagram) === nIG) warnings.push(`Duplicado en prospeccion: ${c.nombre} (Instagram)`);
-    if (nYT && normalize(c.youtube) === nYT) warnings.push(`Duplicado en prospeccion: ${c.nombre} (YouTube)`);
+    if (hTT && extractSocialHandle(c.tiktok) === hTT) warnings.push(`Duplicado en prospeccion: ${c.nombre} (TikTok)`);
+    if (hIG && extractSocialHandle(c.instagram) === hIG) warnings.push(`Duplicado en prospeccion: ${c.nombre} (Instagram)`);
+    if (hYT && extractSocialHandle(c.youtube) === hYT) warnings.push(`Duplicado en prospeccion: ${c.nombre} (YouTube)`);
+    if (nEmail && normalizeEmail(c.email) === nEmail) warnings.push(`Duplicado en prospeccion: ${c.nombre} (email)`);
   });
 
   // Check against talentos table — hard block
   try {
-    const {data: talentos} = await sb.from('talentos').select('id, nombre, tiktok, instagram, youtube');
+    const {data: talentos} = await sb.from('talentos').select('id, nombre, email, tiktok, instagram, youtube');
     (talentos||[]).forEach(t => {
-      if (nTT && normalize(t.tiktok) === nTT) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (TikTok)`);
-      if (nIG && normalize(t.instagram) === nIG) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (Instagram)`);
-      if (nYT && normalize(t.youtube) === nYT) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (YouTube)`);
+      if (hTT && extractSocialHandle(t.tiktok) === hTT) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (TikTok)`);
+      if (hIG && extractSocialHandle(t.instagram) === hIG) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (Instagram)`);
+      if (hYT && extractSocialHandle(t.youtube) === hYT) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (YouTube)`);
+      if (nEmail && normalizeEmail(t.email) === nEmail) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (email)`);
+      if (nName && normalizeName(t.nombre) === nName) blockers.push(`Ya existe en la Base de Talentos un talento con el mismo nombre: ${t.nombre}`);
     });
   } catch(e) { console.warn('Duplicate check against talentos failed:', e); }
 
@@ -1512,16 +1561,18 @@ async function graduarATalento(contactoId) {
     return;
   }
 
-  // Check duplicates in talentos by social URLs
-  const normalize = u => String(u||'').toLowerCase().replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'').trim();
+  // Check duplicates in talentos by social handle / email / name
   try {
-    const {data: talentos} = await sb.from('talentos').select('id,nombre,tiktok,instagram,youtube');
-    const nTT = normalize(c.tiktok), nIG = normalize(c.instagram), nYT = normalize(c.youtube);
+    const {data: talentos} = await sb.from('talentos').select('id,nombre,email,tiktok,instagram,youtube');
+    const hTT = extractSocialHandle(c.tiktok), hIG = extractSocialHandle(c.instagram), hYT = extractSocialHandle(c.youtube);
+    const nEmail = normalizeEmail(c.email), nName = normalizeName(c.nombre);
     let existingTalent = null;
     (talentos||[]).forEach(t => {
-      if (nTT && normalize(t.tiktok) === nTT) existingTalent = t;
-      if (nIG && normalize(t.instagram) === nIG) existingTalent = t;
-      if (nYT && normalize(t.youtube) === nYT) existingTalent = t;
+      if (hTT && extractSocialHandle(t.tiktok) === hTT) existingTalent = t;
+      if (hIG && extractSocialHandle(t.instagram) === hIG) existingTalent = t;
+      if (hYT && extractSocialHandle(t.youtube) === hYT) existingTalent = t;
+      if (nEmail && normalizeEmail(t.email) === nEmail) existingTalent = t;
+      if (nName && normalizeName(t.nombre) === nName) existingTalent = t;
     });
 
     if (existingTalent) {
@@ -1571,8 +1622,7 @@ async function bulkGraduarATalento() {
   let graduated = 0, skipped = 0;
   const talentIds = [];
   try {
-    const {data: talentos} = await sb.from('talentos').select('id,nombre,tiktok,instagram,youtube');
-    const normalize = u => String(u||'').toLowerCase().replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'').trim();
+    const {data: talentos} = await sb.from('talentos').select('id,nombre,email,tiktok,instagram,youtube');
 
     for (const id of ids) {
       const c = contactos.find(x=>x.id===id);
@@ -1580,13 +1630,16 @@ async function bulkGraduarATalento() {
       if (c.talento_id) { skipped++; talentIds.push(c.talento_id); continue; }
       if ((!c.email && !c.telefono) || (!c.tiktok && !c.instagram && !c.youtube)) { skipped++; continue; }
 
-      // Check duplicate
-      const nTT = normalize(c.tiktok), nIG = normalize(c.instagram), nYT = normalize(c.youtube);
+      // Check duplicate by handle / email / name
+      const hTT = extractSocialHandle(c.tiktok), hIG = extractSocialHandle(c.instagram), hYT = extractSocialHandle(c.youtube);
+      const nEmail = normalizeEmail(c.email), nName = normalizeName(c.nombre);
       let existing = null;
       (talentos||[]).forEach(t => {
-        if (nTT && normalize(t.tiktok) === nTT) existing = t;
-        if (nIG && normalize(t.instagram) === nIG) existing = t;
-        if (nYT && normalize(t.youtube) === nYT) existing = t;
+        if (hTT && extractSocialHandle(t.tiktok) === hTT) existing = t;
+        if (hIG && extractSocialHandle(t.instagram) === hIG) existing = t;
+        if (hYT && extractSocialHandle(t.youtube) === hYT) existing = t;
+        if (nEmail && normalizeEmail(t.email) === nEmail) existing = t;
+        if (nName && normalizeName(t.nombre) === nName) existing = t;
       });
 
       if (existing) {
@@ -1815,20 +1868,24 @@ async function parseCSVForProspeccion(text) {
     .replace(/[áàä]/g,'a').replace(/[éèë]/g,'e').replace(/[íìï]/g,'i')
     .replace(/[óòö]/g,'o').replace(/[úùü]/g,'u').replace(/[ñ]/g,'n'));
 
-  // Build existing URLs for duplicate detection
-  const normalize = u => String(u||'').toLowerCase().replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'').trim();
-  const existingTT = new Set(contactos.map(c=>normalize(c.tiktok)).filter(Boolean));
-  const existingIG = new Set(contactos.map(c=>normalize(c.instagram)).filter(Boolean));
-  const existingYT = new Set(contactos.map(c=>normalize(c.youtube)).filter(Boolean));
+  // Build existing handles for duplicate detection (handle-based, not full URL,
+  // so URL trackers/handle-only inputs don't bypass dedupe).
+  const existingTT = new Set(contactos.map(c=>extractSocialHandle(c.tiktok)).filter(Boolean));
+  const existingIG = new Set(contactos.map(c=>extractSocialHandle(c.instagram)).filter(Boolean));
+  const existingYT = new Set(contactos.map(c=>extractSocialHandle(c.youtube)).filter(Boolean));
+  const existingEmail = new Set(contactos.map(c=>normalizeEmail(c.email)).filter(Boolean));
 
   // Also check against talentos
   let talentosTT = new Set(), talentosIG = new Set(), talentosYT = new Set();
+  let talentosEmail = new Set(), talentosName = new Set();
   try {
-    const {data:talentos} = await sb.from('talentos').select('tiktok,instagram,youtube');
+    const {data:talentos} = await sb.from('talentos').select('nombre,email,tiktok,instagram,youtube');
     (talentos||[]).forEach(t => {
-      if (t.tiktok) talentosTT.add(normalize(t.tiktok));
-      if (t.instagram) talentosIG.add(normalize(t.instagram));
-      if (t.youtube) talentosYT.add(normalize(t.youtube));
+      const ht = extractSocialHandle(t.tiktok); if (ht) talentosTT.add(ht);
+      const hi = extractSocialHandle(t.instagram); if (hi) talentosIG.add(hi);
+      const hy = extractSocialHandle(t.youtube); if (hy) talentosYT.add(hy);
+      const he = normalizeEmail(t.email); if (he) talentosEmail.add(he);
+      const hn = normalizeName(t.nombre); if (hn) talentosName.add(hn);
     });
   } catch(e) {}
 
@@ -1853,23 +1910,25 @@ async function parseCSVForProspeccion(text) {
 
     // Determine badge status
     let badge = 'nuevo', badgeColor = '#4ade80';
-    const nTT = normalize(tt), nIG = normalize(ig), nYT = normalize(yt);
+    const hTT = extractSocialHandle(tt), hIG = extractSocialHandle(ig), hYT = extractSocialHandle(yt);
+    const nEmail = normalizeEmail(row['email']);
+    const nName = normalizeName(nombre);
 
     // Duplicate within CSV
-    if ((nTT && csvTT.has(nTT)) || (nIG && csvIG.has(nIG))) {
+    if ((hTT && csvTT.has(hTT)) || (hIG && csvIG.has(hIG))) {
       badge = 'duplicado_csv'; badgeColor = '#f87171';
     }
     // Duplicate within this prospeccion
-    else if ((nTT && existingTT.has(nTT)) || (nIG && existingIG.has(nIG)) || (nYT && existingYT.has(nYT))) {
+    else if ((hTT && existingTT.has(hTT)) || (hIG && existingIG.has(hIG)) || (hYT && existingYT.has(hYT)) || (nEmail && existingEmail.has(nEmail))) {
       badge = 'ya_en_prospeccion'; badgeColor = '#f87171';
     }
     // Already in talentos
-    else if ((nTT && talentosTT.has(nTT)) || (nIG && talentosIG.has(nIG)) || (nYT && talentosYT.has(nYT))) {
+    else if ((hTT && talentosTT.has(hTT)) || (hIG && talentosIG.has(hIG)) || (hYT && talentosYT.has(hYT)) || (nEmail && talentosEmail.has(nEmail)) || (nName && talentosName.has(nName))) {
       badge = 'ya_en_talentos'; badgeColor = '#fbbf24';
     }
 
-    if (nTT) csvTT.add(nTT);
-    if (nIG) csvIG.add(nIG);
+    if (hTT) csvTT.add(hTT);
+    if (hIG) csvIG.add(hIG);
 
     const paisRaw = row['paises'] || row['pais'] || row['country'] || '';
     const paises = paisRaw ? paisRaw.split(/[;,]/).map(x=>x.trim()).filter(Boolean) : [];
@@ -2002,6 +2061,27 @@ async function bulkDelete() {
 }
 
 // ══════════════════════════════════════════════════════════
+// EMAIL LOG HELPER
+// ══════════════════════════════════════════════════════════
+async function logEmailSend({contacto, asunto, cuerpo, status, messageId, smtpResponse, errorMsg, templateId}) {
+  try {
+    const row = {
+      contacto_id: contacto.id,
+      prospeccion_id: prospId,
+      email_to: contacto.email || '',
+      asunto: asunto || '',
+      cuerpo: cuerpo || '',
+      status: status || 'sent',
+      message_id: messageId || '',
+      smtp_response: smtpResponse || '',
+      error: errorMsg || '',
+    };
+    if (templateId) row.template_id = templateId;
+    await sb.from('prospeccion_email_log').insert(row);
+  } catch(e) { console.error('logEmailSend failed:', e); }
+}
+
+// ══════════════════════════════════════════════════════════
 // BULK SEND EMAIL
 // ══════════════════════════════════════════════════════════
 function bulkSendEmail() {
@@ -2063,6 +2143,7 @@ async function confirmBulkSendEmail(templateIdOrDraft) {
     const subject = replaceVars(templateSubject, c);
     const body = replaceVars(templateBody, c);
 
+    const tplId = (templateIdOrDraft === 'draft') ? null : templateIdOrDraft;
     try {
       const resp = await fetch('/.netlify/functions/send-email', {
         method: 'POST',
@@ -2071,6 +2152,16 @@ async function confirmBulkSendEmail(templateIdOrDraft) {
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error);
+      const wasRejected = Array.isArray(data.rejected) && data.rejected.length > 0;
+      const wasAccepted = Array.isArray(data.accepted) && data.accepted.length > 0;
+      await logEmailSend({
+        contacto: c, asunto: subject, cuerpo: body,
+        status: wasRejected && !wasAccepted ? 'rejected' : 'sent',
+        messageId: data.messageId, smtpResponse: data.response,
+        errorMsg: wasRejected && !wasAccepted ? `SMTP rechazó: ${data.rejected.join(', ')}` : '',
+        templateId: tplId,
+      });
+      if (wasRejected && !wasAccepted) { failed++; continue; }
       sent++;
 
       // Auto-advance from contactar to esperando_respuesta
@@ -2087,6 +2178,10 @@ async function confirmBulkSendEmail(templateIdOrDraft) {
     } catch(e) {
       console.error(`Email failed for ${c.email}:`, e);
       failed++;
+      await logEmailSend({
+        contacto: c, asunto: subject, cuerpo: body,
+        status: 'failed', errorMsg: e.message || String(e), templateId: tplId,
+      });
     }
   }
 
@@ -2115,6 +2210,7 @@ async function sendEmail() {
   const btns = document.querySelectorAll('#modal-detalle-footer .btn-primary');
   btns.forEach(b => { b.textContent = 'Enviando...'; b.disabled = true; });
 
+  const c = contactos.find(x => x.id === e.contactId);
   try {
     const resp = await fetch('/.netlify/functions/send-email', {
       method: 'POST',
@@ -2128,16 +2224,35 @@ async function sendEmail() {
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Error del servidor');
 
+    const wasRejected = Array.isArray(data.rejected) && data.rejected.length > 0;
+    const wasAccepted = Array.isArray(data.accepted) && data.accepted.length > 0;
+    if (c) {
+      await logEmailSend({
+        contacto: c, asunto: e.subject, cuerpo: e.body,
+        status: wasRejected && !wasAccepted ? 'rejected' : 'sent',
+        messageId: data.messageId, smtpResponse: data.response,
+        errorMsg: wasRejected && !wasAccepted ? `SMTP rechazó: ${data.rejected.join(', ')}` : '',
+      });
+    }
+    if (wasRejected && !wasAccepted) {
+      throw new Error(`SMTP rechazó el email: ${data.rejected.join(', ')}`);
+    }
+
     closeModal('modal-detalle');
     showToast(`Email enviado a ${e.to}`, 'success');
 
     // Auto-advance to esperando_respuesta if in contactar stage
-    const c = contactos.find(x => x.id === e.contactId);
     if (c && c.etapa === 'contactar') {
       await changeEtapa(c.id, 'esperando_respuesta', 'mail');
     }
   } catch (err) {
     console.error('sendEmail error:', err);
+    if (c) {
+      await logEmailSend({
+        contacto: c, asunto: e.subject, cuerpo: e.body,
+        status: 'failed', errorMsg: err.message || String(err),
+      });
+    }
     showToast('Error al enviar: ' + err.message, 'error');
     btns.forEach(b => { b.textContent = 'Reintentar'; b.disabled = false; });
   }
