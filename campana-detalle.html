@@ -995,19 +995,20 @@ async function loadCampanaChildren() {
   if (!campana) return;
   const contIds = (campana.campana_talentos||[]).flatMap(ct => (ct.contenidos||[]).map(c => c.id));
   if (!contIds.length) return;
-  const [obs, scripts, drafts, hist, cbriefs] = await Promise.all([
+  const [obs, scripts, drafts, hist, cbriefs, stats] = await Promise.all([
     sb.from('contenido_observaciones').select('*').in('contenido_id', contIds),
     sb.from('contenido_scripts').select('*').in('contenido_id', contIds),
     sb.from('contenido_borradores').select('*').in('contenido_id', contIds),
     sb.from('contenido_historial').select('*').in('contenido_id', contIds),
     sb.from('contenido_briefs').select('*').in('contenido_id', contIds),
+    sb.from('contenido_estadisticas').select('*').in('contenido_id', contIds).order('created_at',{ascending:false}),
   ]);
   const groupBy = (rows) => {
     const m = {};
     (rows.data||[]).forEach(r => { (m[r.contenido_id] = m[r.contenido_id] || []).push(r); });
     return m;
   };
-  const obsMap = groupBy(obs), scrMap = groupBy(scripts), drfMap = groupBy(drafts), hisMap = groupBy(hist), brMap = groupBy(cbriefs);
+  const obsMap = groupBy(obs), scrMap = groupBy(scripts), drfMap = groupBy(drafts), hisMap = groupBy(hist), brMap = groupBy(cbriefs), statsMap = groupBy(stats);
   for (const ct of (campana.campana_talentos||[])) {
     for (const c of (ct.contenidos||[])) {
       c.contenido_observaciones = obsMap[c.id] || [];
@@ -1015,6 +1016,7 @@ async function loadCampanaChildren() {
       c.contenido_borradores = drfMap[c.id] || [];
       c.contenido_historial = hisMap[c.id] || [];
       c.contenido_briefs = brMap[c.id] || [];
+      c.contenido_estadisticas = statsMap[c.id] || [];
     }
   }
 }
@@ -1883,11 +1885,12 @@ function buildActions(c, ct) {
     </div>`;
   }
 
-  // ── Paso 7: Estadísticas ──
+  // ── Paso 7: Estadísticas (botón subir + lista) ──
   if (paso === 7 && canI) {
     html += `<div class="workflow-action-box">
       <div class="action-box-title">📊 Estadísticas</div>
-      <div class="action-btns">
+      ${renderStatsList(c)}
+      <div class="action-btns" style="margin-top:8px">
         <label class="btn btn-primary btn-sm" style="cursor:pointer">
           <input type="file" style="display:none" accept="image/*" multiple onchange="uploadStats(this,${c.id})">
           Subir screenshots
@@ -1897,7 +1900,31 @@ function buildActions(c, ct) {
     </div>`;
   }
 
+  // ── Estadísticas ya subidas: mostrar también en pasos posteriores (8,9) ──
+  if (paso > 7 && c.estadisticas_requeridas && (c.contenido_estadisticas||[]).length) {
+    html += `<div class="workflow-action-box" style="background:rgba(99,102,241,0.04);border-color:rgba(99,102,241,0.2)">
+      <div class="action-box-title">📊 Estadísticas (paso 7)</div>
+      ${renderStatsList(c)}
+    </div>`;
+  }
+
   return html;
+}
+
+function renderStatsList(c) {
+  const stats = c.contenido_estadisticas || [];
+  if (!stats.length) {
+    return '<div style="font-size:12px;color:var(--text-dim);padding:8px 0">Aún no hay screenshots subidos.</div>';
+  }
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+    ${stats.map(s => `<div style="position:relative;width:120px;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--surface2)">
+      <a href="${esc(s.url_screenshot||'')}" target="_blank" style="display:block;text-decoration:none">
+        <img src="${esc(s.url_screenshot||'')}" loading="lazy" style="width:100%;height:100px;object-fit:cover;display:block" alt="screenshot">
+      </a>
+      <button onclick="event.stopPropagation();deleteStats(${s.id}, ${JSON.stringify(s.url_screenshot||'').replace(/"/g,'&quot;')})" title="Eliminar" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center">×</button>
+      <div style="font-size:9px;color:var(--text-dim);padding:3px 6px;text-align:center">${fmtDT(s.created_at)}</div>
+    </div>`).join('')}
+  </div>`;
 }
 
 // ════════════════════════════════════════════════
@@ -2168,16 +2195,55 @@ async function uploadDraft(input, contId) {
 
 async function uploadStats(input, contId) {
   const files = Array.from(input.files);
+  if (!files.length) return;
+  let ok = 0, fail = 0;
   for (const file of files) {
     const path = `campana-${campanaId}/contenido-${contId}/stats-${Date.now()}-${safeStorageName(file.name)}`;
     try {
-      await sb.storage.from('content-stats').upload(path, file);
-      const {data:{publicUrl}} = sb.storage.from('content-stats').getPublicUrl(path);
-      await sb.from('contenido_estadisticas').insert({contenido_id:contId, periodo:'7d', url_screenshot:publicUrl||path, subido_por:currentUser.id});
-    } catch(e) { toast('Error: '+e.message,'err'); }
+      const {error: upErr} = await sb.storage.from('content-stats').upload(path, file);
+      if (upErr) throw upErr;
+      const pub = sb.storage.from('content-stats').getPublicUrl(path);
+      const publicUrl = (pub && pub.data && pub.data.publicUrl) || path;
+      const {error: insErr} = await sb.from('contenido_estadisticas').insert({
+        contenido_id: contId, periodo: '7d', url_screenshot: publicUrl, subido_por: currentUser.id,
+      });
+      if (insErr) throw insErr;
+      ok++;
+    } catch(e) {
+      console.error('uploadStats:', e);
+      toast('Error: '+e.message, 'err');
+      fail++;
+    }
   }
-  input.value='';
-  toast('Screenshots subidos ✓','ok');
+  input.value = '';
+  if (ok) {
+    await loadCampana();
+    await loadCampanaChildren();
+    renderAll();
+    toast(ok + ' screenshot' + (ok!==1?'s':'') + ' guardado' + (ok!==1?'s':'') + (fail?' ('+fail+' falló'+(fail!==1?'ron':'')+')':'') + ' ✓', 'ok');
+  }
+}
+
+async function deleteStats(statId, url) {
+  if (!confirm('Eliminar este screenshot?')) return;
+  try {
+    // Best-effort delete del archivo en Storage (puede fallar si la URL no es del bucket)
+    try {
+      const idx = String(url||'').indexOf('/content-stats/');
+      if (idx >= 0) {
+        const path = decodeURIComponent(url.substring(idx + '/content-stats/'.length).split('?')[0]);
+        await sb.storage.from('content-stats').remove([path]);
+      }
+    } catch(e) { /* no-op: el row se borra igual */ }
+    const {error} = await sb.from('contenido_estadisticas').delete().eq('id', statId);
+    if (error) throw error;
+    await loadCampana();
+    await loadCampanaChildren();
+    renderAll();
+    toast('Screenshot eliminado', 'ok');
+  } catch(e) {
+    toast('Error: '+e.message, 'err');
+  }
 }
 
 async function replaceScript(input, contId, scriptId) {
