@@ -135,6 +135,7 @@ let talents = [];
 let rosters = [];
 let rosterLinks = [];
 let talentCampaigns = []; // campaign history per talent
+let talentActiveProsps = {}; // talento_id -> [{prospeccion_id, marca, pendingCount}]
 let rosterBrandEdits = {}; // roster_id → count of brand edits
 let nextTalentId = 1000;
 let nextRosterId = 100;
@@ -489,6 +490,36 @@ async function loadFromSupabase() {
           acciones: (ct.contenidos||[]).map(c => c.tipo).filter(Boolean),
         }));
     } catch(e) { console.warn('Campaign history load:', e); talentCampaigns = []; }
+
+    // Load active prospección sequences for talents (badge "En prospección")
+    try {
+      const {data: contRows} = await sb.from('prospeccion_contactos')
+        .select('id,talento_id,prospeccion_id,etapa,prospecciones(id,marca,estado)')
+        .not('talento_id','is',null)
+        .eq('etapa','esperando_respuesta');
+      const contactByTalento = {};
+      (contRows||[]).forEach(r => {
+        if (!r.prospecciones || r.prospecciones.estado !== 'activa') return;
+        (contactByTalento[r.talento_id] = contactByTalento[r.talento_id] || []).push({
+          contacto_id: r.id, prospeccion_id: r.prospeccion_id, marca: r.prospecciones.marca,
+        });
+      });
+      // Now check who has pending cola
+      const contactoIds = (contRows||[]).map(r => r.id);
+      let pendingByContacto = {};
+      if (contactoIds.length) {
+        const {data: cola} = await sb.from('prospeccion_email_cola')
+          .select('contacto_id')
+          .in('contacto_id', contactoIds)
+          .eq('status','pendiente');
+        (cola||[]).forEach(r => { pendingByContacto[r.contacto_id] = (pendingByContacto[r.contacto_id]||0) + 1; });
+      }
+      talentActiveProsps = {};
+      Object.keys(contactByTalento).forEach(tid => {
+        const list = contactByTalento[tid].filter(c => pendingByContacto[c.contacto_id]);
+        if (list.length) talentActiveProsps[tid] = list;
+      });
+    } catch(e) { console.warn('active prosps load:', e); talentActiveProsps = {}; }
 
     // Auto-enrich marcas_previas from campaign history
     for (const t of talents) {
@@ -914,6 +945,12 @@ let FN_MAP = {
   openAIDescsModal,
   closeAIDescsModal,
   confirmAIDescs,
+  openAddToProspeccionModal,
+  closeAddToProspeccionModal,
+  openCreateProspAndAdd,
+  cancelCreateProsp,
+  confirmCreateProspAndAdd,
+  addSelectionToProspeccion,
 };
 
 let ACTION_MAP = {
@@ -1807,6 +1844,10 @@ function renderCard(t) {
   const engRow = metricRows.length ? `<div class="card-metrics">${metricRows.join('')}</div>` : '';
   const genderBadge = t.genero ? `<span class="cat-tag" style="background:rgba(148,20,224,0.08);color:#9414E0;border-color:rgba(148,20,224,0.2);">${escapeHtml(t.genero)}</span>` : '';
   const reviewBadge = t.needs_review ? `<span class="cat-tag" title="${escapeHtml(t.review_comment||'Perfil marcado para revisión')}" style="background:rgba(245,158,11,0.12);color:#b45309;border-color:rgba(245,158,11,0.35);display:inline-flex;align-items:center;gap:3px;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>REVISIÓN</span>` : '';
+  const prospList = talentActiveProsps[t.id] || [];
+  const prospBadge = prospList.length
+    ? `<a class="cat-tag" href="prospeccion-detalle.html?id=${prospList[0].prospeccion_id}" target="_blank" title="${escapeHtml('En prospección: ' + prospList.map(p=>p.marca).join(', '))}" style="background:rgba(14,165,233,0.12);color:#0ea5e9;border-color:rgba(14,165,233,0.35);display:inline-flex;align-items:center;gap:3px;text-decoration:none" onclick="event.stopPropagation()">📧 En prospección${prospList.length>1?` (${prospList.length})`:''}</a>`
+    : '';
   const cats = t.categorias.slice(0,3).map(c=>`<span class="cat-tag">${escapeHtml(c)}</span>`).join('');
   const reviewCardStyle = t.needs_review ? ' style="border-color:rgba(245,158,11,0.55);box-shadow:0 0 0 1px rgba(245,158,11,0.25);"' : '';
   return `<div class="talent-card${sel?' selected':''}" id="card-${t.id}" data-action="edit" data-id="${t.id}"${reviewCardStyle}>
@@ -1816,7 +1857,7 @@ function renderCard(t) {
     <div class="card-location">${(t.paises||[]).map(p=>(COUNTRY_FLAGS[p]||'')+' '+escapeHtml(p)).join(' · ')}${safeCiudad?', '+safeCiudad:''}</div>
     <div class="card-networks">${networks}</div>
     ${engRow}
-    <div class="card-cats">${reviewBadge}${genderBadge}${cats}${t.categorias.length>3?`<span class="cat-tag">+${t.categorias.length-3}</span>`:''}</div>
+    <div class="card-cats">${reviewBadge}${prospBadge}${genderBadge}${cats}${t.categorias.length>3?`<span class="cat-tag">+${t.categorias.length-3}</span>`:''}</div>
     ${t.needs_review && t.review_comment ? `<div style="margin-top:4px;padding:6px 8px;background:rgba(245,158,11,0.07);border-left:2px solid #f59e0b;border-radius:4px;font-size:11px;color:#92400e;line-height:1.35;"><strong style="font-weight:700;">Revisión:</strong> ${escapeHtml(t.review_comment)}</div>` : ''}
     ${t.updated ? `<div class="card-updated" title="Última actualización de seguidores">↻ ${formatUpdatedDate(t.updated)}</div>` : ''}
     <div class="card-footer">
@@ -3457,6 +3498,148 @@ function openCreateRosterAndAdd() {
   closeModal('add-to-roster-modal');
   _pendingRosterTalentIds = [...selectedIds]; // save current selection
   openCreateRosterModal();
+}
+
+// ===================== ADD SELECTED TO PROSPECCION (INTERNA) =====================
+function closeAddToProspeccionModal() { closeModal('add-to-prosp-modal'); }
+
+async function openAddToProspeccionModal() {
+  if (selectedIds.size === 0) { showToast('Selecciona talentos primero', 'error'); return; }
+  if (!sb || !currentUser) { showToast('Sesión requerida para prospecciones', 'error'); return; }
+  document.getElementById('atp-summary').textContent =
+    selectedIds.size + ' talento' + (selectedIds.size!==1?'s':'') + ' seleccionado' + (selectedIds.size!==1?'s':'') + '. Elige una prospección interna o crea una nueva:';
+  document.getElementById('atp-create-form').style.display = 'none';
+  const list = document.getElementById('add-to-prosp-list');
+  list.innerHTML = '<p style="font-size:12px;color:var(--text-dim);text-align:center;padding:8px">Cargando prospecciones...</p>';
+  openModal('add-to-prosp-modal');
+
+  let prospsRows = [];
+  try {
+    const {data, error} = await sb.from('prospecciones')
+      .select('id,marca,producto,estado,tipo')
+      .in('tipo', ['interna','mixta'])
+      .eq('estado', 'activa')
+      .order('created_at', {ascending:false});
+    if (error) throw error;
+    prospsRows = data || [];
+  } catch(e) {
+    list.innerHTML = '<p style="font-size:12px;color:#ef4444;text-align:center;padding:10px">Error: ' + escapeHtml(e.message) + '</p>';
+    return;
+  }
+
+  if (!prospsRows.length) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--text-muted);text-align:center;padding:10px">No hay prospecciones internas activas. Crea una nueva.</p>';
+    return;
+  }
+
+  // Get talent ids already in each prospección
+  const ids = prospsRows.map(p => p.id);
+  let existing = [];
+  try {
+    const {data} = await sb.from('prospeccion_contactos')
+      .select('prospeccion_id,talento_id')
+      .in('prospeccion_id', ids)
+      .not('talento_id', 'is', null);
+    existing = data || [];
+  } catch(e) {}
+  const byProsp = {};
+  existing.forEach(r => { (byProsp[r.prospeccion_id] = byProsp[r.prospeccion_id] || new Set()).add(r.talento_id); });
+
+  list.innerHTML = prospsRows.map(p => {
+    const taken = byProsp[p.id] || new Set();
+    const alreadyN = [...selectedIds].filter(id => taken.has(id)).length;
+    const willAdd = selectedIds.size - alreadyN;
+    return `<button class="btn btn-outline" style="width:100%;justify-content:flex-start;gap:10px;text-align:left;padding:10px 12px" data-fn="addSelectionToProspeccion" data-id="${p.id}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <span style="flex:1">
+        <div style="font-weight:700;font-size:13px">${escapeHtml(p.marca||'')}</div>
+        ${p.producto?`<div style="font-size:11px;color:var(--text-dim)">${escapeHtml(p.producto)}</div>`:''}
+      </span>
+      <span style="font-size:11px;color:var(--text-dim)">${p.tipo==='mixta'?'Mixta':'Interna'} · agregará ${willAdd}${alreadyN?` (${alreadyN} ya)`:''}</span>
+    </button>`;
+  }).join('');
+}
+
+async function addSelectionToProspeccion(prospId) {
+  const pid = parseInt(prospId);
+  if (!pid || selectedIds.size === 0) return;
+  const idsToAdd = [...selectedIds];
+  try {
+    // Fetch existing talento_ids for this prospección to dedupe
+    const {data:existing} = await sb.from('prospeccion_contactos')
+      .select('talento_id').eq('prospeccion_id', pid).not('talento_id','is',null);
+    const taken = new Set((existing||[]).map(r => r.talento_id));
+    const newOnes = idsToAdd.filter(id => !taken.has(id));
+    if (!newOnes.length) {
+      closeModal('add-to-prosp-modal');
+      showToast('Todos ya estaban en esa prospección', 'info');
+      clearSelection();
+      return;
+    }
+    const rows = newOnes.map(id => {
+      const t = talents.find(x => x.id === id) || {};
+      return {
+        prospeccion_id: pid,
+        talento_id: id,
+        origen: 'interno',
+        etapa: 'evaluacion',
+        nombre: t.nombre || '',
+        email: t.email || '',
+        telefono: t.telefono || '',
+        tiktok: t.tiktok || '',
+        instagram: t.instagram || '',
+        youtube: t.youtube || '',
+        seguidores: t.seguidores || {tiktok:0,instagram:0,youtube:0},
+        categorias: t.categorias || [],
+        paises: t.paises || [],
+        genero: t.genero || '',
+      };
+    });
+    // Insert in chunks
+    for (let i = 0; i < rows.length; i += 50) {
+      const chunk = rows.slice(i, i+50);
+      const {error} = await sb.from('prospeccion_contactos').insert(chunk);
+      if (error) throw error;
+    }
+    closeModal('add-to-prosp-modal');
+    const skipped = idsToAdd.length - newOnes.length;
+    const url = 'prospeccion-detalle.html?id=' + pid;
+    showToast(newOnes.length + ' talento(s) agregado(s)' + (skipped?` (${skipped} omitidos por duplicado)`:'') + '. Abriendo prospección…', 'success', 4000);
+    clearSelection();
+    setTimeout(() => { window.open(url, '_blank'); }, 600);
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+function openCreateProspAndAdd() {
+  document.getElementById('atp-marca').value = '';
+  document.getElementById('atp-producto').value = '';
+  document.getElementById('atp-create-form').style.display = 'block';
+}
+
+function cancelCreateProsp() {
+  document.getElementById('atp-create-form').style.display = 'none';
+}
+
+async function confirmCreateProspAndAdd() {
+  const marca = (document.getElementById('atp-marca').value||'').trim();
+  if (!marca) { showToast('La marca es obligatoria', 'error'); return; }
+  const producto = (document.getElementById('atp-producto').value||'').trim();
+  try {
+    const {data, error} = await sb.from('prospecciones').insert({
+      marca, producto,
+      tipo: 'interna',
+      estado: 'activa',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).select('id').single();
+    if (error) throw error;
+    if (!data || !data.id) throw new Error('No se pudo crear la prospección');
+    await addSelectionToProspeccion(data.id);
+  } catch(e) {
+    showToast('Error: '+e.message, 'error');
+  }
 }
 
 // ===================== GENERAL ROSTERS =====================

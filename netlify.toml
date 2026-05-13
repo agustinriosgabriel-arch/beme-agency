@@ -19,6 +19,10 @@
   timeout = 20
   schedule = "0 12 * * *"  # 6:00 AM Mexico City — daily pending reminders
 
+[functions."process-email-queue"]
+  timeout = 26
+  schedule = "*/15 * * * *"  # every 15 minutes — prospección email sequences
+
 # Cache strategy
 [[headers]]
   for = "/*"

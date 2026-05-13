@@ -37,6 +37,7 @@ exports.handler = async (event) => {
     const mailOptions = {
       from: `"BEME Agency" <${SMTP_USER}>`,
       to,
+      bcc: SMTP_USER,
       subject,
       text: body,
       replyTo: replyTo || SMTP_USER,
@@ -47,7 +48,13 @@ exports.handler = async (event) => {
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ success: true, messageId: info.messageId }),
+      body: JSON.stringify({
+        success: true,
+        messageId: info.messageId,
+        accepted: info.accepted || [],
+        rejected: info.rejected || [],
+        response: info.response || '',
+      }),
     };
   } catch (err) {
     console.error('send-email error:', err);

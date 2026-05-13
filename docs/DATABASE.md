@@ -66,51 +66,66 @@ talent_id   integer REFERENCES talentos(id)
 
 ### `prospecciones`
 ```sql
-id                serial PRIMARY KEY
-marca             text NOT NULL
-paises            text[] DEFAULT '{}'
-plataformas       text[] DEFAULT '{}'        -- ['TikTok','Instagram','YouTube']
-contenido         text DEFAULT ''
-categorias        text[] DEFAULT '{}'
-generos           text[] DEFAULT '{}'
-visualizaciones   text DEFAULT ''
-seguidores_min    integer DEFAULT 0
-seguidores_max    integer DEFAULT 0
-cantidad_talentos integer DEFAULT 0
-producto          text DEFAULT ''
-fecha             date
-notas             text DEFAULT ''
-email_draft       text DEFAULT ''
-estado            text DEFAULT 'activa'      -- activa|pausada|completada|cancelada
-created_at        timestamp DEFAULT now()
-updated_at        timestamp DEFAULT now()
+id                    serial PRIMARY KEY
+marca                 text NOT NULL
+paises                text[] DEFAULT '{}'
+plataformas           text[] DEFAULT '{}'        -- ['TikTok','Instagram','YouTube']
+contenido             text DEFAULT ''
+categorias            text[] DEFAULT '{}'
+generos               text[] DEFAULT '{}'
+visualizaciones       text DEFAULT ''
+seguidores_min        integer DEFAULT 0
+seguidores_max        integer DEFAULT 0
+cantidad_talentos     integer DEFAULT 0
+producto              text DEFAULT ''
+fecha                 date
+notas                 text DEFAULT ''
+email_draft           text DEFAULT ''
+estado                text DEFAULT 'activa'      -- activa|pausada|completada|cancelada
+tipo                  text DEFAULT 'externa'     -- externa|interna|mixta
+secuencia_default_id  integer REFERENCES prospeccion_email_secuencias(id)
+created_at            timestamp DEFAULT now()
+updated_at            timestamp DEFAULT now()
 ```
+
+**`tipo`** define el flujo:
+- `externa`: contactos vienen de afuera de la base de Talentos (CSV, agregar manual). Al cualificarse → "Pasar a Talentos".
+- `interna`: contactos son seleccionados directamente de la base de Talentos via "Sumar Talentos" o desde `index.html` con bulk → "Agregar a prospección". No requiere graduación.
+- `mixta`: ambos flujos disponibles en la misma prospección.
 
 ### `prospeccion_contactos`
 ```sql
-id                serial PRIMARY KEY
-prospeccion_id    integer REFERENCES prospecciones(id) ON DELETE CASCADE
-nombre            text NOT NULL
-paises            text[] DEFAULT '{}'
-ciudad            text DEFAULT ''
-telefono          text DEFAULT ''
-email             text DEFAULT ''
-tiktok            text DEFAULT ''
-instagram         text DEFAULT ''
-youtube           text DEFAULT ''
-seguidores        jsonb DEFAULT '{"tiktok":0,"instagram":0,"youtube":0}'
-categorias        text[] DEFAULT '{}'
-genero            text DEFAULT ''
-keywords          text DEFAULT ''
-foto              text DEFAULT ''
-valores           text DEFAULT ''
-etapa             text DEFAULT 'evaluacion'  -- evaluacion|contactar|esperando_respuesta|descartado|no_interesado|interesado
-medio_contacto    text DEFAULT ''            -- mail|whatsapp|dm
-notas             text DEFAULT ''
-talento_id        integer REFERENCES talentos(id)  -- set when graduated
-created_at        timestamp DEFAULT now()
-updated_at        timestamp DEFAULT now()
+id                       serial PRIMARY KEY
+prospeccion_id           integer REFERENCES prospecciones(id) ON DELETE CASCADE
+nombre                   text NOT NULL
+paises                   text[] DEFAULT '{}'
+ciudad                   text DEFAULT ''
+telefono                 text DEFAULT ''
+email                    text DEFAULT ''
+tiktok                   text DEFAULT ''
+instagram                text DEFAULT ''
+youtube                  text DEFAULT ''
+seguidores               jsonb DEFAULT '{"tiktok":0,"instagram":0,"youtube":0}'
+categorias               text[] DEFAULT '{}'
+genero                   text DEFAULT ''
+keywords                 text DEFAULT ''
+foto                     text DEFAULT ''
+valores                  text DEFAULT ''
+etapa                    text DEFAULT 'evaluacion'  -- evaluacion|contactar|esperando_respuesta|descartado|no_interesado|interesado
+medio_contacto           text DEFAULT ''            -- mail|whatsapp|dm
+notas                    text DEFAULT ''
+talento_id               integer REFERENCES talentos(id)  -- set when graduated OR for "origen=interno"
+origen                   text DEFAULT 'externo'     -- externo|interno
+precio_cotizado          numeric                    -- cotización recibida (visible al llegar a "Interesado")
+precio_cotizado_moneda   text DEFAULT 'USD'
+precio_cotizado_notas    text DEFAULT ''
+created_at               timestamp DEFAULT now()
+updated_at               timestamp DEFAULT now()
 ```
+
+**Unique constraint**: `(prospeccion_id, talento_id) WHERE talento_id IS NOT NULL` — un talento no puede estar dos veces en la misma prospección.
+
+**`origen='interno'`** indica que el contacto fue agregado desde la base de Talentos (no requiere graduación, los botones "Pasar a Talentos" se ocultan).
 
 ### `prospeccion_historial`
 ```sql
@@ -130,6 +145,65 @@ nombre            text NOT NULL
 asunto            text DEFAULT ''
 cuerpo            text NOT NULL
 created_at        timestamp DEFAULT now()
+```
+
+### `prospeccion_email_secuencias`
+Cadenas automatizadas de 1..N templates. Cada paso define qué template usar, cuánto esperar desde el paso anterior, y si respetar días hábiles.
+```sql
+id           serial PRIMARY KEY
+nombre       text NOT NULL
+descripcion  text DEFAULT ''
+pasos        jsonb DEFAULT '[]'  -- [{step,template_id,delay_horas,dias_habiles},...]
+created_at   timestamp DEFAULT now()
+updated_at   timestamp DEFAULT now()
+```
+
+Ejemplo de `pasos`:
+```json
+[
+  {"step":1,"template_id":12,"delay_horas":0, "dias_habiles":false},
+  {"step":2,"template_id":13,"delay_horas":24,"dias_habiles":true},
+  {"step":3,"template_id":14,"delay_horas":72,"dias_habiles":true}
+]
+```
+
+### `prospeccion_email_cola`
+Cola de envíos programados. Una fila por (contacto × paso). El scheduled function `process-email-queue` (cada 15 min) procesa filas `status='pendiente'` con `scheduled_at <= now()`.
+```sql
+id              serial PRIMARY KEY
+contacto_id     integer NOT NULL REFERENCES prospeccion_contactos(id) ON DELETE CASCADE
+prospeccion_id  integer NOT NULL REFERENCES prospecciones(id) ON DELETE CASCADE
+secuencia_id    integer REFERENCES prospeccion_email_secuencias(id)
+step            integer NOT NULL
+template_id     integer
+scheduled_at    timestamp NOT NULL
+status          text DEFAULT 'pendiente'  -- pendiente|enviado|cancelado|error
+sent_at         timestamp
+email_log_id    integer REFERENCES prospeccion_email_log(id)
+error           text DEFAULT ''
+created_at      timestamp DEFAULT now()
+```
+
+**Reglas**:
+- Al **iniciar secuencia** (bulk action en kanban), se insertan N filas: paso 1 marcado como `enviado` (envío inmediato), pasos 2..N como `pendiente` con `scheduled_at` calculado.
+- Al **salir de `etapa='esperando_respuesta'`** hacia cualquier otra etapa, todas las filas `pendiente` de ese contacto se marcan `cancelado` automáticamente.
+- **Forzar siguiente envío**: el botón en el modal de detalle del contacto pone `scheduled_at = now()` y dispara el procesador.
+
+### `prospeccion_email_log`
+Registro de cada intento de envío SMTP (definido en `sql/add_email_log_2026_05_05.sql`):
+```sql
+id              serial PRIMARY KEY
+contacto_id     integer REFERENCES prospeccion_contactos(id)
+prospeccion_id  integer REFERENCES prospecciones(id)
+email_to        text NOT NULL
+asunto          text
+cuerpo          text
+status          text  -- sent|rejected|failed
+message_id      text
+smtp_response   text
+error           text
+template_id     integer
+created_at      timestamp DEFAULT now()
 ```
 
 ---

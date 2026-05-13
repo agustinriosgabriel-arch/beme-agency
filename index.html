@@ -1716,6 +1716,10 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
       Roster
     </button>
+    <button class="btn btn-outline btn-sm" data-fn="openAddToProspeccionModal" title="Sumar a una prospección interna" style="border-color:rgba(14,165,233,0.35);color:#0ea5e9">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Prospección
+    </button>
     <button class="btn btn-danger btn-sm" data-fn="deleteSelectedTalents">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
       Eliminar
@@ -2167,6 +2171,41 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         Crear nuevo roster
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TO PROSPECCION MODAL -->
+<div class="modal-overlay" id="add-to-prosp-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title">Sumar a Prospección Interna</h2>
+      <button class="modal-close" data-fn="closeAddToProspeccionModal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px" id="atp-summary">Talentos seleccionados.</p>
+      <div id="add-to-prosp-list" style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow:auto"></div>
+      <div class="section-divider"></div>
+      <button class="btn btn-outline" style="width:100%" data-fn="openCreateProspAndAdd">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Crear nueva prospección interna
+      </button>
+      <div id="atp-create-form" style="display:none;margin-top:12px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm)">
+        <div class="form-group" style="margin-bottom:8px">
+          <label class="form-label">Marca *</label>
+          <input type="text" id="atp-marca" class="form-input" placeholder="Marca / cliente">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label class="form-label">Producto</label>
+          <input type="text" id="atp-producto" class="form-input" placeholder="Producto / servicio">
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" data-fn="cancelCreateProsp">Cancelar</button>
+          <button class="btn btn-primary btn-sm" data-fn="confirmCreateProspAndAdd">Crear y agregar</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

@@ -154,6 +154,13 @@ body.light .tab-nav{background:rgba(244,244,244,0.9)}
 .estado-pausada{background:rgba(245,158,11,0.1);color:#d97706}
 .estado-completada{background:rgba(22,163,74,0.1);color:#16a34a}
 .estado-cancelada{background:rgba(239,68,68,0.1);color:#dc2626}
+.tipo-badge{
+  font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;
+  text-transform:uppercase;letter-spacing:0.5px;display:inline-block;
+}
+.tipo-externa{background:rgba(99,102,241,0.1);color:#6366f1}
+.tipo-interna{background:rgba(14,165,233,0.1);color:#0ea5e9}
+.tipo-mixta{background:rgba(168,85,247,0.1);color:#a855f7}
 
 .prosp-card-body{display:flex;flex-direction:column;gap:8px}
 .prosp-tags{display:flex;flex-wrap:wrap;gap:4px}
@@ -449,6 +456,12 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       <option value="completada">Completada</option>
       <option value="cancelada">Cancelada</option>
     </select>
+    <select class="filter-select" id="filter-tipo" onchange="renderProspecciones()">
+      <option value="">Todos los tipos</option>
+      <option value="externa">Externa</option>
+      <option value="interna">Interna</option>
+      <option value="mixta">Mixta</option>
+    </select>
   </div>
 
   <!-- Grid container -->
@@ -570,7 +583,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
           <input type="date" id="p-fecha" class="form-input">
         </div>
 
-        <div class="form-group full">
+        <div class="form-group">
           <label class="form-label">Estado</label>
           <select id="p-estado" class="form-input">
             <option value="activa">Activa</option>
@@ -578,6 +591,23 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
             <option value="completada">Completada</option>
             <option value="cancelada">Cancelada</option>
           </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tipo de prospección *</label>
+          <select id="p-tipo" class="form-input">
+            <option value="externa">Externa (fuera de Talentos)</option>
+            <option value="interna">Interna (desde Talentos)</option>
+            <option value="mixta">Mixta (ambas)</option>
+          </select>
+        </div>
+
+        <div class="form-group full">
+          <label class="form-label">Secuencia de emails default</label>
+          <select id="p-secuencia" class="form-input">
+            <option value="">— Ninguna (envíos manuales) —</option>
+          </select>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:4px">Se aplicará al iniciar la secuencia para contactos en esta prospección. Podés sobrescribir al disparar.</div>
         </div>
 
         <div class="form-section-title">Notas y Email</div>
@@ -634,6 +664,7 @@ let currentUser = null;
 let currentProfile = null;
 let prospecciones = [];
 let contactosCounts = {};
+let secuencias = [];
 let editingId = null;
 let deletingId = null;
 let isDark = false;
@@ -713,6 +744,7 @@ async function initApp() {
 
     await loadAppConfig();
     await loadProspecciones();
+    await loadSecuencias();
 
     document.getElementById('login-overlay').style.display = 'none';
     document.getElementById('app').style.display = 'block';
@@ -747,6 +779,16 @@ async function loadAppConfig() {
 }
 
 let noInteresadosGlobal = [];
+
+async function loadSecuencias() {
+  const {data} = await sb.from('prospeccion_email_secuencias').select('id,nombre,pasos').order('nombre', {ascending:true});
+  secuencias = data || [];
+  const sel = document.getElementById('p-secuencia');
+  if (sel) {
+    sel.innerHTML = '<option value="">— Ninguna (envíos manuales) —</option>' +
+      secuencias.map(s => `<option value="${s.id}">${escHtml(s.nombre)} (${(s.pasos||[]).length} pasos)</option>`).join('');
+  }
+}
 
 async function loadProspecciones() {
   const {data, error} = await sb.from('prospecciones').select('*').order('created_at', {ascending:false}).limit(50);
@@ -783,9 +825,11 @@ async function loadProspecciones() {
 function getFilteredProspecciones() {
   const q = (document.getElementById('search-input')?.value||'').toLowerCase().trim();
   const estado = document.getElementById('filter-estado')?.value||'';
+  const tipo = document.getElementById('filter-tipo')?.value||'';
 
   return prospecciones.filter(p => {
     if (estado && p.estado !== estado) return false;
+    if (tipo && (p.tipo||'externa') !== tipo) return false;
     if (q) {
       const marca = (p.marca||'').toLowerCase();
       const cats = (p.categorias||[]).join(' ').toLowerCase();
@@ -794,6 +838,12 @@ function getFilteredProspecciones() {
     }
     return true;
   });
+}
+
+function tipoBadgeHTML(tipo) {
+  const t = tipo || 'externa';
+  const labels = {externa:'Externa', interna:'Interna', mixta:'Mixta'};
+  return `<span class="tipo-badge tipo-${t}">${labels[t]||t}</span>`;
 }
 
 function renderProspecciones() {
@@ -823,7 +873,10 @@ function renderProspecciones() {
           <div class="prosp-nombre">${escHtml(p.marca)}</div>
           <div class="prosp-info">${paises ? escHtml(paises) : ''}${plats ? (paises?' &middot; ':'')+escHtml(plats) : ''}</div>
         </div>
-        ${estadoBadgeHTML(p.estado)}
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+          ${estadoBadgeHTML(p.estado)}
+          ${tipoBadgeHTML(p.tipo)}
+        </div>
       </div>
       <div class="prosp-card-body">
         ${(p.categorias||[]).length ? `<div class="prosp-tags">${p.categorias.map(c=>`<span class="prosp-tag">${escHtml(c)}</span>`).join('')}</div>` : ''}
@@ -1010,6 +1063,8 @@ function editProspeccion(id) {
   document.getElementById('p-producto').value = p.producto||'';
   document.getElementById('p-fecha').value = p.fecha||'';
   document.getElementById('p-estado').value = p.estado||'activa';
+  document.getElementById('p-tipo').value = p.tipo||'externa';
+  document.getElementById('p-secuencia').value = p.secuencia_default_id || '';
   document.getElementById('p-notas').value = p.notas||'';
   document.getElementById('p-email-draft').value = p.email_draft||'';
 
@@ -1026,6 +1081,8 @@ function clearForm() {
     const el = document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('p-estado').value = 'activa';
+  const tipoEl = document.getElementById('p-tipo'); if (tipoEl) tipoEl.value = 'externa';
+  const seqEl = document.getElementById('p-secuencia'); if (seqEl) seqEl.value = '';
   ['p-plat-tiktok','p-plat-ig','p-plat-yt','p-gen-f','p-gen-m','p-gen-nb'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.checked=false;
   });
@@ -1059,6 +1116,11 @@ async function saveProspeccion() {
     producto: document.getElementById('p-producto').value.trim(),
     fecha: document.getElementById('p-fecha').value||null,
     estado: document.getElementById('p-estado').value,
+    tipo: document.getElementById('p-tipo').value || 'externa',
+    secuencia_default_id: (function(){
+      const v = document.getElementById('p-secuencia').value;
+      return v ? parseInt(v) : null;
+    })(),
     notas: document.getElementById('p-notas').value.trim(),
     email_draft: document.getElementById('p-email-draft').value.trim(),
     updated_at: new Date().toISOString(),
