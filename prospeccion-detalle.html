@@ -590,9 +590,14 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
             <input type="text" id="tpl-asunto" class="form-input" placeholder="Asunto del email">
           </div>
           <div class="form-group">
-            <label class="form-label">Cuerpo *</label>
+            <label class="form-label">Cuerpo del Email *</label>
             <textarea id="tpl-cuerpo" class="form-input" style="min-height:150px" placeholder="Hola {{nombre}}, te contactamos de parte de {{marca}} para..."></textarea>
             <div class="form-hint">Variables: {{nombre}}, {{nombreprospeccion}}, {{marca}}, {{producto}}, {{paises}}, {{plataformas}}, {{email}}, {{telefono}}, {{tiktok}}, {{instagram}}</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mensaje WhatsApp <span style="color:var(--text-dim);font-weight:400;font-size:11px">(opcional, más corto)</span></label>
+            <textarea id="tpl-whatsapp" class="form-input" style="min-height:100px" placeholder="Hola {{nombre}}! Te escribo de {{marca}}. Quería ver si te interesa..."></textarea>
+            <div class="form-hint">Si lo completás, aparecerá como opción al "Contactar WhatsApp". Usa las mismas variables que el email.</div>
           </div>
           <div style="display:flex;gap:8px;justify-content:flex-end">
             <button class="btn btn-ghost" onclick="cancelTemplate()">Cancelar</button>
@@ -1094,6 +1099,10 @@ function etapaButtons(c, etapa) {
       <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'descartado')">Descartar</button>`;
     case 'contactar': return `
       <button class="btn btn-primary btn-xs" onclick="event.stopPropagation();requestMedio(${c.id},'esperando_respuesta')">Contactado</button>
+      ${c.telefono?`<button class="btn btn-outline btn-xs" style="color:#25D366;border-color:rgba(37,211,102,0.45)" onclick="event.stopPropagation();openWhatsApp(${c.id})" title="Contactar por WhatsApp">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163A11.867 11.867 0 0 1 .157 11.892C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24z"/></svg>
+        WhatsApp
+      </button>`:''}
       <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'evaluacion')" title="Volver">&larr;</button>`;
     case 'esperando_respuesta': return `
       <button class="btn btn-green btn-xs" onclick="event.stopPropagation();requestMedio(${c.id},'interesado')">Interesado</button>
@@ -1451,10 +1460,105 @@ function openDetalle(id) {
     <button class="btn btn-ghost" onclick="closeModal('modal-detalle')">Cerrar</button>
     ${c.talento_id ? `<a class="btn btn-outline" href="index.html?id=${c.talento_id}" target="_blank" style="text-decoration:none">Ver perfil de Talento</a>` : ''}
     ${(emailTemplates.length || prospeccion.email_draft) ? `<button class="btn btn-outline" onclick="copyEmail(${c.id})">Copiar Email</button>` : ''}
+    ${c.telefono ? `<button class="btn btn-outline" style="border-color:rgba(37,211,102,0.45);color:#25D366" onclick="openWhatsApp(${c.id})">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/></svg>
+      WhatsApp
+    </button>` : ''}
     <button class="btn btn-outline" onclick="closeModal('modal-detalle');openEditContacto(${c.id})">Editar</button>
     <button class="btn btn-danger" onclick="deleteContacto(${c.id})">Eliminar</button>
   `;
   openModal('modal-detalle');
+}
+
+// ══════════════════════════════════════════════════════════
+// WHATSAPP
+// ══════════════════════════════════════════════════════════
+function normalizePhoneForWA(raw) {
+  // Strip everything except digits. Leading "+" or "00" → drop, wa.me wants just digits.
+  let s = String(raw||'').replace(/[^\d]/g, '');
+  if (s.startsWith('00')) s = s.substring(2);
+  return s;
+}
+
+function openWhatsApp(contactoId) {
+  const c = contactos.find(x => x.id === contactoId);
+  if (!c) return;
+  if (!c.telefono) { showToast('Este contacto no tiene teléfono', 'error'); return; }
+
+  const phone = normalizePhoneForWA(c.telefono);
+  if (!phone) { showToast('Número de teléfono inválido', 'error'); return; }
+
+  // Filter templates that have whatsapp_body defined
+  const waTemplates = emailTemplates.filter(t => (t.whatsapp_body||'').trim().length > 0);
+
+  if (!waTemplates.length) {
+    // No templates with WA body → open without text, user types manually
+    const url = `https://wa.me/${phone}`;
+    window.open(url, '_blank');
+    showToast('Abriendo WhatsApp. Definí "Mensaje WhatsApp" en una plantilla para mandarlo prellenado.', 'info', 5000);
+    logWhatsAppOpen(c, '', null);
+    return;
+  }
+
+  // Show template picker
+  window._waPendingContactId = contactoId;
+  const list = document.getElementById('roster-list');
+  document.getElementById('roster-modal-msg').innerHTML =
+    `Mandarle WhatsApp a <strong>${esc(c.nombre)}</strong> (${esc(c.telefono)}).<br><span style="font-size:12px;color:var(--text-muted)">Elegí la plantilla:</span>`;
+  list.innerHTML = waTemplates.map(t => {
+    const preview = replaceVars(t.whatsapp_body, c).substring(0, 120);
+    return `<button class="btn btn-outline" style="width:100%;justify-content:flex-start;gap:10px;text-align:left;flex-direction:column;align-items:flex-start;padding:12px" onclick="doOpenWhatsApp(${t.id})">
+      <div style="font-weight:700;font-size:13px">${esc(t.nombre)}</div>
+      <div style="font-size:11px;color:var(--text-dim);white-space:pre-wrap">${esc(preview)}${t.whatsapp_body.length>120?'…':''}</div>
+    </button>`;
+  }).join('');
+  // Also offer "Sin plantilla — abrir vacío"
+  list.innerHTML += `<button class="btn btn-ghost" style="width:100%;justify-content:flex-start;margin-top:8px;font-size:12px" onclick="doOpenWhatsApp(0)">
+    Abrir sin plantilla
+  </button>`;
+  openModal('modal-roster');
+}
+
+function doOpenWhatsApp(templateId) {
+  const c = contactos.find(x => x.id === window._waPendingContactId);
+  if (!c) { closeModal('modal-roster'); return; }
+  const phone = normalizePhoneForWA(c.telefono);
+  let text = '';
+  if (templateId) {
+    const t = emailTemplates.find(x => x.id === templateId);
+    if (t && t.whatsapp_body) text = replaceVars(t.whatsapp_body, c);
+  }
+  closeModal('modal-roster');
+  const url = `https://wa.me/${phone}${text?`?text=${encodeURIComponent(text)}`:''}`;
+  window.open(url, '_blank');
+  logWhatsAppOpen(c, text, templateId || null);
+  window._waPendingContactId = null;
+}
+
+async function logWhatsAppOpen(c, mensaje, templateId) {
+  // Re-use prospeccion_email_log table to track WA opens.
+  // status = 'sent' (we don't know if user actually sent it, but we logged the open)
+  // email_to = phone for clarity
+  try {
+    await sb.from('prospeccion_email_log').insert({
+      contacto_id: c.id,
+      prospeccion_id: prospId,
+      email_to: 'whatsapp:' + (c.telefono||''),
+      asunto: '[WhatsApp]',
+      cuerpo: mensaje || '',
+      status: 'sent',
+      template_id: templateId || null,
+    });
+    // Add "whatsapp" to medio_contacto if not already there
+    const existing = (c.medio_contacto||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+    if (!existing.includes('whatsapp')) {
+      existing.push('whatsapp');
+      const updated = existing.join(', ');
+      await sb.from('prospeccion_contactos').update({medio_contacto: updated, updated_at: new Date().toISOString()}).eq('id', c.id);
+      c.medio_contacto = updated;
+    }
+    renderKanban();
+  } catch(e) { console.error('logWhatsAppOpen:', e); }
 }
 
 async function savePrecioCotizado(contactoId) {
@@ -2093,6 +2197,7 @@ function openNewTemplate() {
   document.getElementById('tpl-nombre').value = '';
   document.getElementById('tpl-asunto').value = '';
   document.getElementById('tpl-cuerpo').value = '';
+  const w = document.getElementById('tpl-whatsapp'); if (w) w.value = '';
   document.getElementById('template-form').style.display = 'block';
 }
 
@@ -2103,6 +2208,7 @@ function editTemplate(id) {
   document.getElementById('tpl-nombre').value = t.nombre||'';
   document.getElementById('tpl-asunto').value = t.asunto||'';
   document.getElementById('tpl-cuerpo').value = t.cuerpo||'';
+  const w = document.getElementById('tpl-whatsapp'); if (w) w.value = t.whatsapp_body||'';
   document.getElementById('template-form').style.display = 'block';
 }
 
@@ -2116,10 +2222,12 @@ async function saveTemplate() {
   const cuerpo = document.getElementById('tpl-cuerpo').value.trim();
   if (!nombre || !cuerpo) { showToast('Nombre y cuerpo son obligatorios', 'error'); return; }
 
+  const wEl = document.getElementById('tpl-whatsapp');
   const payload = {
     nombre,
     asunto: document.getElementById('tpl-asunto').value.trim(),
     cuerpo,
+    whatsapp_body: wEl ? wEl.value.trim() : '',
   };
 
   try {

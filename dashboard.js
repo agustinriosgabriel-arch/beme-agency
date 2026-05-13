@@ -986,6 +986,7 @@ let ACTION_MAP = {
   'copy-general-roster-url':(id) => copyGeneralRosterUrl(id),
   'ai-descs-roster': (id) => openAIDescsModal(parseInt(id)),
   'clear-brand-edits': (id) => clearRosterBrandEdits(parseInt(id)),
+  'add-to-prosp':    (id)    => addSelectionToProspeccion(parseInt(id)),
 };
 
 document.addEventListener('click', (e) => {
@@ -3549,13 +3550,13 @@ async function openAddToProspeccionModal() {
     const taken = byProsp[p.id] || new Set();
     const alreadyN = [...selectedIds].filter(id => taken.has(id)).length;
     const willAdd = selectedIds.size - alreadyN;
-    return `<button class="btn btn-outline" style="width:100%;justify-content:flex-start;gap:10px;text-align:left;padding:10px 12px" data-fn="addSelectionToProspeccion" data-id="${p.id}">
+    return `<button class="btn btn-outline" style="width:100%;justify-content:flex-start;gap:10px;text-align:left;padding:10px 12px" data-action="add-to-prosp" data-id="${p.id}">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <span style="flex:1">
+      <span style="flex:1;pointer-events:none">
         <div style="font-weight:700;font-size:13px">${escapeHtml(p.marca||'')}</div>
         ${p.producto?`<div style="font-size:11px;color:var(--text-dim)">${escapeHtml(p.producto)}</div>`:''}
       </span>
-      <span style="font-size:11px;color:var(--text-dim)">${p.tipo==='mixta'?'Mixta':'Interna'} · agregará ${willAdd}${alreadyN?` (${alreadyN} ya)`:''}</span>
+      <span style="font-size:11px;color:var(--text-dim);pointer-events:none">${p.tipo==='mixta'?'Mixta':'Interna'} · agregará ${willAdd}${alreadyN?` (${alreadyN} ya)`:''}</span>
     </button>`;
   }).join('');
 }
