@@ -246,6 +246,16 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
 .tipo-interna{background:rgba(14,165,233,0.1);color:#0ea5e9}
 .tipo-mixta{background:rgba(168,85,247,0.1);color:#a855f7}
 .k-talento-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:rgba(14,165,233,0.12);color:#0ea5e9;text-transform:uppercase;letter-spacing:0.5px}
+.k-email{font-size:10.5px;color:var(--text-dim);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.kanban-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.kanban-toolbar .search-wrap{flex:1;min-width:220px;position:relative;display:flex;align-items:center}
+.kanban-toolbar .search-wrap svg{position:absolute;left:10px;color:var(--text-dim);pointer-events:none}
+.kanban-toolbar .search-wrap input{width:100%;padding:8px 30px 8px 32px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px}
+.kanban-toolbar .search-wrap input:focus{outline:none;border-color:var(--primary)}
+.kanban-toolbar .search-clear{position:absolute;right:6px;background:transparent;border:none;color:var(--text-dim);cursor:pointer;padding:4px;display:flex}
+.kanban-toolbar .filter-pills{display:flex;gap:4px;background:var(--surface2);padding:3px;border-radius:var(--radius-sm);border:1px solid var(--border)}
+.kanban-toolbar .filter-pill{font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;border:none;background:transparent;color:var(--text-dim);cursor:pointer}
+.kanban-toolbar .filter-pill.active{background:var(--primary);color:#fff}
 .k-pipeline{display:flex;gap:3px;align-items:center;margin-top:4px;font-size:10px;color:var(--text-dim)}
 .k-pipe-dot{width:8px;height:8px;border-radius:50%;background:var(--border2)}
 .k-pipe-dot.sent{background:#16a34a}
@@ -391,6 +401,22 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
 
   <!-- Etapa stats -->
   <div class="etapa-strip" id="etapa-strip"></div>
+
+  <!-- Kanban toolbar: search + origen filter -->
+  <div class="kanban-toolbar">
+    <div class="search-wrap">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="kanban-search" placeholder="Buscar por nombre, email o URL/handle..." oninput="renderKanban();renderEtapaStrip()">
+      <button type="button" class="search-clear" onclick="document.getElementById('kanban-search').value='';renderKanban();renderEtapaStrip();">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="filter-pills" id="origen-filter" style="display:none">
+      <button class="filter-pill active" data-origen="todos" onclick="setOrigenFilter('todos')">Todos</button>
+      <button class="filter-pill" data-origen="externo" onclick="setOrigenFilter('externo')">Externos</button>
+      <button class="filter-pill" data-origen="interno" onclick="setOrigenFilter('interno')">Talentos</button>
+    </div>
+  </div>
 
   <!-- Kanban -->
   <div class="kanban-wrap" id="kanban-wrap"></div>
@@ -728,6 +754,7 @@ let seqFormPasos = [];         // current draft pasos in form
 let allTalentos = [];          // loaded only when opening talent picker
 let tpSelected = new Set();    // talentos selected in picker
 let tpPaises = [], tpCats = [];
+let origenFilter = 'todos';    // 'todos' | 'externo' | 'interno'
 
 // Multi-select state for contact form
 let selectedCPaises = [];
@@ -931,12 +958,41 @@ function renderHeader() {
 }
 
 // ══════════════════════════════════════════════════════════
+// FILTROS (búsqueda + origen)
+// ══════════════════════════════════════════════════════════
+function getFilteredContactos() {
+  const q = (document.getElementById('kanban-search')?.value || '').toLowerCase().trim();
+  return contactos.filter(c => {
+    // Filter by origen
+    if (origenFilter === 'externo' && c.origen === 'interno') return false;
+    if (origenFilter === 'interno' && c.origen !== 'interno') return false;
+    if (!q) return true;
+    // Search in nombre, email, all social URLs/handles
+    const haystack = [
+      c.nombre, c.email, c.telefono,
+      c.tiktok, c.instagram, c.youtube,
+    ].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(q);
+  });
+}
+
+function setOrigenFilter(value) {
+  origenFilter = value;
+  document.querySelectorAll('#origen-filter .filter-pill').forEach(b => {
+    b.classList.toggle('active', b.dataset.origen === value);
+  });
+  renderKanban();
+  renderEtapaStrip();
+}
+
+// ══════════════════════════════════════════════════════════
 // RENDER ETAPA STRIP
 // ══════════════════════════════════════════════════════════
 function renderEtapaStrip() {
-  // Only show the 4 active etapas in the strip (matching kanban columns)
+  // Counts reflect current filters (search + origen)
+  const filtered = getFilteredContactos();
   document.getElementById('etapa-strip').innerHTML = ETAPAS.map(e => {
-    const count = contactos.filter(c=>c.etapa===e.key).length;
+    const count = filtered.filter(c=>c.etapa===e.key).length;
     return `<div class="etapa-stat" style="border-top-color:${count > 0 ? e.color : 'var(--border)'}">
       <div class="e-count" style="color:${count > 0 ? e.color : 'var(--text-dim)'}">${count}</div>
       <div class="e-label">${e.label}</div>
@@ -948,9 +1004,15 @@ function renderEtapaStrip() {
 // RENDER KANBAN
 // ══════════════════════════════════════════════════════════
 function renderKanban() {
+  // Show/hide origen filter based on prospección type
+  const tipo = (prospeccion && prospeccion.tipo) || 'externa';
+  const origenFilterEl = document.getElementById('origen-filter');
+  if (origenFilterEl) origenFilterEl.style.display = tipo === 'mixta' ? '' : 'none';
+
+  const filtered = getFilteredContactos();
   // Only show active etapas in kanban
   document.getElementById('kanban-wrap').innerHTML = ETAPAS.map(e => {
-    const items = contactos.filter(c=>c.etapa===e.key).sort((a,b) => (a.talento_id?1:0) - (b.talento_id?1:0));
+    const items = filtered.filter(c=>c.etapa===e.key).sort((a,b) => (a.talento_id?1:0) - (b.talento_id?1:0));
     return `<div class="kanban-col">
       <div class="kanban-col-header">
         <div class="kanban-dot" style="background:${items.length > 0 ? e.color : 'var(--text-dim)'}"></div>
@@ -964,8 +1026,8 @@ function renderKanban() {
     </div>`;
   }).join('');
 
-  // No interesados + descartados collapsed section
-  var niList = contactos.filter(c => c.etapa === 'no_interesado');
+  // No interesados + descartados collapsed section (also respects filters)
+  var niList = filtered.filter(c => c.etapa === 'no_interesado');
   var niSection = document.getElementById('no-interesados-section');
   if (niList.length > 0) {
     niSection.style.display = 'block';
@@ -1006,6 +1068,7 @@ function renderKanbanCard(c, etapa) {
       ${handle?`<span class="k-handle">${esc(handle)}</span>`:''}
       ${c.medio_contacto?`<span class="k-medio">${c.medio_contacto.toUpperCase()}</span>`:''}
     </div>
+    ${c.email?`<div class="k-email" title="${esc(c.email)}">${esc(c.email)}</div>`:''}
     ${pipelineHtml}
     <div class="k-actions">
       ${etapaButtons(c, etapa)}
