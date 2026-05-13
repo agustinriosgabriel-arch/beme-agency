@@ -462,6 +462,14 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       <option value="interna">Interna</option>
       <option value="mixta">Mixta</option>
     </select>
+    <button class="btn btn-ghost btn-sm" onclick="openTemplatesModal()" title="Plantillas de email">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      Plantillas
+    </button>
+    <button class="btn btn-ghost btn-sm" onclick="openSecuenciasModal()" title="Secuencias de email automáticas">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Secuencias
+    </button>
   </div>
 
   <!-- Grid container -->
@@ -646,6 +654,95 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
         <p id="confirm-delete-msg">Estas seguro? Se eliminaran todos los contactos asociados.</p>
         <button class="btn btn-ghost" onclick="closeModal('modal-confirm-delete')">Cancelar</button>
         <button class="btn btn-danger" onclick="confirmDeleteProspeccion()">Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Plantillas de Email + WhatsApp
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-templates">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">Plantillas de Email</div>
+      <button class="modal-close" onclick="closeModal('modal-templates')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn btn-primary btn-sm" onclick="openNewTemplate()">+ Nueva Plantilla</button>
+      </div>
+      <div id="templates-list"></div>
+      <div id="template-form" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+        <div class="form-grid" style="grid-template-columns:1fr">
+          <div class="form-group">
+            <label class="form-label">Nombre de la plantilla *</label>
+            <input type="text" id="tpl-nombre" class="form-input" placeholder="Ej: Propuesta inicial">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Asunto</label>
+            <input type="text" id="tpl-asunto" class="form-input" placeholder="Asunto del email">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cuerpo del Email *</label>
+            <textarea id="tpl-cuerpo" class="form-input" style="min-height:150px" placeholder="Hola {{nombre}}, te contactamos de parte de {{marca}} para..."></textarea>
+            <div class="form-hint" style="font-size:11px;color:var(--text-dim);margin-top:4px">Variables: {{nombre}}, {{nombreprospeccion}}, {{marca}}, {{producto}}, {{paises}}, {{plataformas}}, {{email}}, {{telefono}}, {{tiktok}}, {{instagram}}</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mensaje WhatsApp <span style="color:var(--text-dim);font-weight:400;font-size:11px">(opcional, más corto)</span></label>
+            <textarea id="tpl-whatsapp" class="form-input" style="min-height:100px" placeholder="Hola {{nombre}}! Te escribo de {{marca}}. Quería ver si te interesa..."></textarea>
+            <div class="form-hint" style="font-size:11px;color:var(--text-dim);margin-top:4px">Si lo completás, aparecerá como opción al "Contactar WhatsApp" en el detalle de cada contacto.</div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="cancelTemplate()">Cancelar</button>
+            <button class="btn btn-primary" onclick="saveTemplate()">Guardar Plantilla</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Secuencias de Email
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-secuencias">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-header">
+      <div class="modal-title">Secuencias de Email</div>
+      <button class="modal-close" onclick="closeModal('modal-secuencias')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <p style="font-size:13px;color:var(--text-muted);margin:0">Encadená 1..N plantillas con delays. El paso 1 se manda instantáneo; los siguientes en horario hábil según el delay configurado.</p>
+        <button class="btn btn-primary btn-sm" onclick="openNewSecuencia()">+ Nueva</button>
+      </div>
+      <div id="secuencias-list"></div>
+      <div id="secuencia-form" style="display:none;margin-top:16px;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm)">
+        <div class="form-grid" style="grid-template-columns:1fr">
+          <div class="form-group">
+            <label class="form-label">Nombre *</label>
+            <input type="text" id="seq-nombre" class="form-input" placeholder="Ej: Outreach 3 toques">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Descripción</label>
+            <input type="text" id="seq-desc" class="form-input" placeholder="Para qué sirve esta secuencia">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pasos</label>
+            <div id="seq-pasos-list"></div>
+            <button class="btn btn-outline btn-sm" onclick="addPasoToForm()" style="margin-top:8px">+ Agregar paso</button>
+            <div class="form-hint" style="font-size:11px;color:var(--text-dim);margin-top:4px">Paso 1 se manda instantáneo. Los demás respetan delay desde el paso anterior.</div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="cancelSecuencia()">Cancelar</button>
+            <button class="btn btn-primary" onclick="saveSecuencia()">Guardar Secuencia</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1318,6 +1415,256 @@ document.addEventListener('click', function(e) {
     document.querySelectorAll('.ms-panel.open').forEach(p => p.classList.remove('open'));
   }
 });
+
+// ══════════════════════════════════════════════════════════
+// PLANTILLAS DE EMAIL (CRUD)
+// ══════════════════════════════════════════════════════════
+let emailTemplates = [];
+let editingTemplateId = null;
+
+async function loadEmailTemplates() {
+  const {data} = await sb.from('prospeccion_email_templates').select('*').order('created_at', {ascending:false});
+  emailTemplates = data || [];
+}
+
+async function openTemplatesModal() {
+  await loadEmailTemplates();
+  renderTemplatesList();
+  document.getElementById('template-form').style.display = 'none';
+  openModal('modal-templates');
+}
+
+function renderTemplatesList() {
+  const list = document.getElementById('templates-list');
+  if (!emailTemplates.length) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--text-muted);text-align:center;padding:16px">No hay plantillas. Crea una nueva.</p>';
+    return;
+  }
+  list.innerHTML = emailTemplates.map(function(t) {
+    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:8px">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+        '<strong style="flex:1;font-size:14px">'+escHtml(t.nombre)+'</strong>'+
+        (t.whatsapp_body?'<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(37,211,102,0.12);color:#25D366">WA</span>':'')+
+        '<button class="btn btn-ghost btn-xs" onclick="editTemplate('+t.id+')">Editar</button>'+
+        '<button class="btn btn-ghost btn-xs" style="color:#ff6b6b" onclick="deleteTemplate('+t.id+')">Eliminar</button>'+
+      '</div>'+
+      (t.asunto?'<div style="font-size:11px;color:var(--text-muted)">Asunto: '+escHtml(t.asunto)+'</div>':'')+
+      '<div style="font-size:12px;color:var(--text-muted);margin-top:4px;white-space:pre-wrap;max-height:60px;overflow:hidden">'+escHtml((t.cuerpo||'').substring(0,150))+((t.cuerpo||'').length>150?'...':'')+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+function openNewTemplate() {
+  editingTemplateId = null;
+  document.getElementById('tpl-nombre').value = '';
+  document.getElementById('tpl-asunto').value = '';
+  document.getElementById('tpl-cuerpo').value = '';
+  const w = document.getElementById('tpl-whatsapp'); if (w) w.value = '';
+  document.getElementById('template-form').style.display = 'block';
+}
+
+function editTemplate(id) {
+  const t = emailTemplates.find(function(x){return x.id===id;});
+  if (!t) return;
+  editingTemplateId = id;
+  document.getElementById('tpl-nombre').value = t.nombre||'';
+  document.getElementById('tpl-asunto').value = t.asunto||'';
+  document.getElementById('tpl-cuerpo').value = t.cuerpo||'';
+  const w = document.getElementById('tpl-whatsapp'); if (w) w.value = t.whatsapp_body||'';
+  document.getElementById('template-form').style.display = 'block';
+}
+
+function cancelTemplate() {
+  document.getElementById('template-form').style.display = 'none';
+  editingTemplateId = null;
+}
+
+async function saveTemplate() {
+  const nombre = document.getElementById('tpl-nombre').value.trim();
+  const cuerpo = document.getElementById('tpl-cuerpo').value.trim();
+  if (!nombre || !cuerpo) { showToast('Nombre y cuerpo son obligatorios', 'error'); return; }
+  const wEl = document.getElementById('tpl-whatsapp');
+  const payload = {
+    nombre,
+    asunto: document.getElementById('tpl-asunto').value.trim(),
+    cuerpo,
+    whatsapp_body: wEl ? wEl.value.trim() : '',
+  };
+  try {
+    if (editingTemplateId) {
+      await sb.from('prospeccion_email_templates').update(payload).eq('id', editingTemplateId);
+    } else {
+      await sb.from('prospeccion_email_templates').insert(payload);
+    }
+    await loadEmailTemplates();
+    renderTemplatesList();
+    document.getElementById('template-form').style.display = 'none';
+    editingTemplateId = null;
+    showToast('Plantilla guardada', 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+async function deleteTemplate(id) {
+  if (!confirm('Eliminar esta plantilla?')) return;
+  try {
+    await sb.from('prospeccion_email_templates').delete().eq('id', id);
+    emailTemplates = emailTemplates.filter(function(t){return t.id!==id;});
+    renderTemplatesList();
+    showToast('Plantilla eliminada', 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════
+// SECUENCIAS DE EMAIL (CRUD)
+// ══════════════════════════════════════════════════════════
+let editingSecuenciaId = null;
+let seqFormPasos = [];
+
+async function openSecuenciasModal() {
+  // Need both templates and secuencias loaded
+  await loadEmailTemplates();
+  await loadSecuencias();
+  renderSecuenciasList();
+  document.getElementById('secuencia-form').style.display = 'none';
+  openModal('modal-secuencias');
+}
+
+function renderSecuenciasList() {
+  const list = document.getElementById('secuencias-list');
+  if (!secuencias.length) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--text-muted);text-align:center;padding:16px">No hay secuencias todavía. Crea la primera.</p>';
+    return;
+  }
+  list.innerHTML = secuencias.map(function(s) {
+    const pasos = s.pasos || [];
+    const pasosHtml = pasos.map(function(p, i) {
+      const tpl = emailTemplates.find(function(t){return t.id===p.template_id;});
+      const tplName = tpl ? tpl.nombre : ('Template #'+p.template_id);
+      const delayLabel = i === 0 ? 'instantáneo' : ('+'+p.delay_horas+'h'+(p.dias_habiles?' hábiles':''));
+      return '<div style="font-size:11px;color:var(--text-muted);padding:2px 0">'+(i+1)+'. '+escHtml(tplName)+' <span style="color:var(--text-dim)">— '+delayLabel+'</span></div>';
+    }).join('');
+    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:8px">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+        '<strong style="flex:1;font-size:14px">'+escHtml(s.nombre)+'</strong>'+
+        '<button class="btn btn-ghost btn-xs" onclick="editSecuencia('+s.id+')">Editar</button>'+
+        '<button class="btn btn-ghost btn-xs" style="color:#ff6b6b" onclick="deleteSecuencia('+s.id+')">Eliminar</button>'+
+      '</div>'+
+      (s.descripcion?'<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">'+escHtml(s.descripcion)+'</div>':'')+
+      (pasosHtml || '<div style="font-size:11px;color:var(--text-dim)">Sin pasos</div>')+
+    '</div>';
+  }).join('');
+}
+
+function openNewSecuencia() {
+  editingSecuenciaId = null;
+  document.getElementById('seq-nombre').value = '';
+  document.getElementById('seq-desc').value = '';
+  seqFormPasos = [{template_id:null, delay_horas:0, dias_habiles:false}];
+  renderSeqPasosList();
+  document.getElementById('secuencia-form').style.display = 'block';
+}
+
+function editSecuencia(id) {
+  const s = secuencias.find(function(x){return x.id===id;});
+  if (!s) return;
+  editingSecuenciaId = id;
+  document.getElementById('seq-nombre').value = s.nombre || '';
+  document.getElementById('seq-desc').value = s.descripcion || '';
+  seqFormPasos = (s.pasos || []).map(function(p){return Object.assign({}, p);});
+  if (!seqFormPasos.length) seqFormPasos = [{template_id:null, delay_horas:0, dias_habiles:false}];
+  renderSeqPasosList();
+  document.getElementById('secuencia-form').style.display = 'block';
+}
+
+function renderSeqPasosList() {
+  const list = document.getElementById('seq-pasos-list');
+  if (!emailTemplates.length) {
+    list.innerHTML = '<p style="font-size:12px;color:var(--text-dim)">Crea plantillas primero (botón "Plantillas" arriba).</p>';
+    return;
+  }
+  list.innerHTML = seqFormPasos.map(function(p, i) {
+    const tplOpts = emailTemplates.map(function(t){return '<option value="'+t.id+'" '+(p.template_id===t.id?'selected':'')+'>'+escHtml(t.nombre)+'</option>';}).join('');
+    return '<div style="display:grid;grid-template-columns:30px 1fr 90px auto auto;gap:6px;align-items:center;margin-bottom:6px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)">'+
+      '<div style="font-weight:700;font-size:12px;text-align:center">'+(i+1)+'</div>'+
+      '<select class="form-input" style="padding:6px 8px;font-size:12px" onchange="seqFormPasos['+i+'].template_id=parseInt(this.value)||null">'+
+        '<option value="">— Plantilla —</option>'+ tplOpts +
+      '</select>'+
+      '<input type="number" min="0" class="form-input" style="padding:6px 8px;font-size:12px" placeholder="h" value="'+(p.delay_horas||0)+'" oninput="seqFormPasos['+i+'].delay_horas=parseInt(this.value)||0" '+(i===0?'disabled title="Paso 1 = instantáneo"':'')+'>'+
+      '<label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer">'+
+        '<input type="checkbox" '+(p.dias_habiles?'checked':'')+' onchange="seqFormPasos['+i+'].dias_habiles=this.checked" '+(i===0?'disabled':'')+'> hábiles'+
+      '</label>'+
+      (seqFormPasos.length>1 ? '<button class="btn btn-ghost btn-xs" onclick="removePasoFromForm('+i+')" style="color:#ef4444">×</button>' : '<span></span>')+
+    '</div>';
+  }).join('');
+}
+
+function addPasoToForm() {
+  if (seqFormPasos.length >= 10) { showToast('Máximo 10 pasos por secuencia', 'info'); return; }
+  const idx = seqFormPasos.length;
+  const defaultDelay = idx === 1 ? 24 : (idx === 2 ? 72 : 24);
+  seqFormPasos.push({template_id:null, delay_horas: defaultDelay, dias_habiles: true});
+  renderSeqPasosList();
+}
+
+function removePasoFromForm(i) {
+  seqFormPasos.splice(i, 1);
+  if (!seqFormPasos.length) seqFormPasos.push({template_id:null, delay_horas:0, dias_habiles:false});
+  seqFormPasos[0].delay_horas = 0;
+  seqFormPasos[0].dias_habiles = false;
+  renderSeqPasosList();
+}
+
+function cancelSecuencia() {
+  document.getElementById('secuencia-form').style.display = 'none';
+  editingSecuenciaId = null;
+  seqFormPasos = [];
+}
+
+async function saveSecuencia() {
+  const nombre = document.getElementById('seq-nombre').value.trim();
+  if (!nombre) { showToast('Falta nombre', 'error'); return; }
+  const pasosValidos = seqFormPasos.filter(function(p){return p.template_id;});
+  if (!pasosValidos.length) { showToast('Agrega al menos un paso con plantilla', 'error'); return; }
+  const pasosNorm = pasosValidos.map(function(p, i) {
+    return {
+      step: i+1,
+      template_id: p.template_id,
+      delay_horas: i === 0 ? 0 : (p.delay_horas || 0),
+      dias_habiles: i === 0 ? false : !!p.dias_habiles,
+    };
+  });
+  const payload = {
+    nombre,
+    descripcion: document.getElementById('seq-desc').value.trim(),
+    pasos: pasosNorm,
+    updated_at: new Date().toISOString(),
+  };
+  try {
+    if (editingSecuenciaId) {
+      await sb.from('prospeccion_email_secuencias').update(payload).eq('id', editingSecuenciaId);
+    } else {
+      await sb.from('prospeccion_email_secuencias').insert(payload);
+    }
+    await loadSecuencias();
+    renderSecuenciasList();
+    document.getElementById('secuencia-form').style.display = 'none';
+    editingSecuenciaId = null;
+    showToast('Secuencia guardada', 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+async function deleteSecuencia(id) {
+  if (!confirm('Eliminar esta secuencia? Las prospecciones que la usen como default quedarán sin secuencia.')) return;
+  try {
+    await sb.from('prospeccion_email_secuencias').delete().eq('id', id);
+    secuencias = secuencias.filter(function(s){return s.id!==id;});
+    await loadSecuencias();
+    renderSecuenciasList();
+    showToast('Secuencia eliminada', 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+// Helpers usados por los modales (showToast, openModal/closeModal ya existen abajo o arriba)
 
 // ══════════════════════════════════════════════════════════
 // BOOT
