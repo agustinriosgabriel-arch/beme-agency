@@ -347,10 +347,6 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Secuencias
     </button>
-    <button class="btn btn-outline btn-sm" id="btn-sumar-talentos" onclick="openTalentPicker()" style="display:none" title="Sumar talentos de la base a esta prospección">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
-      Sumar Talentos
-    </button>
     <button class="btn btn-outline btn-sm" onclick="openAddContacto()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
       Agregar Contacto
@@ -590,14 +586,14 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
             <input type="text" id="tpl-asunto" class="form-input" placeholder="Asunto del email">
           </div>
           <div class="form-group">
-            <label class="form-label">Cuerpo del Email *</label>
+            <label class="form-label">Cuerpo del Email</label>
             <textarea id="tpl-cuerpo" class="form-input" style="min-height:150px" placeholder="Hola {{nombre}}, te contactamos de parte de {{marca}} para..."></textarea>
             <div class="form-hint">Variables: {{nombre}}, {{nombreprospeccion}}, {{marca}}, {{producto}}, {{paises}}, {{plataformas}}, {{email}}, {{telefono}}, {{tiktok}}, {{instagram}}</div>
           </div>
           <div class="form-group">
-            <label class="form-label">Mensaje WhatsApp <span style="color:var(--text-dim);font-weight:400;font-size:11px">(opcional, más corto)</span></label>
+            <label class="form-label">Mensaje WhatsApp</label>
             <textarea id="tpl-whatsapp" class="form-input" style="min-height:100px" placeholder="Hola {{nombre}}! Te escribo de {{marca}}. Quería ver si te interesa..."></textarea>
-            <div class="form-hint">Si lo completás, aparecerá como opción al "Contactar WhatsApp". Usa las mismas variables que el email.</div>
+            <div class="form-hint">Completá email, WhatsApp, o los dos. Una plantilla solo de WhatsApp solo aparecerá al apretar "Contactar WhatsApp".</div>
           </div>
           <div style="display:flex;gap:8px;justify-content:flex-end">
             <button class="btn btn-ghost" onclick="cancelTemplate()">Cancelar</button>
@@ -628,57 +624,6 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-csv')">Cancelar</button>
       <button class="btn btn-primary" id="btn-csv-import" onclick="confirmCSVImport()">Importar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: Sumar Talentos (prospección interna/mixta) -->
-<div class="modal-overlay" id="modal-talent-picker">
-  <div class="modal" style="max-width:1000px">
-    <div class="modal-header">
-      <div class="modal-title">Sumar Talentos desde la base</div>
-      <button class="modal-close" onclick="closeModal('modal-talent-picker')">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body" style="padding:16px">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-        <input type="text" id="tp-search" class="form-input" placeholder="Buscar nombre o handle..." oninput="renderTalentPickerList()">
-        <select id="tp-plataforma" class="form-input" onchange="renderTalentPickerList()">
-          <option value="">Toda plataforma</option>
-          <option value="tiktok">TikTok</option>
-          <option value="instagram">Instagram</option>
-          <option value="youtube">YouTube</option>
-        </select>
-        <input type="number" id="tp-seg-min" class="form-input" placeholder="Seg. min" oninput="renderTalentPickerList()">
-        <input type="number" id="tp-seg-max" class="form-input" placeholder="Seg. max" oninput="renderTalentPickerList()">
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-        <div class="ms-wrap" id="ms-tppaises-wrap">
-          <div class="ms-trigger" onclick="toggleMsPanel('ms-tppaises')">
-            <span class="ms-placeholder" id="ms-tppaises-ph">Filtrar por paises...</span>
-          </div>
-          <div class="ms-panel" id="ms-tppaises">
-            <input type="text" class="ms-search" placeholder="Buscar pais..." oninput="filterMsOptions('ms-tppaises',this.value)">
-            <div class="ms-options" id="ms-tppaises-options"></div>
-          </div>
-        </div>
-        <div class="ms-wrap" id="ms-tpcats-wrap">
-          <div class="ms-trigger" onclick="toggleMsPanel('ms-tpcats')">
-            <span class="ms-placeholder" id="ms-tpcats-ph">Filtrar por categorías...</span>
-          </div>
-          <div class="ms-panel" id="ms-tpcats">
-            <input type="text" class="ms-search" placeholder="Buscar categoría..." oninput="filterMsOptions('ms-tpcats',this.value)">
-            <div class="ms-options" id="ms-tpcats-options"></div>
-          </div>
-        </div>
-      </div>
-      <div id="tp-summary" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
-      <div id="tp-list" style="max-height:50vh;overflow:auto;border:1px solid var(--border);border-radius:var(--radius-sm)"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-talent-picker')">Cancelar</button>
-      <button class="btn btn-primary" id="btn-tp-add" onclick="confirmAddTalentsToProsp()">Agregar 0 talentos</button>
     </div>
   </div>
 </div>
@@ -1618,12 +1563,14 @@ function copyEmail(contactoId) {
   const c = contactos.find(x=>x.id===contactoId);
   if (!c) return;
 
-  // If there are templates, let user pick one directly
-  if (emailTemplates.length) {
+  // Only show templates with email body (not WhatsApp-only ones)
+  const emailOnly = emailTemplates.filter(t => (t.cuerpo||'').trim().length > 0);
+
+  if (emailOnly.length) {
     window._copyEmailContactId = contactoId;
     const list = document.getElementById('roster-list');
     document.getElementById('roster-modal-msg').textContent = 'Selecciona una plantilla:';
-    list.innerHTML = emailTemplates.map(t => {
+    list.innerHTML = emailOnly.map(t => {
       const preview = replaceVars(t.cuerpo, c).substring(0, 80);
       return `<button class="btn btn-outline" style="width:100%;justify-content:flex-start;gap:10px;text-align:left;flex-direction:column;align-items:flex-start;padding:12px" onclick="doCopyEmail(${t.id})">
         <div style="font-weight:700;font-size:13px">${esc(t.nombre)}</div>
@@ -2172,18 +2119,26 @@ function renderTemplatesList() {
     list.innerHTML = '<p style="font-size:13px;color:var(--text-muted);text-align:center;padding:16px">No hay plantillas. Crea una nueva.</p>';
     return;
   }
-  list.innerHTML = emailTemplates.map(t => `
+  list.innerHTML = emailTemplates.map(t => {
+    const hasEmail = (t.cuerpo||'').trim().length > 0;
+    const hasWA = (t.whatsapp_body||'').trim().length > 0;
+    const emailBadge = hasEmail ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(99,102,241,0.12);color:#6366f1">EMAIL</span>' : '';
+    const waBadge = hasWA ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(37,211,102,0.12);color:#25D366">WA</span>' : '';
+    const preview = hasEmail ? (t.cuerpo||'').substring(0,150) : (t.whatsapp_body||'').substring(0,150);
+    const previewLen = hasEmail ? (t.cuerpo||'').length : (t.whatsapp_body||'').length;
+    return `
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
         <strong style="flex:1;font-size:14px">${esc(t.nombre)}</strong>
-        <button class="btn btn-ghost btn-xs" onclick="useTemplate(${t.id})">Usar</button>
+        ${emailBadge}${waBadge}
+        ${hasEmail?`<button class="btn btn-ghost btn-xs" onclick="useTemplate(${t.id})">Usar</button>`:''}
         <button class="btn btn-ghost btn-xs" onclick="editTemplate(${t.id})">Editar</button>
         <button class="btn btn-ghost btn-xs" style="color:#ff6b6b" onclick="deleteTemplate(${t.id})">Eliminar</button>
       </div>
-      ${t.asunto?`<div style="font-size:11px;color:var(--text-muted)">Asunto: ${esc(t.asunto)}</div>`:''}
-      <div style="font-size:12px;color:var(--text-muted);margin-top:4px;white-space:pre-wrap;max-height:60px;overflow:hidden">${esc(t.cuerpo).substring(0,150)}${t.cuerpo.length>150?'...':''}</div>
+      ${hasEmail && t.asunto?`<div style="font-size:11px;color:var(--text-muted)">Asunto: ${esc(t.asunto)}</div>`:''}
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px;white-space:pre-wrap;max-height:60px;overflow:hidden">${esc(preview)}${previewLen>150?'...':''}</div>
     </div>
-  `).join('');
+  `;}).join('');
 }
 
 function useTemplate(id) {
@@ -2224,14 +2179,16 @@ function cancelTemplate() {
 async function saveTemplate() {
   const nombre = document.getElementById('tpl-nombre').value.trim();
   const cuerpo = document.getElementById('tpl-cuerpo').value.trim();
-  if (!nombre || !cuerpo) { showToast('Nombre y cuerpo son obligatorios', 'error'); return; }
-
   const wEl = document.getElementById('tpl-whatsapp');
+  const whatsappBody = wEl ? wEl.value.trim() : '';
+  if (!nombre) { showToast('Falta el nombre', 'error'); return; }
+  if (!cuerpo && !whatsappBody) { showToast('Completa el cuerpo del email o el mensaje de WhatsApp (al menos uno)', 'error'); return; }
+
   const payload = {
     nombre,
     asunto: document.getElementById('tpl-asunto').value.trim(),
     cuerpo,
-    whatsapp_body: wEl ? wEl.value.trim() : '',
+    whatsapp_body: whatsappBody,
   };
 
   try {
@@ -2531,7 +2488,8 @@ function bulkSendEmail() {
   const withoutEmail = ids.length - withEmail.length;
 
   if (!withEmail.length) { showToast('Ningun contacto seleccionado tiene email', 'error'); return; }
-  if (!emailTemplates.length && !prospeccion.email_draft) { showToast('Crea una plantilla primero', 'error'); return; }
+  const emailOnly = emailTemplates.filter(t => (t.cuerpo||'').trim().length > 0);
+  if (!emailOnly.length && !prospeccion.email_draft) { showToast('Crea una plantilla con cuerpo de email primero', 'error'); return; }
 
   // Show template picker for bulk
   window._bulkEmailContacts = withEmail;
@@ -2541,7 +2499,7 @@ function bulkSendEmail() {
     (withoutEmail ? ` <span style="color:var(--text-dim)">(${withoutEmail} sin email, se omiten)</span>` : '') +
     `<br><span style="font-size:12px;color:var(--text-muted)">Selecciona la plantilla:</span>`;
 
-  list.innerHTML = emailTemplates.map(t => `
+  list.innerHTML = emailOnly.map(t => `
     <button class="btn btn-outline" style="width:100%;justify-content:flex-start;gap:10px;text-align:left;flex-direction:column;align-items:flex-start;padding:12px" onclick="confirmBulkSendEmail(${t.id})">
       <div style="font-weight:700;font-size:13px">${esc(t.nombre)}</div>
       ${t.asunto?`<div style="font-size:11px;color:var(--text-muted)">Asunto: ${esc(t.asunto)}</div>`:''}
@@ -2757,17 +2715,18 @@ function editSecuencia(id) {
 
 function renderSeqPasosList() {
   const list = document.getElementById('seq-pasos-list');
-  if (!emailTemplates.length) {
-    list.innerHTML = '<p style="font-size:12px;color:var(--text-dim)">Crea plantillas primero (botón "Plantillas" arriba).</p>';
+  // Sequences send emails automatically — only templates with email body are valid
+  const emailOnly = emailTemplates.filter(t => (t.cuerpo||'').trim().length > 0);
+  if (!emailOnly.length) {
+    list.innerHTML = '<p style="font-size:12px;color:var(--text-dim)">Crea al menos una plantilla con cuerpo de email (las secuencias mandan emails automáticamente).</p>';
     return;
   }
-  const tplOpts = emailTemplates.map(t => `<option value="${t.id}">${esc(t.nombre)}</option>`).join('');
   list.innerHTML = seqFormPasos.map((p, i) => `
     <div style="display:grid;grid-template-columns:30px 1fr 90px auto auto;gap:6px;align-items:center;margin-bottom:6px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)">
       <div style="font-weight:700;font-size:12px;text-align:center">${i+1}</div>
       <select class="form-input" style="padding:6px 8px;font-size:12px" onchange="seqFormPasos[${i}].template_id=parseInt(this.value)||null">
         <option value="">— Plantilla —</option>
-        ${emailTemplates.map(t => `<option value="${t.id}" ${p.template_id===t.id?'selected':''}>${esc(t.nombre)}</option>`).join('')}
+        ${emailOnly.map(t => `<option value="${t.id}" ${p.template_id===t.id?'selected':''}>${esc(t.nombre)}</option>`).join('')}
       </select>
       <input type="number" min="0" class="form-input" style="padding:6px 8px;font-size:12px" placeholder="h" value="${p.delay_horas||0}" oninput="seqFormPasos[${i}].delay_horas=parseInt(this.value)||0" ${i===0?'disabled title="Paso 1 = instantáneo"':''}>
       <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer">
