@@ -180,19 +180,6 @@ function buildEmailHTML(campaigns, today) {
 
 exports.handler = async (event) => {
   try {
-    // TEMP: ?debug=emails returns the configured recipient list without sending
-    if (event.queryStringParameters && event.queryStringParameters.debug === 'emails') {
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          count: NOTIFY_EMAILS.length,
-          emails: NOTIFY_EMAILS,
-          raw: process.env.CAMPAIGN_SUMMARY_EMAILS || null
-        }, null, 2)
-      };
-    }
-
     // Allow manual trigger via GET/POST, or scheduled via Netlify
     const today = new Date().toLocaleDateString('es-MX', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
