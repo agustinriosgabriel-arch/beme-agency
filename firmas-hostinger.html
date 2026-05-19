@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firmas Hostinger — BEME Agency</title>
+  <style>
+    :root { --grad: linear-gradient(135deg,#b2005d,#9414E0); }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f7;
+      margin: 0;
+      padding: 32px 16px 64px;
+      color: #1a1a1a;
+    }
+    .page { max-width: 880px; margin: 0 auto; }
+    h1 {
+      font-size: 28px;
+      margin: 0 0 8px;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .intro {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.55;
+      margin: 0 0 24px;
+      padding: 16px 20px;
+      background: white;
+      border-radius: 12px;
+      border: 1px solid #eee;
+    }
+    .intro b { color: #1a1a1a; }
+    .intro ol { margin: 8px 0 0; padding-left: 20px; }
+    .intro li { margin: 4px 0; }
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 24px;
+      border: 1px solid #ececec;
+      box-shadow: 0 1px 2px rgba(0,0,0,.03);
+    }
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .card-head h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+    .card-head .email-tag {
+      font-size: 12px;
+      font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+      background: #f3f3f7;
+      padding: 4px 10px;
+      border-radius: 6px;
+      color: #555;
+    }
+    .preview-label, .source-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #888;
+      font-weight: 600;
+      margin: 14px 0 6px;
+    }
+    .preview {
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 20px;
+      background: #fafafa;
+    }
+    .source-wrap { position: relative; }
+    textarea.source {
+      width: 100%;
+      min-height: 160px;
+      max-height: 260px;
+      background: #f8f8f9;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 14px;
+      font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: #333;
+      resize: vertical;
+    }
+    .copy-btn {
+      background: var(--grad);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .copy-btn:active { transform: translateY(1px); }
+    .copy-btn.copied { background: #16a34a; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Firmas Hostinger — BEME Agency</h1>
+    <div class="intro">
+      <b>Cómo usar:</b>
+      <ol>
+        <li>Click en <b>Copiar HTML</b> de la firma que quieras configurar.</li>
+        <li>Entrá al webmail de Hostinger con esa casilla → <i>Configuración → Identidades / Firma</i>.</li>
+        <li>Activá modo <b>HTML / Código fuente</b> y pegá lo copiado.</li>
+        <li>Guardá. Mandate un mail de prueba para verificar que el logo se cargue.</li>
+      </ol>
+    </div>
+
+    <!-- Las firmas se inyectan abajo -->
+    <div id="cards"></div>
+  </div>
+
+  <script>
+    const LOGO = 'https://bemeagency.netlify.app/assets/brand/logos/Beme1Color.png';
+    const WEB = { label: 'bemeagency.com', link: 'https://bemeagency.com' };
+    const IG = { label: '@beme.agency', link: 'https://www.instagram.com/beme.agency/' };
+
+    // Teléfonos (label visible + link wa.me con solo dígitos)
+    const MX = { label: '+52 56 2346 0698', link: 'https://wa.me/525623460698' };
+    const AR = { label: '+54 9 3515 60-2867', link: 'https://wa.me/5493515602867' };
+    const ES = { label: '+34 662 568 768', link: 'https://wa.me/34662568768' };
+
+    const FIRMAS = [
+      {
+        casilla: 'contacto@bemeagency.com',
+        nombre: 'Beme Agency',
+        cargo: 'Departamento de Scouting y Cotizaciones',
+        email: 'contacto@bemeagency.com',
+        telefonos: [MX, AR],
+      },
+      {
+        casilla: 'management@bemeagency.com',
+        nombre: 'Beme Agency',
+        cargo: 'Departamento de Management',
+        email: 'management@bemeagency.com',
+        telefonos: [MX, AR, ES],
+      },
+      {
+        casilla: 'florencia.cafure@bemeagency.com',
+        nombre: 'Florencia Cafure',
+        cargo: 'Directora Beme',
+        email: 'florencia.cafure@bemeagency.com',
+        telefonos: [MX, AR],
+      },
+      {
+        casilla: 'agustin.rios@bemeagency.com',
+        nombre: 'Agustin Rios',
+        cargo: 'Director Beme',
+        email: 'agustin.rios@bemeagency.com',
+        telefonos: [MX, ES],
+      },
+      {
+        casilla: 'finanzas@bemeagency.com',
+        nombre: 'Beme Agency',
+        cargo: 'Departamento de Finanzas',
+        email: 'finanzas@bemeagency.com',
+        telefonos: [MX, ES],
+      },
+    ];
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function buildSignatureHtml(f) {
+      const phones = f.telefonos.map(t =>
+        `<a href="${t.link}" style="color:#444;text-decoration:none">${escapeHtml(t.label)}</a>`
+      ).join('<br>');
+
+      return `<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-family:Arial,Helvetica,sans-serif">
+  <tr>
+    <td style="padding:0 0 12px 0">
+      <div style="height:3px;width:120px;background:linear-gradient(135deg,#b2005d,#9414E0);border-radius:2px;font-size:0;line-height:0">&nbsp;</div>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:0">
+      <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
+        <tr>
+          <td style="vertical-align:middle;padding-right:18px">
+            <img src="${LOGO}" alt="BEME Agency" width="96" style="display:block;width:96px;height:auto;border:0;outline:0">
+          </td>
+          <td style="vertical-align:middle;border-left:2px solid #ececec;padding-left:18px;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;line-height:1.45">
+            <div style="font-size:15px;font-weight:700;color:#1a1a1a">${escapeHtml(f.nombre)}</div>
+            <div style="font-size:12px;color:#666;margin-bottom:6px">${escapeHtml(f.cargo)}</div>
+            <div style="font-size:12px;color:#444">
+              ${phones}<br>
+              <a href="mailto:${f.email}" style="color:#444;text-decoration:none">${escapeHtml(f.email)}</a><br>
+              <a href="${WEB.link}" style="color:#444;text-decoration:none">${escapeHtml(WEB.label)}</a>
+              &nbsp;·&nbsp;
+              <a href="${IG.link}" style="color:#444;text-decoration:none">${escapeHtml(IG.label)}</a>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
+    }
+
+    function render() {
+      const container = document.getElementById('cards');
+      FIRMAS.forEach((f, idx) => {
+        const html = buildSignatureHtml(f);
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="card-head">
+            <h2>${escapeHtml(f.nombre)} — ${escapeHtml(f.cargo)}</h2>
+            <span class="email-tag">${escapeHtml(f.casilla)}</span>
+          </div>
+          <div class="preview-label">Preview</div>
+          <div class="preview">${html}</div>
+          <div class="source-label">HTML para pegar en Hostinger</div>
+          <div class="source-wrap">
+            <textarea class="source" id="src-${idx}" readonly></textarea>
+            <div style="margin-top:10px">
+              <button class="copy-btn" data-idx="${idx}">Copiar HTML</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+        document.getElementById('src-' + idx).value = html;
+      });
+
+      container.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.copy-btn');
+        if (!btn) return;
+        const idx = btn.dataset.idx;
+        const ta = document.getElementById('src-' + idx);
+        try {
+          await navigator.clipboard.writeText(ta.value);
+          btn.classList.add('copied');
+          btn.textContent = '✓ Copiado';
+          setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'Copiar HTML'; }, 1800);
+        } catch (err) {
+          ta.select(); document.execCommand('copy');
+          btn.textContent = '✓ Copiado';
+          setTimeout(() => { btn.textContent = 'Copiar HTML'; }, 1800);
+        }
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>
