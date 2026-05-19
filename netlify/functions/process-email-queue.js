@@ -9,6 +9,7 @@
 // Also responds to POST {cola_id: X} for "Forzar siguiente envío" from the UI.
 
 const nodemailer = require('nodemailer');
+const { buildEmailContent } = require('./lib/email-signature');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
@@ -128,6 +129,7 @@ async function processColaRow(row) {
   const cuerpo = replaceVars(template.cuerpo || '', contacto, prospeccion);
 
   // Send via SMTP
+  const { text: emailText, html: emailHtml } = buildEmailContent(cuerpo);
   let smtpResult, smtpError;
   try {
     const info = await transporter.sendMail({
@@ -135,7 +137,8 @@ async function processColaRow(row) {
       to: contacto.email,
       bcc: SMTP_USER,
       subject: asunto || `(sin asunto)`,
-      text: cuerpo,
+      text: emailText,
+      html: emailHtml,
       replyTo: SMTP_USER,
     });
     smtpResult = info;

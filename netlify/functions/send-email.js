@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { buildEmailContent } = require('./lib/email-signature');
 
 const SMTP_HOST = 'smtp.hostinger.com';
 const SMTP_PORT = 465;
@@ -34,12 +35,15 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Faltan campos: to, subject, body' }) };
     }
 
+    const { text, html } = buildEmailContent(body);
+
     const mailOptions = {
       from: `"BEME Agency" <${SMTP_USER}>`,
       to,
       bcc: SMTP_USER,
       subject,
-      text: body,
+      text,
+      html,
       replyTo: replyTo || SMTP_USER,
     };
 
