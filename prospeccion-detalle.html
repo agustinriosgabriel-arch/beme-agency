@@ -1327,9 +1327,10 @@ async function saveContacto() {
   const youtube = document.getElementById('c-youtube').value.trim();
   const email = document.getElementById('c-email').value.trim();
 
-  // Duplicate check (skip if editing)
+  // Duplicate check (skip if editing). Email no se chequea — agencias con
+  // varios talentos comparten mail; el duplicado se detecta por handle social.
   if (!editingContactoId) {
-    const { warnings, blockers } = await checkDuplicates(tiktok, instagram, youtube, nombre, email);
+    const { warnings, blockers } = await checkDuplicates(tiktok, instagram, youtube, nombre);
     if (blockers.length) {
       alert(blockers.join('\n') + '\n\nNo se puede agregar a prospeccion: ya esta en la Base de Talentos.');
       return;
@@ -1834,35 +1835,33 @@ function extractSocialHandle(url) {
   const parts = clean.split('/');
   return parts[parts.length - 1] || '';
 }
-function normalizeEmail(e) { return String(e||'').toLowerCase().trim(); }
 function normalizeName(n) { return String(n||'').toLowerCase().replace(/\s+/g,' ').trim(); }
 
-async function checkDuplicates(tiktok, instagram, youtube, nombre, email) {
+async function checkDuplicates(tiktok, instagram, youtube, nombre) {
   const warnings = [];
   const blockers = [];
   const hTT = extractSocialHandle(tiktok);
   const hIG = extractSocialHandle(instagram);
   const hYT = extractSocialHandle(youtube);
   const nName = normalizeName(nombre);
-  const nEmail = normalizeEmail(email);
 
   // Check within this prospeccion (warning only)
+  // Nota: el email NO se chequea — una agencia puede representar varios
+  // talentos bajo el mismo mail. Dedupe por handle social.
   contactos.forEach(c => {
     if (c.id === editingContactoId) return;
     if (hTT && extractSocialHandle(c.tiktok) === hTT) warnings.push(`Duplicado en prospeccion: ${c.nombre} (TikTok)`);
     if (hIG && extractSocialHandle(c.instagram) === hIG) warnings.push(`Duplicado en prospeccion: ${c.nombre} (Instagram)`);
     if (hYT && extractSocialHandle(c.youtube) === hYT) warnings.push(`Duplicado en prospeccion: ${c.nombre} (YouTube)`);
-    if (nEmail && normalizeEmail(c.email) === nEmail) warnings.push(`Duplicado en prospeccion: ${c.nombre} (email)`);
   });
 
   // Check against talentos table — hard block
   try {
-    const {data: talentos} = await sb.from('talentos').select('id, nombre, email, tiktok, instagram, youtube');
+    const {data: talentos} = await sb.from('talentos').select('id, nombre, tiktok, instagram, youtube');
     (talentos||[]).forEach(t => {
       if (hTT && extractSocialHandle(t.tiktok) === hTT) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (TikTok)`);
       if (hIG && extractSocialHandle(t.instagram) === hIG) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (Instagram)`);
       if (hYT && extractSocialHandle(t.youtube) === hYT) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (YouTube)`);
-      if (nEmail && normalizeEmail(t.email) === nEmail) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (email)`);
       if (nName && normalizeName(t.nombre) === nName) blockers.push(`Ya existe en la Base de Talentos un talento con el mismo nombre: ${t.nombre}`);
     });
   } catch(e) { console.warn('Duplicate check against talentos failed:', e); }
@@ -2008,17 +2007,17 @@ async function graduarATalento(contactoId) {
     return;
   }
 
-  // Check duplicates in talentos by social handle / email / name
+  // Check duplicates in talentos by social handle / name (email no cuenta:
+  // una agencia puede tener varios talentos con el mismo mail).
   try {
-    const {data: talentos} = await sb.from('talentos').select('id,nombre,email,tiktok,instagram,youtube');
+    const {data: talentos} = await sb.from('talentos').select('id,nombre,tiktok,instagram,youtube');
     const hTT = extractSocialHandle(c.tiktok), hIG = extractSocialHandle(c.instagram), hYT = extractSocialHandle(c.youtube);
-    const nEmail = normalizeEmail(c.email), nName = normalizeName(c.nombre);
+    const nName = normalizeName(c.nombre);
     let existingTalent = null;
     (talentos||[]).forEach(t => {
       if (hTT && extractSocialHandle(t.tiktok) === hTT) existingTalent = t;
       if (hIG && extractSocialHandle(t.instagram) === hIG) existingTalent = t;
       if (hYT && extractSocialHandle(t.youtube) === hYT) existingTalent = t;
-      if (nEmail && normalizeEmail(t.email) === nEmail) existingTalent = t;
       if (nName && normalizeName(t.nombre) === nName) existingTalent = t;
     });
 
@@ -2069,7 +2068,7 @@ async function bulkGraduarATalento() {
   let graduated = 0, skipped = 0;
   const talentIds = [];
   try {
-    const {data: talentos} = await sb.from('talentos').select('id,nombre,email,tiktok,instagram,youtube');
+    const {data: talentos} = await sb.from('talentos').select('id,nombre,tiktok,instagram,youtube');
 
     for (const id of ids) {
       const c = contactos.find(x=>x.id===id);
@@ -2077,15 +2076,15 @@ async function bulkGraduarATalento() {
       if (c.talento_id) { skipped++; talentIds.push(c.talento_id); continue; }
       if ((!c.email && !c.telefono) || (!c.tiktok && !c.instagram && !c.youtube)) { skipped++; continue; }
 
-      // Check duplicate by handle / email / name
+      // Check duplicate by handle / name (email no cuenta: agencias con
+      // varios talentos comparten mail).
       const hTT = extractSocialHandle(c.tiktok), hIG = extractSocialHandle(c.instagram), hYT = extractSocialHandle(c.youtube);
-      const nEmail = normalizeEmail(c.email), nName = normalizeName(c.nombre);
+      const nName = normalizeName(c.nombre);
       let existing = null;
       (talentos||[]).forEach(t => {
         if (hTT && extractSocialHandle(t.tiktok) === hTT) existing = t;
         if (hIG && extractSocialHandle(t.instagram) === hIG) existing = t;
         if (hYT && extractSocialHandle(t.youtube) === hYT) existing = t;
-        if (nEmail && normalizeEmail(t.email) === nEmail) existing = t;
         if (nName && normalizeName(t.nombre) === nName) existing = t;
       });
 
@@ -2331,21 +2330,20 @@ async function parseCSVForProspeccion(text) {
 
   // Build existing handles for duplicate detection (handle-based, not full URL,
   // so URL trackers/handle-only inputs don't bypass dedupe).
+  // Email no se incluye: una agencia puede tener varios talentos con el mismo mail.
   const existingTT = new Set(contactos.map(c=>extractSocialHandle(c.tiktok)).filter(Boolean));
   const existingIG = new Set(contactos.map(c=>extractSocialHandle(c.instagram)).filter(Boolean));
   const existingYT = new Set(contactos.map(c=>extractSocialHandle(c.youtube)).filter(Boolean));
-  const existingEmail = new Set(contactos.map(c=>normalizeEmail(c.email)).filter(Boolean));
 
   // Also check against talentos
   let talentosTT = new Set(), talentosIG = new Set(), talentosYT = new Set();
-  let talentosEmail = new Set(), talentosName = new Set();
+  let talentosName = new Set();
   try {
-    const {data:talentos} = await sb.from('talentos').select('nombre,email,tiktok,instagram,youtube');
+    const {data:talentos} = await sb.from('talentos').select('nombre,tiktok,instagram,youtube');
     (talentos||[]).forEach(t => {
       const ht = extractSocialHandle(t.tiktok); if (ht) talentosTT.add(ht);
       const hi = extractSocialHandle(t.instagram); if (hi) talentosIG.add(hi);
       const hy = extractSocialHandle(t.youtube); if (hy) talentosYT.add(hy);
-      const he = normalizeEmail(t.email); if (he) talentosEmail.add(he);
       const hn = normalizeName(t.nombre); if (hn) talentosName.add(hn);
     });
   } catch(e) {}
@@ -2372,7 +2370,6 @@ async function parseCSVForProspeccion(text) {
     // Determine badge status
     let badge = 'nuevo', badgeColor = '#4ade80';
     const hTT = extractSocialHandle(tt), hIG = extractSocialHandle(ig), hYT = extractSocialHandle(yt);
-    const nEmail = normalizeEmail(row['email']);
     const nName = normalizeName(nombre);
 
     // Duplicate within CSV
@@ -2380,11 +2377,11 @@ async function parseCSVForProspeccion(text) {
       badge = 'duplicado_csv'; badgeColor = '#f87171';
     }
     // Duplicate within this prospeccion
-    else if ((hTT && existingTT.has(hTT)) || (hIG && existingIG.has(hIG)) || (hYT && existingYT.has(hYT)) || (nEmail && existingEmail.has(nEmail))) {
+    else if ((hTT && existingTT.has(hTT)) || (hIG && existingIG.has(hIG)) || (hYT && existingYT.has(hYT))) {
       badge = 'ya_en_prospeccion'; badgeColor = '#f87171';
     }
     // Already in talentos
-    else if ((hTT && talentosTT.has(hTT)) || (hIG && talentosIG.has(hIG)) || (hYT && talentosYT.has(hYT)) || (nEmail && talentosEmail.has(nEmail)) || (nName && talentosName.has(nName))) {
+    else if ((hTT && talentosTT.has(hTT)) || (hIG && talentosIG.has(hIG)) || (hYT && talentosYT.has(hYT)) || (nName && talentosName.has(nName))) {
       badge = 'ya_en_talentos'; badgeColor = '#fbbf24';
     }
 
