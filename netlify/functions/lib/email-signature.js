@@ -6,11 +6,13 @@ const SITE_URL = 'https://bemeagency.netlify.app';
 const LOGO_URL = `${SITE_URL}/assets/brand/logos/Beme1Color.png`;
 
 const SIGNER = {
-  nombre: 'Florencia Cafure',
-  cargo: 'Directora',
+  nombre: 'Beme Agency',
+  cargo: 'Departamento de Scouting y Cotizaciones',
   email: 'contacto@bemeagency.com',
-  telefono: '+54 9 3515 60-2867',
-  telefonoLink: 'https://wa.me/5493515602867',
+  telefonos: [
+    { label: '+52 56 2346 0698', link: 'https://wa.me/525623460698' }, // México
+    { label: '+54 9 3515 60-2867', link: 'https://wa.me/5493515602867' }, // Argentina
+  ],
   web: 'bemeagency.com',
   webLink: 'https://bemeagency.com',
   instagram: '@beme.agency',
@@ -52,9 +54,9 @@ function signatureHtml() {
             </td>
             <td style="vertical-align:middle;border-left:2px solid #ececec;padding-left:18px;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;line-height:1.45">
               <div style="font-size:15px;font-weight:700;color:#1a1a1a">${escapeHtml(SIGNER.nombre)}</div>
-              <div style="font-size:12px;color:#666;margin-bottom:6px">${escapeHtml(SIGNER.cargo)} · BEME Agency</div>
+              <div style="font-size:12px;color:#666;margin-bottom:6px">${escapeHtml(SIGNER.cargo)}</div>
               <div style="font-size:12px;color:#444">
-                <a href="${SIGNER.telefonoLink}" style="color:#444;text-decoration:none">${escapeHtml(SIGNER.telefono)}</a><br>
+                ${SIGNER.telefonos.map(t => `<a href="${t.link}" style="color:#444;text-decoration:none">${escapeHtml(t.label)}</a>`).join('<br>')}<br>
                 <a href="mailto:${SIGNER.email}" style="color:#444;text-decoration:none">${escapeHtml(SIGNER.email)}</a><br>
                 <a href="${SIGNER.webLink}" style="color:#444;text-decoration:none">${escapeHtml(SIGNER.web)}</a>
                 &nbsp;·&nbsp;
@@ -73,8 +75,8 @@ function signatureText() {
     '',
     '--',
     `${SIGNER.nombre}`,
-    `${SIGNER.cargo} · BEME Agency`,
-    `${SIGNER.telefono}`,
+    `${SIGNER.cargo}`,
+    ...SIGNER.telefonos.map(t => t.label),
     `${SIGNER.email}`,
     `${SIGNER.web} · ${SIGNER.instagram}`,
   ].join('\n');
