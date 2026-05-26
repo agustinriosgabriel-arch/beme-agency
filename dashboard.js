@@ -3604,10 +3604,8 @@ async function addSelectionToProspeccion(prospId) {
     }
     closeModal('add-to-prosp-modal');
     const skipped = idsToAdd.length - newOnes.length;
-    const url = 'prospeccion-detalle.html?id=' + pid;
-    showToast(newOnes.length + ' talento(s) agregado(s)' + (skipped?` (${skipped} omitidos por duplicado)`:'') + '. Abriendo prospección…', 'success', 4000);
+    showToast(newOnes.length + ' talento(s) agregado(s)' + (skipped?` (${skipped} omitidos por duplicado)`:''), 'success', 4000);
     clearSelection();
-    setTimeout(() => { window.open(url, '_blank'); }, 600);
   } catch(e) {
     showToast('Error: ' + e.message, 'error');
   }
