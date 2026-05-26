@@ -181,6 +181,10 @@ function buildEmailHTML(campaigns, today) {
 exports.handler = async (event) => {
   try {
     // Allow manual trigger via GET/POST, or scheduled via Netlify
+    // Optional ?to=email1,email2 query param overrides the default recipient list
+    const overrideToRaw = event?.queryStringParameters?.to || '';
+    const overrideTo = overrideToRaw.split(',').map(e => e.trim()).filter(Boolean);
+
     const today = new Date().toLocaleDateString('es-MX', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
       timeZone: 'America/Mexico_City'
@@ -209,8 +213,9 @@ exports.handler = async (event) => {
     }
 
     const html = buildEmailHTML(campaigns, today);
+    const recipients = overrideTo.length ? overrideTo : NOTIFY_EMAILS;
 
-    if (!NOTIFY_EMAILS.length) {
+    if (!recipients.length) {
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'text/html' },
@@ -219,14 +224,14 @@ exports.handler = async (event) => {
     }
 
     const result = await sendEmail(
-      NOTIFY_EMAILS,
+      recipients,
       `📊 Resumen Campañas Beme — ${new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'short',timeZone:'America/Mexico_City'})}`,
       html
     );
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: true, emails: NOTIFY_EMAILS.length, ...result })
+      body: JSON.stringify({ success: true, emails: recipients.length, to: recipients, ...result })
     };
   } catch (err) {
     console.error('Campaign summary error:', err);
