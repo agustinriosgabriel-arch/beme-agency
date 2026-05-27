@@ -238,7 +238,11 @@ pais_facturacion    text
 requiere_factura    text DEFAULT 'no'  -- no|si|solo_invoice
 notas_finanzas      text
 created_at          timestamp DEFAULT now()
+updated_at          timestamp DEFAULT now()  -- bumpeado por trigger trg_campanas_touch
+updated_by          uuid REFERENCES auth.users(id)  -- seteado por la app en cada UPDATE
 ```
+
+Triggers: `trg_campanas_touch` actualiza `updated_at` en cada UPDATE. La app setea `updated_by = currentUser.id`.
 
 ### `campana_talentos`
 ```sql

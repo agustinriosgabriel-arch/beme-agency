@@ -1395,7 +1395,7 @@ async function addBriefNote() {
     fecha: new Date().toISOString()
   });
 
-  const {error} = await sb.from('campanas').update({brief_notas: notas}).eq('id', campanaId);
+  const {error} = await sb.from('campanas').update({brief_notas: notas, updated_by: currentUser.id}).eq('id', campanaId);
   if (error) { toast('Error: '+error.message,'err'); return; }
 
   campana.brief_notas = notas;
@@ -1412,7 +1412,7 @@ async function deleteBriefNote(sortedIdx) {
   const originalIdx = sorted[sortedIdx]._i;
   notas.splice(originalIdx, 1);
 
-  const {error} = await sb.from('campanas').update({brief_notas: notas}).eq('id', campanaId);
+  const {error} = await sb.from('campanas').update({brief_notas: notas, updated_by: currentUser.id}).eq('id', campanaId);
   if (error) { toast('Error: '+error.message,'err'); return; }
 
   campana.brief_notas = notas;
@@ -2598,7 +2598,7 @@ async function saveProducto() {
 // ESTADO CAMPAÑA
 // ════════════════════════════════════════════════
 async function updateEstado(val) {
-  await sb.from('campanas').update({estado:val}).eq('id',campanaId);
+  await sb.from('campanas').update({estado:val, updated_by: currentUser.id}).eq('id',campanaId);
   campana.estado = val;
   toast('Estado actualizado ✓','ok');
 }
@@ -2615,7 +2615,7 @@ async function deleteCampana() {
     `La campaña se moverá a la papelera por 30 días antes de eliminarse permanentemente.`;
   if (!confirm(msg)) return;
 
-  const {error} = await sb.from('campanas').update({deleted_at: new Date().toISOString()}).eq('id', campanaId);
+  const {error} = await sb.from('campanas').update({deleted_at: new Date().toISOString(), updated_by: currentUser.id}).eq('id', campanaId);
   if (error) { toast('Error: '+error.message,'err'); return; }
   toast('Campaña movida a papelera','inf');
   setTimeout(() => { location.href = 'campanas.html'; }, 1000);
