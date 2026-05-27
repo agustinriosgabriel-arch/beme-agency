@@ -1041,6 +1041,15 @@ async function loadCampana() {
     isInternal() ? loadCampanaMensajes() : Promise.resolve(),
   ]);
 }
+
+// Marca la campaña como "tocada": setea updated_by (el trigger bumpea updated_at).
+// Fire-and-forget — no se await para no bloquear la UI tras una mutación.
+async function bumpCampana() {
+  if (!campanaId || !currentUser?.id) return;
+  try {
+    await sb.from('campanas').update({updated_by: currentUser.id}).eq('id', campanaId);
+  } catch(e) { console.warn('bumpCampana:', e); }
+}
 async function loadTalentos() {
   const {data} = await sb.from('talentos').select('id,nombre,foto').order('nombre');
   talentosList = data || [];
@@ -1280,6 +1289,7 @@ async function uploadBriefFiles(input) {
   input.value = '';
   lbl.style.opacity = '1';
   if (uploaded > 0) {
+    bumpCampana();
     await loadCampana();
     renderBriefFiles();
     // Auto-advance contenidos en paso 1 → paso 2
@@ -1290,7 +1300,7 @@ async function uploadBriefFiles(input) {
         p_autor_nombre:currentProfile.nombre, p_accion:'Brief cargado'
       });
     }
-    if (en1.length) { await loadCampana(); renderTalentos(); }
+    if (en1.length) { bumpCampana(); await loadCampana(); renderTalentos(); }
     toast(`${uploaded} archivo${uploaded>1?'s':''} subido${uploaded>1?'s':''} ✓`,'ok');
     if (en1.length) toast(`${en1.length} contenido${en1.length>1?'s':''} avanzado${en1.length>1?'s':''} a "Esperando Script"`,'inf');
   }
@@ -1304,7 +1314,7 @@ async function deleteBriefFile(id, url) {
     const path = url.split('/campaign-briefs/')[1];
     if (path) await sb.storage.from('campaign-briefs').remove([decodeURIComponent(path)]);
   }
-  await loadCampana(); renderBriefFiles();
+  bumpCampana(); await loadCampana(); renderBriefFiles();
   toast(isLink ? 'Link eliminado' : 'Archivo eliminado','inf');
 }
 
@@ -1334,6 +1344,7 @@ async function addBriefLink() {
       return;
     }
     input.value = '';
+    bumpCampana();
     await loadCampana();
     renderBriefFiles();
     // Auto-advance contenidos en paso 1 → paso 2 (igual que con archivos)
@@ -1344,7 +1355,7 @@ async function addBriefLink() {
         p_autor_nombre:currentProfile.nombre, p_accion:'Brief cargado (link)'
       });
     }
-    if (en1.length) { await loadCampana(); renderTalentos(); }
+    if (en1.length) { bumpCampana(); await loadCampana(); renderTalentos(); }
     toast('Link agregado ✓','ok');
     if (en1.length) toast(`${en1.length} contenido${en1.length>1?'s':''} avanzado${en1.length>1?'s':''} a "Esperando Script"`,'inf');
   } finally {
@@ -1444,7 +1455,7 @@ async function uploadContentBriefs(input, contId) {
   }
   input.value='';
   if (uploaded > 0) {
-    await loadCampana(); renderAll();
+    bumpCampana(); await loadCampana(); renderAll();
     toast(`${uploaded} brief${uploaded>1?'s':''} del contenido subido${uploaded>1?'s':''} ✓`,'ok');
   }
 }
@@ -1458,7 +1469,7 @@ async function deleteContentBrief(id, url, contId) {
   if (url.includes('/content-briefs/')) { path = url.split('/content-briefs/')[1]; bucket = 'content-briefs'; }
   else if (url.includes('/campaign-briefs/')) { path = url.split('/campaign-briefs/')[1]; bucket = 'campaign-briefs'; }
   if (path) await sb.storage.from(bucket).remove([decodeURIComponent(path)]);
-  await loadCampana(); renderAll();
+  bumpCampana(); await loadCampana(); renderAll();
   toast('Brief eliminado','inf');
 }
 
@@ -1959,7 +1970,7 @@ async function avanzar(contId) {
       p_autor_nombre: currentProfile.nombre, p_accion: 'Avanzado manualmente'
     });
     if (error) throw error;
-    await loadCampana(); renderAll();
+    bumpCampana(); await loadCampana(); renderAll();
     toast(`Paso actualizado → ${PASO_LABELS[data]||data}`, 'ok');
 
     // Fire notification in background (don't await)
@@ -1990,7 +2001,7 @@ async function retrocederPaso(contId, pasoActual) {
       contenido_id: contId, paso_anterior: pasoActual, paso_nuevo: nuevoPaso,
       accion: 'Retrocedido manualmente por admin', autor_id: currentUser.id, autor_nombre: currentProfile.nombre
     });
-    await loadCampana(); renderAll();
+    bumpCampana(); await loadCampana(); renderAll();
     toast(`Paso retrocedido → ${PASO_LABELS[nuevoPaso]||nuevoPaso}`, 'inf');
   } catch(e) { toast('Error: '+e.message,'err'); }
 }
@@ -2028,7 +2039,7 @@ async function rechazarPaso(contId, paso, obsId) {
       p_autor_nombre: currentProfile.nombre, p_observacion: obs
     });
     if (error) throw error;
-    await loadCampana(); renderAll();
+    bumpCampana(); await loadCampana(); renderAll();
     document.getElementById('cont-'+contId)?.classList.add('open');
     toast('Rechazo enviado — vuelve al paso anterior','inf');
 
@@ -2065,7 +2076,7 @@ async function uploadScript(input, contId) {
         contenido_id: contId, url_archivo: publicUrl||path, subido_por: currentUser.id
       });
     }
-    await loadCampana(); renderAll();
+    bumpCampana(); await loadCampana(); renderAll();
     toast(files.length > 1 ? `${files.length} scripts subidos ✓` : 'Script subido ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
   input.value='';
@@ -2164,7 +2175,7 @@ async function saveScriptFromText(contId) {
     if (dbErr) throw dbErr;
     if (ta) ta.value = '';
     toggleScriptText(contId);
-    await loadCampana(); renderAll();
+    bumpCampana(); await loadCampana(); renderAll();
     toast('Script PDF generado ✓','ok');
   } catch(e) {
     console.error('saveScriptFromText:', e);
@@ -2187,7 +2198,7 @@ async function uploadDraft(input, contId) {
         nombre_archivo: file.name, size_bytes: file.size, subido_por: currentUser.id
       });
     }
-    await loadCampana(); renderAll();
+    bumpCampana(); await loadCampana(); renderAll();
     toast(files.length > 1 ? `${files.length} archivos subidos ✓` : 'Contenido subido ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
   input.value='';
@@ -2217,6 +2228,7 @@ async function uploadStats(input, contId) {
   }
   input.value = '';
   if (ok) {
+    bumpCampana();
     await loadCampana();
     await loadCampanaChildren();
     renderAll();
@@ -2237,6 +2249,7 @@ async function deleteStats(statId, url) {
     } catch(e) { /* no-op: el row se borra igual */ }
     const {error} = await sb.from('contenido_estadisticas').delete().eq('id', statId);
     if (error) throw error;
+    bumpCampana();
     await loadCampana();
     await loadCampanaChildren();
     renderAll();
@@ -2256,7 +2269,7 @@ async function replaceScript(input, contId, scriptId) {
     if (error) throw error;
     const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
     await sb.from('contenido_scripts').update({url_archivo: publicUrl||path}).eq('id', scriptId);
-    await loadCampana(); renderAll();
+    bumpCampana(); await loadCampana(); renderAll();
     toast('Script reemplazado ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
   input.value='';
@@ -2272,7 +2285,7 @@ async function replaceDraft(input, contId, draftId) {
     if (error) throw error;
     const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);
     await sb.from('contenido_borradores').update({url_archivo: publicUrl||path, nombre_archivo: file.name, size_bytes: file.size}).eq('id', draftId);
-    await loadCampana(); renderAll();
+    bumpCampana(); await loadCampana(); renderAll();
     toast('Borrador reemplazado ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
   input.value='';
@@ -2313,7 +2326,7 @@ async function saveTalento() {
       return;
     }
     closeModal('modal-talento');
-    await loadCampana(); renderAll();
+    bumpCampana(); await loadCampana(); renderAll();
     toast('Talento agregado ✓','ok');
   } catch(e) {
     console.error('saveTalento exception:', e);
@@ -2341,6 +2354,7 @@ async function setEmailThread(ctId) {
     .update({email_thread_url: finalUrl})
     .eq('id', ctId);
   if (error) { console.error(error); toast('Error: '+error.message,'err'); return; }
+  bumpCampana();
   ct.email_thread_url = finalUrl;
   renderTalentos();
   toast('Hilo de email vinculado ✓','ok');
@@ -2352,6 +2366,7 @@ async function clearEmailThread(ctId) {
     .update({email_thread_url: null})
     .eq('id', ctId);
   if (error) { console.error(error); toast('Error: '+error.message,'err'); return; }
+  bumpCampana();
   const ct = campana.campana_talentos?.find(x => x.id === ctId);
   if (ct) ct.email_thread_url = null;
   renderTalentos();
@@ -2374,7 +2389,7 @@ async function deleteCampanaTalento(ctId) {
       toast('Error: '+(error.message||'no se pudo eliminar'),'err');
       return;
     }
-    await loadCampana(); renderAll();
+    bumpCampana(); await loadCampana(); renderAll();
     toast('Talento eliminado de la campaña','inf');
   } catch(e) {
     console.error('deleteCampanaTalento exception:', e);
@@ -2428,7 +2443,7 @@ async function savePago(ctId, estado) {
   if (estado==='pagado') payload.pago_fecha = new Date().toISOString().split('T')[0];
   await sb.from('campana_talentos').update(payload).eq('id',ctId);
   toast('Estado de pago actualizado ✓','ok');
-  await loadCampana(); renderTalentos();
+  bumpCampana(); await loadCampana(); renderTalentos();
 }
 
 // ════════════════════════════════════════════════
@@ -2530,7 +2545,7 @@ async function saveContenido() {
       toast('Contenido agregado ✓','ok');
     }
     closeModal('modal-contenido');
-    await loadCampana(); renderAll();
+    bumpCampana(); await loadCampana(); renderAll();
     if (_mcCtId) document.getElementById('tc-'+_mcCtId)?.classList.add('open');
   } catch(e) {
     console.error('saveContenido error:', e);
@@ -2545,7 +2560,7 @@ async function deleteContenido() {
   if (!id || !confirm('¿Eliminar este contenido? Esta acción no se puede deshacer.')) return;
   await sb.from('contenidos').delete().eq('id',id);
   closeModal('modal-contenido');
-  await loadCampana(); renderAll();
+  bumpCampana(); await loadCampana(); renderAll();
   toast('Contenido eliminado','inf');
 }
 
@@ -2569,7 +2584,7 @@ async function saveDerechos() {
   if (isAdmin()) payload.derechos_imagen_valor = parseFloat(document.getElementById('dr-valor').value)||null;
   await sb.from('campana_talentos').update(payload).eq('id',editingDrCtId);
   closeModal('modal-derechos');
-  await loadCampana(); renderAll();
+  bumpCampana(); await loadCampana(); renderAll();
   toast('Derechos actualizados ✓','ok');
 }
 
@@ -2590,7 +2605,7 @@ async function saveProducto() {
     producto_notas: document.getElementById('pr-notas').value.trim()
   }).eq('id',editingPrCtId);
   closeModal('modal-producto');
-  await loadCampana(); renderAll();
+  bumpCampana(); await loadCampana(); renderAll();
   toast('Producto actualizado ✓','ok');
 }
 
