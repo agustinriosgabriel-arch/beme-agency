@@ -1637,7 +1637,9 @@ function renderContenido(c, ct) {
     fileButtonsHTML += scripts.map(s => {
       const replBtn = (isInternal() || isTalentOf(ct)) && paso <= 3
         ? `<label class="file-replace-btn" title="Reemplazar"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" onchange="replaceScript(this,${c.id},${s.id})">↻</label>` : '';
-      return `<span class="file-access-wrap"><a href="${esc(s.url_archivo)}" target="_blank" class="file-access-btn script">📝 Script v${s.version||1}</a>${replBtn}</span>`;
+      const delBtn = isInternal() && paso <= 3
+        ? `<button class="file-replace-btn" title="Eliminar" onclick="event.preventDefault();deleteScript(${s.id},'${esc(s.url_archivo)}',${c.id})">✕</button>` : '';
+      return `<span class="file-access-wrap"><a href="${esc(s.url_archivo)}" target="_blank" class="file-access-btn script">📝 Script v${s.version||1}</a>${replBtn}${delBtn}</span>`;
     }).join('');
   }
   // Borradores (show ALL, with replace button)
@@ -2067,13 +2069,14 @@ async function uploadScript(input, contId) {
   if (!files.length) return;
   toast('Subiendo script(s)...','inf');
   try {
+    let version = nextScriptVersion(contId);
     for (const file of files) {
       const path = `campana-${campanaId}/contenido-${contId}/${Date.now()}-${safeStorageName(file.name)}`;
       const {error} = await sb.storage.from('content-scripts').upload(path, file);
       if (error) throw error;
       const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
       await sb.from('contenido_scripts').insert({
-        contenido_id: contId, url_archivo: publicUrl||path, subido_por: currentUser.id
+        contenido_id: contId, url_archivo: publicUrl||path, version: version++, subido_por: currentUser.id
       });
     }
     bumpCampana(); await loadCampana(); renderAll();
@@ -2170,7 +2173,7 @@ async function saveScriptFromText(contId) {
     if (upErr) throw upErr;
     const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
     const {error: dbErr} = await sb.from('contenido_scripts').insert({
-      contenido_id: contId, url_archivo: publicUrl||path, subido_por: currentUser.id
+      contenido_id: contId, url_archivo: publicUrl||path, version: nextScriptVersion(contId), subido_por: currentUser.id
     });
     if (dbErr) throw dbErr;
     if (ta) ta.value = '';
@@ -2257,6 +2260,43 @@ async function deleteStats(statId, url) {
   } catch(e) {
     toast('Error: '+e.message, 'err');
   }
+}
+
+// Próxima versión de script para un contenido (1 si no hay ninguno; max+1 si ya hay)
+function nextScriptVersion(contId) {
+  const cont = campana.campana_talentos?.flatMap(ct=>ct.contenidos||[]).find(c=>c.id===contId);
+  const scripts = cont?.contenido_scripts || [];
+  return scripts.reduce((m,s)=>Math.max(m, s.version||1), 0) + 1;
+}
+
+async function deleteScript(scriptId, url, contId) {
+  if (!confirm('¿Eliminar este script?')) return;
+  try {
+    const {error} = await sb.from('contenido_scripts').delete().eq('id', scriptId);
+    if (error) throw error;
+    // Borra el archivo del Storage (best-effort)
+    try {
+      const idx = String(url||'').indexOf('/content-scripts/');
+      if (idx >= 0) {
+        const path = decodeURIComponent(url.substring(idx + '/content-scripts/'.length).split('?')[0]);
+        await sb.storage.from('content-scripts').remove([path]);
+      }
+    } catch(e) { /* no-op: el row ya se borró */ }
+    // Si no quedan scripts, vuelve al paso "Esperando Script"
+    const cont = campana.campana_talentos?.flatMap(ct=>ct.contenidos||[]).find(c=>c.id===contId);
+    const remaining = (cont?.contenido_scripts||[]).filter(s=>s.id!==scriptId).length;
+    if (remaining === 0 && cont && cont.script_requerido && cont.paso_actual > 2) {
+      const pasoAnterior = cont.paso_actual;
+      await sb.from('contenidos').update({paso_actual: 2}).eq('id', contId);
+      await sb.from('contenido_historial').insert({
+        contenido_id: contId, paso_anterior: pasoAnterior, paso_nuevo: 2,
+        accion: 'Script eliminado, vuelve a Esperando Script',
+        autor_id: currentUser.id, autor_nombre: currentProfile.nombre
+      });
+    }
+    bumpCampana(); await loadCampana(); renderAll();
+    toast('Script eliminado','inf');
+  } catch(e) { toast('Error: '+e.message,'err'); }
 }
 
 async function replaceScript(input, contId, scriptId) {
