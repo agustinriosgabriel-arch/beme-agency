@@ -311,8 +311,9 @@ function render() {
     const igCell = !showIG?'':t.instagram?`<div style="display:flex;align-items:center;gap:4px;">${igSVG}<a href="${t.instagram}" target="_blank" style="color:#e1306c;font-size:12px;font-weight:600;">${extractH(t.instagram)}</a></div><div style="font-size:11px;color:#777;padding-left:15px;">${fmtF(t.seguidores?.instagram)}</div>`:'<span style="color:#ccc;">—</span>';
     const ytCell = !showYT?'':t.youtube?`<div style="display:flex;align-items:center;gap:4px;">${ytSVG}<a href="${t.youtube}" target="_blank" style="color:#cc0000;font-size:12px;font-weight:600;">${extractH(t.youtube)}</a></div><div style="font-size:11px;color:#777;padding-left:15px;">${fmtF(t.seguidores?.youtube)}</div>`:'<span style="color:#ccc;">—</span>';
     const cats = (t.categorias||[]).slice(0,4).map(c=>`<span style="background:#f5f0f8;color:#7a3fa0;font-size:10px;padding:2px 7px;border-radius:10px;display:inline-block;margin:1px;">${c}</span>`).join('');
-    const rowBg = i%2===0?'#fff':'#faf9fc';
-    return `<tr id="row_${t.id}" style="background:${rowBg};transition:background 0.15s,box-shadow 0.15s;">
+    const isHidden = hiddenIds.has(t.id);
+    const rowBg = isHidden ? '#e5e7eb' : (i%2===0?'#fff':'#faf9fc');
+    return `<tr id="row_${t.id}" style="background:${rowBg};transition:background 0.15s,box-shadow 0.15s;${isHidden?'opacity:0.65;':''}">
       <td style="padding:12px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle;text-align:center;width:52px;">
         <input type="checkbox" class="row-check" data-id="${t.id}" style="width:20px;height:20px;accent-color:#b2005d;cursor:pointer;display:block;margin:auto;">
       </td>
