@@ -1956,11 +1956,34 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
           </label>
         </div>
       </div>
+      <div class="form-group" style="margin-top:14px">
+        <label class="form-label">Acciones comunes (una por línea, opcional)</label>
+        <textarea id="r-comunes" class="form-input" style="min-height:60px" placeholder="Ej.&#10;1 Reel&#10;2 Historias IG"></textarea>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px">Se aplican a todos los talentos del roster (cada uno puede sobrescribirlas). También las podés editar dentro del roster.</div>
+      </div>
+      <div class="form-group" style="margin-top:10px">
+        <label class="roster-platform-check" style="cursor:pointer;display:flex;align-items:center;gap:8px;width:auto;padding:8px 10px">
+          <input type="checkbox" id="r-mostrar-total"> Mostrar total sumado de precios
+        </label>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" data-fn="closeRosterCreateModal">Cancelar</button>
       <button class="btn btn-primary" data-fn="saveRoster">Crear Roster</button>
     </div>
+  </div>
+</div>
+
+<!-- PRICE HISTORY MODAL -->
+<div class="modal-overlay" id="price-hist-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title" id="ph-title">Historial de precios</h2>
+      <button class="modal-close" onclick="closePriceHistory()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="ph-body" style="max-height:60vh;overflow-y:auto"></div>
   </div>
 </div>
 

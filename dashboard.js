@@ -987,6 +987,7 @@ let ACTION_MAP = {
   'ai-descs-roster': (id) => openAIDescsModal(parseInt(id)),
   'clear-brand-edits': (id) => clearRosterBrandEdits(parseInt(id)),
   'add-to-prosp':    (id)    => addSelectionToProspeccion(parseInt(id)),
+  'price-history':   (id)    => openPriceHistory(parseInt(id)),
 };
 
 document.addEventListener('click', (e) => {
@@ -1863,6 +1864,7 @@ function renderCard(t) {
     ${t.updated ? `<div class="card-updated" title="Última actualización de seguidores">↻ ${formatUpdatedDate(t.updated)}</div>` : ''}
     <div class="card-footer">
       <button class="btn btn-outline btn-sm" style="flex:1" data-action="edit" data-id="${t.id}" data-stop="1">Editar</button>
+      <button class="btn btn-outline btn-sm" data-action="price-history" data-id="${t.id}" data-stop="1" title="Historial de precios" style="color:#9414E0;font-weight:700;">$</button>
       ${(t.tiktok || t.instagram || t.youtube) ? `<div class="card-update-wrap" data-stop="1">
         <button class="scrape-btn upd-all" id="upd-all-${t.id}" data-action="upd-all" data-id="${t.id}" data-stop="1" title="Actualizar todo">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
@@ -2047,6 +2049,62 @@ function switchTab(tab) {
 // ===================== MODAL =====================
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ===================== HISTORIAL DE PRECIOS (solo admin) =====================
+function closePriceHistory(){ const m=document.getElementById('price-hist-modal'); if(m) m.classList.remove('open'); }
+async function openPriceHistory(talentId){
+  const tid = parseInt(talentId);
+  const t = talents.find(x => x.id === tid);
+  const title = document.getElementById('ph-title');
+  const body = document.getElementById('ph-body');
+  if (title) title.textContent = 'Historial de precios — ' + (t ? t.nombre : ('#'+tid));
+  if (body) body.innerHTML = '<div style="text-align:center;color:#888;padding:30px;">Cargando...</div>';
+  openModal('price-hist-modal');
+  try {
+    // RLS-safe: cargamos por separado y unimos en JS (los JOIN por FK fallan en silencio)
+    const { data: sels } = await sb.from('roster_selecciones')
+      .select('roster_id, link_id, lineas, accion, precio, updated_at')
+      .eq('talent_id', tid);
+    const rows = (sels||[]).filter(s =>
+      (Array.isArray(s.lineas) && s.lineas.some(l => l.precio!=null || l.accion)) || s.accion || s.precio!=null
+    );
+    if (!rows.length) { if(body) body.innerHTML = '<div style="text-align:center;color:#999;padding:30px;">Sin historial de precios.</div>'; return; }
+    const rosterIds = [...new Set(rows.map(s => s.roster_id))];
+    const linkIds = [...new Set(rows.map(s => s.link_id).filter(id => id > 0))];
+    const [rRes, lRes] = await Promise.all([
+      sb.from('rosters').select('id,name').in('id', rosterIds),
+      linkIds.length ? sb.from('roster_links').select('id,client_name,roster_title').in('id', linkIds) : Promise.resolve({data:[]}),
+    ]);
+    const rById = Object.fromEntries((rRes.data||[]).map(r => [r.id, r]));
+    const lById = Object.fromEntries((lRes.data||[]).map(l => [l.id, l]));
+    const fmtP = (p) => '$ ' + Number(p).toLocaleString('es-ES');
+    const entries = rows.map(s => {
+      const r = rById[s.roster_id], l = s.link_id > 0 ? lById[s.link_id] : null;
+      const rosterName = (l && l.roster_title) || (r && r.name) || ('Roster #'+s.roster_id);
+      const cliente = l && l.client_name ? l.client_name : '';
+      const lineas = (Array.isArray(s.lineas) && s.lineas.length) ? s.lineas
+        : ((s.accion || s.precio!=null) ? [{accion: s.accion||'', precio: s.precio}] : []);
+      return { date: s.updated_at, rosterName, cliente, lineas };
+    }).sort((a,b) => new Date(b.date) - new Date(a.date));
+    if (body) body.innerHTML = entries.map(e => {
+      const d = e.date ? new Date(e.date) : null;
+      const ds = d ? d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
+      const lineasHtml = e.lineas.map(l => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:2px 0;">
+        <span style="color:#444;">${escapeHtml(l.accion)||'—'}</span>
+        ${(l.precio!=null && l.precio!=='') ? `<span style="color:#b2005d;font-weight:700;white-space:nowrap;">${fmtP(l.precio)}</span>` : ''}
+      </div>`).join('') || '<span style="color:#bbb;font-size:12px;">—</span>';
+      return `<div style="border:1px solid #eee;border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px;">
+          <span style="font-weight:700;font-size:13px;color:#111;">${escapeHtml(e.rosterName)}${e.cliente?` <span style="font-weight:500;color:#9414E0;font-size:11px;">· ${escapeHtml(e.cliente)}</span>`:''}</span>
+          <span style="font-size:11px;color:#888;white-space:nowrap;">${ds}</span>
+        </div>
+        ${lineasHtml}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    if (body) body.innerHTML = '<div style="text-align:center;color:#cc0000;padding:30px;">Error: '+e.message+'</div>';
+  }
+}
 
 function openAddModal() {
   editingId = null; currentPhoto = '';
@@ -3212,6 +3270,8 @@ function openCreateRosterModal(rosterId) {
   if(rosterId !== undefined || !_pendingRosterTalentIds) _pendingRosterTalentIds = null;
   document.getElementById('r-nombre').value = '';
   document.getElementById('r-desc').value = '';
+  if(document.getElementById('r-comunes')) document.getElementById('r-comunes').value = '';
+  if(document.getElementById('r-mostrar-total')) document.getElementById('r-mostrar-total').checked = false;
   // Default all platforms on
   ['r-show-tt','r-show-ig','r-show-yt'].forEach(id => {
     const el = document.getElementById(id);
@@ -3223,6 +3283,8 @@ function openCreateRosterModal(rosterId) {
     if(r) {
       document.getElementById('r-nombre').value = r.name;
       document.getElementById('r-desc').value = r.description || '';
+      if(document.getElementById('r-comunes')) document.getElementById('r-comunes').value = (Array.isArray(r.lineas_comunes) ? r.lineas_comunes : []).map(l => l.accion||'').filter(Boolean).join('\n');
+      if(document.getElementById('r-mostrar-total')) document.getElementById('r-mostrar-total').checked = !!r.mostrar_total;
       if(r.platforms) {
         if(document.getElementById('r-show-tt')) document.getElementById('r-show-tt').checked = r.platforms.tt !== false;
         if(document.getElementById('r-show-ig')) document.getElementById('r-show-ig').checked = r.platforms.ig !== false;
@@ -3248,15 +3310,17 @@ async function saveRoster() {
   if(!platforms.tt && !platforms.ig && !platforms.yt) {
     showToast('Selecciona al menos una plataforma', 'error'); return;
   }
+  const lineasComunes = (document.getElementById('r-comunes')?.value || '').split('\n').map(s => s.trim()).filter(Boolean).map(a => ({accion: a}));
+  const mostrarTotal = document.getElementById('r-mostrar-total')?.checked || false;
   closeModal('roster-create-modal');
 
   if(editingRosterId) {
     // UPDATE
     const r = rosters.find(x => x.id === editingRosterId);
-    if(r) { r.name = name; r.description = desc; r.platforms = platforms; }
+    if(r) { r.name = name; r.description = desc; r.platforms = platforms; r.lineas_comunes = lineasComunes; r.mostrar_total = mostrarTotal; }
     updateStats(); renderRosters();
     if(sb && currentUser) {
-      sb.from('rosters').update({name, description:desc, platforms}).eq('id', editingRosterId)
+      sb.from('rosters').update({name, description:desc, platforms, lineas_comunes: lineasComunes, mostrar_total: mostrarTotal}).eq('id', editingRosterId)
         .then(({error}) => {
           if(error) showToast('Error: ' + error.message, 'error');
           else showToast('Roster actualizado', 'success');
@@ -3274,7 +3338,8 @@ async function saveRoster() {
 
       const {data: inserted, error} = await sb.from('rosters').insert({
         id: newId, name, description: desc, platforms,
-        talent_ids: initialTalentIds, public_token: newToken, created: newCreated
+        talent_ids: initialTalentIds, public_token: newToken, created: newCreated,
+        lineas_comunes: lineasComunes, mostrar_total: mostrarTotal
       }).select('*').single();
       if(error) {
         console.error('Roster insert error:', error);

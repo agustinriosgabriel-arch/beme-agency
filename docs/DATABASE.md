@@ -38,9 +38,11 @@ Categories and countries are stored here and loaded on boot.
 
 ### `rosters`
 ```sql
-id      serial PRIMARY KEY
-nombre  text NOT NULL
-created timestamp DEFAULT now()
+id              serial PRIMARY KEY
+nombre          text NOT NULL
+created         timestamp DEFAULT now()
+lineas_comunes  jsonb DEFAULT '[]'      -- acciones comunes del roster: [{accion}], se siembran a todos los talentos
+mostrar_total   boolean DEFAULT false   -- si true, el summary suma los precios de todas las líneas
 ```
 
 ### `rosters_generales`
@@ -56,9 +58,23 @@ created_at      timestamp DEFAULT now()
 
 ### `roster_selecciones`
 ```sql
-roster_id   integer REFERENCES rosters(id)
-talent_id   integer REFERENCES talentos(id)
+roster_id          integer REFERENCES rosters(id)
+talent_id          integer REFERENCES talentos(id)
+link_id            integer DEFAULT 0          -- 0 = token directo, >0 = roster_links.id
+selected           boolean DEFAULT false
+lineas             jsonb DEFAULT '[]'         -- [{accion, precio}] por talento (reemplaza accion/precio simples)
+accion             text DEFAULT ''            -- LEGACY: espejo (líneas unidas) por compatibilidad
+precio             numeric                    -- LEGACY: espejo (suma de líneas)
+contraoferta       text                       -- guarda el campo "Comentarios" del cliente (UI de contraoferta eliminada)
+allow_counteroffer boolean DEFAULT false      -- DEPRECADO: ya no se usa (UI eliminada)
+admin_precio       text DEFAULT ''            -- precio interno (solo admin)
+admin_notes        text DEFAULT ''            -- notas internas (solo admin)
+hidden             boolean DEFAULT false      -- descartado por link
+updated_at         timestamptz DEFAULT now()
+PRIMARY KEY (roster_id, talent_id, link_id)
 ```
+Historial de precios por creador: se deriva consultando todas las filas de `roster_selecciones`
+de un `talent_id`, uniendo en JS con `rosters` (nombre) y `roster_links` (cliente). No hay tabla aparte.
 
 ---
 
