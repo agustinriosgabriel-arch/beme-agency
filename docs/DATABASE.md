@@ -43,6 +43,7 @@ nombre          text NOT NULL
 created         timestamp DEFAULT now()
 lineas_comunes  jsonb DEFAULT '[]'      -- acciones comunes del roster: [{accion}], se siembran a todos los talentos
 mostrar_total   boolean DEFAULT false   -- si true, el summary suma los precios de todas las líneas
+moneda          text DEFAULT 'USD'      -- USD | MXN | ARS | EUR (formato de precios del roster)
 ```
 
 ### `rosters_generales`

@@ -113,6 +113,16 @@ input[type=number]{-moz-appearance:textfield;}
   </div>
 </div>
 
+<div id="valores-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:14px;max-width:520px;width:100%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,0,0,0.25);">
+    <div style="padding:16px 20px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div style="font-weight:800;font-size:15px;color:#111;" id="val-title">Valores de contenido</div>
+      <button onclick="closeValores()" style="background:none;border:none;font-size:24px;line-height:1;color:#888;cursor:pointer;">×</button>
+    </div>
+    <div id="val-body" style="padding:16px 20px 22px;overflow-y:auto;font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;"></div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
@@ -144,7 +154,8 @@ function extractH(url){if(!url)return'';const m=url.match(/@([^/?#&]+)/);if(m)re
 function countries(t){return(t.paises||[t.pais||'']).filter(Boolean).map(c=>(FLAG_MAP[c]||'')+' '+c);}
 function escHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escAttr(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function fmtPrecio(p){return '$ '+Number(p).toLocaleString('es-ES');}
+function monedaSymbol(cur){return ({USD:'US$',MXN:'MX$',ARS:'AR$',EUR:'€'})[cur] || '$';}
+function fmtPrecio(p, cur){return monedaSymbol(cur || (ROSTER && ROSTER.moneda))+' '+Number(p).toLocaleString('es-ES');}
 
 // ── Líneas acción→precio ──────────────────────────────────────
 // Devuelve las líneas {accion, precio} de un talento: propias, o sembradas
@@ -184,7 +195,7 @@ function renderLinesCell(t){
   const rows = lineas.map((l,i)=>`<div class="linea-row" data-id="${t.id}" data-idx="${i}" style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">
     <input type="text" class="linea-accion" data-id="${t.id}" data-idx="${i}" value="${escAttr(l.accion)}" placeholder="Acción"
       style="flex:1;min-width:80px;border:1px solid #e0e0e0;border-radius:6px;padding:5px 7px;font-size:12px;font-family:inherit;color:#111;outline:none;">
-    <span style="font-size:12px;color:#b2005d;font-weight:700;">$</span>
+    <span style="font-size:12px;color:#b2005d;font-weight:700;">${monedaSymbol(ROSTER.moneda)}</span>
     <input type="text" inputmode="numeric" pattern="[0-9]*" class="linea-precio" data-id="${t.id}" data-idx="${i}" value="${l.precio!=null?l.precio:''}" placeholder="0"
       style="width:62px;border:1px solid #e0e0e0;border-radius:6px;padding:5px 7px;font-size:12px;font-family:inherit;color:#111;outline:none;text-align:right;">
     <button type="button" class="del-linea-btn" data-id="${t.id}" data-idx="${i}" title="Quitar línea"
@@ -194,6 +205,8 @@ function renderLinesCell(t){
     <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
       <button type="button" class="add-linea-btn" data-id="${t.id}"
         style="background:#fdf4f8;border:1px solid #e8c0d8;color:#b2005d;font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">+ Acción</button>
+      <button type="button" class="valores-btn" data-id="${t.id}"
+        style="background:#fff7ed;border:1px solid #fcd9a8;color:#b45309;font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">Valores</button>
       <button type="button" class="price-hist-btn" data-id="${t.id}"
         style="background:#f5f0fa;border:1px solid #d8c0ea;color:#9414E0;font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">Historial $</button>
     </div>
@@ -259,7 +272,7 @@ async function init() {
     const selQuery = sb.from('roster_selecciones').select('*').eq('roster_id', ROSTER.id).eq('link_id', LINK_ID);
     const [talentsRes, selRes] = await Promise.all([
       talentIds.length > 0
-        ? sb.from('talentos').select('id,nombre,paises,ciudad,tiktok,instagram,youtube,categorias,seguidores,genero,keywords').in('id', talentIds)
+        ? sb.from('talentos').select('id,nombre,paises,ciudad,tiktok,instagram,youtube,categorias,seguidores,genero,keywords,valores').in('id', talentIds)
         : {data:[]},
       selQuery,
     ]);
@@ -482,6 +495,7 @@ function render() {
         <div style="font-size:12px;color:#888;line-height:1.8;">
           <div style="font-weight:700;color:#111;">${visibleTalents.length} talento${visibleTalents.length!==1?'s':''}${hiddenIds.size ? ' <span style="font-size:11px;font-weight:400;color:#888;">(' + hiddenIds.size + ' oculto' + (hiddenIds.size!==1?'s':'') + ')</span>' : ''}</div>
           <div>${today}</div>
+          <div style="font-weight:600;color:#b2005d;">Moneda: ${ROSTER.moneda || 'USD'}</div>
         </div>
         ${IS_INTERNAL
           ? `<div style="margin-top:8px;font-size:11px;padding:4px 10px;background:linear-gradient(135deg,rgba(148,20,224,0.08),rgba(106,13,158,0.08));border:1px solid rgba(148,20,224,0.2);border-radius:10px;color:#9414E0;font-weight:700;">Vista Admin/Manager</div>`
@@ -806,14 +820,14 @@ function updateSummary() {
     html+='<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.1);gap:12px;">'
       +'<div><div style="font-weight:700;font-size:13px;">'+t.nombre+'</div>'+(a?'<div style="font-size:11px;opacity:0.7;margin-top:1px;">'+a+'</div>':'')+(co?'<div style="font-size:10px;opacity:0.6;margin-top:2px;font-style:italic;">'+co+'</div>':'')+'</div>'
       +'<div style="text-align:right;flex-shrink:0;">'
-      +(subtotal>0?'<div style="font-size:12px;font-weight:700;">$ '+subtotal.toLocaleString('es-ES')+'</div>':'<span style="font-size:12px;opacity:0.4;">Sin precio</span>')
+      +(subtotal>0?'<div style="font-size:12px;font-weight:700;">'+fmtPrecio(subtotal)+'</div>':'<span style="font-size:12px;opacity:0.4;">Sin precio</span>')
       +'</div></div>';
   });
 
   document.getElementById('sum-count').textContent = unique.length+' talento'+(unique.length!==1?'s':'')+' seleccionado'+(unique.length!==1?'s':'');
   const tw = document.getElementById('sum-total-wrap');
   // El total sumado solo se muestra si el admin activó "Mostrar total sumado"
-  if(ROSTER.mostrar_total && hasPrice){ document.getElementById('sum-total').textContent='$ '+total.toLocaleString('es-ES'); tw.style.display='flex'; } else tw.style.display='none';
+  if(ROSTER.mostrar_total && hasPrice){ document.getElementById('sum-total').textContent=fmtPrecio(total); tw.style.display='flex'; } else tw.style.display='none';
   document.getElementById('sum-list').innerHTML = html;
   // Show remove button (admin only, works in all modes including compact)
   const removeBtn = document.getElementById('remove-selected-btn');
@@ -894,6 +908,8 @@ document.addEventListener('click', e => {
   if (e.target.closest && e.target.closest('#apply-comun-btn')) { applyComunToAll(); return; }
   const histBtn = e.target.closest && e.target.closest('.price-hist-btn');
   if (histBtn) { openPriceHistory(parseInt(histBtn.getAttribute('data-id'))); return; }
+  const valBtn = e.target.closest && e.target.closest('.valores-btn');
+  if (valBtn) { openValores(parseInt(valBtn.getAttribute('data-id'))); return; }
 });
 document.addEventListener('focusin', e => {
   if (e.target.classList.contains('linea-accion') || e.target.classList.contains('linea-precio')) e.target.style.borderColor='#b2005d';
@@ -953,7 +969,7 @@ async function openPriceHistory(talentId){
     const rosterIds = [...new Set(rows.map(s => s.roster_id))];
     const linkIds = [...new Set(rows.map(s => s.link_id).filter(id => id > 0))];
     const [rRes, lRes] = await Promise.all([
-      sb.from('rosters').select('id,name').in('id', rosterIds),
+      sb.from('rosters').select('id,name,moneda').in('id', rosterIds),
       linkIds.length ? sb.from('roster_links').select('id,client_name,roster_title').in('id', linkIds) : Promise.resolve({data:[]}),
     ]);
     const rById = Object.fromEntries((rRes.data||[]).map(r => [r.id, r]));
@@ -962,16 +978,17 @@ async function openPriceHistory(talentId){
       const r = rById[s.roster_id], l = s.link_id > 0 ? lById[s.link_id] : null;
       const rosterName = (l && l.roster_title) || (r && r.name) || ('Roster #'+s.roster_id);
       const cliente = l && l.client_name ? l.client_name : '';
+      const moneda = (r && r.moneda) || 'USD';
       const lineas = (Array.isArray(s.lineas) && s.lineas.length) ? s.lineas
         : ((s.accion || s.precio!=null) ? [{accion: s.accion||'', precio: s.precio}] : []);
-      return { date: s.updated_at, rosterName, cliente, lineas };
+      return { date: s.updated_at, rosterName, cliente, moneda, lineas };
     }).sort((a,b) => new Date(b.date) - new Date(a.date));
     document.getElementById('ph-body').innerHTML = entries.map(e => {
       const d = e.date ? new Date(e.date) : null;
       const ds = d ? d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
       const lineasHtml = e.lineas.map(l => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:2px 0;">
         <span style="color:#444;">${escHtml(l.accion)||'—'}</span>
-        ${(l.precio!=null && l.precio!=='') ? `<span style="color:#b2005d;font-weight:700;white-space:nowrap;">${fmtPrecio(l.precio)}</span>` : ''}
+        ${(l.precio!=null && l.precio!=='') ? `<span style="color:#b2005d;font-weight:700;white-space:nowrap;">${fmtPrecio(l.precio, e.moneda)}</span>` : ''}
       </div>`).join('') || '<span style="color:#bbb;font-size:12px;">—</span>';
       return `<div style="border:1px solid #eee;border-radius:10px;padding:10px 12px;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px;">
@@ -987,6 +1004,19 @@ async function openPriceHistory(talentId){
 }
 // Cerrar el modal al hacer clic en el fondo
 document.getElementById('price-hist-modal').addEventListener('click', e => { if (e.target.id === 'price-hist-modal') closePriceHistory(); });
+
+// ── Valores de contenido del talento (solo admin) ─────────────
+function closeValores(){ document.getElementById('valores-modal').style.display='none'; }
+function openValores(talentId){
+  if (!IS_INTERNAL) return;
+  const tid = parseInt(talentId);
+  const t = TALENTS.find(x => x.id === tid);
+  document.getElementById('val-title').textContent = 'Valores de contenido — ' + (t ? t.nombre : ('#'+tid));
+  const v = (t && t.valores) ? String(t.valores).trim() : '';
+  document.getElementById('val-body').innerHTML = v ? escHtml(v) : '<span style="color:#999;">Este talento no tiene valores de contenido cargados.</span>';
+  document.getElementById('valores-modal').style.display = 'flex';
+}
+document.getElementById('valores-modal').addEventListener('click', e => { if (e.target.id === 'valores-modal') closeValores(); });
 
 init();
 </script>

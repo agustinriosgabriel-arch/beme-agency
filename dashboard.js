@@ -2072,26 +2072,28 @@ async function openPriceHistory(talentId){
     const rosterIds = [...new Set(rows.map(s => s.roster_id))];
     const linkIds = [...new Set(rows.map(s => s.link_id).filter(id => id > 0))];
     const [rRes, lRes] = await Promise.all([
-      sb.from('rosters').select('id,name').in('id', rosterIds),
+      sb.from('rosters').select('id,name,moneda').in('id', rosterIds),
       linkIds.length ? sb.from('roster_links').select('id,client_name,roster_title').in('id', linkIds) : Promise.resolve({data:[]}),
     ]);
     const rById = Object.fromEntries((rRes.data||[]).map(r => [r.id, r]));
     const lById = Object.fromEntries((lRes.data||[]).map(l => [l.id, l]));
-    const fmtP = (p) => '$ ' + Number(p).toLocaleString('es-ES');
+    const symFor = (cur) => ({USD:'US$',MXN:'MX$',ARS:'AR$',EUR:'€'})[cur] || '$';
+    const fmtP = (p, cur) => symFor(cur) + ' ' + Number(p).toLocaleString('es-ES');
     const entries = rows.map(s => {
       const r = rById[s.roster_id], l = s.link_id > 0 ? lById[s.link_id] : null;
       const rosterName = (l && l.roster_title) || (r && r.name) || ('Roster #'+s.roster_id);
       const cliente = l && l.client_name ? l.client_name : '';
+      const moneda = (r && r.moneda) || 'USD';
       const lineas = (Array.isArray(s.lineas) && s.lineas.length) ? s.lineas
         : ((s.accion || s.precio!=null) ? [{accion: s.accion||'', precio: s.precio}] : []);
-      return { date: s.updated_at, rosterName, cliente, lineas };
+      return { date: s.updated_at, rosterName, cliente, moneda, lineas };
     }).sort((a,b) => new Date(b.date) - new Date(a.date));
     if (body) body.innerHTML = entries.map(e => {
       const d = e.date ? new Date(e.date) : null;
       const ds = d ? d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
       const lineasHtml = e.lineas.map(l => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:2px 0;">
         <span style="color:#444;">${escapeHtml(l.accion)||'—'}</span>
-        ${(l.precio!=null && l.precio!=='') ? `<span style="color:#b2005d;font-weight:700;white-space:nowrap;">${fmtP(l.precio)}</span>` : ''}
+        ${(l.precio!=null && l.precio!=='') ? `<span style="color:#b2005d;font-weight:700;white-space:nowrap;">${fmtP(l.precio, e.moneda)}</span>` : ''}
       </div>`).join('') || '<span style="color:#bbb;font-size:12px;">—</span>';
       return `<div style="border:1px solid #eee;border-radius:10px;padding:10px 12px;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px;">
@@ -3272,6 +3274,7 @@ function openCreateRosterModal(rosterId) {
   document.getElementById('r-desc').value = '';
   if(document.getElementById('r-comunes')) document.getElementById('r-comunes').value = '';
   if(document.getElementById('r-mostrar-total')) document.getElementById('r-mostrar-total').checked = false;
+  if(document.getElementById('r-moneda')) document.getElementById('r-moneda').value = 'USD';
   // Default all platforms on
   ['r-show-tt','r-show-ig','r-show-yt'].forEach(id => {
     const el = document.getElementById(id);
@@ -3285,6 +3288,7 @@ function openCreateRosterModal(rosterId) {
       document.getElementById('r-desc').value = r.description || '';
       if(document.getElementById('r-comunes')) document.getElementById('r-comunes').value = (Array.isArray(r.lineas_comunes) ? r.lineas_comunes : []).map(l => l.accion||'').filter(Boolean).join('\n');
       if(document.getElementById('r-mostrar-total')) document.getElementById('r-mostrar-total').checked = !!r.mostrar_total;
+      if(document.getElementById('r-moneda')) document.getElementById('r-moneda').value = r.moneda || 'USD';
       if(r.platforms) {
         if(document.getElementById('r-show-tt')) document.getElementById('r-show-tt').checked = r.platforms.tt !== false;
         if(document.getElementById('r-show-ig')) document.getElementById('r-show-ig').checked = r.platforms.ig !== false;
@@ -3312,15 +3316,16 @@ async function saveRoster() {
   }
   const lineasComunes = (document.getElementById('r-comunes')?.value || '').split('\n').map(s => s.trim()).filter(Boolean).map(a => ({accion: a}));
   const mostrarTotal = document.getElementById('r-mostrar-total')?.checked || false;
+  const moneda = document.getElementById('r-moneda')?.value || 'USD';
   closeModal('roster-create-modal');
 
   if(editingRosterId) {
     // UPDATE
     const r = rosters.find(x => x.id === editingRosterId);
-    if(r) { r.name = name; r.description = desc; r.platforms = platforms; r.lineas_comunes = lineasComunes; r.mostrar_total = mostrarTotal; }
+    if(r) { r.name = name; r.description = desc; r.platforms = platforms; r.lineas_comunes = lineasComunes; r.mostrar_total = mostrarTotal; r.moneda = moneda; }
     updateStats(); renderRosters();
     if(sb && currentUser) {
-      sb.from('rosters').update({name, description:desc, platforms, lineas_comunes: lineasComunes, mostrar_total: mostrarTotal}).eq('id', editingRosterId)
+      sb.from('rosters').update({name, description:desc, platforms, lineas_comunes: lineasComunes, mostrar_total: mostrarTotal, moneda}).eq('id', editingRosterId)
         .then(({error}) => {
           if(error) showToast('Error: ' + error.message, 'error');
           else showToast('Roster actualizado', 'success');
@@ -3339,7 +3344,7 @@ async function saveRoster() {
       const {data: inserted, error} = await sb.from('rosters').insert({
         id: newId, name, description: desc, platforms,
         talent_ids: initialTalentIds, public_token: newToken, created: newCreated,
-        lineas_comunes: lineasComunes, mostrar_total: mostrarTotal
+        lineas_comunes: lineasComunes, mostrar_total: mostrarTotal, moneda
       }).select('*').single();
       if(error) {
         console.error('Roster insert error:', error);
