@@ -158,6 +158,17 @@ body.dark .tab-nav{background:var(--surface)}
 .extra-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px}
 .extra-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-dim);margin-bottom:5px}
 
+/* ── Buscador de talento (modal agregar) ── */
+.talento-search-wrap{position:relative}
+.talento-results{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:50;max-height:240px;overflow-y:auto;background:var(--surface,#fff);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.12);display:none}
+.talento-results.open{display:block}
+.talento-opt{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;transition:background 0.12s;border-bottom:1px solid var(--border)}
+.talento-opt:last-child{border-bottom:none}
+.talento-opt:hover,.talento-opt.active{background:rgba(178,0,93,0.08)}
+.talento-opt-foto{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--surface2);flex-shrink:0}
+.talento-opt-name{font-size:13px;font-weight:600;color:var(--text)}
+.talento-opt-empty{padding:11px 12px;font-size:12px;color:var(--text-muted);text-align:center}
+
 /* ── Contenidos ── */
 .contenidos-wrap{padding:14px 18px}
 .add-contenido-btn{display:flex;align-items:center;gap:6px;padding:8px 12px;border:2px dashed var(--border2);border-radius:var(--radius-sm);font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;background:none;width:100%;justify-content:center;transition:all 0.15s;margin-top:10px;font-family:inherit}
@@ -628,7 +639,11 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
     <div class="modal-body">
       <div class="form-group">
         <label class="form-label">Talento *</label>
-        <select id="at-id" class="form-input"></select>
+        <div class="talento-search-wrap">
+          <input type="text" id="at-search" class="form-input" placeholder="Buscar talento por nombre..." autocomplete="off" oninput="filterTalentoOptions()" onfocus="filterTalentoOptions()">
+          <input type="hidden" id="at-id">
+          <div id="at-results" class="talento-results"></div>
+        </div>
       </div>
       <div class="form-grid-2">
         <div class="form-group">
@@ -2334,16 +2349,53 @@ async function replaceDraft(input, contId, draftId) {
 // ════════════════════════════════════════════════
 // TALENTO CRUD
 // ════════════════════════════════════════════════
+let addTalentoAvail = [];
 function openAddTalento() {
   const existing = new Set((campana.campana_talentos||[]).map(ct=>ct.talent_id));
-  const avail = talentosList.filter(t=>!existing.has(t.id));
-  document.getElementById('at-id').innerHTML = avail.length
-    ? avail.map(t=>`<option value="${t.id}">${esc(t.nombre)}</option>`).join('')
-    : '<option value="">Sin talentos disponibles</option>';
+  addTalentoAvail = talentosList.filter(t=>!existing.has(t.id));
+  document.getElementById('at-id').value = '';
+  document.getElementById('at-search').value = '';
   ['at-fee-marca','at-fee-talento','at-metodo'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('at-moneda').value='USD';
+  filterTalentoOptions();
+  document.getElementById('at-results').classList.remove('open');
   openModal('modal-talento');
 }
+
+function filterTalentoOptions() {
+  const q = (document.getElementById('at-search').value||'').trim().toLowerCase();
+  const box = document.getElementById('at-results');
+  if (!addTalentoAvail.length) {
+    box.innerHTML = '<div class="talento-opt-empty">Sin talentos disponibles</div>';
+    box.classList.add('open');
+    return;
+  }
+  const matches = q
+    ? addTalentoAvail.filter(t=>(t.nombre||'').toLowerCase().includes(q))
+    : addTalentoAvail;
+  box.innerHTML = matches.length
+    ? matches.map(t=>`<div class="talento-opt" onclick="selectTalentoOption(${t.id})">
+        ${t.foto?`<img class="talento-opt-foto" src="${esc(t.foto)}" alt="">`:`<div class="talento-opt-foto"></div>`}
+        <span class="talento-opt-name">${esc(t.nombre)}</span>
+      </div>`).join('')
+    : '<div class="talento-opt-empty">Sin coincidencias</div>';
+  box.classList.add('open');
+}
+
+function selectTalentoOption(id) {
+  const t = addTalentoAvail.find(x=>x.id===id);
+  if (!t) return;
+  document.getElementById('at-id').value = id;
+  document.getElementById('at-search').value = t.nombre||'';
+  document.getElementById('at-results').classList.remove('open');
+}
+
+document.addEventListener('click', (e)=>{
+  if (!e.target.closest('.talento-search-wrap')) {
+    const box = document.getElementById('at-results');
+    if (box) box.classList.remove('open');
+  }
+});
 
 async function saveTalento() {
   const tid = parseInt(document.getElementById('at-id').value);
