@@ -165,7 +165,7 @@ body.dark .tab-nav{background:var(--surface)}
 .talento-opt{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;transition:background 0.12s;border-bottom:1px solid var(--border)}
 .talento-opt:last-child{border-bottom:none}
 .talento-opt:hover,.talento-opt.active{background:rgba(178,0,93,0.08)}
-.talento-opt-foto{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--surface2);flex-shrink:0}
+.talento-opt-foto{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--surface2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text-muted)}
 .talento-opt-name{font-size:13px;font-weight:600;color:var(--text)}
 .talento-opt-empty{padding:11px 12px;font-size:12px;color:var(--text-muted);text-align:center}
 
@@ -1066,8 +1066,20 @@ async function bumpCampana() {
   } catch(e) { console.warn('bumpCampana:', e); }
 }
 async function loadTalentos() {
-  const {data} = await sb.from('talentos').select('id,nombre,foto').order('nombre');
-  talentosList = data || [];
+  // Supabase corta en 1000 filas por defecto → paginamos con .range() para traerlos TODOS.
+  // No pedimos 'foto' acá: son base64 enormes (decenas de MB) y no se usan en esta lista;
+  // la foto de los talentos ya-en-campaña viene por el join campana_talentos→talentos.
+  const PAGE = 1000;
+  let all = [], from = 0;
+  while (true) {
+    const {data, error} = await sb.from('talentos')
+      .select('id,nombre').order('nombre').range(from, from + PAGE - 1);
+    if (error) { console.error('loadTalentos:', error); break; }
+    all = all.concat(data || []);
+    if (!data || data.length < PAGE) break;
+    from += PAGE;
+  }
+  talentosList = all;
 }
 
 // Store team member names (loaded separately to avoid RLS issues)
@@ -1140,9 +1152,8 @@ function togglePipeline() {
 function renderPipeline() {
   const allConts = [];
   (campana.campana_talentos||[]).forEach(ct => {
-    const t = talentosList.find(t => t.id === ct.talent_id);
     (ct.contenidos||[]).forEach(c => {
-      allConts.push({...c, talent_name: t?.nombre || 'Talento', talent_foto: t?.foto, ct_id: ct.id});
+      allConts.push({...c, talent_name: ct.talentos?.nombre || 'Talento', talent_foto: ct.talentos?.foto, ct_id: ct.id});
     });
   });
 
@@ -2375,7 +2386,7 @@ function filterTalentoOptions() {
     : addTalentoAvail;
   box.innerHTML = matches.length
     ? matches.map(t=>`<div class="talento-opt" onclick="selectTalentoOption(${t.id})">
-        ${t.foto?`<img class="talento-opt-foto" src="${esc(t.foto)}" alt="">`:`<div class="talento-opt-foto"></div>`}
+        <div class="talento-opt-foto">${esc((t.nombre||'?')[0].toUpperCase())}</div>
         <span class="talento-opt-name">${esc(t.nombre)}</span>
       </div>`).join('')
     : '<div class="talento-opt-empty">Sin coincidencias</div>';

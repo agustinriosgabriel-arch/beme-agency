@@ -728,6 +728,23 @@ const SB_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const prospId = parseInt(new URLSearchParams(location.search).get('id'))||0;
 
+// Supabase corta en 1000 filas por defecto. Este helper pagina para traer TODOS los talentos
+// (crítico para la deduplicación por handle: si se corta, no detecta duplicados >1000).
+async function fetchAllTalentos(columns, orderCol) {
+  const PAGE = 1000;
+  let all = [], from = 0;
+  while (true) {
+    let q = sb.from('talentos').select(columns);
+    if (orderCol) q = q.order(orderCol, {ascending:true});
+    const {data, error} = await q.range(from, from + PAGE - 1);
+    if (error) { console.error('fetchAllTalentos:', error); break; }
+    all = all.concat(data || []);
+    if (!data || data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+
 const ETAPAS = [
   {key:'evaluacion',          label:'Evaluacion',        color:'#d97706'},
   {key:'contactar',           label:'Contactar',         color:'#d97706'},
@@ -1857,7 +1874,7 @@ async function checkDuplicates(tiktok, instagram, youtube, nombre) {
 
   // Check against talentos table — hard block
   try {
-    const {data: talentos} = await sb.from('talentos').select('id, nombre, tiktok, instagram, youtube');
+    const talentos = await fetchAllTalentos('id, nombre, tiktok, instagram, youtube');
     (talentos||[]).forEach(t => {
       if (hTT && extractSocialHandle(t.tiktok) === hTT) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (TikTok)`);
       if (hIG && extractSocialHandle(t.instagram) === hIG) blockers.push(`Ya existe en la Base de Talentos: ${t.nombre} (Instagram)`);
@@ -2010,7 +2027,7 @@ async function graduarATalento(contactoId) {
   // Check duplicates in talentos by social handle / name (email no cuenta:
   // una agencia puede tener varios talentos con el mismo mail).
   try {
-    const {data: talentos} = await sb.from('talentos').select('id,nombre,tiktok,instagram,youtube');
+    const talentos = await fetchAllTalentos('id,nombre,tiktok,instagram,youtube');
     const hTT = extractSocialHandle(c.tiktok), hIG = extractSocialHandle(c.instagram), hYT = extractSocialHandle(c.youtube);
     const nName = normalizeName(c.nombre);
     let existingTalent = null;
@@ -2068,7 +2085,7 @@ async function bulkGraduarATalento() {
   let graduated = 0, skipped = 0;
   const talentIds = [];
   try {
-    const {data: talentos} = await sb.from('talentos').select('id,nombre,tiktok,instagram,youtube');
+    const talentos = await fetchAllTalentos('id,nombre,tiktok,instagram,youtube');
 
     for (const id of ids) {
       const c = contactos.find(x=>x.id===id);
@@ -2339,7 +2356,7 @@ async function parseCSVForProspeccion(text) {
   let talentosTT = new Set(), talentosIG = new Set(), talentosYT = new Set();
   let talentosName = new Set();
   try {
-    const {data:talentos} = await sb.from('talentos').select('nombre,tiktok,instagram,youtube');
+    const talentos = await fetchAllTalentos('nombre,tiktok,instagram,youtube');
     (talentos||[]).forEach(t => {
       const ht = extractSocialHandle(t.tiktok); if (ht) talentosTT.add(ht);
       const hi = extractSocialHandle(t.instagram); if (hi) talentosIG.add(hi);
@@ -3064,8 +3081,7 @@ async function openTalentPicker() {
   document.getElementById('btn-tp-add').textContent = 'Cargando...';
   document.getElementById('btn-tp-add').disabled = true;
   try {
-    const {data} = await sb.from('talentos').select('id,nombre,email,telefono,tiktok,instagram,youtube,seguidores,categorias,paises,foto,genero').order('nombre', {ascending:true});
-    allTalentos = data || [];
+    allTalentos = await fetchAllTalentos('id,nombre,email,telefono,tiktok,instagram,youtube,seguidores,categorias,paises,foto,genero', 'nombre');
   } catch(e) { allTalentos = []; }
 
   // Prefill filters with prospeccion criteria

@@ -209,9 +209,20 @@ async function init() {
     document.title = roster.name + ' \u2014 Beme';
 
     document.getElementById('load-msg').textContent = 'Cargando talentos...';
-    // Load all talents that match the roster's built-in filters
-    let query = sb.from('talentos').select('*').order('nombre');
-    const { data: talentsData } = await query;
+    // Load all talents that match the roster's built-in filters.
+    // Supabase corta en 1000 filas por defecto → paginamos para traerlos TODOS.
+    let talentsData = [];
+    {
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data, error } = await sb.from('talentos').select('*').order('nombre').range(from, from + PAGE - 1);
+        if (error) { console.error('load roster talentos:', error); break; }
+        talentsData = talentsData.concat(data || []);
+        if (!data || data.length < PAGE) break;
+        from += PAGE;
+      }
+    }
     ALL_TALENTS = applyRosterFilters(talentsData || []);
 
     populateCountryFilter();

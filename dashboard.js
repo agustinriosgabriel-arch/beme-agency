@@ -597,7 +597,7 @@ function setupRealtimeSubscription() {
           // payload.new is empty — reload only changed columns (skip foto to save IO)
           // payload.new is empty — merge updated columns into existing talents (preserve foto, etc.)
           const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,needs_review,review_comment,review_marked_by,review_marked_at';
-          sb.from('talentos').select(TALENT_COLS_RT).order('nombre').then(({ data }) => {
+          loadTalentosWithRetry(TALENT_COLS_RT).then(({ data }) => {
             if (data) {
               // Merge into existing talents to preserve fields not in RT select (like foto)
               var byId = {};

@@ -1095,8 +1095,18 @@ async function loadUsuarios() {
 }
 
 async function loadTalentosBD() {
-  const {data} = await sb.from('talentos').select('id, nombre, foto').order('nombre');
-  talentosList = data || [];
+  // Supabase corta en 1000 filas por defecto → paginamos para traerlos TODOS.
+  const PAGE = 1000;
+  let all = [], from = 0;
+  while (true) {
+    const {data, error} = await sb.from('talentos')
+      .select('id, nombre, foto').order('nombre').range(from, from + PAGE - 1);
+    if (error) { console.error('loadTalentosBD:', error); break; }
+    all = all.concat(data || []);
+    if (!data || data.length < PAGE) break;
+    from += PAGE;
+  }
+  talentosList = all;
 }
 
 let showTrash = false;
