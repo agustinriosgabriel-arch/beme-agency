@@ -1845,12 +1845,23 @@ document.addEventListener('click', function(e) {
 // inputs against full URLs.
 function extractSocialHandle(url) {
   if (!url) return '';
-  const clean = String(url).toLowerCase().split('#')[0].split('?')[0].replace(/\/+$/,'').trim();
+  let clean = String(url).toLowerCase().split('#')[0].split('?')[0].trim();
   if (!clean) return '';
-  const m = clean.match(/@([^/]+)/);
-  if (m) return m[1];
-  const parts = clean.split('/');
-  return parts[parts.length - 1] || '';
+  // @handle (tiktok / youtube) — tiene prioridad sobre la ruta
+  const at = clean.match(/@([a-z0-9._-]+)/);
+  if (at) return at[1];
+  // Sacar protocolo y dominio para quedarnos con la ruta
+  clean = clean.replace(/^https?:\/\//, '').replace(/^www\./, '');
+  const parts = clean.split('/').filter(Boolean);
+  // Si el primer segmento es un dominio (tiene punto, ej: instagram.com), lo descartamos
+  if (parts.length && parts[0].includes('.')) parts.shift();
+  // El handle es el PRIMER segmento real de la ruta, salteando sub-rutas conocidas
+  // (.../leonardobru/reels/ → "leonardobru", no "reels"). Esto evita falsos duplicados.
+  const RESERVED = new Set(['reel','reels','p','tv','stories','story','explore','video','videos','shorts','channel','c','user','about','feed','watch','profile','posts','tagged','live']);
+  for (const seg of parts) {
+    if (seg && !RESERVED.has(seg)) return seg;
+  }
+  return parts[0] || '';
 }
 function normalizeName(n) { return String(n||'').toLowerCase().replace(/\s+/g,' ').trim(); }
 
