@@ -1,0 +1,6 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - img "Beme" [ref=e4]
+    - generic [ref=e5]: URL inválida — falta el token del roster.
+  - generic [ref=e6]: ✓ Guardado
+  - button "↓ Exportar CSV" [ref=e8] [cursor=pointer]

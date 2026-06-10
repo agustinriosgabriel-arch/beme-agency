@@ -1,0 +1,2529 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BEME — Manual de Identidad · Vol. 01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Bodoni:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Public+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Brand palette — preserved */
+    --primary:        #b2005d;
+    --primary-light:  #ed568f;
+    --primary-dark:   #8a0048;
+    --accent:         #5C0A2E;
+    --gradient: linear-gradient(135deg, #b2005d 0%, #5C0A2E 100%);
+
+    /* Editorial neutrals */
+    --ink:        #0E0E10;   /* deep ink */
+    --ink-soft:   #1C1C20;
+    --paper:      #F7F4EE;   /* warm paper */
+    --paper-2:    #EEE9DF;
+    --paper-3:    #E2DCCF;
+    --rule:       #1C1C20;
+    --rule-soft:  rgba(14,14,16,0.14);
+    --muted:      #5A5A60;
+    --muted-2:    #8A8A90;
+
+    --serif: 'Libre Bodoni', 'Times New Roman', serif;
+    --sans:  'Public Sans', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    --mono:  'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+    --maxw: 1240px;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);}
+  body{
+    font-family:var(--sans);
+    font-weight:400;
+    font-size:15px;
+    line-height:1.6;
+    letter-spacing:0.005em;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary);color:#fff}
+
+  /* ============ STRUCTURE ============ */
+  .page{
+    min-height:100vh;
+    padding:64px 56px;
+    max-width:var(--maxw);
+    margin:0 auto;
+    position:relative;
+    border-bottom:1px solid var(--rule-soft);
+  }
+  .page--ink{ background:var(--ink); color:var(--paper); border-bottom-color:rgba(255,255,255,0.08); }
+  .page--paper2{ background:var(--paper-2); }
+  .page--primary{ background:var(--primary); color:#fff; border-bottom-color:rgba(255,255,255,0.15); }
+
+  .folio{
+    position:absolute; top:24px; left:56px; right:56px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:var(--sans); font-size:11px; letter-spacing:0.22em; text-transform:uppercase;
+    color:var(--muted);
+  }
+  .page--ink .folio, .page--primary .folio{ color:rgba(255,255,255,0.55); }
+  .folio .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;margin:0 10px;opacity:0.7}
+
+  .page-num{ position:absolute; bottom:24px; right:56px; font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:0.1em;}
+  .page--ink .page-num, .page--primary .page-num{ color:rgba(255,255,255,0.5); }
+
+  /* ============ TYPE ============ */
+  .display{
+    font-family:var(--serif);
+    font-weight:500;
+    line-height:0.96;
+    letter-spacing:-0.02em;
+  }
+  .eyebrow{
+    font-family:var(--sans);
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:0.32em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .page--ink .eyebrow, .page--primary .eyebrow{ color:rgba(255,255,255,0.65) }
+
+  h2.section-title{
+    font-family:var(--serif);
+    font-weight:500;
+    font-size:clamp(40px, 6.5vw, 88px);
+    line-height:0.98;
+    letter-spacing:-0.022em;
+    margin:0 0 12px;
+  }
+  h3{ font-family:var(--serif); font-weight:500; font-size:32px; letter-spacing:-0.015em; margin:0 0 12px;}
+  h4{ font-family:var(--sans); font-weight:600; font-size:13px; letter-spacing:0.18em; text-transform:uppercase; margin:0 0 14px; color:var(--muted);}
+  p{ margin:0 0 14px; max-width:62ch; }
+  .lead{ font-family:var(--serif); font-style:italic; font-size:22px; line-height:1.5; color:var(--ink); max-width:34ch;}
+  .small{ font-size:13px; color:var(--muted); }
+
+  /* drop cap */
+  .dropcap::first-letter{
+    font-family:var(--serif); font-weight:500;
+    float:left; font-size:88px; line-height:0.85;
+    padding:8px 12px 0 0; color:var(--primary);
+  }
+
+  /* rules */
+  hr.rule{ border:0; border-top:1px solid var(--rule); margin:32px 0; }
+  hr.rule--soft{ border-top:1px solid var(--rule-soft); }
+
+  /* grid helpers */
+  .grid{ display:grid; gap:32px; }
+  .g-2{ grid-template-columns:repeat(2,1fr); }
+  .g-3{ grid-template-columns:repeat(3,1fr); }
+  .g-4{ grid-template-columns:repeat(4,1fr); }
+  .g-12{ grid-template-columns:repeat(12,1fr); gap:24px;}
+  @media (max-width:900px){ .g-2,.g-3,.g-4{grid-template-columns:1fr} .g-12{ grid-template-columns:repeat(4,1fr)} }
+
+  /* ============ COVER ============ */
+  .cover{
+    min-height:100vh;
+    padding:56px;
+    max-width:var(--maxw);
+    margin:0 auto;
+    background:var(--paper);
+    position:relative;
+    display:flex; flex-direction:column; justify-content:space-between;
+    border-bottom:1px solid var(--rule-soft);
+  }
+  .cover-top{ display:flex; justify-content:space-between; align-items:flex-start;}
+  .cover-mark{ font-family:var(--mono); font-size:11px; letter-spacing:0.2em; color:var(--muted);}
+  .cover-title{
+    font-family:var(--serif); font-weight:500;
+    font-size:clamp(96px, 22vw, 280px);
+    line-height:0.82;
+    letter-spacing:-0.04em;
+    margin:0;
+  }
+  .cover-title .amp{ font-style:italic; color:var(--primary); font-weight:400;}
+  .cover-sub{
+    font-family:var(--serif); font-style:italic; font-weight:400;
+    font-size:clamp(20px,2.4vw,30px);
+    color:var(--ink-soft);
+    max-width:38ch;
+    line-height:1.35;
+    margin-top:24px;
+  }
+  .cover-meta{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    border-top:1px solid var(--rule); padding-top:18px; gap:32px; flex-wrap:wrap;
+  }
+  .meta-block{ display:flex; flex-direction:column; gap:4px; }
+  .meta-block .k{ font-size:10px; letter-spacing:0.3em; text-transform:uppercase; color:var(--muted); }
+  .meta-block .v{ font-family:var(--serif); font-size:18px; }
+
+  /* ============ TOC ============ */
+  .toc-list{ list-style:none; padding:0; margin:0; }
+  .toc-list li{
+    display:grid;
+    grid-template-columns: 60px 1fr 90px;
+    align-items:baseline;
+    gap:24px;
+    padding:18px 0;
+    border-bottom:1px solid var(--rule-soft);
+  }
+  .toc-num{ font-family:var(--mono); font-size:12px; color:var(--muted); letter-spacing:0.1em;}
+  .toc-title{ font-family:var(--serif); font-size:26px; letter-spacing:-0.01em;}
+  .toc-page{ font-family:var(--mono); font-size:12px; color:var(--muted); text-align:right;}
+
+  /* ============ COLOR SWATCHES ============ */
+  .swatch{
+    border:1px solid var(--rule-soft);
+    overflow:hidden;
+    background:var(--paper);
+    display:flex; flex-direction:column;
+  }
+  .swatch .chip{ aspect-ratio: 4/3; }
+  .swatch .info{ padding:18px 18px 20px; }
+  .swatch .info .name{ font-family:var(--serif); font-size:22px; letter-spacing:-0.01em; }
+  .swatch .info .role{ font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:var(--muted); margin-bottom:10px;}
+  .specs{ font-family:var(--mono); font-size:11.5px; line-height:1.7; color:var(--ink); border-top:1px solid var(--rule-soft); padding-top:10px; margin-top:8px;}
+  .specs .row{ display:flex; justify-content:space-between; gap:14px;}
+  .specs .row span:first-child{ color:var(--muted); }
+
+  /* ============ LOGO CONSTRUCTION ============ */
+  .stage{
+    background:var(--paper-2);
+    border:1px solid var(--rule-soft);
+    padding:48px;
+    display:flex; align-items:center; justify-content:center;
+    min-height:340px;
+    position:relative;
+  }
+  .stage--ink{ background:var(--ink); }
+  .stage--gradient{ background:var(--gradient); }
+  .logo-img{ max-width:240px; height:auto; display:block; }
+
+  /* logo wordmark fallback rendering (SVG-like display) */
+  .wordmark{
+    font-family:var(--serif);
+    font-weight:500;
+    font-size:96px;
+    letter-spacing:-0.04em;
+    line-height:1;
+    color:var(--ink);
+  }
+  .wordmark .accent{ color:var(--primary); }
+  .wordmark--light{ color:var(--paper); }
+
+  .construction-grid{
+    position:relative;
+    background:
+      linear-gradient(var(--rule-soft) 1px, transparent 1px) 0 0 / 100% 32px,
+      linear-gradient(90deg, var(--rule-soft) 1px, transparent 1px) 0 0 / 32px 100%;
+  }
+  .clearspace{
+    position:relative;
+    padding:48px;
+    background:var(--paper-2);
+    border:1px solid var(--rule-soft);
+  }
+  .clearspace .frame{
+    border:1px dashed var(--primary);
+    padding:48px;
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+  }
+  .clearspace .x{
+    position:absolute;
+    font-family:var(--mono); font-size:11px; color:var(--primary);
+    letter-spacing:0.1em;
+  }
+  .clearspace .x.t{ top:-9px; left:50%; transform:translateX(-50%); background:var(--paper-2); padding:0 6px;}
+  .clearspace .x.b{ bottom:-9px; left:50%; transform:translateX(-50%); background:var(--paper-2); padding:0 6px;}
+  .clearspace .x.l{ left:-12px; top:50%; transform:translateY(-50%) rotate(-90deg); background:var(--paper-2); padding:0 6px;}
+  .clearspace .x.r{ right:-12px; top:50%; transform:translateY(-50%) rotate(90deg); background:var(--paper-2); padding:0 6px;}
+
+  .do-dont{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
+  @media(max-width:900px){ .do-dont{grid-template-columns:1fr 1fr} }
+  .dd-cell{
+    background:var(--paper);
+    border:1px solid var(--rule-soft);
+    padding:28px 22px;
+    display:flex; flex-direction:column; gap:14px;
+    min-height:200px;
+  }
+  .dd-cell .preview{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    background:var(--paper-2);
+    min-height:130px;
+    position:relative;
+    overflow:hidden;
+  }
+  .dd-cell .preview.bad{ background:#cfcaba; }
+  .dd-cell .preview.warn{ background:var(--paper-3); }
+  .dd-cell .label{
+    display:flex; align-items:center; gap:10px;
+    font-size:11px; letter-spacing:0.2em; text-transform:uppercase; font-weight:600;
+  }
+  .dot-no{ width:10px; height:10px; border-radius:50%; background:#C8102E;}
+  .dot-yes{ width:10px; height:10px; border-radius:50%; background:#0E0E10;}
+  .dd-cell .note{ font-size:13px; color:var(--muted); line-height:1.5;}
+
+  .mini-logo{
+    font-family:var(--serif); font-weight:500;
+    font-size:48px; letter-spacing:-0.04em;
+    color:var(--ink);
+  }
+  .mini-logo .accent{ color:var(--primary); }
+
+  /* ============ TYPOGRAPHY SPECIMEN ============ */
+  .specimen{
+    border-top:1px solid var(--rule);
+    padding:24px 0;
+    display:grid;
+    grid-template-columns: 90px 1fr;
+    gap:32px;
+    align-items:start;
+  }
+  .specimen .meta{ font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:0.08em; line-height:1.7;}
+  .specimen .sample{ font-family:var(--serif); font-weight:500; letter-spacing:-0.015em; }
+
+  /* ============ UI TOKENS ============ */
+  .ui-card{
+    background:var(--paper);
+    border:1px solid var(--rule-soft);
+    padding:28px;
+  }
+  .ui-card .title-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:18px;}
+  .btn{
+    display:inline-flex; align-items:center; gap:10px;
+    padding:13px 22px; border-radius:0;
+    font-family:var(--sans); font-weight:600; font-size:13px;
+    letter-spacing:0.12em; text-transform:uppercase;
+    cursor:pointer; transition:all .2s ease;
+    border:1px solid transparent;
+    text-decoration:none;
+  }
+  .btn-primary{ background:var(--ink); color:var(--paper); }
+  .btn-primary:hover{ background:var(--primary); }
+  .btn-outline{ background:transparent; border-color:var(--ink); color:var(--ink); }
+  .btn-outline:hover{ background:var(--ink); color:var(--paper); }
+  .btn-accent{ background:var(--primary); color:#fff;}
+  .btn-accent:hover{ background:var(--primary-dark); }
+  .btn-ghost{ background:transparent; color:var(--ink); padding:13px 0; border-bottom:1px solid var(--ink); border-radius:0;}
+
+  /* ============ STATIONERY MOCKUPS ============ */
+  .card-mock{
+    aspect-ratio: 85/55;
+    background:var(--paper);
+    border:1px solid var(--rule-soft);
+    padding:24px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    position:relative;
+    box-shadow: 0 30px 60px -30px rgba(14,14,16,0.25);
+  }
+  .card-mock.dark{ background:var(--ink); color:var(--paper); border-color:transparent;}
+  .card-mock.primary{ background:var(--primary); color:#fff; border-color:transparent;}
+  .card-name{ font-family:var(--serif); font-size:20px; letter-spacing:-0.015em; line-height:1.1;}
+  .card-role{ font-size:10px; letter-spacing:0.24em; text-transform:uppercase; color:var(--muted); margin-top:4px;}
+  .card-mock.dark .card-role{ color:rgba(247,244,238,0.6); }
+  .card-mock.primary .card-role{ color:rgba(255,255,255,0.7); }
+  .card-mark{ font-family:var(--serif); font-weight:500; font-size:28px; letter-spacing:-0.04em; }
+  .card-mock.dark .card-mark .a{ color:var(--primary-light);}
+  .card-mock.primary .card-mark .a{ color:#fff; opacity:0.6;}
+  .card-contacts{ font-family:var(--mono); font-size:9.5px; letter-spacing:0.05em; line-height:1.7;}
+
+  .letterhead{
+    aspect-ratio: 210/297;
+    background:var(--paper);
+    border:1px solid var(--rule-soft);
+    padding:32px;
+    display:flex; flex-direction:column;
+    position:relative;
+    box-shadow: 0 30px 60px -30px rgba(14,14,16,0.25);
+    font-size:11px;
+  }
+  .letterhead .lh-head{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding-bottom:18px; border-bottom:1px solid var(--ink);
+  }
+  .letterhead .lh-mark{ font-family:var(--serif); font-weight:500; font-size:34px; letter-spacing:-0.04em;}
+  .letterhead .lh-mark .a{ color:var(--primary); }
+  .letterhead .lh-meta{ font-family:var(--mono); font-size:8.5px; line-height:1.7; color:var(--muted); text-align:right; letter-spacing:0.05em;}
+  .letterhead .lh-body{ margin-top:32px; flex:1; line-height:1.7;}
+  .letterhead .lh-body p{ font-size:10px; }
+  .letterhead .lh-foot{
+    display:flex; justify-content:space-between;
+    border-top:1px solid var(--rule-soft);
+    padding-top:10px; font-family:var(--mono); font-size:8px; letter-spacing:0.1em; color:var(--muted);
+  }
+
+  .envelope{
+    aspect-ratio: 220/110;
+    background:var(--paper);
+    border:1px solid var(--rule-soft);
+    padding:22px 26px;
+    display:flex; justify-content:space-between; align-items:flex-end;
+    box-shadow: 0 30px 60px -30px rgba(14,14,16,0.25);
+  }
+  .envelope .env-mark{ font-family:var(--serif); font-weight:500; font-size:32px; letter-spacing:-0.04em;}
+  .envelope .env-mark .a{ color:var(--primary);}
+  .envelope .env-from{ font-family:var(--mono); font-size:9px; color:var(--muted); line-height:1.6; letter-spacing:0.06em; text-align:right;}
+
+  /* ============ PHOTOGRAPHY ============ */
+  .photo-tile{
+    aspect-ratio: 4/5;
+    background:var(--paper-3);
+    overflow:hidden;
+    position:relative;
+  }
+  .photo-tile.tall{ aspect-ratio: 3/5; }
+  .photo-tile.wide{ aspect-ratio: 16/10;}
+  .photo-tile .label{
+    position:absolute; bottom:14px; left:16px;
+    font-family:var(--mono); font-size:10px; letter-spacing:0.18em; text-transform:uppercase;
+    color:var(--paper); mix-blend-mode:difference;
+  }
+  /* abstract photo simulators */
+  .p-portrait{ background:
+    radial-gradient(ellipse at 50% 35%, #d5b9a7 0 18%, transparent 30%),
+    linear-gradient(180deg, #2a1410 0%, #5a2a26 60%, #1a0a08 100%);
+  }
+  .p-editorial{ background:
+    linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  }
+  .p-stage{ background:
+    radial-gradient(circle at 30% 70%, rgba(255,255,255,0.15), transparent 50%),
+    linear-gradient(180deg, #18181B 0%, #3A2A33 100%);
+  }
+  .p-doc{ background:
+    linear-gradient(135deg, #d6d0c2 0%, #b3a994 100%);
+  }
+  .p-mono{ background: linear-gradient(180deg, #f7f4ee 0%, #c9c2b1 100%); }
+
+  /* ============ SIGNATURE APPLICATIONS ============ */
+  .app-board{
+    background:var(--paper-2);
+    border:1px solid var(--rule-soft);
+    padding:32px;
+    display:flex; align-items:center; justify-content:center;
+    min-height:280px;
+    position:relative;
+    overflow:hidden;
+  }
+  .app-poster{
+    width:100%; max-width:380px;
+    aspect-ratio:3/4;
+    background:var(--ink);
+    color:var(--paper);
+    padding:28px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    position:relative;
+  }
+  .app-poster.alt{ background:var(--primary); }
+  .app-poster .pmark{ font-family:var(--serif); font-weight:500; font-size:26px; letter-spacing:-0.03em;}
+  .app-poster .pmark .a{ color:var(--primary-light);}
+  .app-poster.alt .pmark .a{ color:#fff; opacity:0.55;}
+  .app-poster .ptitle{ font-family:var(--serif); font-weight:500; font-size:48px; line-height:0.95; letter-spacing:-0.025em;}
+  .app-poster .pfoot{ font-family:var(--mono); font-size:9px; letter-spacing:0.18em; text-transform:uppercase; opacity:0.7;}
+
+  .social-mock{
+    width:100%; max-width:340px;
+    aspect-ratio:1/1;
+    background:var(--paper);
+    padding:24px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    border:1px solid var(--rule-soft);
+  }
+  .social-mock.primary{ background:var(--primary); color:#fff; border-color:transparent;}
+  .social-mock .sm-mark{ font-family:var(--serif); font-weight:500; font-size:22px; letter-spacing:-0.03em;}
+  .social-mock .sm-mark .a{ color:var(--primary);}
+  .social-mock.primary .sm-mark .a{ color:#fff; opacity:0.55;}
+  .social-mock .sm-title{ font-family:var(--serif); font-weight:500; font-size:34px; line-height:0.98; letter-spacing:-0.02em;}
+  .social-mock .sm-foot{ font-family:var(--mono); font-size:9px; letter-spacing:0.18em; text-transform:uppercase; opacity:0.6;}
+
+  /* ============ TABLES ============ */
+  table.tokens{
+    width:100%; border-collapse:collapse;
+    font-family:var(--mono); font-size:12px;
+  }
+  table.tokens th, table.tokens td{
+    text-align:left; padding:12px 14px;
+    border-bottom:1px solid var(--rule-soft);
+  }
+  table.tokens th{
+    font-family:var(--sans); font-size:10px; letter-spacing:0.22em; text-transform:uppercase;
+    color:var(--muted); font-weight:600;
+  }
+  table.tokens td .chip-mini{ display:inline-block; width:18px; height:18px; vertical-align:middle; margin-right:10px; border:1px solid var(--rule-soft);}
+
+  /* index numbers */
+  .big-num{
+    font-family:var(--serif); font-weight:500;
+    font-size:160px; line-height:0.85; letter-spacing:-0.04em;
+    color:var(--primary);
+  }
+  .big-num--ink{ color:var(--ink);}
+
+  /* voice list */
+  .voice-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule);}
+  .voice-cell{
+    padding:24px 28px;
+    border-right:1px solid var(--rule-soft);
+    border-bottom:1px solid var(--rule-soft);
+  }
+  .voice-cell:nth-child(2n){ border-right:none; }
+  .voice-cell h5{
+    font-family:var(--sans); font-size:11px; letter-spacing:0.22em; text-transform:uppercase;
+    color:var(--muted); font-weight:600; margin:0 0 8px;
+  }
+  .voice-cell .quote{
+    font-family:var(--serif); font-style:italic; font-size:20px; line-height:1.4;
+    margin:0;
+  }
+  .voice-cell.is{ color:var(--ink); }
+  .voice-cell.isnt{ color:var(--muted); text-decoration:line-through; text-decoration-color:var(--primary);}
+
+  /* asymm grid for moodboard */
+  .mood{
+    display:grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap:16px;
+    height:560px;
+  }
+  .mood .m1{ grid-row:1/3; }
+  .mood .m4{ grid-column:2/4; }
+  @media(max-width:900px){ .mood{ grid-template-columns:1fr 1fr; grid-template-rows:repeat(3,200px); height:auto;} .mood .m1{ grid-row:auto;} .mood .m4{ grid-column:auto;} }
+
+  /* misc */
+  .quote-block{
+    font-family:var(--serif); font-style:italic;
+    font-size:clamp(28px, 3.6vw, 56px);
+    line-height:1.15; letter-spacing:-0.015em;
+    max-width:22ch;
+  }
+  .quote-block::before{ content:"\201C"; color:var(--primary); margin-right:6px;}
+  .quote-block::after{ content:"\201D"; color:var(--primary); }
+  .attr{ font-family:var(--sans); font-size:11px; letter-spacing:0.24em; text-transform:uppercase; color:var(--muted); margin-top:24px;}
+
+  /* utilities */
+  .mb-8{ margin-bottom:8px;} .mb-16{margin-bottom:16px;} .mb-24{margin-bottom:24px;} .mb-32{margin-bottom:32px;} .mb-48{margin-bottom:48px;} .mb-64{margin-bottom:64px;}
+  .mt-16{margin-top:16px} .mt-24{margin-top:24px} .mt-32{margin-top:32px} .mt-48{margin-top:48px}
+  .center{text-align:center}
+  .right{text-align:right}
+  .uppercase{text-transform:uppercase; letter-spacing:0.22em}
+
+  /* print */
+  @media print{
+    body{ background:#fff;}
+    .page, .cover{ page-break-after: always; min-height: 100vh; border:none;}
+    @page{ size: A3 portrait; margin:0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     PAGE 01 — COVER
+============================================================ -->
+<section class="cover">
+  <div class="cover-top">
+    <div class="cover-mark">BEME — TALENT &amp; CULTURE</div>
+    <div class="cover-mark">VOL. 01 / 2026</div>
+  </div>
+
+  <div>
+    <div class="eyebrow" style="margin-bottom:18px;">Manual de Identidad Visual</div>
+    <h1 class="cover-title">Be<span class="amp">me</span>.</h1>
+    <p class="cover-sub">
+      Una guía editorial para la construcción, expresión y protección
+      de la marca BEME — agencia de talento, contenido y cultura.
+    </p>
+  </div>
+
+  <div class="cover-meta">
+    <div class="meta-block">
+      <span class="k">Edición</span>
+      <span class="v">Primera · 2026</span>
+    </div>
+    <div class="meta-block">
+      <span class="k">Editor</span>
+      <span class="v">BEME Brand Studio</span>
+    </div>
+    <div class="meta-block">
+      <span class="k">Documento</span>
+      <span class="v">Brand Book / Interno</span>
+    </div>
+    <div class="meta-block">
+      <span class="k">Folios</span>
+      <span class="v">001 — 120</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PAGE 02 — COLOPHON / INTRO
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>BEME · Brand Book</span>
+    <span><span class="dot"></span> Vol. 01 <span class="dot"></span> 2026</span>
+    <span>Introducción</span>
+  </div>
+
+  <div class="grid g-12" style="margin-top:120px;">
+    <div style="grid-column: span 5;">
+      <div class="eyebrow mb-24">Sobre este manual</div>
+      <h2 class="display" style="font-size:64px; margin:0 0 32px;">
+        Una marca no se diseña.<br>
+        <em style="color:var(--primary); font-weight:400;">Se cuida.</em>
+      </h2>
+    </div>
+    <div style="grid-column: span 7;">
+      <p class="dropcap">
+        Este documento reúne las reglas, principios y decisiones que dan forma a la identidad de
+        <strong>BEME</strong>. No es un catálogo de aplicaciones: es la voz visual y verbal con la que
+        nos presentamos ante el mundo. Cada página describe un sistema —tipográfico, cromático, fotográfico o
+        editorial— pensado para mantener consistencia sin perder carácter.
+      </p>
+      <p>
+        BEME trabaja con marcas globales, talento y cultura. La identidad acompaña ese rol: refinada, segura,
+        editorial. Lo que sigue es la herramienta para sostenerla en cada formato, equipo y conversación.
+      </p>
+      <hr class="rule--soft rule" style="margin:32px 0 20px;">
+      <div class="grid g-3" style="gap:18px;">
+        <div>
+          <div class="eyebrow mb-8">Versión</div>
+          <p class="small" style="margin:0;">1.0 — Mayo 2026</p>
+        </div>
+        <div>
+          <div class="eyebrow mb-8">Custodia</div>
+          <p class="small" style="margin:0;">BEME Brand Studio</p>
+        </div>
+        <div>
+          <div class="eyebrow mb-8">Soporte</div>
+          <p class="small" style="margin:0;">brand@beme.agency</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">002</div>
+</section>
+
+<!-- ============================================================
+     PAGE 03 — TABLE OF CONTENTS
+============================================================ -->
+<section class="page page--paper2">
+  <div class="folio">
+    <span>BEME · Brand Book</span>
+    <span><span class="dot"></span> Índice <span class="dot"></span></span>
+    <span>Vol. 01</span>
+  </div>
+
+  <div style="margin-top:96px; max-width:880px;">
+    <div class="eyebrow mb-16">Contenido</div>
+    <h2 class="section-title" style="margin-bottom:48px;">Índice<span style="color:var(--primary);">.</span></h2>
+
+    <ol class="toc-list" start="0" style="counter-reset:section;">
+      <li><span class="toc-num">01</span><span class="toc-title">Esencia &amp; valores</span><span class="toc-page">P. 004</span></li>
+      <li><span class="toc-num">02</span><span class="toc-title">El logotipo</span><span class="toc-page">P. 008</span></li>
+      <li><span class="toc-num">03</span><span class="toc-title">Sistema cromático</span><span class="toc-page">P. 014</span></li>
+      <li><span class="toc-num">04</span><span class="toc-title">Tipografía</span><span class="toc-page">P. 020</span></li>
+      <li><span class="toc-num">05</span><span class="toc-title">Voz &amp; tono</span><span class="toc-page">P. 026</span></li>
+      <li><span class="toc-num">06</span><span class="toc-title">Dirección fotográfica</span><span class="toc-page">P. 030</span></li>
+      <li><span class="toc-num">07</span><span class="toc-title">Sistema digital · UI</span><span class="toc-page">P. 036</span></li>
+      <li><span class="toc-num">08</span><span class="toc-title">Papelería</span><span class="toc-page">P. 042</span></li>
+      <li><span class="toc-num">09</span><span class="toc-title">Aplicaciones</span><span class="toc-page">P. 048</span></li>
+    </ol>
+  </div>
+
+  <div class="page-num">003</div>
+</section>
+
+<!-- ============================================================
+     SECTION OPENER 01 — ESSENCE
+============================================================ -->
+<section class="page page--ink">
+  <div class="folio">
+    <span>01 · Esencia</span>
+    <span><span class="dot"></span> BEME Brand Book <span class="dot"></span></span>
+    <span>P. 004</span>
+  </div>
+
+  <div style="display:flex; flex-direction:column; justify-content:space-between; min-height:80vh; margin-top:80px;">
+    <div>
+      <div class="eyebrow" style="color:var(--primary-light);">Capítulo Uno</div>
+      <h2 class="display" style="font-size:clamp(80px,11vw,180px); margin-top:24px; color:var(--paper);">
+        Esencia<br>
+        <em style="color:var(--primary-light); font-weight:400; font-style:italic;">&amp; valores.</em>
+      </h2>
+    </div>
+
+    <div class="grid g-12" style="margin-top:64px;">
+      <div style="grid-column: span 5;">
+        <p class="lead" style="color:var(--paper); opacity:0.85;">
+          BEME es una agencia que conecta talento y cultura con las marcas más exigentes del mundo.
+        </p>
+      </div>
+      <div style="grid-column: span 6; grid-column-start:7;">
+        <p style="color:rgba(247,244,238,0.78); max-width:54ch;">
+          Operamos en el cruce entre la industria del entretenimiento y la consultoría estratégica.
+          Nuestro trabajo se mide en la calidad de las decisiones que tomamos, no en el ruido que generamos.
+          Esta sección define quiénes somos antes de cómo nos vemos.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">004</div>
+</section>
+
+<!-- ============================================================
+     PAGE — MANIFESTO + VALUES
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>01 · Esencia</span>
+    <span><span class="dot"></span> Manifiesto <span class="dot"></span></span>
+    <span>P. 005</span>
+  </div>
+
+  <div class="grid g-12" style="margin-top:96px;">
+    <div style="grid-column: span 5;">
+      <div class="eyebrow mb-24">Manifiesto</div>
+      <p class="quote-block">El talento no se contrata. Se acompaña.</p>
+      <p class="attr">— BEME, Principio fundacional</p>
+    </div>
+
+    <div style="grid-column: span 6; grid-column-start:7;">
+      <p>
+        Trabajamos en una industria saturada de ruido. Por eso elegimos un lenguaje sobrio:
+        decisiones largas, ejecuciones precisas, resultados verificables. Las marcas con las que colaboramos
+        confían en BEME porque hablamos su idioma — no el de la euforia del momento, sino el de la
+        construcción a largo plazo.
+      </p>
+      <p>
+        Cada campaña, contrato y conversación que sale de esta agencia debe sostenerse en cuatro pilares:
+        criterio, transparencia, confidencialidad y autoría.
+      </p>
+    </div>
+  </div>
+
+  <hr class="rule" style="margin:64px 0 32px;">
+
+  <div class="grid g-4">
+    <div>
+      <div class="big-num">01</div>
+      <h4 style="margin-top:18px;">Criterio</h4>
+      <p class="small">
+        Antes de proponer, escuchamos. Antes de ejecutar, validamos. El criterio editorial precede al volumen.
+      </p>
+    </div>
+    <div>
+      <div class="big-num big-num--ink">02</div>
+      <h4 style="margin-top:18px;">Transparencia</h4>
+      <p class="small">
+        Mostrar números, contratos, métricas y procesos. La confianza se construye con visibilidad, no con relato.
+      </p>
+    </div>
+    <div>
+      <div class="big-num">03</div>
+      <h4 style="margin-top:18px;">Confidencialidad</h4>
+      <p class="small">
+        Lo que sucede entre marca, talento y agencia se queda entre marca, talento y agencia.
+      </p>
+    </div>
+    <div>
+      <div class="big-num big-num--ink">04</div>
+      <h4 style="margin-top:18px;">Autoría</h4>
+      <p class="small">
+        Defendemos el trabajo creativo del talento. La marca acompaña; el talento autora.
+      </p>
+    </div>
+  </div>
+
+  <div class="page-num">005</div>
+</section>
+
+<!-- ============================================================
+     PAGE — POSITIONING / AUDIENCE
+============================================================ -->
+<section class="page page--paper2">
+  <div class="folio">
+    <span>01 · Esencia</span>
+    <span><span class="dot"></span> Posicionamiento <span class="dot"></span></span>
+    <span>P. 006</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="grid g-12">
+      <div style="grid-column: span 5;">
+        <div class="eyebrow mb-16">Posicionamiento</div>
+        <h2 class="section-title" style="font-size:72px;">No somos<br>una agencia<br><em style="color:var(--primary); font-weight:400;">cualquiera.</em></h2>
+      </div>
+      <div style="grid-column: span 6; grid-column-start:7;">
+        <p>
+          BEME se posiciona en la franja superior del mercado de talento: representamos a un grupo
+          curado de creadores y artistas que trabajan con marcas globales. Nuestra propuesta no compite
+          en volumen, compite en estándar.
+        </p>
+
+        <div class="grid g-2 mt-32" style="gap:24px;">
+          <div>
+            <h4>Para quién es BEME</h4>
+            <ul class="small" style="padding-left:18px; line-height:1.8;">
+              <li>Marcas líderes en lifestyle, lujo, tecnología y entretenimiento.</li>
+              <li>Talento con criterio editorial y proyección internacional.</li>
+              <li>Equipos de marketing que exigen procesos, no improvisación.</li>
+            </ul>
+          </div>
+          <div>
+            <h4>Para quién no es</h4>
+            <ul class="small" style="padding-left:18px; line-height:1.8; color:var(--muted);">
+              <li>Marcas que buscan exposición masiva sin estrategia.</li>
+              <li>Campañas tácticas de corto plazo sin contexto cultural.</li>
+              <li>Procesos sin contratos, sin métricas, sin papel.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">006</div>
+</section>
+
+<!-- ============================================================
+     PAGE — PULL QUOTE / BREAK
+============================================================ -->
+<section class="page page--primary">
+  <div class="folio">
+    <span>01 · Esencia</span>
+    <span><span class="dot"></span> Tono editorial <span class="dot"></span></span>
+    <span>P. 007</span>
+  </div>
+
+  <div style="display:flex; align-items:center; min-height:80vh; margin-top:40px;">
+    <div style="max-width:900px;">
+      <div class="eyebrow" style="color:rgba(255,255,255,0.75); margin-bottom:32px;">Síntesis de marca</div>
+      <p class="quote-block" style="color:#fff; font-size:clamp(36px,5.6vw,84px); max-width:none;">
+        Donde el talento se vuelve oficio,<br>
+        y la marca, una conversación seria.
+      </p>
+      <p class="attr" style="color:rgba(255,255,255,0.7); margin-top:48px;">— Posicionamiento BEME / 2026</p>
+    </div>
+  </div>
+
+  <div class="page-num">007</div>
+</section>
+
+<!-- ============================================================
+     SECTION OPENER 02 — LOGO
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>02 · Logotipo</span>
+    <span><span class="dot"></span> BEME Brand Book <span class="dot"></span></span>
+    <span>P. 008</span>
+  </div>
+
+  <div class="grid g-12" style="margin-top:96px;">
+    <div style="grid-column: span 5;">
+      <div class="eyebrow mb-16">Capítulo Dos</div>
+      <h2 class="section-title">El logotipo<span style="color:var(--primary);">.</span></h2>
+      <p class="lead mt-24">
+        El elemento más visible y menos negociable de la identidad.
+      </p>
+    </div>
+    <div style="grid-column: span 6; grid-column-start:7;">
+      <p>
+        El logotipo de BEME es un wordmark editorial. Su construcción combina la solidez de una serif
+        moderna con la cadencia íntima de una minúscula. Esta sección define su construcción,
+        área de respeto, tamaños mínimos y restricciones.
+      </p>
+      <p>
+        El logo no se rediseña. Se aplica.
+      </p>
+    </div>
+  </div>
+
+  <div style="margin-top:80px;" class="stage">
+    <img src="assets/brand/logos/Beme1Color.png" alt="BEME Logo" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"/>
+    <div class="wordmark" style="display:none;">Be<span class="accent">me</span>.</div>
+  </div>
+
+  <div class="page-num">008</div>
+</section>
+
+<!-- ============================================================
+     PAGE — LOGO CONSTRUCTION
+============================================================ -->
+<section class="page page--paper2">
+  <div class="folio">
+    <span>02 · Logotipo</span>
+    <span><span class="dot"></span> Construcción <span class="dot"></span></span>
+    <span>P. 009</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="grid g-12 mb-48">
+      <div style="grid-column: span 5;">
+        <div class="eyebrow mb-16">2.1 · Construcción</div>
+        <h2 class="display" style="font-size:56px;">Una geometría<br>silenciosa.</h2>
+      </div>
+      <div style="grid-column: span 6; grid-column-start:7;">
+        <p>
+          El wordmark se construye sobre una grilla modular basada en la altura-x de la tipografía maestra.
+          La unidad <strong>X</strong> equivale a la altura del cuerpo de la "e".
+          Todas las proporciones —altura, espacios, ascendentes y descendentes— derivan de esta unidad.
+        </p>
+      </div>
+    </div>
+
+    <div class="grid g-2" style="gap:24px;">
+      <div class="stage construction-grid" style="min-height:420px;">
+        <img src="assets/brand/logos/Beme1Color.png" alt="BEME" class="logo-img" style="max-width:280px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"/>
+        <div class="wordmark" style="display:none;">Be<span class="accent">me</span>.</div>
+      </div>
+      <div style="padding:24px 0;">
+        <h4>Unidad modular</h4>
+        <p>
+          La grilla mostrada usa una unidad <strong>X = 32px</strong> a escala de referencia. La proporción
+          se mantiene constante al escalar el logo en cualquier formato.
+        </p>
+        <table class="tokens mt-24">
+          <tr><th>Elemento</th><th>Medida</th></tr>
+          <tr><td>Altura del wordmark</td><td>3X</td></tr>
+          <tr><td>Ancho aproximado</td><td>9X</td></tr>
+          <tr><td>Ascendente "B"</td><td>1.5X sobre baseline</td></tr>
+          <tr><td>Punto final</td><td>0.5X de diámetro</td></tr>
+          <tr><td>Tracking</td><td>-40 (negativo)</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">009</div>
+</section>
+
+<!-- ============================================================
+     PAGE — CLEAR SPACE & MIN SIZE
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>02 · Logotipo</span>
+    <span><span class="dot"></span> Área de respeto <span class="dot"></span></span>
+    <span>P. 010</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">2.2 · Área de respeto &amp; tamaño mínimo</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">Espacio para respirar.</h2>
+
+    <div class="grid g-2" style="gap:32px;">
+      <div>
+        <div class="clearspace">
+          <div class="frame">
+            <span class="x t">1X</span>
+            <span class="x b">1X</span>
+            <span class="x l">1X</span>
+            <span class="x r">1X</span>
+            <img src="assets/brand/logos/Beme1Color.png" alt="BEME" class="logo-img" style="max-width:200px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"/>
+            <div class="wordmark" style="display:none; font-size:64px;">Be<span class="accent">me</span>.</div>
+          </div>
+        </div>
+        <h4 style="margin-top:24px;">Área de respeto</h4>
+        <p class="small">
+          Mantener un margen libre equivalente a <strong>1X</strong> en los cuatro lados del logotipo. Ningún
+          elemento gráfico, texto o imagen puede invadir esta zona.
+        </p>
+      </div>
+
+      <div>
+        <div style="border:1px solid var(--rule-soft); padding:48px; display:flex; flex-direction:column; gap:32px; background:var(--paper);">
+          <div style="display:flex; align-items:baseline; gap:24px;">
+            <div class="wordmark" style="font-size:64px;">Be<span class="accent">me</span>.</div>
+            <span class="small">Pantalla — 64px</span>
+          </div>
+          <div style="display:flex; align-items:baseline; gap:24px;">
+            <div class="wordmark" style="font-size:32px;">Be<span class="accent">me</span>.</div>
+            <span class="small">Mínimo digital — 24px de altura</span>
+          </div>
+          <div style="display:flex; align-items:baseline; gap:24px;">
+            <div class="wordmark" style="font-size:18px;">Be<span class="accent">me</span>.</div>
+            <span class="small">Mínimo impreso — 12mm de ancho</span>
+          </div>
+        </div>
+        <h4 style="margin-top:24px;">Tamaño mínimo</h4>
+        <p class="small">
+          El logotipo no debe reducirse a un punto donde la tilde final pierda definición. Para impresión,
+          12 mm de ancho. Para digital, 24 px de altura.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">010</div>
+</section>
+
+<!-- ============================================================
+     PAGE — LOGO VARIANTS
+============================================================ -->
+<section class="page page--paper2">
+  <div class="folio">
+    <span>02 · Logotipo</span>
+    <span><span class="dot"></span> Variantes <span class="dot"></span></span>
+    <span>P. 011</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">2.3 · Variantes oficiales</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">Cuatro versiones.<br>Una sola voz.</h2>
+
+    <div class="grid g-2" style="gap:24px;">
+      <div>
+        <div class="stage" style="min-height:280px;">
+          <img src="assets/brand/logos/Beme1Color.png" alt="BEME Color" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"/>
+          <div class="wordmark" style="display:none;">Be<span class="accent">me</span>.</div>
+        </div>
+        <h4 style="margin-top:16px;">Color principal</h4>
+        <p class="small">Sobre fondo claro. Versión primaria para impresión y digital.</p>
+      </div>
+
+      <div>
+        <div class="stage stage--ink" style="min-height:280px;">
+          <img src="assets/brand/logos/Beme1blanco.png" alt="BEME Blanco" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"/>
+          <div class="wordmark wordmark--light" style="display:none;">Be<span style="color:var(--primary-light);">me</span>.</div>
+        </div>
+        <h4 style="margin-top:16px;">Blanco sobre oscuro</h4>
+        <p class="small">Sobre fondo negro, gris carbón o foto. Acento en rosa claro.</p>
+      </div>
+
+      <div>
+        <div class="stage" style="min-height:280px; background:#fff;">
+          <div class="wordmark">Be<span style="color:var(--ink);">me</span>.</div>
+        </div>
+        <h4 style="margin-top:16px;">Monocromo negro</h4>
+        <p class="small">Aplicaciones de una sola tinta o donde el color no esté disponible.</p>
+      </div>
+
+      <div>
+        <div class="stage stage--gradient" style="min-height:280px;">
+          <div class="wordmark wordmark--light">Be<span style="color:#fff; opacity:0.55;">me</span>.</div>
+        </div>
+        <h4 style="margin-top:16px;">Sobre gradiente</h4>
+        <p class="small">Reservado para piezas editoriales y campañas. No usar en documentos formales.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">011</div>
+</section>
+
+<!-- ============================================================
+     PAGE — DON'TS
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>02 · Logotipo</span>
+    <span><span class="dot"></span> Restricciones <span class="dot"></span></span>
+    <span>P. 012</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="grid g-12 mb-48">
+      <div style="grid-column: span 5;">
+        <div class="eyebrow mb-16">2.4 · Lo que no se hace</div>
+        <h2 class="display" style="font-size:56px;">El logo no se<br><em style="color:var(--primary); font-weight:400;">reinterpreta.</em></h2>
+      </div>
+      <div style="grid-column: span 6; grid-column-start:7;">
+        <p>
+          Las variantes oficiales cubren todos los usos esperables. Cualquier modificación —proporciones,
+          colores, efectos, recursos decorativos— rompe el sistema y debilita la marca. Si una situación no
+          aparece resuelta en este manual, escribir a <strong>brand@beme.agency</strong>.
+        </p>
+      </div>
+    </div>
+
+    <div class="do-dont">
+      <div class="dd-cell">
+        <div class="preview"><div class="mini-logo">Be<span class="accent">me</span>.</div></div>
+        <div class="label"><span class="dot-yes"></span>Correcto</div>
+        <div class="note">Logo oficial en color principal, sobre fondo limpio, con área de respeto.</div>
+      </div>
+
+      <div class="dd-cell">
+        <div class="preview bad"><div class="mini-logo" style="transform:skewX(-12deg);">Be<span class="accent">me</span>.</div></div>
+        <div class="label"><span class="dot-no"></span>No deformar</div>
+        <div class="note">Nunca inclinar, estirar, comprimir ni rotar el logotipo.</div>
+      </div>
+
+      <div class="dd-cell">
+        <div class="preview warn" style="background:linear-gradient(135deg,#3b6e3b,#7a3e7a);"><div class="mini-logo" style="color:#fff;">Be<span style="color:#ffea00;">me</span>.</div></div>
+        <div class="label"><span class="dot-no"></span>No recolorear</div>
+        <div class="note">Solo los colores oficiales BEME. Prohibido sustituir el acento por colores ajenos.</div>
+      </div>
+
+      <div class="dd-cell">
+        <div class="preview"><div class="mini-logo" style="text-shadow:3px 3px 0 var(--primary), -2px -2px 8px rgba(0,0,0,0.4); ">Be<span class="accent">me</span>.</div></div>
+        <div class="label"><span class="dot-no"></span>Sin efectos</div>
+        <div class="note">Sin sombras, bordes, brillos, biseles ni texturas. El logo es plano.</div>
+      </div>
+
+      <div class="dd-cell">
+        <div class="preview" style="background:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 60 60%22><circle cx=%2230%22 cy=%2230%22 r=%2215%22 fill=%22%23999%22/></svg>') #aaa center/cover;"><div class="mini-logo" style="color:#fff;">Be<span style="color:#ed568f;">me</span>.</div></div>
+        <div class="label"><span class="dot-no"></span>Sin fondos ruidosos</div>
+        <div class="note">No aplicar sobre fotos saturadas o patrones que compitan con el wordmark.</div>
+      </div>
+
+      <div class="dd-cell">
+        <div class="preview"><div style="display:flex; align-items:center; gap:10px;"><div class="mini-logo" style="font-size:34px;">Be<span class="accent">me</span>.</div><span style="font-family:var(--sans); font-size:11px; color:var(--muted); border-left:1px solid var(--rule); padding-left:10px;">AGENCY</span></div></div>
+        <div class="label"><span class="dot-no"></span>Sin lockups no oficiales</div>
+        <div class="note">No agregar tagline, descriptor ni elementos al lado del logo sin aprobación.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">012</div>
+</section>
+
+<!-- ============================================================
+     SECTION OPENER 03 — COLOR
+============================================================ -->
+<section class="page page--ink">
+  <div class="folio">
+    <span>03 · Color</span>
+    <span><span class="dot"></span> BEME Brand Book <span class="dot"></span></span>
+    <span>P. 014</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="grid g-12">
+      <div style="grid-column: span 5;">
+        <div class="eyebrow" style="color:var(--primary-light);">Capítulo Tres</div>
+        <h2 class="display" style="font-size:clamp(72px,10vw,160px); color:var(--paper); margin-top:24px;">
+          Sistema<br>
+          <em style="color:var(--primary-light); font-weight:400; font-style:italic;">cromático.</em>
+        </h2>
+      </div>
+      <div style="grid-column: span 6; grid-column-start:7; align-self:end;">
+        <p class="lead" style="color:var(--paper); opacity:0.85;">
+          Un magenta editorial, un burgundy profundo, una paleta de papel.
+        </p>
+        <p style="color:rgba(247,244,238,0.7); margin-top:32px;">
+          El color de BEME conserva la intensidad de su origen pero se aplica con disciplina editorial:
+          mucho neutro, acento medido, presencia precisa. Los rosados saturados desaparecen del fondo;
+          el magenta vuelve donde importa.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">014</div>
+</section>
+
+<!-- ============================================================
+     PAGE — PRIMARY COLOR
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>03 · Color</span>
+    <span><span class="dot"></span> Primario <span class="dot"></span></span>
+    <span>P. 015</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">3.1 · Color principal</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">BEME Magenta.</h2>
+
+    <div class="grid g-2" style="gap:48px;">
+      <div style="background:var(--primary); aspect-ratio:1/1; padding:40px; display:flex; flex-direction:column; justify-content:space-between; color:#fff;">
+        <div style="font-family:var(--mono); font-size:11px; letter-spacing:0.18em;">PMS · 233 C</div>
+        <div>
+          <div class="display" style="font-size:88px; line-height:0.9;">B</div>
+          <div style="font-family:var(--mono); font-size:11px; letter-spacing:0.18em; margin-top:12px;">#B2005D</div>
+        </div>
+      </div>
+
+      <div>
+        <h3>El color firma.</h3>
+        <p>
+          BEME Magenta es la única tonalidad con autoridad de marca. Aparece en acentos, no en fondos
+          extensos. Su rol editorial es señalar — un punto, un trazo, un detalle.
+        </p>
+
+        <table class="tokens mt-32">
+          <tr><th>Modelo</th><th>Valor</th></tr>
+          <tr><td>HEX</td><td>#B2005D</td></tr>
+          <tr><td>RGB</td><td>178 · 0 · 93</td></tr>
+          <tr><td>CMYK</td><td>20 · 100 · 35 · 15</td></tr>
+          <tr><td>PMS</td><td>233 C</td></tr>
+          <tr><td>HSL</td><td>329° · 100% · 35%</td></tr>
+          <tr><td>Token UI</td><td>--primary</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">015</div>
+</section>
+
+<!-- ============================================================
+     PAGE — SECONDARY COLOR
+============================================================ -->
+<section class="page page--paper2">
+  <div class="folio">
+    <span>03 · Color</span>
+    <span><span class="dot"></span> Secundarios <span class="dot"></span></span>
+    <span>P. 016</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">3.2 · Familia primaria extendida &amp; acento</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">La familia.</h2>
+
+    <div class="grid g-3" style="gap:24px;">
+      <div class="swatch">
+        <div class="chip" style="background:#ed568f;"></div>
+        <div class="info">
+          <div class="role">Primario · Light</div>
+          <div class="name">Rosé Editorial</div>
+          <div class="specs">
+            <div class="row"><span>HEX</span><span>#ED568F</span></div>
+            <div class="row"><span>RGB</span><span>237·86·143</span></div>
+            <div class="row"><span>CMYK</span><span>0·76·17·0</span></div>
+            <div class="row"><span>Token</span><span>--primary-light</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="chip" style="background:#8a0048;"></div>
+        <div class="info">
+          <div class="role">Primario · Dark</div>
+          <div class="name">Burgundy</div>
+          <div class="specs">
+            <div class="row"><span>HEX</span><span>#8A0048</span></div>
+            <div class="row"><span>RGB</span><span>138·0·72</span></div>
+            <div class="row"><span>CMYK</span><span>30·100·40·30</span></div>
+            <div class="row"><span>Token</span><span>--primary-dark</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="chip" style="background:#5C0A2E;"></div>
+        <div class="info">
+          <div class="role">Acento · Editorial</div>
+          <div class="name">Oxblood de Autor</div>
+          <div class="specs">
+            <div class="row"><span>HEX</span><span>#5C0A2E</span></div>
+            <div class="row"><span>RGB</span><span>92·10·46</span></div>
+            <div class="row"><span>CMYK</span><span>45·100·55·55</span></div>
+            <div class="row"><span>Token</span><span>--accent</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="rule" style="margin:48px 0 32px;">
+
+    <div class="grid g-12">
+      <div style="grid-column: span 5;">
+        <h4>Gradiente firma</h4>
+        <p class="small">
+          Reservado para portadas, aplicaciones editoriales y comunicaciones de campaña. Nunca como fondo
+          de documentos formales, contratos o presentaciones financieras.
+        </p>
+      </div>
+      <div style="grid-column: span 7;">
+        <div style="background:var(--gradient); aspect-ratio: 6/1; display:flex; align-items:center; justify-content:flex-end; padding:0 32px; color:#fff; font-family:var(--mono); font-size:12px; letter-spacing:0.18em;">
+          135° · #B2005D → #5C0A2E
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">016</div>
+</section>
+
+<!-- ============================================================
+     PAGE — NEUTRALS
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>03 · Color</span>
+    <span><span class="dot"></span> Neutros <span class="dot"></span></span>
+    <span>P. 017</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">3.3 · Neutros editoriales</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">Papel, tinta, sombra.</h2>
+
+    <p style="max-width:64ch;" class="mb-32">
+      La paleta neutra reemplaza al gris frío genérico por una serie de papeles cálidos y tintas profundas.
+      Es la base del 90% de toda comunicación BEME. El color BEME aparece sobre estos neutros, no al revés.
+    </p>
+
+    <div class="grid g-4" style="gap:18px;">
+      <div class="swatch">
+        <div class="chip" style="background:#0E0E10;"></div>
+        <div class="info">
+          <div class="role">Tinta</div>
+          <div class="name">Ink</div>
+          <div class="specs">
+            <div class="row"><span>HEX</span><span>#0E0E10</span></div>
+            <div class="row"><span>RGB</span><span>14·14·16</span></div>
+            <div class="row"><span>CMYK</span><span>72·67·63·76</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="chip" style="background:#1C1C20;"></div>
+        <div class="info">
+          <div class="role">Tinta · Suave</div>
+          <div class="name">Ink Soft</div>
+          <div class="specs">
+            <div class="row"><span>HEX</span><span>#1C1C20</span></div>
+            <div class="row"><span>RGB</span><span>28·28·32</span></div>
+            <div class="row"><span>CMYK</span><span>72·67·60·64</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="chip" style="background:#5A5A60;"></div>
+        <div class="info">
+          <div class="role">Texto · Muted</div>
+          <div class="name">Slate</div>
+          <div class="specs">
+            <div class="row"><span>HEX</span><span>#5A5A60</span></div>
+            <div class="row"><span>RGB</span><span>90·90·96</span></div>
+            <div class="row"><span>CMYK</span><span>62·54·47·22</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="chip" style="background:#8A8A90;"></div>
+        <div class="info">
+          <div class="role">Auxiliar</div>
+          <div class="name">Fog</div>
+          <div class="specs">
+            <div class="row"><span>HEX</span><span>#8A8A90</span></div>
+            <div class="row"><span>RGB</span><span>138·138·144</span></div>
+            <div class="row"><span>CMYK</span><span>46·39·34·3</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="chip" style="background:#E2DCCF;"></div>
+        <div class="info">
+          <div class="role">Papel · Profundo</div>
+          <div class="name">Paper 03</div>
+          <div class="specs">
+            <div class="row"><span>HEX</span><span>#E2DCCF</span></div>
+            <div class="row"><span>RGB</span><span>226·220·207</span></div>
+            <div class="row"><span>CMYK</span><span>10·11·20·0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="chip" style="background:#EEE9DF;"></div>
+        <div class="info">
+          <div class="role">Papel · Medio</div>
+          <div class="name">Paper 02</div>
+          <div class="specs">
+            <div class="row"><span>HEX</span><span>#EEE9DF</span></div>
+            <div class="row"><span>RGB</span><span>238·233·223</span></div>
+            <div class="row"><span>CMYK</span><span>5·6·12·0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="chip" style="background:#F7F4EE;"></div>
+        <div class="info">
+          <div class="role">Papel · Base</div>
+          <div class="name">Paper 01</div>
+          <div class="specs">
+            <div class="row"><span>HEX</span><span>#F7F4EE</span></div>
+            <div class="row"><span>RGB</span><span>247·244·238</span></div>
+            <div class="row"><span>CMYK</span><span>2·3·6·0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="chip" style="background:#FFFFFF; border:1px solid var(--rule-soft);"></div>
+        <div class="info">
+          <div class="role">Papel · Puro</div>
+          <div class="name">Pure</div>
+          <div class="specs">
+            <div class="row"><span>HEX</span><span>#FFFFFF</span></div>
+            <div class="row"><span>RGB</span><span>255·255·255</span></div>
+            <div class="row"><span>CMYK</span><span>0·0·0·0</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">017</div>
+</section>
+
+<!-- ============================================================
+     PAGE — COLOR PROPORTIONS / USAGE
+============================================================ -->
+<section class="page page--paper2">
+  <div class="folio">
+    <span>03 · Color</span>
+    <span><span class="dot"></span> Proporciones <span class="dot"></span></span>
+    <span>P. 018</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">3.4 · Proporciones de uso</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">60 / 30 / 10.</h2>
+
+    <p class="mb-32" style="max-width:60ch;">
+      Toda composición BEME respeta una regla editorial estricta: la mayor parte del lienzo es papel
+      o tinta neutra; el color de marca actúa como acento.
+    </p>
+
+    <div style="display:flex; height:120px; border:1px solid var(--rule-soft);">
+      <div style="width:60%; background:var(--paper); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:11px; letter-spacing:0.2em; color:var(--muted);">60% PAPER · #F7F4EE</div>
+      <div style="width:30%; background:var(--ink); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:11px; letter-spacing:0.2em; color:var(--paper);">30% INK · #0E0E10</div>
+      <div style="width:10%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:11px; letter-spacing:0.2em; color:#fff;">10%</div>
+    </div>
+
+    <div class="grid g-3 mt-48" style="gap:24px;">
+      <div>
+        <h4>60% Papel</h4>
+        <p class="small">Fondo dominante. Da espacio editorial, sostiene la tipografía y le devuelve aire al lector.</p>
+      </div>
+      <div>
+        <h4>30% Tinta</h4>
+        <p class="small">Tipografía principal, secciones nocturnas, encabezados serios, contraste estructural.</p>
+      </div>
+      <div>
+        <h4>10% Magenta</h4>
+        <p class="small">Acentos. Una palabra, un signo, un detalle. Nunca un fondo completo en documentos formales.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">018</div>
+</section>
+
+<!-- ============================================================
+     SECTION OPENER 04 — TYPOGRAPHY
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>04 · Tipografía</span>
+    <span><span class="dot"></span> BEME Brand Book <span class="dot"></span></span>
+    <span>P. 020</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="grid g-12">
+      <div style="grid-column: span 5;">
+        <div class="eyebrow mb-16">Capítulo Cuatro</div>
+        <h2 class="section-title">Tipografía<span style="color:var(--primary);">.</span></h2>
+      </div>
+      <div style="grid-column: span 6; grid-column-start:7;">
+        <p class="lead">
+          Una serif moderna para titular. Una sans humanista para leer.
+        </p>
+        <p class="mt-24">
+          BEME usa <strong>Libre Bodoni</strong> como tipografía de display —ecos del periodismo editorial,
+          alto contraste, autoridad— y <strong>Public Sans</strong> como tipografía utilitaria, calibrada para
+          interfaces, formularios y textos largos. Una tercera tipografía monoespaciada,
+          <strong>JetBrains Mono</strong>, ordena datos y especificaciones técnicas.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">020</div>
+</section>
+
+<!-- ============================================================
+     PAGE — TYPE SPECIMEN: SERIF
+============================================================ -->
+<section class="page page--paper2">
+  <div class="folio">
+    <span>04 · Tipografía</span>
+    <span><span class="dot"></span> Display <span class="dot"></span></span>
+    <span>P. 021</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="grid g-12 mb-48">
+      <div style="grid-column: span 5;">
+        <div class="eyebrow mb-16">4.1 · Display</div>
+        <h2 class="display" style="font-size:80px;">Libre Bodoni.</h2>
+        <p class="small mt-16" style="max-width:32ch;">
+          Diseñada para grandes cuerpos editoriales. Su alto contraste entre trazos finos y gruesos transmite
+          autoridad y refinamiento.
+        </p>
+      </div>
+      <div style="grid-column: span 6; grid-column-start:7;">
+        <p class="display" style="font-size:128px; line-height:0.85; letter-spacing:-0.03em;">Aa</p>
+        <p style="font-family:var(--mono); font-size:11px; letter-spacing:0.18em; color:var(--muted); margin-top:24px;">ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
+        <p style="font-family:var(--mono); font-size:11px; letter-spacing:0.18em; color:var(--muted);">abcdefghijklmnopqrstuvwxyz 0123456789</p>
+      </div>
+    </div>
+
+    <div class="specimen">
+      <div class="meta">DISPLAY<br>96 / 96<br>500 · -2%</div>
+      <div class="sample" style="font-size:88px;">Una nueva generación<br>de talento global.</div>
+    </div>
+    <div class="specimen">
+      <div class="meta">HEADLINE<br>64 / 64<br>500 · -1.5%</div>
+      <div class="sample" style="font-size:56px;">Marcas que entienden la cultura.</div>
+    </div>
+    <div class="specimen">
+      <div class="meta">TITLE<br>40 / 44<br>500 · -1%</div>
+      <div class="sample" style="font-size:38px;">El talento se acompaña, no se contrata.</div>
+    </div>
+    <div class="specimen">
+      <div class="meta">PULL<br>28 / 36<br>400 · italic</div>
+      <div class="sample" style="font-size:26px; font-style:italic; font-weight:400;">Donde el oficio se vuelve marca, y la marca se vuelve conversación.</div>
+    </div>
+  </div>
+
+  <div class="page-num">021</div>
+</section>
+
+<!-- ============================================================
+     PAGE — TYPE SPECIMEN: SANS
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>04 · Tipografía</span>
+    <span><span class="dot"></span> Texto <span class="dot"></span></span>
+    <span>P. 022</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="grid g-12 mb-48">
+      <div style="grid-column: span 5;">
+        <div class="eyebrow mb-16">4.2 · Texto base</div>
+        <h2 class="display" style="font-size:80px;">Public Sans.</h2>
+        <p class="small mt-16" style="max-width:32ch;">
+          Sans serif neutra, humanista y calibrada para legibilidad en interfaces y documentos largos.
+          Calza con la Bodoni sin competir.
+        </p>
+      </div>
+      <div style="grid-column: span 6; grid-column-start:7;">
+        <p style="font-family:var(--sans); font-weight:600; font-size:128px; line-height:0.85; letter-spacing:-0.03em;">Aa</p>
+        <p style="font-family:var(--mono); font-size:11px; letter-spacing:0.18em; color:var(--muted); margin-top:24px;">ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
+        <p style="font-family:var(--mono); font-size:11px; letter-spacing:0.18em; color:var(--muted);">abcdefghijklmnopqrstuvwxyz 0123456789</p>
+      </div>
+    </div>
+
+    <div class="grid g-2" style="gap:48px;">
+      <div>
+        <h4>Escala tipográfica</h4>
+        <table class="tokens">
+          <tr><th>Token</th><th>Tamaño</th><th>Line height</th></tr>
+          <tr><td>display</td><td>72-128 px</td><td>0.85 – 0.95</td></tr>
+          <tr><td>h1</td><td>56 px</td><td>1.05</td></tr>
+          <tr><td>h2</td><td>40 px</td><td>1.1</td></tr>
+          <tr><td>h3</td><td>28 px</td><td>1.2</td></tr>
+          <tr><td>lead</td><td>20 px</td><td>1.5</td></tr>
+          <tr><td>body</td><td>15 / 16 px</td><td>1.6</td></tr>
+          <tr><td>small</td><td>13 px</td><td>1.5</td></tr>
+          <tr><td>caption</td><td>11 px</td><td>1.4</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Pesos &amp; usos</h4>
+        <p style="font-weight:300; font-size:18px;">Light · 300 · cifras editoriales</p>
+        <p style="font-weight:400; font-size:18px;">Regular · 400 · cuerpo de texto</p>
+        <p style="font-weight:500; font-size:18px;">Medium · 500 · cifras destacadas</p>
+        <p style="font-weight:600; font-size:18px;">Semibold · 600 · subtítulos, UI</p>
+        <p style="font-weight:700; font-size:18px;">Bold · 700 · énfasis puntual</p>
+
+        <hr class="rule--soft rule">
+
+        <h4>Tipografía técnica</h4>
+        <p style="font-family:var(--mono); font-size:14px; line-height:1.6;">
+          JetBrains Mono — datos, especificaciones, código.<br>
+          ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>
+          abcdefghijklmnopqrstuvwxyz 0123456789
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">022</div>
+</section>
+
+<!-- ============================================================
+     PAGE — TYPE PAIRING IN USE
+============================================================ -->
+<section class="page page--paper2">
+  <div class="folio">
+    <span>04 · Tipografía</span>
+    <span><span class="dot"></span> En contexto <span class="dot"></span></span>
+    <span>P. 023</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">4.3 · Pareja en contexto</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">Una pareja precisa.</h2>
+
+    <div class="ui-card" style="padding:48px;">
+      <p style="font-family:var(--mono); font-size:11px; letter-spacing:0.2em; color:var(--muted); text-transform:uppercase;">Reporte · Q4 2026</p>
+      <h3 style="font-size:56px; margin-top:16px;">Cómo Anker pasó de campaña a cultura.</h3>
+      <p class="lead" style="margin-top:16px;">Una colaboración de seis meses con cinco creadores que reescribió el calendario editorial de la marca.</p>
+      <p style="margin-top:16px; max-width:68ch;">
+        Cuando Anker llegó a BEME, el brief era publicar contenido de producto. Lo que entregamos fue una
+        narrativa cultural: cinco creadores, cinco ciudades, una sola estética. Esta es la trastienda.
+      </p>
+      <p style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:24px; letter-spacing:0.06em;">POR / BEME EDITORIAL · 12 MIN DE LECTURA · ABRIL 2026</p>
+    </div>
+  </div>
+
+  <div class="page-num">023</div>
+</section>
+
+<!-- ============================================================
+     SECTION OPENER 05 — VOICE
+============================================================ -->
+<section class="page page--ink">
+  <div class="folio">
+    <span>05 · Voz</span>
+    <span><span class="dot"></span> BEME Brand Book <span class="dot"></span></span>
+    <span>P. 026</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="grid g-12">
+      <div style="grid-column: span 5;">
+        <div class="eyebrow" style="color:var(--primary-light);">Capítulo Cinco</div>
+        <h2 class="display" style="font-size:clamp(72px,10vw,160px); color:var(--paper); margin-top:24px;">
+          Voz<br>
+          <em style="color:var(--primary-light); font-weight:400; font-style:italic;">&amp; tono.</em>
+        </h2>
+      </div>
+      <div style="grid-column: span 6; grid-column-start:7; align-self:end;">
+        <p class="lead" style="color:var(--paper); opacity:0.85;">
+          Cómo suena BEME cuando habla.
+        </p>
+        <p style="color:rgba(247,244,238,0.7); margin-top:24px;">
+          La voz BEME es directa pero culta, segura sin ser arrogante, editorial sin caer en lo pretencioso.
+          Habla de talento como quien habla de oficio. Habla de marcas como quien habla de socios.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">026</div>
+</section>
+
+<!-- ============================================================
+     PAGE — VOICE PRINCIPLES
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>05 · Voz</span>
+    <span><span class="dot"></span> Principios <span class="dot"></span></span>
+    <span>P. 027</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">5.1 · Principios de tono</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">Cuatro reglas.</h2>
+
+    <div class="grid g-2" style="gap:0; border-top:1px solid var(--rule);">
+      <div style="padding:32px 32px 32px 0; border-bottom:1px solid var(--rule-soft); border-right:1px solid var(--rule-soft);">
+        <div class="big-num" style="font-size:96px;">01</div>
+        <h3 style="margin-top:16px;">Editorial, no publicitario.</h3>
+        <p>
+          Escribimos como una revista, no como un brochure. Frases completas, ritmo, criterio. Sin signos de
+          exclamación gratuitos. Sin verbos de moda.
+        </p>
+      </div>
+      <div style="padding:32px 0 32px 32px; border-bottom:1px solid var(--rule-soft);">
+        <div class="big-num" style="font-size:96px;">02</div>
+        <h3 style="margin-top:16px;">Específico, no general.</h3>
+        <p>
+          "5 creadores, 12 ciudades, 9 millones de impresiones" comunica más que "una gran campaña". El dato
+          concreto reemplaza al adjetivo.
+        </p>
+      </div>
+      <div style="padding:32px 32px 32px 0; border-right:1px solid var(--rule-soft);">
+        <div class="big-num" style="font-size:96px;">03</div>
+        <h3 style="margin-top:16px;">Sereno, no efusivo.</h3>
+        <p>
+          La emoción se infiere, no se anuncia. Confiamos en que el lector reconozca la calidad del trabajo
+          sin que necesitemos subrayarlo.
+        </p>
+      </div>
+      <div style="padding:32px 0 32px 32px;">
+        <div class="big-num" style="font-size:96px;">04</div>
+        <h3 style="margin-top:16px;">Profesional, nunca corporativo.</h3>
+        <p>
+          Evitamos la jerga vacía: "sinergia", "innovación disruptiva", "soluciones 360". Hablamos como
+          editores y operadores, no como agencia de plantilla.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">027</div>
+</section>
+
+<!-- ============================================================
+     PAGE — VOICE IS / ISN'T
+============================================================ -->
+<section class="page page--paper2">
+  <div class="folio">
+    <span>05 · Voz</span>
+    <span><span class="dot"></span> Es / No es <span class="dot"></span></span>
+    <span>P. 028</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">5.2 · Es / No es</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">Ejemplos prácticos.</h2>
+
+    <div class="voice-grid">
+      <div class="voice-cell is">
+        <h5>BEME dice</h5>
+        <p class="quote">El talento no se contrata, se acompaña.</p>
+      </div>
+      <div class="voice-cell isnt">
+        <h5>BEME no dice</h5>
+        <p class="quote">¡Conectamos influencers con marcas de manera disruptiva!</p>
+      </div>
+
+      <div class="voice-cell is">
+        <h5>BEME dice</h5>
+        <p class="quote">Una colaboración de seis meses con cinco creadores.</p>
+      </div>
+      <div class="voice-cell isnt">
+        <h5>BEME no dice</h5>
+        <p class="quote">Una campaña espectacular con los mejores influencers del momento.</p>
+      </div>
+
+      <div class="voice-cell is">
+        <h5>BEME dice</h5>
+        <p class="quote">El brief llegó en febrero. La primera publicación, en mayo.</p>
+      </div>
+      <div class="voice-cell isnt">
+        <h5>BEME no dice</h5>
+        <p class="quote">¡Velocidad récord! En tiempo y forma 🚀.</p>
+      </div>
+
+      <div class="voice-cell is">
+        <h5>BEME dice</h5>
+        <p class="quote">Datos verificables, contratos firmados, métricas auditables.</p>
+      </div>
+      <div class="voice-cell isnt">
+        <h5>BEME no dice</h5>
+        <p class="quote">Garantizamos resultados sorprendentes que superarán tus expectativas.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">028</div>
+</section>
+
+<!-- ============================================================
+     SECTION OPENER 06 — PHOTOGRAPHY
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>06 · Fotografía</span>
+    <span><span class="dot"></span> BEME Brand Book <span class="dot"></span></span>
+    <span>P. 030</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="grid g-12">
+      <div style="grid-column: span 5;">
+        <div class="eyebrow mb-16">Capítulo Seis</div>
+        <h2 class="section-title">Dirección<br>fotográfica<span style="color:var(--primary);">.</span></h2>
+      </div>
+      <div style="grid-column: span 6; grid-column-start:7;">
+        <p class="lead">
+          Retrato editorial, luz natural, gesto contenido.
+        </p>
+        <p class="mt-24">
+          La fotografía BEME se construye desde el lenguaje del retrato editorial: composiciones limpias,
+          luz natural o suavemente artificial, postura contenida. El talento aparece como autor, no como
+          producto. Las marcas aparecen como contexto, no como aviso.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">030</div>
+</section>
+
+<!-- ============================================================
+     PAGE — MOOD BOARD
+============================================================ -->
+<section class="page page--paper2">
+  <div class="folio">
+    <span>06 · Fotografía</span>
+    <span><span class="dot"></span> Moodboard <span class="dot"></span></span>
+    <span>P. 031</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="grid g-12 mb-32">
+      <div style="grid-column: span 5;">
+        <div class="eyebrow mb-16">6.1 · Dirección visual</div>
+        <h2 class="display" style="font-size:48px;">Lo que sí.</h2>
+      </div>
+      <div style="grid-column: span 6; grid-column-start:7;">
+        <p>
+          Retratos verticales en proporción 4:5, primer plano y plano medio. Sombra suave, mirada al objetivo
+          o desviada con intención. Fondos neutros o entornos arquitectónicos sobrios. Vestuario en gama
+          contenida.
+        </p>
+      </div>
+    </div>
+
+    <div class="mood">
+      <div class="photo-tile m1 p-portrait"><span class="label">Retrato · Estudio</span></div>
+      <div class="photo-tile p-stage"><span class="label">Backstage</span></div>
+      <div class="photo-tile p-mono"><span class="label">Detalle</span></div>
+      <div class="photo-tile m4 wide p-editorial"><span class="label">Editorial · Color</span></div>
+    </div>
+  </div>
+
+  <div class="page-num">031</div>
+</section>
+
+<!-- ============================================================
+     PAGE — PHOTO RULES
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>06 · Fotografía</span>
+    <span><span class="dot"></span> Reglas <span class="dot"></span></span>
+    <span>P. 032</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">6.2 · Reglas de producción</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">Cómo se fotografía.</h2>
+
+    <div class="grid g-3" style="gap:32px;">
+      <div>
+        <h4>Iluminación</h4>
+        <p class="small">
+          Luz natural lateral o frontal suave. Si se usa luz artificial, mantener una sola fuente con
+          difusor. Evitar luces duras y sombras dramáticas.
+        </p>
+      </div>
+      <div>
+        <h4>Encuadre</h4>
+        <p class="small">
+          Vertical 4:5 para retrato. Horizontal 3:2 o 16:9 para editorial y campañas. El sujeto en regla de
+          tercios, nunca centrado mecánicamente.
+        </p>
+      </div>
+      <div>
+        <h4>Gama de color</h4>
+        <p class="small">
+          Tonos cálidos sobre paleta de papel y arena. Evitar saturaciones altas que compitan con el magenta
+          de marca. Filtros desaturados, contraste medio.
+        </p>
+      </div>
+      <div>
+        <h4>Postproducción</h4>
+        <p class="small">
+          Retoque ético: limpieza, no transformación. Mantener textura de piel. Sin filtros decorativos ni
+          grano artificial excesivo.
+        </p>
+      </div>
+      <div>
+        <h4>Gesto</h4>
+        <p class="small">
+          Postura natural, mirada serena. El talento no posa: trabaja, mira, piensa. Captar el oficio antes
+          que el glamour.
+        </p>
+      </div>
+      <div>
+        <h4>Producto</h4>
+        <p class="small">
+          Si la marca aparece, lo hace como contexto, no como vidriera. Logos en plano secundario; el sujeto
+          conserva la jerarquía.
+        </p>
+      </div>
+    </div>
+
+    <hr class="rule" style="margin:48px 0 32px;">
+
+    <div class="grid g-2" style="gap:32px;">
+      <div>
+        <h4>Lo que sí</h4>
+        <ul class="small" style="padding-left:18px; line-height:1.8;">
+          <li>Retratos a 50mm o 85mm en formato medio.</li>
+          <li>Fondos neutros, arquitectura modernista, espacios habitados.</li>
+          <li>Vestuario en gama tierra, blanco roto, negro, granate.</li>
+          <li>Postproducción mínima, color natural.</li>
+        </ul>
+      </div>
+      <div>
+        <h4 style="color:var(--primary);">Lo que no</h4>
+        <ul class="small" style="padding-left:18px; line-height:1.8; color:var(--muted);">
+          <li>Stock fotográfico genérico de "creador con teléfono".</li>
+          <li>Composiciones llenas de gráfica, emojis o stickers.</li>
+          <li>Filtros vintage, Instagram preset, HDR exagerado.</li>
+          <li>Logos de marcas en primer plano sin propósito narrativo.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">032</div>
+</section>
+
+<!-- ============================================================
+     SECTION OPENER 07 — UI TOKENS
+============================================================ -->
+<section class="page page--ink">
+  <div class="folio">
+    <span>07 · UI</span>
+    <span><span class="dot"></span> BEME Brand Book <span class="dot"></span></span>
+    <span>P. 036</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="grid g-12">
+      <div style="grid-column: span 5;">
+        <div class="eyebrow" style="color:var(--primary-light);">Capítulo Siete</div>
+        <h2 class="display" style="font-size:clamp(72px,10vw,160px); color:var(--paper); margin-top:24px;">
+          Sistema<br>
+          <em style="color:var(--primary-light); font-weight:400; font-style:italic;">digital.</em>
+        </h2>
+      </div>
+      <div style="grid-column: span 6; grid-column-start:7; align-self:end;">
+        <p class="lead" style="color:var(--paper); opacity:0.85;">
+          Componentes, tokens y aplicación a producto.
+        </p>
+        <p style="color:rgba(247,244,238,0.7); margin-top:24px;">
+          BEME opera sobre una plataforma propia. La identidad se traduce a tokens de diseño, componentes
+          de interfaz y reglas de composición. Esta sección define la versión "calmada" del sistema, alineada
+          con el manual editorial.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">036</div>
+</section>
+
+<!-- ============================================================
+     PAGE — DESIGN TOKENS
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>07 · UI</span>
+    <span><span class="dot"></span> Tokens <span class="dot"></span></span>
+    <span>P. 037</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">7.1 · Design tokens</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">Tokens base.</h2>
+
+    <div class="grid g-2" style="gap:48px;">
+      <div>
+        <h4>Color</h4>
+        <table class="tokens">
+          <tr><th>Token</th><th>Valor</th></tr>
+          <tr><td><span class="chip-mini" style="background:#b2005d"></span>--primary</td><td>#B2005D</td></tr>
+          <tr><td><span class="chip-mini" style="background:#ed568f"></span>--primary-light</td><td>#ED568F</td></tr>
+          <tr><td><span class="chip-mini" style="background:#8a0048"></span>--primary-dark</td><td>#8A0048</td></tr>
+          <tr><td><span class="chip-mini" style="background:#5C0A2E"></span>--accent</td><td>#5C0A2E</td></tr>
+          <tr><td><span class="chip-mini" style="background:#0E0E10"></span>--ink</td><td>#0E0E10</td></tr>
+          <tr><td><span class="chip-mini" style="background:#F7F4EE"></span>--paper</td><td>#F7F4EE</td></tr>
+          <tr><td><span class="chip-mini" style="background:#5A5A60"></span>--muted</td><td>#5A5A60</td></tr>
+        </table>
+      </div>
+
+      <div>
+        <h4>Espacio &amp; radio</h4>
+        <table class="tokens">
+          <tr><th>Token</th><th>Valor</th></tr>
+          <tr><td>--space-1</td><td>4 px</td></tr>
+          <tr><td>--space-2</td><td>8 px</td></tr>
+          <tr><td>--space-3</td><td>12 px</td></tr>
+          <tr><td>--space-4</td><td>16 px</td></tr>
+          <tr><td>--space-6</td><td>24 px</td></tr>
+          <tr><td>--space-8</td><td>32 px</td></tr>
+          <tr><td>--space-12</td><td>48 px</td></tr>
+          <tr><td>--radius-0</td><td>0 — editorial default</td></tr>
+          <tr><td>--radius-2</td><td>4 px — botones util.</td></tr>
+          <tr><td>--radius-4</td><td>8 px — cards densas</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <hr class="rule" style="margin:48px 0 32px;">
+
+    <h4>Sombras &amp; superficies</h4>
+    <div class="grid g-3" style="gap:24px;">
+      <div style="background:var(--paper); padding:32px; box-shadow:0 1px 0 var(--rule-soft); border:1px solid var(--rule-soft);">
+        <div class="small">Surface 01 · Page</div>
+        <p style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:8px;">background:#F7F4EE</p>
+      </div>
+      <div style="background:#fff; padding:32px; box-shadow:0 8px 24px -12px rgba(14,14,16,0.12); border:1px solid var(--rule-soft);">
+        <div class="small">Surface 02 · Card</div>
+        <p style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:8px;">box-shadow: 0 8px 24px -12px rgba(0,0,0,0.12)</p>
+      </div>
+      <div style="background:#fff; padding:32px; box-shadow:0 30px 60px -30px rgba(14,14,16,0.35); border:1px solid var(--rule-soft);">
+        <div class="small">Surface 03 · Elevated</div>
+        <p style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:8px;">box-shadow: 0 30px 60px -30px rgba(0,0,0,0.35)</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">037</div>
+</section>
+
+<!-- ============================================================
+     PAGE — BUTTONS / COMPONENTS
+============================================================ -->
+<section class="page page--paper2">
+  <div class="folio">
+    <span>07 · UI</span>
+    <span><span class="dot"></span> Componentes <span class="dot"></span></span>
+    <span>P. 038</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">7.2 · Componentes base</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">Botones &amp; superficies.</h2>
+
+    <div class="ui-card mb-32">
+      <div class="title-row">
+        <h3 style="font-size:24px; margin:0;">Botones</h3>
+        <span class="small">4 estilos · 1 escala</span>
+      </div>
+      <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center;">
+        <a class="btn btn-primary" href="#">Iniciar conversación</a>
+        <a class="btn btn-accent" href="#">Solicitar propuesta</a>
+        <a class="btn btn-outline" href="#">Ver casos</a>
+        <a class="btn btn-ghost" href="#">Saber más →</a>
+      </div>
+      <p class="small mt-24" style="max-width:60ch;">
+        Bordes rectos por defecto. Mayúsculas con tracking abierto. La acción principal por pantalla usa
+        tinta (oscuro). El acento magenta queda para CTAs editoriales o campañas.
+      </p>
+    </div>
+
+    <div class="grid g-2" style="gap:24px;">
+      <div class="ui-card">
+        <div class="title-row">
+          <h3 style="font-size:20px; margin:0;">Card · Talento</h3>
+        </div>
+        <div style="background:var(--paper-2); aspect-ratio:4/5; margin-bottom:16px;"></div>
+        <p style="font-family:var(--serif); font-size:22px; margin:0;">Sofía Lerena</p>
+        <p class="small" style="margin-top:4px;">Editorial · Lifestyle · 412K</p>
+      </div>
+      <div class="ui-card">
+        <div class="title-row">
+          <h3 style="font-size:20px; margin:0;">Card · Campaña</h3>
+        </div>
+        <p style="font-family:var(--mono); font-size:10px; letter-spacing:0.2em; color:var(--muted); text-transform:uppercase;">PROPUESTA · ANKER · 2026</p>
+        <p style="font-family:var(--serif); font-size:28px; margin-top:8px; line-height:1.1;">Estaciones de carga, estaciones de cultura.</p>
+        <div style="display:flex; gap:8px; margin-top:18px;">
+          <span style="font-size:10px; padding:4px 10px; border:1px solid var(--ink); letter-spacing:0.18em; text-transform:uppercase;">5 talentos</span>
+          <span style="font-size:10px; padding:4px 10px; border:1px solid var(--ink); letter-spacing:0.18em; text-transform:uppercase;">6 meses</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">038</div>
+</section>
+
+<!-- ============================================================
+     SECTION OPENER 08 — STATIONERY
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>08 · Papelería</span>
+    <span><span class="dot"></span> BEME Brand Book <span class="dot"></span></span>
+    <span>P. 042</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="grid g-12">
+      <div style="grid-column: span 5;">
+        <div class="eyebrow mb-16">Capítulo Ocho</div>
+        <h2 class="section-title">Papelería<span style="color:var(--primary);">.</span></h2>
+      </div>
+      <div style="grid-column: span 6; grid-column-start:7;">
+        <p class="lead">
+          Tarjetas, membretes, sobres. El primer contacto físico con la marca.
+        </p>
+        <p class="mt-24">
+          La papelería BEME se imprime en papel reciclado natural (gramaje 320 para tarjetas, 100 para
+          membretes). Tinta directa magenta y negra. Sin laminados ni acabados brillantes.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">042</div>
+</section>
+
+<!-- ============================================================
+     PAGE — BUSINESS CARDS
+============================================================ -->
+<section class="page page--paper2">
+  <div class="folio">
+    <span>08 · Papelería</span>
+    <span><span class="dot"></span> Tarjetas <span class="dot"></span></span>
+    <span>P. 043</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">8.1 · Tarjeta personal</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">85 × 55 mm.</h2>
+
+    <div class="grid g-3" style="gap:32px;">
+      <div>
+        <div class="card-mock">
+          <div>
+            <div class="card-mark">Be<span class="a" style="color:var(--primary);">me</span>.</div>
+          </div>
+          <div>
+            <div class="card-name">Agustín Ríos</div>
+            <div class="card-role">Founder &amp; Director</div>
+          </div>
+        </div>
+        <p class="small mt-16">Anverso · Versión clara</p>
+      </div>
+
+      <div>
+        <div class="card-mock dark">
+          <div>
+            <div class="card-mark">Be<span class="a">me</span>.</div>
+          </div>
+          <div>
+            <div class="card-name">Agustín Ríos</div>
+            <div class="card-role">Founder &amp; Director</div>
+          </div>
+        </div>
+        <p class="small mt-16">Anverso · Versión tinta</p>
+      </div>
+
+      <div>
+        <div class="card-mock primary">
+          <div></div>
+          <div>
+            <div class="card-contacts" style="margin-bottom:14px;">agustin@beme.agency<br>+54 11 5689 4421<br>beme.agency</div>
+            <div class="card-mark">Be<span class="a">me</span>.</div>
+          </div>
+        </div>
+        <p class="small mt-16">Reverso · Magenta</p>
+      </div>
+    </div>
+
+    <hr class="rule" style="margin:48px 0 32px;">
+
+    <div class="grid g-3" style="gap:24px;">
+      <div>
+        <h4>Material</h4>
+        <p class="small">Cartulina reciclada 320g, terminación mate, sin laminado.</p>
+      </div>
+      <div>
+        <h4>Tintas</h4>
+        <p class="small">PMS 233C (magenta), Process Black, papel sin imprimir como tercera "tinta".</p>
+      </div>
+      <div>
+        <h4>Tipografía</h4>
+        <p class="small">Nombre en Libre Bodoni 14pt. Cargo en Public Sans 7pt, tracking 0.24em.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">043</div>
+</section>
+
+<!-- ============================================================
+     PAGE — LETTERHEAD + ENVELOPE
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>08 · Papelería</span>
+    <span><span class="dot"></span> Membrete &amp; sobre <span class="dot"></span></span>
+    <span>P. 044</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">8.2 · Membrete corporativo</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">A4 · Vertical.</h2>
+
+    <div class="grid g-2" style="gap:48px; align-items:start;">
+      <div>
+        <div class="letterhead">
+          <div class="lh-head">
+            <div class="lh-mark">Be<span class="a">me</span>.</div>
+            <div class="lh-meta">BEME AGENCY<br>Av. Libertador 5430, CABA<br>brand@beme.agency<br>+54 11 5689 4421</div>
+          </div>
+          <div class="lh-body">
+            <p style="font-family:var(--mono); font-size:9px; letter-spacing:0.1em; color:var(--muted); margin-bottom:18px;">REF · ACUERDO 2026-007 · ANKER × BEME</p>
+            <p style="font-family:var(--serif); font-size:18px; line-height:1.4; margin-bottom:16px;">Estimados,</p>
+            <p>El presente acuerdo formaliza la colaboración entre Anker Innovations LLC y BEME Agency para la campaña editorial "Cargar Cultura", a desplegarse entre mayo y noviembre de 2026.</p>
+            <p>Los términos económicos, calendario y entregables figuran en los anexos I, II y III del presente documento. Toda comunicación oficial se canaliza a través del comité conjunto descripto en la cláusula 4.</p>
+            <p>Reciban un saludo cordial,</p>
+            <p style="font-family:var(--serif); font-style:italic; font-size:14px; margin-top:32px;">Agustín Ríos<br>Director · BEME</p>
+          </div>
+          <div class="lh-foot">
+            <span>BEME · 2026</span>
+            <span>1 / 4</span>
+          </div>
+        </div>
+        <p class="small mt-16">Membrete A4 · Papel 100g natural</p>
+      </div>
+
+      <div>
+        <div class="envelope">
+          <div class="env-mark">Be<span class="a">me</span>.</div>
+          <div class="env-from">REMITE<br>BEME AGENCY<br>Av. Libertador 5430<br>C1428 · CABA · Argentina</div>
+        </div>
+        <p class="small mt-16">Sobre DL · 220 × 110 mm</p>
+
+        <hr class="rule" style="margin:32px 0;">
+
+        <h4>Composición</h4>
+        <p class="small">
+          Encabezado a 32mm del borde superior. Bloque de datos en columna derecha, Mono 8.5pt. Línea de
+          regla horizontal a tinta plena separando cabecera y cuerpo. Pie con paginación a la derecha y
+          año a la izquierda.
+        </p>
+
+        <h4 class="mt-32">Producción</h4>
+        <p class="small">
+          Impresión digital láser para uso interno. Offset una tinta (PMS 233C) para documentos
+          ceremoniales: contratos, acuerdos de exclusividad, cartas de presentación.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">044</div>
+</section>
+
+<!-- ============================================================
+     SECTION OPENER 09 — APPLICATIONS
+============================================================ -->
+<section class="page page--ink">
+  <div class="folio">
+    <span>09 · Aplicaciones</span>
+    <span><span class="dot"></span> BEME Brand Book <span class="dot"></span></span>
+    <span>P. 048</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="grid g-12">
+      <div style="grid-column: span 5;">
+        <div class="eyebrow" style="color:var(--primary-light);">Capítulo Nueve</div>
+        <h2 class="display" style="font-size:clamp(72px,10vw,160px); color:var(--paper); margin-top:24px;">
+          Aplica<span style="font-style:italic; color:var(--primary-light); font-weight:400;">-</span><br>
+          ciones.
+        </h2>
+      </div>
+      <div style="grid-column: span 6; grid-column-start:7; align-self:end;">
+        <p class="lead" style="color:var(--paper); opacity:0.85;">
+          La marca en el mundo: portadas, social, presentaciones, señalética.
+        </p>
+        <p style="color:rgba(247,244,238,0.7); margin-top:24px;">
+          Esta sección reúne ejemplos de aplicación en distintos formatos. No son artes finales: son
+          modelos de criterio. Toda nueva aplicación debe partir de los principios expuestos en este manual.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">048</div>
+</section>
+
+<!-- ============================================================
+     PAGE — POSTERS / COVERS
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>09 · Aplicaciones</span>
+    <span><span class="dot"></span> Portadas <span class="dot"></span></span>
+    <span>P. 049</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">9.1 · Portadas editoriales</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">Tres tonos.</h2>
+
+    <div class="grid g-3" style="gap:24px;">
+      <div class="app-board">
+        <div class="app-poster">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div class="pmark">Be<span class="a">me</span>.</div>
+            <div class="pfoot" style="text-align:right;">Vol. 04<br>Mayo 26</div>
+          </div>
+          <div>
+            <p class="pfoot" style="margin-bottom:18px;">Capítulo 04 — Talento</p>
+            <p class="ptitle">El criterio<br>como oficio.</p>
+          </div>
+          <div class="pfoot">Edición BEME / 2026</div>
+        </div>
+      </div>
+
+      <div class="app-board" style="background:var(--paper);">
+        <div class="app-poster" style="background:var(--paper); color:var(--ink); border:1px solid var(--rule-soft);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div class="pmark" style="color:var(--ink);">Be<span class="a" style="color:var(--primary);">me</span>.</div>
+            <div class="pfoot" style="text-align:right; color:var(--muted);">Vol. 04<br>Mayo 26</div>
+          </div>
+          <div>
+            <p class="pfoot" style="margin-bottom:18px; color:var(--muted);">Reporte anual — 2026</p>
+            <p class="ptitle" style="color:var(--ink);">Marcas, talento,<br>cultura.</p>
+          </div>
+          <div class="pfoot" style="color:var(--muted);">Edición BEME / 2026</div>
+        </div>
+      </div>
+
+      <div class="app-board">
+        <div class="app-poster alt">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div class="pmark">Be<span class="a">me</span>.</div>
+            <div class="pfoot" style="text-align:right;">Vol. 04<br>Mayo 26</div>
+          </div>
+          <div>
+            <p class="pfoot" style="margin-bottom:18px;">Lanzamiento de campaña</p>
+            <p class="ptitle">Cargar<br>cultura.</p>
+          </div>
+          <div class="pfoot">Anker × BEME / 2026</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="small mt-32" style="max-width:60ch;">
+      Las portadas mantienen un sistema constante: marca arriba-izquierda, metadata arriba-derecha,
+      título tipográfico inferior, créditos al pie. Tres modos cromáticos según el contexto editorial.
+    </p>
+  </div>
+
+  <div class="page-num">049</div>
+</section>
+
+<!-- ============================================================
+     PAGE — SOCIAL MEDIA APPLICATIONS
+============================================================ -->
+<section class="page page--paper2">
+  <div class="folio">
+    <span>09 · Aplicaciones</span>
+    <span><span class="dot"></span> Social <span class="dot"></span></span>
+    <span>P. 050</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">9.2 · Aplicaciones digitales</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">Social &amp; campañas.</h2>
+
+    <div class="grid g-3" style="gap:24px;">
+      <div>
+        <div class="social-mock">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div class="sm-mark">Be<span class="a">me</span>.</div>
+            <div class="sm-foot">@beme.agency</div>
+          </div>
+          <div>
+            <div class="sm-foot" style="margin-bottom:14px;">Anuncio · Vol. 04</div>
+            <p class="sm-title">El talento<br>no se contrata.<br>Se acompaña.</p>
+          </div>
+          <div class="sm-foot">Mayo 2026</div>
+        </div>
+        <p class="small mt-16">Quote post · Feed cuadrado</p>
+      </div>
+
+      <div>
+        <div class="social-mock" style="background:var(--ink); color:var(--paper); border-color:transparent;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div class="sm-mark" style="color:var(--paper);">Be<span class="a" style="color:var(--primary-light);">me</span>.</div>
+            <div class="sm-foot" style="opacity:0.6;">Nuevo caso</div>
+          </div>
+          <div>
+            <div class="sm-foot" style="margin-bottom:14px; opacity:0.6;">Anker × BEME — 2026</div>
+            <p class="sm-title" style="color:var(--paper);">5 ciudades.<br>5 creadores.<br>9M de alcance.</p>
+          </div>
+          <div class="sm-foot" style="opacity:0.6;">Ver el caso →</div>
+        </div>
+        <p class="small mt-16">Case study · Feed cuadrado</p>
+      </div>
+
+      <div>
+        <div class="social-mock primary">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div class="sm-mark">Be<span class="a">me</span>.</div>
+            <div class="sm-foot">Anuncio</div>
+          </div>
+          <div>
+            <div class="sm-foot" style="margin-bottom:14px;">Equipo · Hiring 2026</div>
+            <p class="sm-title">Talent<br>Manager —<br>Buenos Aires.</p>
+          </div>
+          <div class="sm-foot">beme.agency/jobs</div>
+        </div>
+        <p class="small mt-16">Hiring · Feed cuadrado</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">050</div>
+</section>
+
+<!-- ============================================================
+     PAGE — SIGNATURE APPLICATIONS (Email/Sign)
+============================================================ -->
+<section class="page">
+  <div class="folio">
+    <span>09 · Aplicaciones</span>
+    <span><span class="dot"></span> Firma &amp; señalética <span class="dot"></span></span>
+    <span>P. 051</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">9.3 · Firma de email &amp; señalética</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">Donde la marca se reconoce sola.</h2>
+
+    <div class="grid g-2" style="gap:48px; align-items:start;">
+      <div>
+        <h4>Firma de email</h4>
+        <div style="background:#fff; border:1px solid var(--rule-soft); padding:28px; font-family:var(--sans);">
+          <div style="font-family:var(--serif); font-size:34px; letter-spacing:-0.04em; margin-bottom:14px;">Be<span style="color:var(--primary);">me</span>.</div>
+          <p style="font-family:var(--serif); font-size:18px; margin:0;">Agustín Ríos</p>
+          <p style="font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:var(--muted); margin:4px 0 18px;">Founder &amp; Director</p>
+          <p style="font-family:var(--mono); font-size:11px; line-height:1.7; color:var(--ink); margin:0;">
+            agustin@beme.agency<br>
+            +54 11 5689 4421<br>
+            beme.agency
+          </p>
+          <hr style="border:none; border-top:1px solid var(--rule-soft); margin:18px 0;">
+          <p style="font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); margin:0;">BEME · Talent &amp; Culture · 2026</p>
+        </div>
+        <p class="small mt-16">Plano, sin imágenes embebidas, texto seleccionable. Compatible con Gmail, Outlook, Apple Mail.</p>
+      </div>
+
+      <div>
+        <h4>Señalética interna</h4>
+        <div class="stage" style="min-height:280px; background:var(--ink); position:relative; padding:0; align-items:stretch;">
+          <div style="flex:1; padding:32px; display:flex; flex-direction:column; justify-content:space-between; color:var(--paper);">
+            <div style="font-family:var(--mono); font-size:11px; letter-spacing:0.22em; opacity:0.6;">PISO 04</div>
+            <div>
+              <div style="font-family:var(--serif); font-size:64px; letter-spacing:-0.04em; line-height:0.9;">Estudio</div>
+              <div style="font-family:var(--mono); font-size:11px; letter-spacing:0.22em; opacity:0.6; margin-top:14px;">PRODUCCIÓN · EDITORIAL · FOTOGRAFÍA</div>
+            </div>
+            <div style="font-family:var(--serif); font-size:28px; letter-spacing:-0.04em;">Be<span style="color:var(--primary-light);">me</span>.</div>
+          </div>
+          <div style="width:8px; background:var(--primary);"></div>
+        </div>
+        <p class="small mt-16">Panel de pared interior · 600 × 900 mm · Acrílico negro pintado, corte vertical magenta.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-num">051</div>
+</section>
+
+<!-- ============================================================
+     PAGE — PRESENTATION COVER
+============================================================ -->
+<section class="page page--paper2">
+  <div class="folio">
+    <span>09 · Aplicaciones</span>
+    <span><span class="dot"></span> Presentaciones <span class="dot"></span></span>
+    <span>P. 052</span>
+  </div>
+
+  <div style="margin-top:96px;">
+    <div class="eyebrow mb-16">9.4 · Cover de presentación</div>
+    <h2 class="display" style="font-size:56px; margin-bottom:48px;">Propuestas para marcas.</h2>
+
+    <div style="background:var(--ink); aspect-ratio: 16/9; padding:48px; color:var(--paper); display:flex; flex-direction:column; justify-content:space-between; position:relative;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div style="font-family:var(--serif); font-size:32px; letter-spacing:-0.04em;">Be<span style="color:var(--primary-light);">me</span>.</div>
+        <div style="font-family:var(--mono); font-size:11px; letter-spacing:0.22em; opacity:0.5;">PROPUESTA · CONFIDENCIAL</div>
+      </div>
+
+      <div>
+        <p style="font-family:var(--mono); font-size:11px; letter-spacing:0.22em; opacity:0.55; margin-bottom:18px;">ANKER INNOVATIONS · MAYO 2026</p>
+        <p style="font-family:var(--serif); font-weight:500; font-size:clamp(48px,7vw,120px); line-height:0.92; letter-spacing:-0.025em; margin:0;">Cargar cultura,<br><em style="color:var(--primary-light); font-weight:400; font-style:italic;">no solo dispositivos.</em></p>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+        <div style="font-family:var(--mono); font-size:11px; letter-spacing:0.18em; opacity:0.55;">VOLUMEN 01<br>EDICIÓN BEME / 2026</div>
+        <div style="font-family:var(--mono); font-size:11px; letter-spacing:0.18em; opacity:0.55;">CONTACTO<br>brand@beme.agency</div>
+      </div>
+    </div>
+
+    <p class="small mt-24" style="max-width:60ch;">
+      Cover 16:9 para propuestas Keynote / Figma / PDF. Mantiene la misma jerarquía editorial que las
+      portadas impresas: marca, contexto, título, créditos.
+    </p>
+  </div>
+
+  <div class="page-num">052</div>
+</section>
+
+<!-- ============================================================
+     COLOPHON / CLOSING
+============================================================ -->
+<section class="page page--primary">
+  <div class="folio">
+    <span>BEME · Brand Book</span>
+    <span><span class="dot"></span> Colofón <span class="dot"></span></span>
+    <span>FIN · Vol. 01</span>
+  </div>
+
+  <div style="display:flex; flex-direction:column; justify-content:space-between; min-height:80vh; margin-top:80px;">
+    <div>
+      <div class="eyebrow" style="color:rgba(255,255,255,0.75);">Colofón</div>
+      <h2 class="display" style="font-size:clamp(72px,10vw,160px); color:#fff; margin-top:24px;">Fin del<br><em style="font-style:italic; opacity:0.7;">volumen 01.</em></h2>
+    </div>
+
+    <div class="grid g-4" style="gap:24px; color:#fff;">
+      <div>
+        <div class="eyebrow" style="color:rgba(255,255,255,0.7);">Editor</div>
+        <p style="margin-top:8px; opacity:0.85;">BEME Brand Studio<br>Buenos Aires · 2026</p>
+      </div>
+      <div>
+        <div class="eyebrow" style="color:rgba(255,255,255,0.7);">Tipografías</div>
+        <p style="margin-top:8px; opacity:0.85;">Libre Bodoni<br>Public Sans<br>JetBrains Mono</p>
+      </div>
+      <div>
+        <div class="eyebrow" style="color:rgba(255,255,255,0.7);">Versión</div>
+        <p style="margin-top:8px; opacity:0.85;">1.0 — Mayo 2026<br>Próxima revisión: 2027</p>
+      </div>
+      <div>
+        <div class="eyebrow" style="color:rgba(255,255,255,0.7);">Contacto</div>
+        <p style="margin-top:8px; opacity:0.85;">brand@beme.agency<br>beme.agency</p>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid rgba(255,255,255,0.25); padding-top:24px; display:flex; justify-content:space-between; align-items:flex-end; color:rgba(255,255,255,0.65); font-family:var(--mono); font-size:11px; letter-spacing:0.18em;">
+      <span>© BEME 2026 · DOCUMENTO INTERNO</span>
+      <span style="font-family:var(--serif); font-size:48px; font-weight:500; letter-spacing:-0.04em; color:#fff;">Be<span style="opacity:0.55;">me</span>.</span>
+      <span>VOL. 01 / FIN</span>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

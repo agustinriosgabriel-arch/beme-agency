@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -X DELETE 'https://ngstqwbzvnpggpklifat.supabase.co/rest/v1/talentos?id=in.\\(3913,3917,3916,3891\\)' -H 'apikey: sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb' -H 'Authorization: Bearer sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb' -H 'Prefer: return=representation' -o /dev/null -w 'HTTP %{http_code}')",
+      "Read(//Applications/Google Chrome.app/Contents/MacOS/**)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless --disable-gpu --print-to-pdf=\"/Users/agustinrios/Desktop/Beme Aplicación/beme_v10 10/Contrato-Astrid-Millan-Coachella.pdf\" --no-margins \"/Users/agustinrios/Desktop/Beme Aplicación/beme_v10 10/contrato-astrid-millan.html\")",
+      "Bash(curl -s -X POST https://bemeagency.netlify.app/.netlify/functions/ensemble-scraper -H 'Content-Type: application/json' -d '{\"platform\":\"instagram\",\"username\":\"xkarentorresx\",\"action\":\"engagement\"}')",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -s 'https://ngstqwbzvnpggpklifat.supabase.co/rest/v1/talentos?select=id,nombre,social_meta,keywords&instagram=ilike.*karentorres*' -H 'apikey: sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb' -H 'Authorization: Bearer sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb')",
+      "Bash(curl -s -X POST https://bemeagency.netlify.app/.netlify/functions/ensemble-scraper -H 'Content-Type: application/json' -d '{\"platform\":\"tiktok\",\"username\":\"brenda.jair\",\"action\":\"followers\"}')",
+      "Bash(curl -s -X POST https://bemeagency.netlify.app/.netlify/functions/ensemble-scraper -H 'Content-Type: application/json' -d '{\"platform\":\"tiktok\",\"username\":\"brendajairr\",\"action\":\"followers\"}')",
+      "Bash(curl -s 'https://ngstqwbzvnpggpklifat.supabase.co/rest/v1/talentos?select=id,nombre,tiktok,instagram&nombre=ilike.*brenda*' -H 'apikey: sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb' -H 'Authorization: Bearer sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb')",
+      "Bash(curl -s -X POST https://bemeagency.netlify.app/.netlify/functions/ensemble-scraper -H 'Content-Type: application/json' -d '{\"platform\":\"tiktok\",\"username\":\"brenda_jair\",\"action\":\"followers\"}')",
+      "Bash(curl -s -X POST https://bemeagency.netlify.app/.netlify/functions/ensemble-scraper -H 'Content-Type: application/json' -d '{\"platform\":\"instagram\",\"username\":\"brenda_jair\",\"action\":\"followers\"}')",
+      "Bash(node -e \"const fs=require\\('fs'\\);const h=fs.readFileSync\\('roster.html','utf8'\\);const m=h.match\\(/<script>\\([\\\\s\\\\S]*\\)<\\\\/script>/\\);try{new Function\\(m[1]\\);console.log\\('JS sintaxis OK ✓'\\);}catch\\(e\\){console.log\\('ERROR:',e.message\\);}\")",
+      "Bash(node --check dashboard.js)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const fs=require\\('fs'\\);const h=fs.readFileSync\\('roster.html','utf8'\\);const m=h.match\\(/<script>\\([\\\\s\\\\S]*\\)<\\\\/script>/\\);new Function\\(m[1]\\);console.log\\('roster.html JS OK'\\);\")"
+    ]
+  }
+}

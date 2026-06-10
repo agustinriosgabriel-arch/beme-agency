@@ -2617,5 +2617,17 @@ function toggleMobFilter() {
   panel.classList.toggle('open');
 }
 </script>
+<script>
+/* Evita que la ruedita del mouse/trackpad cambie los precios y oculta las flechas de los inputs numéricos */
+(function(){
+  var s=document.createElement('style');
+  s.textContent='input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield;appearance:textfield}';
+  document.head.appendChild(s);
+  document.addEventListener('wheel',function(e){
+    var el=document.activeElement;
+    if(el&&el.tagName==='INPUT'&&el.type==='number'&&el===e.target){e.preventDefault();}
+  },{passive:false});
+})();
+</script>
 </body>
 </html>

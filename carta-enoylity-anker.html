@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Beme Agency — Formal Notice — Anker SOLIX Campaign</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#b2005d;
+    --purple:#9414E0;
+    --gradient:linear-gradient(135deg,#b2005d 0%,#9414E0 100%);
+    --text:#1a1a1a;
+    --text-soft:#4a4a55;
+    --muted:#8a8a95;
+    --border:#e6e6ec;
+    --bg:#ffffff;
+    --surface:#fafafb;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#eceef2;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:9pt;line-height:1.4;-webkit-font-smoothing:antialiased}
+
+  /* Page (letter size) */
+  .page{
+    width:21.59cm;             /* 8.5in */
+    min-height:27.94cm;        /* 11in */
+    margin:24px auto;
+    background:var(--bg);
+    padding:1.1cm 1.6cm 1.1cm;
+    position:relative;
+    box-shadow:0 10px 40px rgba(0,0,0,0.12);
+    display:flex;flex-direction:column;
+  }
+  .page::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:4px;
+    background:var(--gradient);
+  }
+  .page-break{break-before:page;page-break-before:always}
+
+  /* Header */
+  header{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    padding-bottom:9px;border-bottom:1px solid var(--border);margin-bottom:12px;
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand img{height:34px;width:auto;display:block}
+  .contact{text-align:right;font-size:7.5pt;color:var(--text-soft);line-height:1.4}
+  .contact a{color:var(--primary);text-decoration:none}
+  .contact .pill{display:inline-block;background:var(--gradient);color:#fff;padding:2px 8px;border-radius:999px;font-size:6.5pt;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+
+  /* Mini header for page 2 */
+  .mini-header{
+    display:flex;justify-content:space-between;align-items:center;
+    padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:14px;
+  }
+  .mini-header img{height:24px;width:auto;display:block}
+  .mini-header .pg-ref{font-size:7pt;color:var(--muted);letter-spacing:1.3px;text-transform:uppercase;font-weight:600}
+
+  /* Meta row */
+  .meta{
+    display:grid;grid-template-columns:1fr 1fr;gap:18px;
+    margin-bottom:10px;
+  }
+  .meta .block label{display:block;font-size:6.5pt;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:600;margin-bottom:2px}
+  .meta .block .v{font-size:8.5pt;color:var(--text);font-weight:500;line-height:1.35}
+  .meta .block .v strong{font-weight:700}
+
+  /* Subject */
+  .subject{
+    background:var(--surface);border-left:3px solid var(--primary);
+    padding:7px 12px;margin-bottom:10px;border-radius:0 6px 6px 0;
+  }
+  .subject .lbl{font-size:6.5pt;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:600;margin-bottom:2px}
+  .subject .ttl{font-family:'Syne',sans-serif;font-weight:700;font-size:10pt;color:var(--text);letter-spacing:.2px;line-height:1.25}
+
+  /* Body */
+  main{flex:1}
+  main p{margin-bottom:6px;color:var(--text-soft);text-align:justify}
+  main p.lead{color:var(--text);font-weight:500}
+  main h2{
+    font-family:'Syne',sans-serif;font-weight:700;font-size:9pt;
+    text-transform:uppercase;letter-spacing:1.3px;
+    color:var(--primary);margin:9px 0 4px;
+    break-after:avoid;page-break-after:avoid;
+  }
+  main h2 .num{display:inline-block;background:var(--gradient);color:#fff;width:17px;height:17px;line-height:17px;border-radius:5px;text-align:center;font-size:8pt;margin-right:6px;vertical-align:-1px}
+  main ul{margin:0 0 6px 0;padding-left:0;list-style:none}
+  main ul li{position:relative;padding:2px 0 2px 15px;color:var(--text-soft);break-inside:avoid;page-break-inside:avoid;line-height:1.4}
+  main ul li::before{
+    content:'';position:absolute;left:3px;top:9px;width:4px;height:4px;
+    background:var(--gradient);border-radius:50%;
+  }
+  main strong{color:var(--text);font-weight:700}
+  main .quote{background:#fbf3f7;border:1px solid #f1d3e0;padding:4px 10px;border-radius:5px;margin:3px 0;font-style:italic;color:var(--text);font-size:8.5pt;line-height:1.35}
+
+  .section{break-inside:avoid;page-break-inside:avoid}
+
+  .callout{
+    background:var(--surface);border:1px solid var(--border);border-radius:8px;
+    padding:8px 12px;margin:9px 0;break-inside:avoid;page-break-inside:avoid;
+  }
+  .callout-title{font-family:'Syne',sans-serif;font-weight:700;font-size:9pt;color:var(--text);margin-bottom:3px;display:flex;align-items:center;gap:7px}
+  .callout-title::before{content:'';width:7px;height:7px;background:var(--gradient);border-radius:50%}
+
+  /* Signature */
+  .sign{margin-top:12px;padding-top:10px;border-top:1px solid var(--border);break-inside:avoid;page-break-inside:avoid}
+  .sign .closing{margin-bottom:18px;color:var(--text-soft)}
+  .sign .name{font-family:'Syne',sans-serif;font-weight:700;font-size:10.5pt;color:var(--text);letter-spacing:.2px}
+  .sign .role{font-size:8.5pt;color:var(--text-soft);margin-top:2px}
+  .sign .role strong{color:var(--primary)}
+  .sign .email{font-size:8pt;color:var(--muted);margin-top:2px}
+  .sign .email a{color:var(--primary);text-decoration:none}
+
+  /* Footer */
+  footer{
+    margin-top:auto;padding-top:10px;
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:6.5pt;color:var(--muted);border-top:1px solid var(--border);gap:12px;
+  }
+  footer .left{display:flex;align-items:center;gap:7px}
+  footer .dot{width:4px;height:4px;border-radius:50%;background:var(--gradient);flex-shrink:0}
+  footer .right{font-family:'Syne',sans-serif;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-soft);white-space:nowrap}
+
+  /* Print actions */
+  .toolbar{
+    position:fixed;top:16px;right:16px;display:flex;gap:8px;z-index:10;
+  }
+  .toolbar button{
+    background:var(--gradient);color:#fff;border:none;border-radius:8px;
+    padding:10px 16px;font-family:inherit;font-weight:600;font-size:10pt;
+    cursor:pointer;box-shadow:0 4px 14px rgba(178,0,93,0.35);
+  }
+  .toolbar button:hover{transform:translateY(-1px)}
+
+  @media print{
+    body{background:#fff}
+    .toolbar{display:none}
+    .page{margin:0;box-shadow:none;width:100%;min-height:auto;height:27.94cm;padding:0.9cm 1.4cm 0.9cm;page-break-after:always;overflow:hidden}
+    .page:last-of-type{page-break-after:auto}
+    @page{size:Letter;margin:0}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<!-- ════════ PAGE 1 ════════ -->
+<div class="page">
+
+  <header>
+    <div class="brand">
+      <img src="assets/brand/logos/Beme1Color.png" alt="Beme Agency">
+    </div>
+    <div class="contact">
+      <span class="pill">Talent Agency</span><br>
+      Beme Agency LLC<br>
+      <a href="mailto:contacto@bemeagency.com">contacto@bemeagency.com</a><br>
+      bemeagency.com
+    </div>
+  </header>
+
+  <div class="meta">
+    <div class="block">
+      <label>Issued to</label>
+      <div class="v">
+        <strong>Enoylity Media Creations LLC</strong><br>
+        <a href="mailto:support@enoylity.com" style="color:var(--primary);text-decoration:none">support@enoylity.com</a>
+      </div>
+    </div>
+    <div class="block" style="text-align:right">
+      <label>Date</label>
+      <div class="v"><strong>May 12, 2026</strong></div>
+      <label style="margin-top:8px">Reference</label>
+      <div class="v">Anker SOLIX — Storm Season Campaign</div>
+    </div>
+  </div>
+
+  <div class="subject">
+    <div class="lbl">Subject</div>
+    <div class="ttl">Final Extension Notice — Anker SOLIX Storm Season Marketing Campaign</div>
+  </div>
+
+  <main>
+    <p>To the Enoylity Media Creations team,</p>
+
+    <p class="lead">We are writing with an update on the <strong>Anker SOLIX Storm Season Marketing Campaign</strong> and the path forward.</p>
+
+    <p>On May 12, 2026, we met with the Anker brand team to discuss this campaign. Based on the current state of delivery — the missed posting window of <strong>May 2–3</strong>, the gap between our feedback and your revised cut on <strong>May 12</strong>, and the fact that the submitted version still does not meet the approved brief — the brand's initial position was <strong>full cancellation</strong>.</p>
+
+    <p>We have managed to push back on that decision and secure <strong>one final extension</strong>. The terms below are firm and non-negotiable.</p>
+
+    <div class="section">
+      <h2><span class="num">1</span> New Delivery Deadline</h2>
+      <p>A new draft must be delivered by <strong>end of day, May 14, 2026 (8:00 PM EST)</strong>. This is the only extension being granted.</p>
+    </div>
+
+    <div class="section">
+      <h2><span class="num">2</span> What the New Draft Must Include</h2>
+      <p>The revised cut must respect every requirement previously communicated, including the original brief (re-attached for reference) and in particular:</p>
+      <ul>
+        <li><strong>Usage demonstration scenes:</strong> the Anker SOLIX F3800 / F3800 Plus must be clearly shown on camera powering multiple essential appliances at the same time — e.g., refrigerator, washing machine, hair dryer, kettle, computer, lighting, etc. Voice-over claims that the unit "is connected" or "is working" while only cables are visible will not be accepted. The product itself, in operative use, must be on screen.</li>
+        <li><strong>All must-do shots</strong> specified in the brief must be included.</li>
+        <li><strong>All Mandatory Mentions</strong> set out in Section 5 of the Agreement must be present in both the integration and the description box:
+          <div class="quote">"Anker SOLIX is the only backup power you need."</div>
+          <div class="quote">"Search Anker SOLIX on Google or Amazon or check out the links below for more info."</div>
+          <div class="quote">"100 Preppers."</div>
+        </li>
+        <li><strong>Content Direction and Big Idea</strong> — "Backup Early. Storm Ready." / "See how I prepare for storm season with Anker SOLIX" — must drive the creative.</li>
+        <li><strong>Tracking link and hashtags</strong> provided by the brand must be included in the description box.</li>
+      </ul>
+    </div>
+  </main>
+
+  <footer>
+    <div class="left">
+      <span class="dot"></span>
+      <span>Beme Agency LLC · Talent &amp; Influencer Marketing · Confidential business communication</span>
+    </div>
+    <div class="right">PAGE 1 / 2</div>
+  </footer>
+
+</div>
+
+<!-- ════════ PAGE 2 ════════ -->
+<div class="page page-break">
+
+  <div class="mini-header">
+    <img src="assets/brand/logos/Beme1Color.png" alt="Beme Agency">
+    <div class="pg-ref">Anker SOLIX Storm Season — Final Notice · May 12, 2026</div>
+  </div>
+
+  <main>
+    <div class="section">
+      <h2><span class="num">3</span> Consequences of Failing to Deliver</h2>
+      <p>If the draft is not delivered by end of day on <strong>May 14, 2026</strong>, or if it is delivered but fails to address the points above, the following will apply <strong>automatically and without further notice</strong>:</p>
+      <ul>
+        <li><strong>Termination of the Agreement for Default</strong> under Clause 11.</li>
+        <li><strong>Return of the US$3,000 advance payment</strong> within three (3) business days, pursuant to Clause 9 of the Agreement.</li>
+        <li><strong>Return of the Anker SOLIX F3800 / F3800 Plus product</strong> within three (3) business days, pursuant to Clause 14 of the Agreement. Beme Agency will cover return shipping.</li>
+        <li><strong>Removal of Enoylity Technology (@enoylitytechnology)</strong> from future collaboration consideration with Anker and all brands within the same group, including but not limited to Anker SOLIX, Anker Charging, eufy, and soundcore.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2><span class="num">4</span> Next Steps</h2>
+      <p>Please confirm receipt of this notice and your commitment to the May 14 deadline by reply <strong>today, May 12, during labour hours</strong>. The re-attached brief contains everything needed to produce a compliant cut.</p>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">Path Forward</div>
+      <p style="margin:0;color:var(--text-soft)">We would prefer to see this campaign close successfully. The path to that outcome is narrow, but we are keeping it open until <strong>end of day May 14, 2026, 8:00 PM EST</strong>.</p>
+    </div>
+
+    <div class="sign">
+      <p class="closing">Regards,</p>
+      <div class="name">Agustin Gabriel Rios</div>
+      <div class="role"><strong>Founder &amp; CEO</strong> · Beme Agency LLC</div>
+      <div class="email"><a href="mailto:contacto@bemeagency.com">contacto@bemeagency.com</a></div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="left">
+      <span class="dot"></span>
+      <span>Beme Agency LLC · This notice is sent in connection with the Agreement currently in force between the parties.</span>
+    </div>
+    <div class="right">PAGE 2 / 2</div>
+  </footer>
+
+</div>
+
+</body>
+</html>
