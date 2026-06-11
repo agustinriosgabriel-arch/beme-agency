@@ -526,6 +526,39 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
           <label class="form-label">Notas</label>
           <textarea id="c-notas" class="form-input" placeholder="Notas sobre este contacto..."></textarea>
         </div>
+        <div class="form-section-title">Dirección de Entrega</div>
+        <div class="form-group">
+          <label class="form-label">Destinatario</label>
+          <input type="text" id="c-de-destinatario" class="form-input" placeholder="A nombre de...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Teléfono de entrega</label>
+          <input type="text" id="c-de-telefono" class="form-input" placeholder="+54 11 ...">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Dirección (calle y número)</label>
+          <input type="text" id="c-de-calle" class="form-input" placeholder="Av. Ejemplo 1234, Piso 5 Depto B">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ciudad</label>
+          <input type="text" id="c-de-ciudad" class="form-input" placeholder="Ciudad">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Provincia / Estado</label>
+          <input type="text" id="c-de-provincia" class="form-input" placeholder="Provincia o estado">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Código Postal</label>
+          <input type="text" id="c-de-cp" class="form-input" placeholder="CP">
+        </div>
+        <div class="form-group">
+          <label class="form-label">País</label>
+          <input type="text" id="c-de-pais" class="form-input" placeholder="País de entrega">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Referencias / Notas de entrega</label>
+          <textarea id="c-de-notas" class="form-input" placeholder="Horario de recepción, referencias, indicaciones para el courier..."></textarea>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1321,11 +1354,20 @@ function openEditContacto(id) {
   document.getElementById('c-keywords').value = c.keywords||'';
   document.getElementById('c-valores').value = c.valores||'';
   document.getElementById('c-notas').value = c.notas||'';
+  const de = c.direccion_entrega || {};
+  document.getElementById('c-de-destinatario').value = de.destinatario||'';
+  document.getElementById('c-de-telefono').value = de.telefono||'';
+  document.getElementById('c-de-calle').value = de.calle||'';
+  document.getElementById('c-de-ciudad').value = de.ciudad||'';
+  document.getElementById('c-de-provincia').value = de.provincia||'';
+  document.getElementById('c-de-cp').value = de.cp||'';
+  document.getElementById('c-de-pais').value = de.pais||'';
+  document.getElementById('c-de-notas').value = de.notas||'';
   openModal('modal-contacto');
 }
 
 function clearContactForm() {
-  ['c-nombre','c-ciudad','c-email','c-telefono','c-tiktok','c-instagram','c-youtube','c-keywords','c-valores','c-notas'].forEach(id=>{
+  ['c-nombre','c-ciudad','c-email','c-telefono','c-tiktok','c-instagram','c-youtube','c-keywords','c-valores','c-notas','c-de-destinatario','c-de-telefono','c-de-calle','c-de-ciudad','c-de-provincia','c-de-cp','c-de-pais','c-de-notas'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('c-genero').value = '';
@@ -1370,6 +1412,16 @@ async function saveContacto() {
     keywords: document.getElementById('c-keywords').value.trim(),
     valores: document.getElementById('c-valores').value.trim(),
     notas: document.getElementById('c-notas').value.trim(),
+    direccion_entrega: {
+      destinatario: document.getElementById('c-de-destinatario').value.trim(),
+      telefono: document.getElementById('c-de-telefono').value.trim(),
+      calle: document.getElementById('c-de-calle').value.trim(),
+      ciudad: document.getElementById('c-de-ciudad').value.trim(),
+      provincia: document.getElementById('c-de-provincia').value.trim(),
+      cp: document.getElementById('c-de-cp').value.trim(),
+      pais: document.getElementById('c-de-pais').value.trim(),
+      notas: document.getElementById('c-de-notas').value.trim(),
+    },
     updated_at: new Date().toISOString(),
   };
 
@@ -1418,6 +1470,19 @@ function openDetalle(id) {
     ${c.categorias?.length?`<div class="detail-row"><div class="detail-label">Categorias</div><div class="detail-value">${c.categorias.map(x=>`<span class="prosp-tag">${esc(x)}</span>`).join(' ')}</div></div>`:''}
     ${c.valores?`<div class="detail-row"><div class="detail-label">Valores</div><div class="detail-value" style="white-space:pre-wrap">${esc(c.valores)}</div></div>`:''}
     ${c.notas?`<div class="detail-row"><div class="detail-label">Notas</div><div class="detail-value">${esc(c.notas)}</div></div>`:''}
+    ${(function(){
+      const de = c.direccion_entrega || {};
+      const lineas = [
+        de.destinatario,
+        de.calle,
+        [de.ciudad, de.provincia, de.cp].filter(Boolean).join(', '),
+        de.pais,
+        de.telefono ? `Tel: ${de.telefono}` : '',
+        de.notas,
+      ].filter(Boolean);
+      if (!lineas.length) return '';
+      return `<div class="detail-row"><div class="detail-label">Dirección de Entrega</div><div class="detail-value" style="white-space:pre-wrap">${lineas.map(esc).join('\n')}</div></div>`;
+    })()}
     <div class="detail-row"><div class="detail-label">Etapa</div><div class="detail-value"><span class="estado-badge es-${c.etapa==='activa'?'activa':''}" style="background:${ETAPAS.find(e=>e.key===c.etapa)?.color||'#888'}22;color:${ETAPAS.find(e=>e.key===c.etapa)?.color||'#888'}">${ETAPAS.find(e=>e.key===c.etapa)?.label||c.etapa}</span></div></div>
     ${c.medio_contacto?`<div class="detail-row"><div class="detail-label">Medio</div><div class="detail-value"><span class="k-medio">${c.medio_contacto.toUpperCase()}</span></div></div>`:''}
     ${(function(){

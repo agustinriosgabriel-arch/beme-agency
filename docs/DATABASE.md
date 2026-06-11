@@ -136,6 +136,7 @@ origen                   text DEFAULT 'externo'     -- externo|interno
 precio_cotizado          numeric                    -- cotización recibida (visible al llegar a "Interesado")
 precio_cotizado_moneda   text DEFAULT 'USD'
 precio_cotizado_notas    text DEFAULT ''
+direccion_entrega        jsonb DEFAULT '{}'  -- { destinatario, calle, ciudad, provincia, cp, pais, telefono, notas } — envío de PR boxes/regalos
 created_at               timestamp DEFAULT now()
 updated_at               timestamp DEFAULT now()
 ```
