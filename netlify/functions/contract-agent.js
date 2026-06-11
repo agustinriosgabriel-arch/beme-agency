@@ -136,7 +136,7 @@ ${clausulaSpark}
 
 exports.handler = async (event) => {
   const headers = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || 'https://bemeagency.netlify.app',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
   };
@@ -188,18 +188,25 @@ IMPORTANT: Return ONLY a valid JSON array. No markdown, no explanation. Example:
         },
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 2000,
+          max_tokens: 4000,
           messages: [{ role: 'user', content: prompt }],
         }),
       });
 
       if (!response.ok) {
+        // No exponer detalles internos de la API al cliente; quedan en los logs de Netlify.
         const err = await response.text();
-        return { statusCode: 500, headers, body: JSON.stringify({ error: 'API error ' + response.status + ': ' + err.substring(0, 200) }) };
+        console.error('[contract-agent] Anthropic error', response.status, err.substring(0, 500));
+        return { statusCode: 500, headers, body: JSON.stringify({ error: 'Error del servicio de IA. Intenta de nuevo en unos segundos.' }) };
       }
 
       const result = await response.json();
       let aiText = result.content?.[0]?.text || '[]';
+
+      // Si la respuesta se cortó por max_tokens, el JSON viene incompleto → avisar en vez de fallar críptico.
+      if (result.stop_reason === 'max_tokens') {
+        return { statusCode: 200, headers, body: JSON.stringify({ html: data.contenido_html, warning: 'Los cambios pedidos son demasiado extensos para una sola pasada. Divide las instrucciones en partes más chicas.' }) };
+      }
 
       // Clean markdown wrapping if present
       const jsonMatch = aiText.match(/```(?:json)?\n?([\s\S]*?)```/);
@@ -216,12 +223,18 @@ IMPORTANT: Return ONLY a valid JSON array. No markdown, no explanation. Example:
           }
         }
         console.log(`Applied ${applied}/${ops.length} replacements`);
+        // Guard: nunca permitir que el HTML resultante incluya scripts (el preview lo inyecta con innerHTML).
+        html = html.replace(/<script\b[\s\S]*?<\/script\s*>/gi, '').replace(/\son\w+\s*=\s*(['"])[\s\S]*?\1/gi, '');
         if (applied === 0) {
           // Fallback: if no exact matches, return error with details
           return { statusCode: 200, headers, body: JSON.stringify({ html, warning: 'No se pudieron aplicar los cambios. Intenta con instrucciones mas especificas.' }) };
         }
+        if (applied < ops.length) {
+          return { statusCode: 200, headers, body: JSON.stringify({ html, warning: `Se aplicaron ${applied} de ${ops.length} cambios. Revisa el contrato y repite los que falten.` }) };
+        }
       } catch(e) {
-        return { statusCode: 500, headers, body: JSON.stringify({ error: 'AI response invalida: ' + aiText.substring(0, 100) }) };
+        console.error('[contract-agent] respuesta IA no parseable:', aiText.substring(0, 300));
+        return { statusCode: 500, headers, body: JSON.stringify({ error: 'La IA devolvió una respuesta inválida. Intenta de nuevo.' }) };
       }
 
       return { statusCode: 200, headers, body: JSON.stringify({ html }) };

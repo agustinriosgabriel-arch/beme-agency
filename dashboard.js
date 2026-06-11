@@ -2635,7 +2635,9 @@ let ytApiKey = '';
 let apifyToken = '';
 let ensembleToken = '';
 
-const YT_API_KEY_DEFAULT = 'AIzaSyA1ldlefc3IyyJ_nnt4dKF4mF7qowtG3fY';
+// La clave de YouTube ya NO viene hardcodeada (se filtraba en el código fuente).
+// Cada usuario la configura una vez desde el modal de APIs y queda en localStorage.
+const YT_API_KEY_DEFAULT = '';
 
 function loadApiKey() {
   try {
@@ -2713,12 +2715,12 @@ async function saveApiKey() {
 }
 
 function clearApiKey() {
-  ytApiKey = YT_API_KEY_DEFAULT;
+  ytApiKey = '';
   try { localStorage.removeItem('beme_yt_api_key'); } catch(e) {}
   document.getElementById('yt-api-key-input').value = '';
   updateApiKeyUI();
   closeModal('yt-api-modal');
-  showToast('Clave restaurada a la predeterminada', 'info');
+  showToast('Clave eliminada', 'info');
 }
 
 // ── Apify token management ───────────────────────────────────

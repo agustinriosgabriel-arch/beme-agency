@@ -954,13 +954,27 @@ function shouldSkipRefresh() {
   if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable)) return true;
   return false;
 }
+// Gate barato: antes de recargar el payload completo (campaña + contenidos + hijos),
+// consultamos solo updated_at. Todas las mutaciones llaman bumpCampana() → updated_at cambia.
+// Red de seguridad: full reload cada 30s aunque el marcador no cambie (cubre mutaciones
+// que no bumpean, p.ej. desde el portal de talentos).
+let _lastSeenMarker = null;
+let _lastFullRefresh = 0;
 async function autoRefreshTick() {
   if (_autoRefreshing) return;
   if (shouldSkipRefresh()) return;
   _autoRefreshing = true;
   try {
-    await loadCampana();
-    if (campana) renderAll();
+    const now = Date.now();
+    const {data: mk} = await sb.from('campanas').select('updated_at').eq('id', campanaId).single();
+    const marker = mk?.updated_at || null;
+    const changed = marker !== _lastSeenMarker;
+    _lastSeenMarker = marker;
+    if (changed || now - _lastFullRefresh > 30000) {
+      await loadCampana();
+      if (campana) renderAll();
+      _lastFullRefresh = now;
+    }
   } catch(e) {
     console.warn('autoRefresh failed:', e);
   } finally {

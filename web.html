@@ -312,29 +312,38 @@ section{padding:110px 0}
 }
 
 /* ============================================================
-   MARCAS
+   MARCAS — grilla de logos
 ============================================================ */
-.marcas{background:var(--ink);color:var(--paper)}
-.marcas .eyebrow{color:var(--primary-light)}
-.marcas .eyebrow::before{background:var(--primary-light)}
-.marcas .sec-head p{color:rgba(247,244,238,0.6)}
+.marcas{background:#fff;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
 .marcas-list{
-  display:flex;flex-wrap:wrap;gap:0;
-  border-top:1px solid rgba(247,244,238,0.18);
-  border-left:1px solid rgba(247,244,238,0.12);
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+  border-top:1px solid var(--rule);
+  border-left:1px solid var(--rule-soft);
 }
 .marca{
-  font-family:var(--serif);font-size:clamp(20px,2.4vw,30px);font-weight:500;
-  padding:34px 44px;flex:1 1 auto;text-align:center;
-  border-right:1px solid rgba(247,244,238,0.12);
-  border-bottom:1px solid rgba(247,244,238,0.12);
-  color:rgba(247,244,238,0.85);
-  transition:color .2s ease,background .25s ease;
+  display:flex;align-items:center;justify-content:center;
+  padding:34px 28px;min-height:110px;
+  border-right:1px solid var(--rule-soft);
+  border-bottom:1px solid var(--rule-soft);
+  transition:background .25s ease;
 }
-.marca:hover{color:#fff;background:rgba(178,0,93,0.22)}
+.marca img{
+  max-height:38px;max-width:120px;width:auto;height:auto;
+  filter:grayscale(1);opacity:.65;
+  transition:filter .25s ease,opacity .25s ease;
+}
+.marca:hover{background:rgba(178,0,93,0.03)}
+.marca:hover img{filter:none;opacity:1}
 .marcas-note{
   margin-top:28px;font-family:var(--mono);font-size:11px;
-  letter-spacing:0.14em;text-transform:uppercase;color:rgba(247,244,238,0.45);
+  letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);
+  line-height:2;
+}
+@media(max-width:560px){
+  .marcas-list{grid-template-columns:repeat(2,1fr)}
+  .marca{min-height:88px;padding:24px 18px}
+  .marca img{max-height:30px;max-width:104px}
 }
 
 /* ============================================================
@@ -530,8 +539,8 @@ html.js .reveal.in{opacity:1;transform:none}
       <article class="servicio reveal">
         <div class="num">S·02</div>
         <h3>Campañas de influencer marketing</h3>
-        <p>Del brief al reporte final en un flujo de nueve pasos. Cada contenido pasa por guion, producción, aprobación y publicación con seguimiento documentado en cada etapa.</p>
-        <div class="tags"><span class="tag">Flujo de 9 pasos</span><span class="tag">TikTok · IG · YouTube</span></div>
+        <p>Del brief al reporte final. Cada contenido pasa por producción, aprobación de la marca y publicación con seguimiento documentado en cada etapa.</p>
+        <div class="tags"><span class="tag">Seguimiento documentado</span><span class="tag">TikTok · IG · YouTube</span></div>
       </article>
       <article class="servicio reveal">
         <div class="num">S·03</div>
@@ -548,7 +557,7 @@ html.js .reveal.in{opacity:1;transform:none}
       <article class="servicio reveal">
         <div class="num">S·05</div>
         <h3>Contratos y presupuestos</h3>
-        <p>Contratos en varios idiomas y presupuestos con quince días de validez, en la moneda que corresponda: USD, MXN, ARS o EUR. Ningún acuerdo queda en una conversación.</p>
+        <p>Contratos en varios idiomas y presupuestos en la moneda que corresponda: USD, MXN, ARS o EUR. Ningún acuerdo queda en una conversación.</p>
         <div class="tags"><span class="tag">Multidioma</span><span class="tag">USD · MXN · ARS · EUR</span></div>
       </article>
       <article class="servicio reveal">
@@ -596,19 +605,14 @@ html.js .reveal.in{opacity:1;transform:none}
   <div class="wrap">
     <div class="sec-head">
       <p class="eyebrow">Proceso</p>
-      <h2 class="display" id="proceso-title">Nueve pasos. Ninguno se salta.</h2>
-      <p>El mismo flujo gobierna cada contenido de cada campaña. La marca sabe en qué paso está su inversión en todo momento.</p>
+      <h2 class="display" id="proceso-title">Del brief al reporte, sin sorpresas.</h2>
+      <p>La marca sabe en qué etapa está su inversión en todo momento. Nada se publica sin su aprobación.</p>
     </div>
     <div class="proceso-list">
-      <div class="paso reveal"><div class="pn">01</div><div><h3>Brief</h3><p>La marca define objetivo, mensaje y plataformas. Todo parte de un documento, no de una llamada.</p></div></div>
-      <div class="paso reveal"><div class="pn">02</div><div><h3>Selección de talento</h3><p>Propuesta de creadores con datos de audiencia, engagement y trayectoria. La marca aprueba la lista final.</p></div></div>
-      <div class="paso reveal"><div class="pn">03</div><div><h3>Contrato y presupuesto</h3><p>Condiciones, entregables y fechas por escrito. Presupuesto con validez de quince días en la moneda acordada.</p></div></div>
-      <div class="paso reveal"><div class="pn">04</div><div><h3>Guion</h3><p>El talento propone el guion de cada contenido. La autoría creativa es suya; el encuadre estratégico, nuestro.</p></div></div>
-      <div class="paso reveal"><div class="pn">05</div><div><h3>Aprobación de guion</h3><p>La marca revisa y aprueba antes de producir. Las correcciones suceden en papel, no en posproducción.</p></div></div>
-      <div class="paso reveal"><div class="pn">06</div><div><h3>Producción</h3><p>El creador produce el contenido según el guion aprobado, en su formato y con su lenguaje.</p></div></div>
-      <div class="paso reveal"><div class="pn">07</div><div><h3>Aprobación de contenido</h3><p>Revisión final del material antes de salir. Ningún contenido se publica sin visto bueno de la marca.</p></div></div>
-      <div class="paso reveal"><div class="pn">08</div><div><h3>Publicación</h3><p>Publicación coordinada por plataforma con registro del link de cada pieza publicada.</p></div></div>
-      <div class="paso reveal"><div class="pn">09</div><div><h3>Estadísticas y reporte</h3><p>Alcance, interacción y conversiones por contenido. El reporte cierra la campaña con números, no con adjetivos.</p></div></div>
+      <div class="paso reveal"><div class="pn">01</div><div><h3>Brief y selección</h3><p>La marca define objetivo y plataformas. Proponemos creadores con datos de audiencia y trayectoria; la marca aprueba la lista final.</p></div></div>
+      <div class="paso reveal"><div class="pn">02</div><div><h3>Acuerdo por escrito</h3><p>Condiciones, entregables y fechas en contrato. Presupuesto con validez definida, en la moneda acordada.</p></div></div>
+      <div class="paso reveal"><div class="pn">03</div><div><h3>Producción y aprobación</h3><p>El talento crea con su lenguaje; la marca revisa y aprueba antes de cada publicación.</p></div></div>
+      <div class="paso reveal"><div class="pn">04</div><div><h3>Publicación y reporte</h3><p>Publicación coordinada y reporte final con alcance, interacción y conversiones por contenido. La campaña cierra con números, no con adjetivos.</p></div></div>
     </div>
   </div>
 </section>
@@ -619,19 +623,34 @@ html.js .reveal.in{opacity:1;transform:none}
     <div class="sec-head">
       <p class="eyebrow">Marcas</p>
       <h2 class="display" id="marcas-title">Compañía conocida.</h2>
-      <p>Marcas globales que han trabajado con creadores de nuestro roster.</p>
+      <p>Marcas globales que han trabajado con BEME y con creadores de nuestro roster.</p>
     </div>
     <div class="marcas-list">
-      <div class="marca reveal">Anker</div>
-      <div class="marca reveal">Huawei</div>
-      <div class="marca reveal">Shark Beauty</div>
-      <div class="marca reveal">Avon</div>
-      <div class="marca reveal">Kiehl's</div>
-      <div class="marca reveal">Garnier</div>
-      <div class="marca reveal">Sheglam</div>
-      <div class="marca reveal">Uriage</div>
+      <div class="marca reveal"><img src="assets/marcas/cocacola.png" alt="Coca-Cola" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/huawei.png" alt="Huawei" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/universalmusic.png" alt="Universal Music" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/shein.png" alt="SHEIN" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/oppo.png" alt="OPPO" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/kerastase.svg" alt="Kérastase" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/redken.png" alt="Redken" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/avene.png" alt="Avène" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/kleenex.png" alt="Kleenex" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/tresemme.png" alt="TRESemmé" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/sharkbeauty.webp" alt="Shark Beauty" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/esika.png" alt="Ésika" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/uriage.png" alt="Uriage" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/sheglam.webp" alt="Sheglam" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/glowmode.webp" alt="Glowmode" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/halara.png" alt="Halara" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/binance.png" alt="Binance" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/ecoflow.png" alt="EcoFlow" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/honkai.png" alt="Honkai Star Rail" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/autozone.png" alt="AutoZone" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/radioshack.png" alt="RadioShack" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/armorall.png" alt="Armor All" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/xiomara.png" alt="Xiomara" loading="lazy"></div>
     </div>
-    <p class="marcas-note">Lifestyle · Lujo · Tecnología · Belleza · Entretenimiento</p>
+    <p class="marcas-note">También: Anker · Avon · Kiehl's · Garnier · Prorganics · Dr.Melaxi · Xtreme</p>
   </div>
 </section>
 

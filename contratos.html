@@ -1244,8 +1244,21 @@ function collectFormData() {
   };
 }
 
+// Validación mínima antes de guardar/generar: sin las partes el template sale
+// "De una parte, ..." vacío → contrato legalmente inválido.
+function validateContractPayload(p) {
+  if (!p.parte_a_nombre) return 'Falta el nombre de la Parte A';
+  if (!p.parte_b_nombre) return 'Falta el nombre de la Parte B';
+  if (!p.servicios) return 'Falta describir los servicios';
+  if (p.tarifa_tipo !== 'canje' && !(p.monto > 0)) return 'El monto debe ser mayor a 0 (o elegí tarifa "canje")';
+  if (p.derechos_imagen && !p.derechos_dias) return 'Indicá los días de derechos de imagen';
+  return null;
+}
+
 async function saveContractDraft() {
   const payload = collectFormData();
+  const err = validateContractPayload(payload);
+  if (err) { showToast(err, 'error'); return; }
   try {
     const {data, error} = await sb.from('contratos').insert(payload).select().single();
     if (error) throw error;
@@ -1276,6 +1289,8 @@ async function callAI(action, data, idioma) {
 
 async function generateContract() {
   const payload = collectFormData();
+  const verr = validateContractPayload(payload);
+  if (verr) { showToast(verr, 'error'); return; }
 
   // Save draft first
   let contractId;

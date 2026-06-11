@@ -6,7 +6,7 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
 exports.handler = async (event) => {
   const headers = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || 'https://bemeagency.netlify.app',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
   };

@@ -3,7 +3,7 @@
 // Endpoint: /.netlify/functions/campaign-summary (can also be triggered manually)
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ngstqwbzvnpggpklifat.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY; // requerida — sin fallback a anon (RLS bloquearía las queries)
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const NOTIFY_EMAILS = (process.env.CAMPAIGN_SUMMARY_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
 

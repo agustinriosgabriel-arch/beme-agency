@@ -12,12 +12,12 @@ const nodemailer = require('nodemailer');
 const { buildEmailContent } = require('./lib/email-signature');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ngstqwbzvnpggpklifat.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY; // requerida — sin fallback a anon (RLS bloquearía la cola)
 
-const SMTP_HOST = 'smtp.hostinger.com';
-const SMTP_PORT = 465;
-const SMTP_USER = 'contacto@bemeagency.com';
-const SMTP_PASS = '1234-Beme';
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.hostinger.com';
+const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
+const SMTP_USER = process.env.SMTP_USER || 'contacto@bemeagency.com';
+const SMTP_PASS = process.env.SMTP_PASS; // configurar en Netlify → Environment variables
 
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
@@ -181,15 +181,21 @@ async function processColaRow(row) {
 
 // ── Handler ───────────────────────────────────────────────────
 
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://bemeagency.netlify.app';
+
 exports.handler = async (event) => {
   const headers = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
   };
 
   if (event && event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers, body: '' };
+  }
+
+  if (!SMTP_PASS || !SUPABASE_KEY) {
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Faltan env vars: SMTP_PASS y/o SUPABASE_SERVICE_KEY' }) };
   }
 
   try {

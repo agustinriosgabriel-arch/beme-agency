@@ -1047,13 +1047,29 @@ function shouldSkipRefresh() {
   if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable)) return true;
   return false;
 }
+// Gate barato: antes de recargar el listado completo (50 campañas + talentos con fotos),
+// consultamos solo el updated_at más reciente. Cualquier alta/edición/borrado bumpea
+// updated_at (trigger trg_campanas_touch). Red de seguridad: full reload cada 30s.
+let _lastListMarker = null;
+let _lastFullListRefresh = 0;
 async function autoRefreshTick() {
   if (_autoRefreshing || shouldSkipRefresh()) return;
   _autoRefreshing = true;
   try {
-    await loadCampanas();
-    renderCampanas();
-    renderStats();
+    const now = Date.now();
+    const {data: mk} = await sb.from('campanas')
+      .select('updated_at')
+      .order('updated_at', {ascending:false, nullsFirst:false})
+      .limit(1);
+    const marker = mk?.[0]?.updated_at || null;
+    const changed = marker !== _lastListMarker;
+    _lastListMarker = marker;
+    if (changed || now - _lastFullListRefresh > 30000) {
+      await loadCampanas();
+      renderCampanas();
+      renderStats();
+      _lastFullListRefresh = now;
+    }
   } catch(e) { console.warn('autoRefresh:', e); }
   finally { _autoRefreshing = false; }
 }
@@ -1121,8 +1137,8 @@ async function loadCampanas() {
     campana_managers(user_id),
     campana_handlers(user_id),
     campana_talentos(
-      id,talent_id,fee_marca,fee_talento,moneda,pago_estado,orden_trabajo,identificador,
-      talentos(id,nombre,foto,numero),
+      id,talent_id,identificador,
+      talentos(id,nombre,foto),
       contenidos(id,paso_actual,tipo)
     )
   `).order('created_at', {ascending:false}).limit(50);
