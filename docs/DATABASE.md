@@ -277,6 +277,7 @@ producto_estado         text DEFAULT 'no_aplica'  -- no_aplica|en_espera|recibid
 producto_paqueteria     text
 producto_tracking       text
 producto_notas          text
+producto_direccion      jsonb DEFAULT '{}'  -- { destinatario, calle, ciudad, provincia, cp, pais, telefono, notas } — dirección de entrega por campaña, pre-llenada del contacto pero editable
 derechos_imagen_dias    integer
 derechos_imagen_valor   numeric
 derechos_imagen_desde   date

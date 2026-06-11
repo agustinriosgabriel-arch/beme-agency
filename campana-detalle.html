@@ -810,6 +810,20 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
       <div class="form-group"><label class="form-label">Paquetería</label><input type="text" id="pr-pak" class="form-input" placeholder="DHL, FedEx..."></div>
       <div class="form-group"><label class="form-label">Tracking</label><input type="text" id="pr-track" class="form-input"></div>
       <div class="form-group"><label class="form-label">Notas</label><textarea id="pr-notas" class="form-input" rows="2"></textarea></div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin:18px 0 6px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);flex:1">Dirección de Entrega</div>
+        <button type="button" class="btn btn-ghost btn-xs" id="pr-dir-fill" onclick="fillDireccionFromContacto()" style="display:none">↺ Traer del contacto</button>
+      </div>
+      <div id="pr-dir-hint" style="display:none;font-size:11px;color:var(--text-dim);margin-bottom:8px"></div>
+      <div class="form-group"><label class="form-label">Destinatario</label><input type="text" id="pr-de-destinatario" class="form-input" placeholder="A nombre de..."></div>
+      <div class="form-group"><label class="form-label">Dirección (calle y número)</label><input type="text" id="pr-de-calle" class="form-input" placeholder="Av. Ejemplo 1234, Piso 5 Depto B"></div>
+      <div class="form-group"><label class="form-label">Ciudad</label><input type="text" id="pr-de-ciudad" class="form-input" placeholder="Ciudad"></div>
+      <div class="form-group"><label class="form-label">Provincia / Estado</label><input type="text" id="pr-de-provincia" class="form-input" placeholder="Provincia o estado"></div>
+      <div class="form-group"><label class="form-label">Código Postal</label><input type="text" id="pr-de-cp" class="form-input" placeholder="CP"></div>
+      <div class="form-group"><label class="form-label">País</label><input type="text" id="pr-de-pais" class="form-input" placeholder="País de entrega"></div>
+      <div class="form-group"><label class="form-label">Teléfono de entrega</label><input type="text" id="pr-de-telefono" class="form-input" placeholder="+54 11 ..."></div>
+      <div class="form-group"><label class="form-label">Referencias / Notas de entrega</label><textarea id="pr-de-notas" class="form-input" rows="2" placeholder="Horario de recepción, referencias, indicaciones para el courier..."></textarea></div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('modal-producto')">Cancelar</button>
@@ -1586,6 +1600,11 @@ function renderTalentoCard(ct) {
           <div class="extra-title">Producto</div>
           <div style="font-size:12px;font-weight:600;color:${prColor[ct.producto_estado||'no_aplica']}">${prLabel[ct.producto_estado||'no_aplica']}</div>
           ${ct.producto_tracking?`<div style="font-size:11px;color:var(--text-dim);margin-top:2px">${esc(ct.producto_paqueteria)} · ${esc(ct.producto_tracking)}</div>`:''}
+          ${(function(){
+            const de = ct.producto_direccion || {};
+            const resumen = [de.calle, de.ciudad, de.pais].filter(Boolean).join(', ');
+            return resumen ? `<div style="font-size:11px;color:var(--text-dim);margin-top:2px">📦 ${esc(resumen)}</div>` : '';
+          })()}
           ${isInternal()?`<button class="btn btn-ghost btn-xs" style="margin-top:6px" onclick="openProducto(${ct.id})">Editar</button>`:''}
         </div>
         <div class="extra-box">
@@ -2705,21 +2724,88 @@ async function saveDerechos() {
   toast('Derechos actualizados ✓','ok');
 }
 
-function openProducto(ctId) {
+// Dirección del contacto (prospeccion_contactos) cacheada por talent_id para pre-llenar
+let _contactoDireccion = null;
+
+function _setDireccionFields(de) {
+  de = de || {};
+  document.getElementById('pr-de-destinatario').value = de.destinatario||'';
+  document.getElementById('pr-de-calle').value = de.calle||'';
+  document.getElementById('pr-de-ciudad').value = de.ciudad||'';
+  document.getElementById('pr-de-provincia').value = de.provincia||'';
+  document.getElementById('pr-de-cp').value = de.cp||'';
+  document.getElementById('pr-de-pais').value = de.pais||'';
+  document.getElementById('pr-de-telefono').value = de.telefono||'';
+  document.getElementById('pr-de-notas').value = de.notas||'';
+}
+function _hasDireccion(de) {
+  return de && Object.values(de).some(v => (v||'').toString().trim());
+}
+
+async function openProducto(ctId) {
   editingPrCtId = ctId;
   const ct = campana.campana_talentos?.find(x=>x.id===ctId)||{};
   document.getElementById('pr-estado').value = ct.producto_estado||'no_aplica';
   document.getElementById('pr-pak').value = ct.producto_paqueteria||'';
   document.getElementById('pr-track').value = ct.producto_tracking||'';
   document.getElementById('pr-notas').value = ct.producto_notas||'';
+
+  const fillBtn = document.getElementById('pr-dir-fill');
+  const hint = document.getElementById('pr-dir-hint');
+  fillBtn.style.display = 'none';
+  hint.style.display = 'none';
+  _contactoDireccion = null;
+
+  const saved = ct.producto_direccion || {};
+  _setDireccionFields(saved);
   openModal('modal-producto');
+
+  // Buscar la dirección registrada en el contacto (prospeccion) por talent_id
+  const talentId = ct.talent_id;
+  if (talentId) {
+    try {
+      const { data } = await sb.from('prospeccion_contactos')
+        .select('direccion_entrega')
+        .eq('talento_id', talentId)
+        .not('direccion_entrega', 'is', null)
+        .limit(1);
+      const de = data && data[0] && data[0].direccion_entrega;
+      if (_hasDireccion(de)) {
+        _contactoDireccion = de;
+        if (!_hasDireccion(saved)) {
+          // No hay dirección guardada para esta campaña → pre-llenar con la del contacto
+          _setDireccionFields(de);
+          hint.textContent = 'Pre-llenada desde la dirección del contacto. Editala si para esta campaña va a otra dirección.';
+          hint.style.display = '';
+        } else {
+          // Ya hay una guardada → ofrecer traer la del contacto por si cambió
+          fillBtn.style.display = '';
+        }
+      }
+    } catch(e) { console.warn('lookup direccion contacto:', e); }
+  }
+}
+function fillDireccionFromContacto() {
+  if (!_hasDireccion(_contactoDireccion)) { toast('El contacto no tiene dirección registrada','inf'); return; }
+  _setDireccionFields(_contactoDireccion);
+  toast('Dirección del contacto cargada','ok');
 }
 async function saveProducto() {
   await sb.from('campana_talentos').update({
     producto_estado: document.getElementById('pr-estado').value,
     producto_paqueteria: document.getElementById('pr-pak').value.trim(),
     producto_tracking: document.getElementById('pr-track').value.trim(),
-    producto_notas: document.getElementById('pr-notas').value.trim()
+    producto_notas: document.getElementById('pr-notas').value.trim(),
+    producto_direccion: {
+      destinatario: document.getElementById('pr-de-destinatario').value.trim(),
+      calle: document.getElementById('pr-de-calle').value.trim(),
+      ciudad: document.getElementById('pr-de-ciudad').value.trim(),
+      provincia: document.getElementById('pr-de-provincia').value.trim(),
+      cp: document.getElementById('pr-de-cp').value.trim(),
+      pais: document.getElementById('pr-de-pais').value.trim(),
+      telefono: document.getElementById('pr-de-telefono').value.trim(),
+      notas: document.getElementById('pr-de-notas').value.trim(),
+    }
   }).eq('id',editingPrCtId);
   closeModal('modal-producto');
   bumpCampana(); await loadCampana(); renderAll();
