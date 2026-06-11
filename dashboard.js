@@ -381,7 +381,7 @@ async function loadFromSupabase() {
 
     // Load all data in parallel for speed
     // Load WITHOUT foto first (base64 photos are huge, loaded in background after render)
-    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,needs_review,review_comment,review_marked_by,review_marked_at';
+    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at';
     const [configResult, talentResult, rosterResult, linksResult] = await Promise.all([
       sb.from('app_config').select('key,value'),
       loadTalentosWithRetry(TALENT_COLS),
@@ -596,7 +596,7 @@ function setupRealtimeSubscription() {
         if (!t || !t.id) {
           // payload.new is empty — reload only changed columns (skip foto to save IO)
           // payload.new is empty — merge updated columns into existing talents (preserve foto, etc.)
-          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,needs_review,review_comment,review_marked_by,review_marked_at';
+          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at';
           loadTalentosWithRetry(TALENT_COLS_RT).then(({ data }) => {
             if (data) {
               // Merge into existing talents to preserve fields not in RT select (like foto)
@@ -2137,6 +2137,8 @@ function clearForm() {
   var _fma = document.getElementById('f-manager-agencia'); if(_fma) _fma.value = '';
   var _fmt = document.getElementById('f-manager-telefono'); if(_fmt) _fmt.value = '';
   var _fme = document.getElementById('f-manager-email'); if(_fme) _fme.value = '';
+  ['f-de-destinatario','f-de-telefono','f-de-calle','f-de-ciudad','f-de-provincia','f-de-cp','f-de-pais','f-de-notas']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   toggleManagerFields(false);
   var _fnr = document.getElementById('f-needs-review'); if(_fnr) _fnr.checked = false;
   var _frc = document.getElementById('f-review-comment'); if(_frc) _frc.value = '';
@@ -2173,6 +2175,9 @@ function fillForm(t) {
   var _fma = document.getElementById('f-manager-agencia'); if(_fma) _fma.value = t.manager_agencia || '';
   var _fmt = document.getElementById('f-manager-telefono'); if(_fmt) _fmt.value = t.manager_telefono || '';
   var _fme = document.getElementById('f-manager-email'); if(_fme) _fme.value = t.manager_email || '';
+  var _de = t.direccion_entrega || {};
+  var _deMap = {'f-de-destinatario':'destinatario','f-de-telefono':'telefono','f-de-calle':'calle','f-de-ciudad':'ciudad','f-de-provincia':'provincia','f-de-cp':'cp','f-de-pais':'pais','f-de-notas':'notas'};
+  Object.keys(_deMap).forEach(function(id){ var el=document.getElementById(id); if(el) el.value = _de[_deMap[id]] || ''; });
   toggleManagerFields(!!t.tiene_manager);
   var _fnr = document.getElementById('f-needs-review');
   var _frc = document.getElementById('f-review-comment');
@@ -2477,6 +2482,19 @@ async function saveTalent() {
     manager_agencia: (document.getElementById('f-manager-agencia') ? document.getElementById('f-manager-agencia').value.trim() : ''),
     manager_telefono: (document.getElementById('f-manager-telefono') ? document.getElementById('f-manager-telefono').value.trim() : ''),
     manager_email: (document.getElementById('f-manager-email') ? document.getElementById('f-manager-email').value.trim() : ''),
+    direccion_entrega: (function(){
+      var g = function(id){ var el=document.getElementById(id); return el ? el.value.trim() : ''; };
+      return {
+        destinatario: g('f-de-destinatario'),
+        telefono: g('f-de-telefono'),
+        calle: g('f-de-calle'),
+        ciudad: g('f-de-ciudad'),
+        provincia: g('f-de-provincia'),
+        cp: g('f-de-cp'),
+        pais: g('f-de-pais'),
+        notas: g('f-de-notas'),
+      };
+    })(),
     categorias: cats,
     updated: new Date().toISOString().split('T')[0]
   };
@@ -2531,6 +2549,7 @@ async function saveTalent() {
       manager_agencia: savedTalent.manager_agencia||'',
       manager_telefono: savedTalent.manager_telefono||'',
       manager_email: savedTalent.manager_email||'',
+      direccion_entrega: savedTalent.direccion_entrega||{},
       needs_review: !!savedTalent.needs_review,
       review_comment: savedTalent.review_comment||'',
       review_marked_by: savedTalent.review_marked_by||'',

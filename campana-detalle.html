@@ -813,7 +813,7 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
 
       <div style="display:flex;align-items:center;gap:10px;margin:18px 0 6px">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);flex:1">Dirección de Entrega</div>
-        <button type="button" class="btn btn-ghost btn-xs" id="pr-dir-fill" onclick="fillDireccionFromContacto()" style="display:none">↺ Traer del contacto</button>
+        <button type="button" class="btn btn-ghost btn-xs" id="pr-dir-fill" onclick="fillDireccionFromContacto()" style="display:none">↺ Traer del perfil del talento</button>
       </div>
       <div id="pr-dir-hint" style="display:none;font-size:11px;color:var(--text-dim);margin-bottom:8px"></div>
       <div class="form-group"><label class="form-label">Destinatario</label><input type="text" id="pr-de-destinatario" class="form-input" placeholder="A nombre de..."></div>
@@ -2760,14 +2760,13 @@ async function openProducto(ctId) {
   _setDireccionFields(saved);
   openModal('modal-producto');
 
-  // Buscar la dirección registrada en el contacto (prospeccion) por talent_id
+  // Buscar la dirección registrada en el perfil del talento por talent_id
   const talentId = ct.talent_id;
   if (talentId) {
     try {
-      const { data } = await sb.from('prospeccion_contactos')
+      const { data } = await sb.from('talentos')
         .select('direccion_entrega')
-        .eq('talento_id', talentId)
-        .not('direccion_entrega', 'is', null)
+        .eq('id', talentId)
         .limit(1);
       const de = data && data[0] && data[0].direccion_entrega;
       if (_hasDireccion(de)) {
@@ -2775,7 +2774,7 @@ async function openProducto(ctId) {
         if (!_hasDireccion(saved)) {
           // No hay dirección guardada para esta campaña → pre-llenar con la del contacto
           _setDireccionFields(de);
-          hint.textContent = 'Pre-llenada desde la dirección del contacto. Editala si para esta campaña va a otra dirección.';
+          hint.textContent = 'Pre-llenada desde la dirección del perfil del talento. Editala si para esta campaña va a otra dirección.';
           hint.style.display = '';
         } else {
           // Ya hay una guardada → ofrecer traer la del contacto por si cambió
@@ -2786,9 +2785,9 @@ async function openProducto(ctId) {
   }
 }
 function fillDireccionFromContacto() {
-  if (!_hasDireccion(_contactoDireccion)) { toast('El contacto no tiene dirección registrada','inf'); return; }
+  if (!_hasDireccion(_contactoDireccion)) { toast('El talento no tiene dirección registrada en su perfil','inf'); return; }
   _setDireccionFields(_contactoDireccion);
-  toast('Dirección del contacto cargada','ok');
+  toast('Dirección del perfil del talento cargada','ok');
 }
 async function saveProducto() {
   await sb.from('campana_talentos').update({

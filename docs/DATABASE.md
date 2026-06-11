@@ -26,6 +26,7 @@ foto            text DEFAULT ''
 seguidores      jsonb DEFAULT '{"tiktok":0,"instagram":0,"youtube":0}'
 genero          text DEFAULT ''
 keywords        text DEFAULT ''
+direccion_entrega jsonb DEFAULT '{}'  -- { destinatario, calle, ciudad, provincia, cp, pais, telefono, notas } — envío de producto/PR boxes; pre-llena la dirección de entrega en campañas
 updated         date
 ```
 
