@@ -23,6 +23,20 @@
   timeout = 26
   schedule = "*/15 * * * *"  # every 15 minutes — prospección email sequences
 
+# Sitio público — cuando bemeagency.com apunte a Netlify, la raíz sirve la web
+# de marketing (web.html). La app interna sigue en bemeagency.netlify.app.
+[[redirects]]
+  from = "https://bemeagency.com/"
+  to = "/web.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://www.bemeagency.com/"
+  to = "/web.html"
+  status = 200
+  force = true
+
 # Cache strategy
 [[headers]]
   for = "/*"
