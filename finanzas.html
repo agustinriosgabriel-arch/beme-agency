@@ -108,6 +108,34 @@ body.dark .logo .logo-dark{display:block}
 .st-enviada{background:rgba(167,139,250,0.12);color:#a78bfa}
 .st-cobrada,.st-pagado{background:rgba(74,222,128,0.12);color:var(--green)}
 .st-cancelada{background:rgba(248,113,113,0.12);color:var(--red)}
+.st-pagada_parcial,.st-parcial{background:rgba(56,189,248,0.12);color:var(--blue)}
+.st-vencida{background:rgba(248,113,113,0.18);color:var(--red)}
+
+/* Barra de progreso de pago */
+.pay-progress{height:4px;background:var(--surface3);border-radius:99px;overflow:hidden;margin-top:6px}
+.pay-progress-fill{height:100%;background:var(--green);border-radius:99px;transition:width 0.3s}
+.pay-progress-fill.partial{background:var(--blue)}
+
+/* Aging badge de vencimiento */
+.venc-badge{font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;flex-shrink:0}
+.venc-ok{background:rgba(74,222,128,0.1);color:var(--green)}
+.venc-pronto{background:rgba(251,191,36,0.12);color:var(--orange)}
+.venc-vencida{background:rgba(248,113,113,0.15);color:var(--red)}
+
+/* Resumen mensual */
+.res-table{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.res-table th{text-align:right;padding:9px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);border-bottom:1px solid var(--border);background:var(--surface2)}
+.res-table th:first-child{text-align:left}
+.res-table td{padding:8px 12px;text-align:right;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+.res-table td:first-child{text-align:left;font-weight:600}
+.res-table tr:last-child td{border-bottom:none}
+.res-table tr.total-row td{font-weight:800;background:var(--surface2)}
+.res-section{margin-bottom:28px}
+.res-section h3{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.res-section h3 .hint{font-size:11px;font-weight:500;color:var(--text-dim)}
+.audit-row{font-size:11px;color:var(--text-muted);padding:3px 0;border-bottom:1px dashed var(--border)}
+.audit-row:last-child{border-bottom:none}
+.audit-row b{color:var(--text)}
 
 /* Expand detail */
 .fin-detail{display:none;padding:12px 14px;background:var(--surface);border-bottom:1px solid var(--border)}
@@ -255,13 +283,14 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   <div class="sub-tabs">
     <button class="sub-tab active" data-section="cxc" onclick="switchSection('cxc')">CxC Cobros</button>
     <button class="sub-tab" data-section="cxp" onclick="switchSection('cxp')">CxP Pagos</button>
+    <button class="sub-tab" data-section="resumen" onclick="switchSection('resumen')">Resumen</button>
     <button class="sub-tab" data-section="clientes" onclick="switchSection('clientes')">Clientes</button>
   </div>
 
   <div id="section-cxc">
     <div class="toolbar">
       <div class="search-wrap"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" class="search-input" id="cxc-search" placeholder="Buscar campana, cliente, marca, talento, identificador, folio..." oninput="renderCxC()"></div>
-      <select class="filter-select" id="cxc-filter" onchange="renderCxC()"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="emitida">Emitida</option><option value="enviada">Enviada</option><option value="cobrada">Cobrada</option></select>
+      <select class="filter-select" id="cxc-filter" onchange="renderCxC()"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="emitida">Emitida</option><option value="enviada">Enviada</option><option value="pagada_parcial">Pago Parcial</option><option value="cobrada">Cobrada</option><option value="vencida">Vencidas</option></select>
     </div>
     <div id="cxc-container"></div>
   </div>
@@ -269,9 +298,13 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   <div id="section-cxp" style="display:none">
     <div class="toolbar">
       <div class="search-wrap"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" class="search-input" id="cxp-search" placeholder="Buscar talento, campana, identificador, marca..." oninput="renderCxP()"></div>
-      <select class="filter-select" id="cxp-filter" onchange="renderCxP()"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="pagado">Pagado</option></select>
+      <select class="filter-select" id="cxp-filter" onchange="renderCxP()"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="parcial">Parcial</option><option value="pagado">Pagado</option></select>
     </div>
     <div id="cxp-container"></div>
+  </div>
+
+  <div id="section-resumen" style="display:none">
+    <div id="resumen-container"></div>
   </div>
 
   <div id="section-clientes" style="display:none">
@@ -293,8 +326,13 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       <div class="form-group full"><label class="form-label">Orden de Compra (identificador campaña)</label><input type="text" id="fac-orden-compra" class="form-input" placeholder="Ej: 001/0042/00125/01" readonly style="background:var(--surface2);font-family:'SF Mono',monospace;color:var(--text-muted)"></div>
       <div class="form-group"><label class="form-label">Monto *</label><input type="number" id="fac-monto" class="form-input" placeholder="0.00" step="0.01"></div>
       <div class="form-group"><label class="form-label">Moneda</label><select id="fac-moneda" class="form-input"><option value="MXN">MXN</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
-      <div class="form-group"><label class="form-label">Fecha Emision</label><input type="date" id="fac-fecha-emision" class="form-input"></div>
-      <div class="form-group"><label class="form-label">Estado</label><select id="fac-estado" class="form-input"><option value="pendiente">Pendiente</option><option value="emitida">Emitida</option><option value="enviada">Enviada</option><option value="cobrada">Cobrada</option><option value="cancelada">Cancelada</option></select></div>
+      <div class="form-group"><label class="form-label">Fecha Emision</label><input type="date" id="fac-fecha-emision" class="form-input" onchange="updateVencimientoHint()"></div>
+      <div class="form-group"><label class="form-label">Días de crédito</label><input type="number" id="fac-dias-credito" class="form-input" value="45" min="0" step="1" onchange="updateVencimientoHint()" oninput="updateVencimientoHint()"><div class="form-hint" id="fac-venc-hint">Contado = 0 días</div></div>
+      <div class="form-group"><label class="form-label">Esquema de pago</label><select id="fac-esquema" class="form-input" onchange="onEsquemaChange()"><option value="contado">100% contra factura</option><option value="50_50">50 / 50 (anticipo + liquidación)</option><option value="anticipo">Anticipo %</option><option value="financiado">Financiado (varios pagos)</option></select></div>
+      <div class="form-group" id="fac-anticipo-group" style="display:none"><label class="form-label">% Anticipo</label><input type="number" id="fac-anticipo" class="form-input" placeholder="50" min="1" max="99" step="1"></div>
+      <div class="form-group"><label class="form-label">Estado</label><select id="fac-estado" class="form-input"><option value="pendiente">Pendiente</option><option value="emitida">Emitida</option><option value="enviada">Enviada</option><option value="pagada_parcial">Pago Parcial</option><option value="cobrada">Cobrada</option><option value="cancelada">Cancelada</option></select><div class="form-hint">Parcial/Cobrada se actualizan solos al registrar pagos</div></div>
+      <div class="form-group" id="fac-uuid-group"><label class="form-label">Folio Fiscal (UUID CFDI)</label><input type="text" id="fac-uuid" class="form-input" placeholder="ad662d33-6934-459c-a128-..." style="font-family:'SF Mono',monospace;font-size:11px"></div>
+      <div class="form-group"><label class="form-label">Forma de pago (SAT)</label><select id="fac-forma-pago" class="form-input"><option value="">—</option><option value="03">03 - Transferencia</option><option value="02">02 - Cheque</option><option value="01">01 - Efectivo</option><option value="99">99 - Por definir</option></select></div>
       <div class="form-group"><label class="form-label">PDF Factura</label><input type="file" id="fac-pdf" class="form-input" accept=".pdf"></div>
       <div class="form-group"><label class="form-label">XML Factura</label><input type="file" id="fac-xml" class="form-input" accept=".xml"></div>
       <div class="form-group full"><label class="form-label">Notas</label><textarea id="fac-notas" class="form-input" placeholder="Notas..."></textarea></div>
@@ -309,7 +347,12 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   <div class="modal" style="max-width:480px"><div class="modal-header"><div class="modal-title">Registrar Pago</div><button class="modal-close" onclick="closeModal('modal-comprobante')"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
   <div class="modal-body">
     <div class="form-grid" style="grid-template-columns:1fr">
-      <div class="form-group"><label class="form-label">Monto</label><input type="number" id="comp-monto" class="form-input" step="0.01"></div>
+      <div id="comp-saldo-info" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;display:none">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Total factura</span><b id="comp-info-total"></b></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Ya pagado</span><b id="comp-info-pagado" style="color:var(--green)"></b></div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span style="color:var(--text-muted)">Saldo pendiente</span><b id="comp-info-saldo" style="color:var(--orange)"></b></div>
+      </div>
+      <div class="form-group"><label class="form-label">Monto de este pago</label><input type="number" id="comp-monto" class="form-input" step="0.01"><div class="form-hint">Puede ser parcial (50/50, anticipo, etc.) — el estado se actualiza solo</div></div>
       <div class="form-group"><label class="form-label">Fecha de Pago</label><input type="date" id="comp-fecha" class="form-input"></div>
       <div class="form-group"><label class="form-label">Corredor *</label><select id="comp-corredor" class="form-input"><option value="">Seleccionar...</option><option value="mercury">Mercury</option><option value="wise">Wise</option></select></div>
       <div class="form-group"><label class="form-label">Comprobante</label><input type="file" id="comp-file" class="form-input" accept=".pdf,.png,.jpg,.jpeg"></div>
@@ -340,7 +383,12 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   <div class="modal" style="max-width:480px"><div class="modal-header"><div class="modal-title" id="modal-pt-title">Pagar Talento</div><button class="modal-close" onclick="closeModal('modal-pago-talento')"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
   <div class="modal-body">
     <div class="form-grid" style="grid-template-columns:1fr">
-      <div class="form-group"><label class="form-label">Monto</label><input type="number" id="pt-monto" class="form-input" step="0.01"></div>
+      <div id="pt-saldo-info" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;display:none">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Fee talento</span><b id="pt-info-total"></b></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Ya pagado</span><b id="pt-info-pagado" style="color:var(--green)"></b></div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span style="color:var(--text-muted)">Saldo pendiente</span><b id="pt-info-saldo" style="color:var(--orange)"></b></div>
+      </div>
+      <div class="form-group"><label class="form-label">Monto de este pago</label><input type="number" id="pt-monto" class="form-input" step="0.01"><div class="form-hint">Puede ser parcial (adelanto, 50/50) — el estado se actualiza solo</div></div>
       <div class="form-group"><label class="form-label">Moneda</label><select id="pt-moneda" class="form-input"><option value="USD">USD</option><option value="MXN">MXN</option><option value="EUR">EUR</option></select></div>
       <div class="form-group"><label class="form-label">Fecha de Pago</label><input type="date" id="pt-fecha" class="form-input"></div>
       <div class="form-group"><label class="form-label">Corredor *</label><select id="pt-corredor" class="form-input"><option value="">Seleccionar...</option><option value="mercury">Mercury</option><option value="wise">Wise</option><option value="cxp_agustin_cash">CxP Agustin (CASH)</option></select></div>
@@ -386,7 +434,7 @@ const SB_KEY='sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
 const sb=supabase.createClient(SB_URL,SB_KEY);
 
 let currentUser=null,currentProfile=null;
-let campanas=[],clientes=[],marcas=[],facturas=[],pagosMarca=[],complementos=[],pagosTalento=[],campanasTalentos=[];
+let campanas=[],clientes=[],marcas=[],facturas=[],pagosMarca=[],complementos=[],pagosTalento=[],campanasTalentos=[],auditoria=[];
 let activeSection='cxc',isDark=false;
 let editingFacturaId=null,editingFacturaCampanaId=null,editingFacturaClienteId=null;
 let compFacturaId=null,complFacturaId=null,complPagoId=null;
@@ -440,7 +488,7 @@ async function autoRefreshTick(){
 function startAutoRefresh(){if(_autoRefreshTimer)return;_autoRefreshTimer=setInterval(autoRefreshTick,4000);}
 
 async function loadData(){
-  const[cmpR,cliR,facR,pmR,compR,ptR,ctR]=await Promise.all([
+  const[cmpR,cliR,facR,pmR,compR,ptR,ctR,audR]=await Promise.all([
     sb.from('campanas').select('*,marcas(id,nombre,cliente_id,clientes(id,nombre,pais))').is('deleted_at',null).order('created_at',{ascending:false}),
     sb.from('clientes').select('*').order('nombre'),
     sb.from('facturas').select('*').order('created_at',{ascending:false}),
@@ -448,35 +496,88 @@ async function loadData(){
     sb.from('complementos_pago').select('*').order('created_at',{ascending:false}),
     sb.from('pagos_talento').select('*').order('created_at',{ascending:false}),
     sb.from('campana_talentos').select('*,talentos(id,nombre,foto)').order('created_at',{ascending:false}),
+    sb.from('facturas_auditoria').select('*').order('created_at',{ascending:false}).limit(500),
   ]);
   campanas=cmpR.data||[];clientes=cliR.data||[];facturas=facR.data||[];
   pagosMarca=pmR.data||[];complementos=compR.data||[];pagosTalento=ptR.data||[];
+  auditoria=audR.data||[]; // si la tabla no existe aún, queda []
   const campanasIds=new Set(campanas.map(c=>c.id));
   campanasTalentos=(ctR.data||[]).filter(ct=>campanasIds.has(ct.campana_id));
 }
 
-function renderAll(){renderStats();renderCxC();renderCxP();renderClientes();
+function renderAll(){renderStats();renderCxC();renderCxP();renderResumen();renderClientes();
   document.getElementById('subtitle').textContent=`${campanas.length} campanas · ${clientes.length} clientes`;}
 
-// STATS
+// ═══════════════════════════════════════════
+// HELPERS FINANCIEROS (parciales, saldos, vencimientos)
+// ═══════════════════════════════════════════
+// Pagado real de una factura: monto_pagado del trigger, o suma local de pagos (fallback)
+function facPagado(f){
+  const local=pagosMarca.filter(p=>p.factura_id===f.id).reduce((s,p)=>s+(Number(p.monto)||0),0);
+  return Math.max(Number(f.monto_pagado)||0, local);
+}
+function facSaldo(f){return Math.max(0,(Number(f.monto)||0)-facPagado(f));}
+// Pagado a un talento (suma de pagos parciales)
+function ctPagado(ct){return pagosTalento.filter(p=>p.campana_talento_id===ct.id).reduce((s,p)=>s+(Number(p.monto)||0),0);}
+function ctSaldo(ct){return Math.max(0,(Number(ct.fee_talento)||0)-ctPagado(ct));}
+function ctEstadoPago(ct){
+  const fee=Number(ct.fee_talento)||0, paid=ctPagado(ct);
+  if(fee>0&&paid>=fee)return'pagado';
+  if(paid>0)return'parcial';
+  return ct.pago_estado==='pagado'?'pagado':'pendiente'; // respeta marcas manuales previas
+}
+// Info de vencimiento: días restantes/vencidos
+function vencInfo(f){
+  if(!f.fecha_vencimiento||['cobrada','cancelada'].includes(f.estado))return null;
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const v=new Date(f.fecha_vencimiento+'T00:00:00');
+  const dias=Math.round((v-hoy)/86400000);
+  if(dias<0)return{cls:'venc-vencida',label:`Vencida ${-dias}d`,dias};
+  if(dias<=7)return{cls:'venc-pronto',label:dias===0?'Vence HOY':`Vence en ${dias}d`,dias};
+  return{cls:'venc-ok',label:`Vence ${formatDate(f.fecha_vencimiento)}`,dias};
+}
+function facVencida(f){const v=vencInfo(f);return v&&v.dias<0;}
+const ESQUEMA_LABEL={contado:'100%','50_50':'50/50',anticipo:'Anticipo',financiado:'Financiado'};
+
+// Acumula montos por moneda y los muestra sin mezclar divisas
+function fmtMulti(map){
+  const parts=Object.entries(map).filter(([,v])=>Math.round(v)!==0)
+    .sort((a,b)=>b[1]-a[1]).map(([m,v])=>fmtMoney(v,m)+' '+m);
+  return parts.length?parts.join(' · '):fmtMoney(0);
+}
+function addCur(map,cur,v){const c=cur||'USD';map[c]=(map[c]||0)+v;}
+
+// STATS — por moneda, basadas en saldos reales (no estados binarios)
 function renderStats(){
   const now=new Date(),month=now.getMonth(),year=now.getFullYear();
-  let cxcPend=0,cxcCobrado=0,cxpPend=0,cxpPagado=0;
-  // CxC from campana_talentos fee_marca where no factura cobrada
-  const cobradas=new Set(facturas.filter(f=>f.estado==='cobrada').map(f=>f.campana_id));
-  campanasTalentos.forEach(ct=>{
-    const fm=Number(ct.fee_marca)||0;
-    if(cobradas.has(ct.campana_id))cxcCobrado+=fm; else cxcPend+=fm;
+  const cxcPend={},cxcCobrado={},cxpPend={},cxpPagado={};
+  // CxC pendiente: saldo de facturas activas + campañas con fees sin factura
+  const campConFactura=new Set(facturas.filter(f=>f.estado!=='cancelada').map(f=>f.campana_id));
+  facturas.forEach(f=>{
+    if(f.estado==='cancelada')return;
+    addCur(cxcPend,f.moneda,facSaldo(f));
   });
-  // CxP
   campanasTalentos.forEach(ct=>{
-    const ft=Number(ct.fee_talento)||0;
-    if(ct.pago_estado==='pagado')cxpPagado+=ft; else cxpPend+=ft;
+    if(campConFactura.has(ct.campana_id))return; // ya facturada: cuenta el saldo de la factura
+    addCur(cxcPend,ct.moneda,Number(ct.fee_marca)||0);
   });
-  document.getElementById('stat-cxc-pend').textContent=fmtMoney(cxcPend);
-  document.getElementById('stat-cxc-cobrado').textContent=fmtMoney(cxcCobrado);
-  document.getElementById('stat-cxp-pend').textContent=fmtMoney(cxpPend);
-  document.getElementById('stat-cxp-pagado').textContent=fmtMoney(cxpPagado);
+  // CxC cobrado este mes: pagos de marca con fecha en el mes actual
+  pagosMarca.forEach(p=>{
+    if(!p.fecha_pago)return;
+    const d=new Date(p.fecha_pago+'T00:00:00');
+    if(d.getMonth()===month&&d.getFullYear()===year)addCur(cxcCobrado,p.moneda,Number(p.monto)||0);
+  });
+  // CxP pendiente: saldo por talento (soporta parciales)
+  campanasTalentos.forEach(ct=>{addCur(cxpPend,ct.moneda,ctEstadoPago(ct)==='pagado'?0:ctSaldo(ct));});
+  // CxP pagado este mes
+  pagosTalento.forEach(p=>{
+    if(!p.fecha_pago)return;
+    const d=new Date(p.fecha_pago+'T00:00:00');
+    if(d.getMonth()===month&&d.getFullYear()===year)addCur(cxpPagado,p.moneda,Number(p.monto)||0);
+  });
+  const set=(id,map)=>{const el=document.getElementById(id);el.textContent=fmtMulti(map);el.style.fontSize=Object.keys(map).filter(k=>Math.round(map[k])!==0).length>1?'16px':'26px';};
+  set('stat-cxc-pend',cxcPend);set('stat-cxc-cobrado',cxcCobrado);
+  set('stat-cxp-pend',cxpPend);set('stat-cxp-pagado',cxpPagado);
 }
 
 // SUB-TABS
@@ -485,6 +586,7 @@ function switchSection(s){
   document.querySelectorAll('.sub-tab').forEach(b=>b.classList.toggle('active',b.dataset.section===s));
   document.getElementById('section-cxc').style.display=s==='cxc'?'block':'none';
   document.getElementById('section-cxp').style.display=s==='cxp'?'block':'none';
+  document.getElementById('section-resumen').style.display=s==='resumen'?'block':'none';
   document.getElementById('section-clientes').style.display=s==='clientes'?'block':'none';
 }
 
@@ -519,7 +621,8 @@ function renderCxC(){
                  || ocs.some(x=>x.includes(q));
       if(!match) return;
     }
-    if(filt){if(!facs.length&&filt!=='pendiente')return;if(facs.length&&!facs.some(f=>f.estado===filt))return;}
+    if(filt==='vencida'){if(!facs.some(f=>facVencida(f)))return;}
+    else if(filt){if(!facs.length&&filt!=='pendiente')return;if(facs.length&&!facs.some(f=>f.estado===filt))return;}
     if(!byClient[cli.id])byClient[cli.id]={cliente:cli,campanas:[]};
     byClient[cli.id].campanas.push({...c,facs});
   });
@@ -548,21 +651,25 @@ function renderCxCRow(c){
   const totalFee=cts.reduce((s,ct)=>s+(Number(ct.fee_marca)||0),0);
   const fac=c.facs[0]; // main factura
   const estado=fac?fac.estado:'sin_factura';
-  const estadoLabel={sin_factura:'Sin Factura',pendiente:'Pendiente',emitida:'Emitida',enviada:'Enviada',cobrada:'Cobrada',cancelada:'Cancelada'};
+  const estadoLabel={sin_factura:'Sin Factura',pendiente:'Pendiente',emitida:'Emitida',enviada:'Enviada',pagada_parcial:'Pago Parcial',cobrada:'Cobrada',cancelada:'Cancelada'};
   const estadoClass=fac?'st-'+fac.estado:'st-pendiente';
+  const venc=fac?vencInfo(fac):null;
+  const saldo=fac?facSaldo(fac):0;
 
   return `<div>
     <div class="fin-row" onclick="toggleDetail('detail-${c.id}')" style="cursor:pointer">
       <div class="fin-row-name">${esc(c.nombre)}</div>
       <div class="fin-row-meta">${esc(c.marcas?.nombre||'')}</div>
-      <span class="status-pill ${estadoClass}">${estadoLabel[estado]}</span>
-      <div class="fin-row-amount">${fmtMoney(totalFee)}</div>
+      ${venc?`<span class="venc-badge ${venc.cls}">${venc.label}</span>`:''}
+      <span class="status-pill ${estadoClass}">${estadoLabel[estado]||estado}</span>
+      <div class="fin-row-amount">${fac?fmtMoney(fac.monto,fac.moneda):fmtMoney(totalFee)}${fac&&saldo>0&&facPagado(fac)>0?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,fac.moneda)}</div>`:''}</div>
       <div class="fin-row-actions">
         ${!fac?`<button class="btn btn-primary btn-xs" onclick="event.stopPropagation();openNuevaFactura(${c.id},${c.marcas?.clientes?.id||0})">+ Factura</button>`:''}
       </div>
     </div>
     <div class="fin-detail" id="detail-${c.id}">
-      ${fac?renderFacturaDetail(fac,c):`<p style="font-size:12px;color:var(--text-dim);padding:8px">Sin factura creada. Click "+ Factura" para crear.</p>`}
+      ${fac?c.facs.map(fx=>renderFacturaDetail(fx,c)).join('<div style="height:10px"></div>'):`<p style="font-size:12px;color:var(--text-dim);padding:8px">Sin factura creada. Click "+ Factura" para crear.</p>`}
+      ${fac?`<div style="margin-top:8px"><button class="btn btn-outline btn-xs" onclick="openNuevaFactura(${c.id},${c.marcas?.clientes?.id||0})">+ Otra factura</button></div>`:''}
     </div>
   </div>`;
 }
@@ -572,11 +679,19 @@ function renderFacturaDetail(f,c){
   const compls=complementos.filter(cp=>cp.factura_id===f.id);
   const isPPD=f.tipo==='PPD';
   const hasPago=pagos.length>0;
+  const pagado=facPagado(f),saldo=facSaldo(f);
+  const pct=Number(f.monto)>0?Math.min(100,Math.round(pagado/Number(f.monto)*100)):0;
+  const venc=vencInfo(f);
+  const audits=auditoria.filter(a=>a.factura_id===f.id).slice(0,5);
+  const esquema=f.esquema_pago&&f.esquema_pago!=='contado'?`<span class="status-pill st-emitida" title="Esquema de pago">${ESQUEMA_LABEL[f.esquema_pago]||f.esquema_pago}${f.esquema_pago==='anticipo'&&f.anticipo_porcentaje?' '+f.anticipo_porcentaje+'%':''}</span>`:'';
 
   return `<div class="fin-detail-grid">
     <div class="fin-detail-card">
       <div class="fd-title">Factura</div>
-      <div class="fd-status"><span class="status-pill st-${f.estado}">${f.estado}</span> <span style="font-size:11px;color:var(--text-dim)">${f.tipo} ${f.numero_factura?'#'+f.numero_factura:''}</span></div>
+      <div class="fd-status"><span class="status-pill st-${f.estado}">${f.estado==='pagada_parcial'?'pago parcial':f.estado}</span> ${esquema} <span style="font-size:11px;color:var(--text-dim)">${f.tipo} ${f.numero_factura?'#'+f.numero_factura:''}</span></div>
+      ${f.fecha_emision?`<div style="font-size:11px;color:var(--text-muted)">Emitida: ${formatDate(f.fecha_emision)}${f.dias_credito!=null?` · ${f.dias_credito}d crédito`:''}</div>`:''}
+      ${venc?`<div style="margin:4px 0"><span class="venc-badge ${venc.cls}">${venc.label}</span></div>`:''}
+      ${f.uuid_fiscal?`<div style="font-size:9.5px;color:var(--text-dim);font-family:'SF Mono',monospace;word-break:break-all" title="Folio fiscal CFDI">${esc(f.uuid_fiscal)}</div>`:''}
       <div class="fd-files">
         ${f.factura_pdf_url?`<a class="fd-file-link" href="${f.factura_pdf_url}" target="_blank"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> PDF</a>`:''}
         ${f.factura_xml_url?`<a class="fd-file-link" href="${f.factura_xml_url}" target="_blank"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> XML</a>`:''}
@@ -585,16 +700,21 @@ function renderFacturaDetail(f,c){
         <button class="btn btn-outline btn-xs" onclick="editFactura(${f.id})">Editar</button>
         ${f.estado==='emitida'?`<button class="btn btn-xs btn-outline" onclick="marcarFacturaEnviada(${f.id})">Marcar Enviada</button>`:''}
       </div>
+      ${audits.length?`<div style="margin-top:8px"><div class="fd-title" style="margin-bottom:2px">Últimos cambios</div>${audits.map(a=>`<div class="audit-row"><b>${esc(a.campo)}</b>: ${esc(a.valor_anterior??'—')} → <b>${esc(a.valor_nuevo??'—')}</b> <span style="opacity:0.7">${new Date(a.created_at).toLocaleDateString('es-ES',{day:'2-digit',month:'short'})}</span></div>`).join('')}</div>`:''}
     </div>
     <div class="fin-detail-card">
-      <div class="fd-title">Pago / Comprobante</div>
+      <div class="fd-title">Pagos · ${fmtMoney(pagado,f.moneda)} de ${fmtMoney(f.monto,f.moneda)}</div>
+      <div class="pay-progress"><div class="pay-progress-fill ${pct<100?'partial':''}" style="width:${pct}%"></div></div>
+      ${saldo>0&&hasPago?`<div style="font-size:11px;color:var(--orange);font-weight:700;margin-top:4px">Saldo pendiente: ${fmtMoney(saldo,f.moneda)}</div>`:''}
+      <div style="margin-top:6px">
       ${hasPago?pagos.map(p=>`<div style="margin-bottom:6px">
         <div style="font-size:12px"><strong>${fmtMoney(p.monto,p.moneda)}</strong> via <span style="text-transform:uppercase;font-weight:700;font-size:10px">${p.corredor}</span></div>
         <div style="font-size:11px;color:var(--text-dim)">${formatDate(p.fecha_pago)}</div>
         ${p.comprobante_url?`<a class="fd-file-link" href="${p.comprobante_url}" target="_blank">Comprobante</a>`:''}
       </div>`).join(''):`<p style="font-size:12px;color:var(--text-dim)">Sin pago registrado</p>`}
+      </div>
       <div class="fd-actions">
-        ${f.estado!=='cobrada'&&f.estado!=='cancelada'?`<button class="btn btn-green btn-xs" onclick="openComprobante(${f.id},${c.id})">Registrar Pago</button>`:''}
+        ${f.estado!=='cobrada'&&f.estado!=='cancelada'?`<button class="btn btn-green btn-xs" onclick="openComprobante(${f.id},${c.id})">${hasPago?'Registrar otro pago':'Registrar Pago'}</button>`:''}
       </div>
     </div>
     ${isPPD?`<div class="fin-detail-card">
@@ -642,12 +762,32 @@ function onFacTalentoChange(){
     montoEl.dataset.autofilled = '1';
   }
 }
+// Esquema de pago: muestra % anticipo cuando aplica
+function onEsquemaChange(){
+  const esq=document.getElementById('fac-esquema').value;
+  const grp=document.getElementById('fac-anticipo-group');
+  grp.style.display=(esq==='50_50'||esq==='anticipo')?'':'none';
+  if(esq==='50_50')document.getElementById('fac-anticipo').value=50;
+}
+// Hint de vencimiento calculado: emisión + días de crédito
+function updateVencimientoHint(){
+  const fe=document.getElementById('fac-fecha-emision').value;
+  const dias=parseInt(document.getElementById('fac-dias-credito').value)||0;
+  const hint=document.getElementById('fac-venc-hint');
+  if(fe){const v=new Date(fe+'T00:00:00');v.setDate(v.getDate()+dias);hint.textContent='Vence: '+v.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'});}
+  else hint.textContent='Contado = 0 días';
+}
 function openNuevaFactura(campanaId,clienteId){
   editingFacturaId=null;editingFacturaCampanaId=campanaId;editingFacturaClienteId=clienteId;
   document.getElementById('modal-factura-title').textContent='Nueva Factura';
-  ['fac-numero','fac-notas','fac-orden-compra'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['fac-numero','fac-notas','fac-orden-compra','fac-uuid'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('fac-tipo').value='PUE';document.getElementById('fac-moneda').value='MXN';
   document.getElementById('fac-estado').value='pendiente';document.getElementById('fac-fecha-emision').value='';
+  document.getElementById('fac-dias-credito').value=45;
+  document.getElementById('fac-esquema').value='contado';
+  document.getElementById('fac-anticipo').value='';
+  document.getElementById('fac-forma-pago').value='03';
+  onEsquemaChange();updateVencimientoHint();
   const montoEl = document.getElementById('fac-monto');
   if (montoEl) { montoEl.value = ''; montoEl.dataset.autofilled = '1'; }
   // Selector de talento + autoasignación de folio/OC con el identificador
@@ -669,6 +809,12 @@ function editFactura(id){
   document.getElementById('fac-moneda').value=f.moneda||'MXN';
   document.getElementById('fac-estado').value=f.estado||'pendiente';
   document.getElementById('fac-fecha-emision').value=f.fecha_emision||'';
+  document.getElementById('fac-dias-credito').value=f.dias_credito!=null?f.dias_credito:45;
+  document.getElementById('fac-esquema').value=f.esquema_pago||'contado';
+  document.getElementById('fac-anticipo').value=f.anticipo_porcentaje||'';
+  document.getElementById('fac-uuid').value=f.uuid_fiscal||'';
+  document.getElementById('fac-forma-pago').value=f.forma_pago||'';
+  onEsquemaChange();updateVencimientoHint();
   document.getElementById('fac-notas').value=f.notas||'';
   // Resolver el campana_talento por identificador (orden_compra) si existe
   const cts = campanasTalentos.filter(ct=>ct.campana_id===f.campana_id);
@@ -686,6 +832,7 @@ function editFactura(id){
 async function saveFactura(){
   const monto=parseFloat(document.getElementById('fac-monto').value)||0;
   if(!monto){showToast('Monto es obligatorio','error');return;}
+  const esquema=document.getElementById('fac-esquema').value;
   const payload={
     campana_id:editingFacturaCampanaId,cliente_id:editingFacturaClienteId,
     tipo:document.getElementById('fac-tipo').value,
@@ -693,6 +840,11 @@ async function saveFactura(){
     monto,moneda:document.getElementById('fac-moneda').value,
     estado:document.getElementById('fac-estado').value,
     fecha_emision:document.getElementById('fac-fecha-emision').value||null,
+    dias_credito:parseInt(document.getElementById('fac-dias-credito').value)||0,
+    esquema_pago:esquema,
+    anticipo_porcentaje:(esquema==='50_50'||esquema==='anticipo')?(parseFloat(document.getElementById('fac-anticipo').value)||null):null,
+    uuid_fiscal:document.getElementById('fac-uuid').value.trim(),
+    forma_pago:document.getElementById('fac-forma-pago').value,
     notas:document.getElementById('fac-notas').value.trim(),
     orden_compra:(document.getElementById('fac-orden-compra')?.value||'').trim(),
     updated_at:new Date().toISOString(),
@@ -718,11 +870,25 @@ async function marcarFacturaEnviada(id){
   await loadData();renderAll();showToast('Factura marcada como enviada','success');}catch(e){showToast('Error: '+e.message,'error');}
 }
 
-// Comprobante marca
+// Comprobante marca — soporta pagos parciales (50/50, anticipos, financiado)
 function openComprobante(facturaId,campanaId){
   compFacturaId=facturaId;
   const f=facturas.find(x=>x.id===facturaId);
-  document.getElementById('comp-monto').value=f?.monto||'';
+  const pagado=f?facPagado(f):0,saldo=f?facSaldo(f):0;
+  // Panel de saldo
+  const info=document.getElementById('comp-saldo-info');
+  if(f&&info){
+    info.style.display='block';
+    document.getElementById('comp-info-total').textContent=fmtMoney(f.monto,f.moneda);
+    document.getElementById('comp-info-pagado').textContent=fmtMoney(pagado,f.moneda);
+    document.getElementById('comp-info-saldo').textContent=fmtMoney(saldo,f.moneda);
+  }
+  // Prefill: si hay esquema con anticipo y es el primer pago, sugerir el % — si no, el saldo
+  let sugerido=saldo||f?.monto||'';
+  if(f&&pagado===0&&(f.esquema_pago==='50_50'||f.esquema_pago==='anticipo')&&f.anticipo_porcentaje){
+    sugerido=Math.round((Number(f.monto)||0)*Number(f.anticipo_porcentaje)/100*100)/100;
+  }
+  document.getElementById('comp-monto').value=sugerido;
   document.getElementById('comp-fecha').value=new Date().toISOString().split('T')[0];
   document.getElementById('comp-corredor').value='';document.getElementById('comp-notas').value='';
   openModal('modal-comprobante');
@@ -730,10 +896,14 @@ function openComprobante(facturaId,campanaId){
 async function saveComprobanteMarca(){
   const corredor=document.getElementById('comp-corredor').value;
   if(!corredor){showToast('Selecciona un corredor','error');return;}
+  const monto=parseFloat(document.getElementById('comp-monto').value)||0;
+  if(monto<=0){showToast('El monto debe ser mayor a 0','error');return;}
   const f=facturas.find(x=>x.id===compFacturaId);
+  const saldo=f?facSaldo(f):0;
+  if(f&&monto>saldo*1.001&&!confirm(`El pago (${fmtMoney(monto,f.moneda)}) supera el saldo pendiente (${fmtMoney(saldo,f.moneda)}). ¿Registrar igual?`))return;
   const payload={
     factura_id:compFacturaId,campana_id:f?.campana_id,
-    monto:parseFloat(document.getElementById('comp-monto').value)||0,
+    monto,
     moneda:f?.moneda||'USD',fecha_pago:document.getElementById('comp-fecha').value||null,
     corredor,notas:document.getElementById('comp-notas').value.trim(),created_by:currentUser.id,
   };
@@ -741,10 +911,13 @@ async function saveComprobanteMarca(){
     const file=document.getElementById('comp-file').files[0];
     if(file)payload.comprobante_url=await uploadFile(file,`campana-${f?.campana_id}/comprobante-marca`);
     const{error}=await sb.from('pagos_marca').insert(payload);if(error)throw error;
-    // Mark factura as cobrada
-    await sb.from('facturas').update({estado:'cobrada',updated_at:new Date().toISOString()}).eq('id',compFacturaId);
+    // El trigger trg_pagos_marca_sync actualiza monto_pagado y estado (parcial/cobrada).
+    // Fallback client-side por si la migración fase2 aún no corrió:
+    const totalPagado=(f?facPagado(f):0)+monto;
+    const nuevoEstado=f&&totalPagado>=Number(f.monto)?'cobrada':'pagada_parcial';
+    await sb.from('facturas').update({estado:nuevoEstado,updated_at:new Date().toISOString()}).eq('id',compFacturaId);
     closeModal('modal-comprobante');await loadData();renderAll();
-    showToast('Pago registrado y factura marcada como cobrada','success');
+    showToast(nuevoEstado==='cobrada'?'Pago registrado — factura COBRADA al 100%':'Pago parcial registrado — queda saldo pendiente','success');
   }catch(e){showToast('Error: '+e.message,'error');}
 }
 
@@ -783,7 +956,7 @@ function renderCxP(){
   const container=document.getElementById('cxp-container');
 
   let rows=campanasTalentos.filter(ct=>{
-    if(filt&&ct.pago_estado!==filt)return false;
+    if(filt&&ctEstadoPago(ct)!==filt)return false;
     const camp=campanas.find(c=>c.id===ct.campana_id);
     const tName=(ct.talentos?.nombre||'').toLowerCase();
     const cName=(camp?.nombre||'').toLowerCase();
@@ -798,19 +971,22 @@ function renderCxP(){
 
   container.innerHTML=rows.map(ct=>{
     const camp=campanas.find(c=>c.id===ct.campana_id);
-    const pt=pagosTalento.find(p=>p.campana_talento_id===ct.id);
-    const isPaid=ct.pago_estado==='pagado';
+    const pts=pagosTalento.filter(p=>p.campana_talento_id===ct.id);
+    const estado=ctEstadoPago(ct);
+    const pagado=ctPagado(ct),saldo=ctSaldo(ct);
+    const estadoLbl={pagado:'Pagado',parcial:'Parcial',pendiente:'Pendiente'}[estado];
+    const corredores=[...new Set(pts.map(p=>p.corredor).filter(Boolean))].join(', ');
     return `<div class="fin-row">
       <div class="fin-row-name">${esc(ct.talentos?.nombre||'—')}
         ${ct.identificador?`<span title="Identificador / OC" style="margin-left:6px;font-size:10px;font-family:'SF Mono',monospace;font-weight:700;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px;cursor:pointer" onclick="event.stopPropagation();navigator.clipboard.writeText('${esc(ct.identificador)}');showToast('Copiado: ${esc(ct.identificador)}','success')">${esc(ct.identificador)}</span>`:''}
       </div>
       <div class="fin-row-meta">${esc(camp?.nombre||'—')}</div>
-      <span class="status-pill ${isPaid?'st-pagado':'st-pendiente'}">${isPaid?'Pagado':'Pendiente'}</span>
-      ${pt?`<span style="font-size:10px;color:var(--text-dim);text-transform:uppercase;font-weight:700">${pt.corredor||''}</span>`:''}
-      <div class="fin-row-amount">${fmtMoney(ct.fee_talento||0,ct.moneda)}</div>
+      <span class="status-pill st-${estado}">${estadoLbl}</span>
+      ${corredores?`<span style="font-size:10px;color:var(--text-dim);text-transform:uppercase;font-weight:700">${esc(corredores)}</span>`:''}
+      <div class="fin-row-amount">${fmtMoney(ct.fee_talento||0,ct.moneda)}${estado==='parcial'?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,ct.moneda)}</div>`:''}</div>
       <div class="fin-row-actions">
-        ${!isPaid?`<button class="btn btn-green btn-xs" onclick="openPagoTalento(${ct.id},${ct.campana_id},${ct.talent_id})">Pagar</button>`:''}
-        ${pt?.comprobante_url?`<a class="btn btn-ghost btn-xs" href="${pt.comprobante_url}" target="_blank">Comprobante</a>`:''}
+        ${estado!=='pagado'?`<button class="btn btn-green btn-xs" onclick="openPagoTalento(${ct.id},${ct.campana_id},${ct.talent_id})">${estado==='parcial'?'Pagar saldo':'Pagar'}</button>`:''}
+        ${pts.filter(p=>p.comprobante_url).map((p,i)=>`<a class="btn btn-ghost btn-xs" href="${p.comprobante_url}" target="_blank">Comp.${pts.length>1?' '+(i+1):''}</a>`).join('')}
       </div>
     </div>`;
   }).join('');
@@ -819,8 +995,16 @@ function renderCxP(){
 function openPagoTalento(ctId,campId,talId){
   ptCampanaTalentoId=ctId;ptCampanaId=campId;ptTalentId=talId;
   const ct=campanasTalentos.find(x=>x.id===ctId);
+  const pagado=ct?ctPagado(ct):0,saldo=ct?ctSaldo(ct):0;
   document.getElementById('modal-pt-title').textContent='Pagar: '+(ct?.talentos?.nombre||'');
-  document.getElementById('pt-monto').value=ct?.fee_talento||'';
+  const info=document.getElementById('pt-saldo-info');
+  if(ct&&info){
+    info.style.display='block';
+    document.getElementById('pt-info-total').textContent=fmtMoney(ct.fee_talento||0,ct.moneda);
+    document.getElementById('pt-info-pagado').textContent=fmtMoney(pagado,ct.moneda);
+    document.getElementById('pt-info-saldo').textContent=fmtMoney(saldo,ct.moneda);
+  }
+  document.getElementById('pt-monto').value=saldo||ct?.fee_talento||'';
   document.getElementById('pt-moneda').value=ct?.moneda||'USD';
   document.getElementById('pt-fecha').value=new Date().toISOString().split('T')[0];
   document.getElementById('pt-corredor').value='';document.getElementById('pt-notas').value='';
@@ -829,9 +1013,14 @@ function openPagoTalento(ctId,campId,talId){
 async function savePagoTalento(){
   const corredor=document.getElementById('pt-corredor').value;
   if(!corredor){showToast('Selecciona un corredor','error');return;}
+  const monto=parseFloat(document.getElementById('pt-monto').value)||0;
+  if(monto<=0){showToast('El monto debe ser mayor a 0','error');return;}
+  const ct=campanasTalentos.find(x=>x.id===ptCampanaTalentoId);
+  const saldo=ct?ctSaldo(ct):0;
+  if(ct&&monto>saldo*1.001&&!confirm(`El pago (${fmtMoney(monto,ct.moneda)}) supera el saldo pendiente (${fmtMoney(saldo,ct.moneda)}). ¿Registrar igual?`))return;
   const payload={
     campana_talento_id:ptCampanaTalentoId,campana_id:ptCampanaId,talent_id:ptTalentId,
-    monto:parseFloat(document.getElementById('pt-monto').value)||0,
+    monto,
     moneda:document.getElementById('pt-moneda').value,
     estado:'pagado',fecha_pago:document.getElementById('pt-fecha').value||null,
     corredor,notas:document.getElementById('pt-notas').value.trim(),created_by:currentUser.id,
@@ -840,11 +1029,112 @@ async function savePagoTalento(){
     const file=document.getElementById('pt-file').files[0];
     if(file)payload.comprobante_url=await uploadFile(file,`campana-${ptCampanaId}/comprobante-talento-${ptTalentId}`);
     const{error}=await sb.from('pagos_talento').insert(payload);if(error)throw error;
-    // Sync campana_talentos
-    await sb.from('campana_talentos').update({pago_estado:'pagado',pago_fecha:payload.fecha_pago}).eq('id',ptCampanaTalentoId);
+    // El trigger trg_pagos_talento_sync actualiza pago_estado (pendiente/parcial/pagado).
+    // Fallback client-side por si la migración fase2 aún no corrió:
+    const totalPagado=(ct?ctPagado(ct):0)+monto;
+    const fee=Number(ct?.fee_talento)||0;
+    const nuevoEstado=fee>0&&totalPagado>=fee?'pagado':'parcial';
+    await sb.from('campana_talentos').update({pago_estado:nuevoEstado,pago_fecha:payload.fecha_pago}).eq('id',ptCampanaTalentoId);
     closeModal('modal-pago-talento');await loadData();renderAll();
-    showToast('Pago registrado','success');
+    showToast(nuevoEstado==='pagado'?'Pago registrado — talento pagado al 100%':'Adelanto registrado — queda saldo pendiente','success');
   }catch(e){showToast('Error: '+e.message,'error');}
+}
+
+// ═══════════════════════════════════════════
+// RESUMEN MENSUAL + AGING DE CARTERA
+// ═══════════════════════════════════════════
+function renderResumen(){
+  const container=document.getElementById('resumen-container');
+  if(!container)return;
+
+  // ── 1. Resumen mensual (últimos 12 meses), separado por moneda ──
+  // Facturado: facturas por fecha_emision · Cobrado: pagos_marca por fecha_pago
+  // Pagado talentos: pagos_talento por fecha_pago · Neto: cobrado - pagado
+  const meses={}; // 'YYYY-MM' -> {fact:{cur:v}, cob:{...}, pag:{...}}
+  const mk=k=>meses[k]||(meses[k]={fact:{},cob:{},pag:{}});
+  facturas.forEach(f=>{
+    if(f.estado==='cancelada'||!f.fecha_emision)return;
+    addCur(mk(f.fecha_emision.slice(0,7)).fact,f.moneda,Number(f.monto)||0);
+  });
+  pagosMarca.forEach(p=>{if(p.fecha_pago)addCur(mk(p.fecha_pago.slice(0,7)).cob,p.moneda,Number(p.monto)||0);});
+  pagosTalento.forEach(p=>{if(p.fecha_pago)addCur(mk(p.fecha_pago.slice(0,7)).pag,p.moneda,Number(p.monto)||0);});
+
+  const keys=Object.keys(meses).sort().reverse().slice(0,12);
+  const mesLbl=k=>{const[y,m]=k.split('-');return new Date(+y,+m-1,1).toLocaleDateString('es-ES',{month:'short',year:'2-digit'});};
+  const neto=(cob,pag)=>{const out={};Object.keys({...cob,...pag}).forEach(c=>{out[c]=(cob[c]||0)-(pag[c]||0);});return out;};
+  const totFact={},totCob={},totPag={};
+  keys.forEach(k=>{const m=meses[k];Object.entries(m.fact).forEach(([c,v])=>addCur(totFact,c,v));Object.entries(m.cob).forEach(([c,v])=>addCur(totCob,c,v));Object.entries(m.pag).forEach(([c,v])=>addCur(totPag,c,v));});
+
+  const tablaResumen=keys.length?`<table class="res-table">
+    <thead><tr><th>Mes</th><th>Facturado</th><th>Cobrado</th><th>Pagado a Talentos</th><th>Neto (Cob − Pag)</th></tr></thead>
+    <tbody>
+      ${keys.map(k=>{const m=meses[k];return `<tr>
+        <td style="text-transform:capitalize">${mesLbl(k)}</td>
+        <td>${fmtMulti(m.fact)}</td>
+        <td style="color:var(--green)">${fmtMulti(m.cob)}</td>
+        <td>${fmtMulti(m.pag)}</td>
+        <td style="font-weight:700">${fmtMulti(neto(m.cob,m.pag))}</td>
+      </tr>`;}).join('')}
+      <tr class="total-row"><td>Total 12m</td><td>${fmtMulti(totFact)}</td><td style="color:var(--green)">${fmtMulti(totCob)}</td><td>${fmtMulti(totPag)}</td><td>${fmtMulti(neto(totCob,totPag))}</td></tr>
+    </tbody>
+  </table>`:'<div class="empty-state"><p>Sin movimientos registrados todavía</p></div>';
+
+  // ── 2. Aging de cartera (CxC): facturas con saldo, por antigüedad de vencimiento ──
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const buckets={porVencer:{},d30:{},d60:{},d90:{}};
+  const bucketRows={porVencer:[],d30:[],d60:[],d90:[]};
+  facturas.forEach(f=>{
+    if(['cobrada','cancelada'].includes(f.estado))return;
+    const saldo=facSaldo(f);
+    if(saldo<=0)return;
+    let b='porVencer';
+    if(f.fecha_vencimiento){
+      const dias=Math.round((hoy-new Date(f.fecha_vencimiento+'T00:00:00'))/86400000);
+      if(dias>60)b='d90';else if(dias>30)b='d60';else if(dias>0)b='d30';
+    }
+    addCur(buckets[b],f.moneda,saldo);
+    bucketRows[b].push(f);
+  });
+  const cli=id=>clientes.find(c=>c.id===id)?.nombre||'—';
+  const bucketCard=(titulo,cls,map,rows)=>`<div class="fin-detail-card" style="border-left:3px solid ${cls}">
+    <div class="fd-title">${titulo}</div>
+    <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin:4px 0">${fmtMulti(map)}</div>
+    ${rows.slice(0,6).map(f=>`<div style="font-size:11px;color:var(--text-muted);padding:2px 0">${esc(cli(f.cliente_id))} · ${f.numero_factura?'#'+esc(f.numero_factura):'s/folio'} · <b>${fmtMoney(facSaldo(f),f.moneda)}</b>${f.fecha_vencimiento?` · vence ${formatDate(f.fecha_vencimiento)}`:''}</div>`).join('')}
+    ${rows.length>6?`<div style="font-size:10px;color:var(--text-dim)">+${rows.length-6} más</div>`:''}
+  </div>`;
+
+  // ── 3. Por facturar: campañas con fees sin ninguna factura ──
+  const campConFactura=new Set(facturas.filter(f=>f.estado!=='cancelada').map(f=>f.campana_id));
+  const porFacturar={};
+  let porFacturarCount=0;
+  campanas.forEach(c=>{
+    if(campConFactura.has(c.id))return;
+    const cts=campanasTalentos.filter(ct=>ct.campana_id===c.id);
+    const tot=cts.reduce((s,ct)=>s+(Number(ct.fee_marca)||0),0);
+    if(tot>0){cts.forEach(ct=>addCur(porFacturar,ct.moneda,Number(ct.fee_marca)||0));porFacturarCount++;}
+  });
+
+  container.innerHTML=`
+    <div class="res-section">
+      <h3>Resumen Mensual <span class="hint">facturado por emisión · cobrado/pagado por fecha de pago · cada moneda por separado</span></h3>
+      ${tablaResumen}
+    </div>
+    <div class="res-section">
+      <h3>Aging de Cartera (CxC) <span class="hint">saldos pendientes por antigüedad</span></h3>
+      <div class="fin-detail-grid" style="grid-template-columns:repeat(4,1fr)">
+        ${bucketCard('Por vencer','var(--green)',buckets.porVencer,bucketRows.porVencer)}
+        ${bucketCard('Vencidas 1-30d','var(--orange)',buckets.d30,bucketRows.d30)}
+        ${bucketCard('Vencidas 31-60d','var(--orange)',buckets.d60,bucketRows.d60)}
+        ${bucketCard('Vencidas +60d','var(--red)',buckets.d90,bucketRows.d90)}
+      </div>
+    </div>
+    <div class="res-section">
+      <h3>Por Facturar <span class="hint">campañas con fees acordados y sin factura emitida</span></h3>
+      <div class="fin-detail-card" style="border-left:3px solid var(--blue);max-width:380px">
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800">${fmtMulti(porFacturar)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${porFacturarCount} campaña${porFacturarCount!==1?'s':''} sin facturar</div>
+      </div>
+    </div>`;
 }
 
 // ═══════════════════════════════════════════
