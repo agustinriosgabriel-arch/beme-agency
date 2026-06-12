@@ -3,461 +3,574 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BEME Agency — Representación de talento y campañas de influencer marketing</title>
-<meta name="description" content="BEME es una agencia de representación de talento e influencer marketing. Más de 1.000 creadores, 1.200 millones de alcance combinado y operación en más de 10 países. Procesos, contratos y métricas auditables.">
-<meta property="og:title" content="BEME Agency — El talento no se contrata. Se acompaña.">
-<meta property="og:description" content="Agencia de representación de talento y campañas de influencer marketing entre América Latina y Europa.">
+<title>Beme Agency — Agencia de talento e influencer marketing</title>
+<meta name="description" content="Beme conecta marcas con los creadores que mueven la cultura. Más de 1.000 talentos, 1.200 millones de alcance combinado y operación en más de 10 países.">
+<meta property="og:title" content="Beme Agency — El talento no se contrata. Se acompaña.">
+<meta property="og:description" content="Agencia de talento e influencer marketing entre América Latina y Europa.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.bemeagency.com">
 <link rel="icon" href="favicon.ico">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Libre+Bodoni:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Public+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   BEME — Sitio público. Tokens del manual de marca (cap. 7).
+   BEME — identidad oficial (Manual-Beme.pdf)
+   Pantone 220C magenta · púrpura · degradados · Just Sans/Inter
 ============================================================ */
 :root{
-  --primary:#b2005d;
-  --primary-light:#ed568f;
-  --primary-dark:#8a0048;
-  --accent:#5C0A2E;
-  --gradient:linear-gradient(135deg,#b2005d 0%,#5C0A2E 100%);
-  --ink:#0E0E10;
-  --ink-soft:#1C1C20;
-  --paper:#F7F4EE;
-  --rule:#1C1C20;
-  --rule-soft:rgba(14,14,16,0.14);
-  --muted:#5A5A60;
-  --serif:'Libre Bodoni','Times New Roman',serif;
-  --sans:'Public Sans',-apple-system,BlinkMacSystemFont,'Inter',sans-serif;
-  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
-  --maxw:1240px;
+  --magenta:#b2005d;
+  --magenta-rgb:178,0,93;
+  --purple:#9414E0;
+  --purple-rgb:148,20,224;
+  --soft-pink:#ed568f;
+  --hot-pink:#d90e86;
+  --deep-purple:#440b5d;
+  --black:#141416;
+  --black-2:#1c1c1c;
+  --black-3:#232327;
+  --white:#f4f4f4;
+  --gray:#a8a8b0;
+  --g-magenta:linear-gradient(135deg,#B2005D,#ed568f);
+  --g-purple:linear-gradient(135deg,#440b5d,#9414e0);
+  --g-vibrant:linear-gradient(135deg,#9414e0,#d90e86);
+  --g-hero:linear-gradient(96deg,#ed568f 0%,#d90e86 28%,#9414e0 62%,#ed568f 100%);
+  --font:'Just Sans','Inter','Helvetica Neue',Arial,sans-serif;
+  --maxw:1280px;
+  --ease:cubic-bezier(.22,.8,.26,.99);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
-@media (prefers-reduced-motion:reduce){
-  html{scroll-behavior:auto}
-  *,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}
-}
 body{
-  font-family:var(--sans);
-  background:var(--paper);
-  color:var(--ink);
-  font-size:16px;
-  line-height:1.6;
+  font-family:var(--font);
+  background:var(--black);
+  color:var(--white);
+  font-size:16px;line-height:1.6;
+  overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
 }
-::selection{background:var(--primary);color:#fff}
+::selection{background:var(--hot-pink);color:#fff}
 a{color:inherit}
 img{max-width:100%;display:block}
-.wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
+button{font-family:inherit}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 36px}
 @media(max-width:768px){.wrap{padding:0 20px}}
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--soft-pink);outline-offset:3px;border-radius:4px}
 
-/* —— Tipos editoriales —— */
-.eyebrow{
-  font-family:var(--mono);
-  font-size:11px;
-  letter-spacing:0.22em;
-  text-transform:uppercase;
-  color:var(--primary);
-  display:flex;align-items:center;gap:12px;
+/* —— Grain global —— */
+body::after{
+  content:'';position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-.eyebrow::before{content:'';width:28px;height:1px;background:var(--primary)}
-.display{
-  font-family:var(--serif);
-  font-weight:500;
-  line-height:1.06;
-  letter-spacing:-0.01em;
+/* —— Cursor glow —— */
+#glow{
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(560px circle at var(--mx,50%) var(--my,30%),rgba(var(--purple-rgb),0.10),transparent 65%);
 }
-.rule{height:1px;background:var(--rule);border:0}
-.rule--soft{background:var(--rule-soft)}
-
-/* —— Focus visible —— */
-a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
-  outline:2px solid var(--primary);outline-offset:3px;
+/* —— Barra de progreso de scroll —— */
+#progress{
+  position:fixed;top:0;left:0;height:3px;width:100%;z-index:1001;
+  background:var(--g-hero);transform-origin:0 50%;transform:scaleX(0);
 }
 
 /* ============================================================
    NAV
 ============================================================ */
 .nav{
-  position:sticky;top:0;z-index:100;
-  background:rgba(247,244,238,0.92);
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--rule-soft);
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  transition:background .35s var(--ease),border-color .35s var(--ease),backdrop-filter .35s;
+  border-bottom:1px solid transparent;
+}
+.nav.scrolled{
+  background:rgba(20,20,22,0.75);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-bottom-color:rgba(244,244,244,0.08);
 }
 .nav-inner{
-  max-width:var(--maxw);margin:0 auto;padding:0 32px;
-  display:flex;align-items:center;justify-content:space-between;
-  height:72px;
+  max-width:var(--maxw);margin:0 auto;padding:0 36px;
+  display:flex;align-items:center;justify-content:space-between;height:78px;
 }
-.nav-logo{
-  font-family:var(--serif);font-weight:700;font-size:22px;
-  letter-spacing:0.02em;text-decoration:none;color:var(--ink);
-  display:flex;align-items:baseline;gap:6px;
-}
-.nav-logo span{color:var(--primary)}
-.nav-links{display:flex;align-items:center;gap:36px;list-style:none}
+.nav-logo img{height:40px;width:auto}
+.nav-links{display:flex;align-items:center;gap:8px;list-style:none}
 .nav-links a{
-  text-decoration:none;font-size:13px;font-weight:500;
-  letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);
-  transition:color .2s ease;padding:8px 0;
+  text-decoration:none;font-size:13.5px;font-weight:500;letter-spacing:0.02em;
+  color:var(--gray);padding:10px 16px;border-radius:99px;
+  transition:color .2s,background .2s;
 }
-.nav-links a:hover{color:var(--primary)}
+.nav-links a:hover{color:#fff;background:rgba(244,244,244,0.07)}
 .nav-cta{
-  background:var(--ink);color:#fff!important;
-  padding:12px 26px!important;
-  transition:background .2s ease;
-  cursor:pointer;
+  position:relative;color:#fff!important;font-weight:600!important;
+  background:var(--g-vibrant);
+  box-shadow:0 0 24px rgba(217,14,134,0.35);
+  margin-left:10px;
 }
-.nav-cta:hover{background:var(--primary)}
-.nav-burger{
-  display:none;background:none;border:0;cursor:pointer;
-  width:44px;height:44px;align-items:center;justify-content:center;
-}
-.nav-burger svg{width:24px;height:24px;stroke:var(--ink)}
+.nav-cta:hover{box-shadow:0 0 38px rgba(217,14,134,0.55);background:var(--g-vibrant)!important}
+.nav-burger{display:none;background:none;border:0;cursor:pointer;width:46px;height:46px;align-items:center;justify-content:center;z-index:1002}
+.nav-burger svg{width:26px;height:26px;stroke:#fff}
 @media(max-width:920px){
   .nav-links{
-    display:none;
-    position:absolute;top:72px;left:0;right:0;
-    background:var(--paper);border-bottom:1px solid var(--rule);
-    flex-direction:column;align-items:flex-start;gap:0;
-    padding:12px 20px 24px;
+    display:flex;position:fixed;inset:0;z-index:1001;
+    background:rgba(20,20,22,0.97);backdrop-filter:blur(20px);
+    flex-direction:column;justify-content:center;gap:10px;
+    opacity:0;pointer-events:none;transition:opacity .3s var(--ease);
   }
-  .nav-links.open{display:flex}
-  .nav-links li{width:100%}
-  .nav-links a{display:block;padding:14px 4px;font-size:15px;border-bottom:1px solid var(--rule-soft)}
-  .nav-cta{margin-top:16px;text-align:center}
+  .nav-links.open{opacity:1;pointer-events:auto}
+  .nav-links a{font-size:26px;font-weight:700;padding:14px 28px}
   .nav-burger{display:flex}
 }
 
 /* ============================================================
    HERO
 ============================================================ */
-.hero{padding:96px 0 0;position:relative}
-.hero-grid{display:grid;grid-template-columns:1fr;gap:48px}
-.hero h1{
-  font-size:clamp(44px,7.5vw,104px);
-  max-width:14ch;
+.hero{
+  position:relative;min-height:100svh;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:150px 0 40px;overflow:hidden;
 }
-.hero h1 em{font-style:italic;color:var(--primary)}
-.hero-sub{
-  max-width:54ch;font-size:18px;font-weight:300;
-  color:var(--ink-soft);line-height:1.7;
-}
-.hero-actions{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
-.btn{
-  display:inline-flex;align-items:center;gap:10px;
-  font-family:var(--sans);font-size:13px;font-weight:600;
-  letter-spacing:0.08em;text-transform:uppercase;
-  text-decoration:none;padding:16px 34px;
-  cursor:pointer;border:1px solid var(--ink);
-  transition:all .2s ease;
-  min-height:48px;
-}
-.btn-dark{background:var(--ink);color:#fff}
-.btn-dark:hover{background:var(--primary);border-color:var(--primary)}
-.btn-ghost{background:transparent;color:var(--ink)}
-.btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
-.btn svg{width:15px;height:15px;flex:none}
+/* blobs animados */
+.hero .blob{position:absolute;border-radius:50%;filter:blur(110px);opacity:.5;will-change:transform}
+.hero .b1{width:560px;height:560px;background:var(--magenta);top:-160px;left:-120px;animation:drift1 16s ease-in-out infinite alternate}
+.hero .b2{width:480px;height:480px;background:var(--purple);bottom:-140px;right:-80px;animation:drift2 19s ease-in-out infinite alternate}
+.hero .b3{width:300px;height:300px;background:var(--hot-pink);top:30%;left:55%;opacity:.32;animation:drift3 14s ease-in-out infinite alternate}
+@keyframes drift1{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,60px) scale(1.15)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1.1)}to{transform:translate(-80px,-70px) scale(.95)}}
+@keyframes drift3{from{transform:translate(0,0)}to{transform:translate(-60px,80px) scale(1.2)}}
 
-/* —— Stats —— */
-.stats{
-  margin-top:88px;border-top:1px solid var(--rule);
-  display:grid;grid-template-columns:repeat(4,1fr);
+.hero-grid{
+  position:relative;z-index:3;
+  display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center;
 }
-.stat{
-  padding:36px 28px 40px;border-right:1px solid var(--rule-soft);
+.hero-badge{
+  display:inline-flex;align-items:center;gap:10px;
+  font-size:12.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--soft-pink);
+  border:1px solid rgba(237,86,143,0.35);border-radius:99px;
+  padding:9px 18px;margin-bottom:28px;
+  background:rgba(237,86,143,0.06);
 }
-.stat:last-child{border-right:0}
-.stat .n{
-  font-family:var(--serif);font-size:clamp(36px,4vw,54px);
-  font-weight:600;line-height:1;font-variant-numeric:tabular-nums;
-  color:var(--ink);
+.hero-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--hot-pink);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(217,14,134,.6)}50%{box-shadow:0 0 0 7px rgba(217,14,134,0)}}
+.hero h1{
+  font-size:clamp(46px,6.6vw,96px);
+  font-weight:900;line-height:1.0;letter-spacing:-0.03em;
 }
-.stat .n sup{font-size:0.45em;color:var(--primary);font-weight:500}
-.stat .l{
-  margin-top:12px;font-family:var(--mono);font-size:11px;
-  letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);
+.hero h1 .grad{
+  background:var(--g-hero);background-size:220% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:gradShift 7s ease-in-out infinite;
 }
-@media(max-width:920px){
-  .stats{grid-template-columns:repeat(2,1fr)}
-  .stat:nth-child(2){border-right:0}
-  .stat:nth-child(1),.stat:nth-child(2){border-bottom:1px solid var(--rule-soft)}
+@keyframes gradShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.hero-sub{
+  margin-top:28px;max-width:50ch;font-size:18px;font-weight:300;
+  color:var(--gray);line-height:1.75;
 }
-@media(max-width:480px){.stat{padding:24px 16px 28px}}
+.hero-sub strong{color:var(--white);font-weight:600}
+.hero-actions{display:flex;gap:18px;flex-wrap:wrap;margin-top:40px}
+.btn{
+  position:relative;display:inline-flex;align-items:center;gap:10px;
+  font-size:14.5px;font-weight:700;letter-spacing:0.02em;text-decoration:none;
+  padding:18px 36px;border-radius:99px;cursor:pointer;border:0;
+  transition:transform .25s var(--ease),box-shadow .25s var(--ease);
+  min-height:52px;will-change:transform;
+}
+.btn-primary{
+  color:#fff;background:var(--g-vibrant);
+  box-shadow:0 8px 32px rgba(217,14,134,0.35);
+}
+.btn-primary:hover{box-shadow:0 12px 48px rgba(217,14,134,0.55)}
+.btn-outline{
+  color:#fff;background:rgba(244,244,244,0.04);
+  border:1px solid rgba(244,244,244,0.22);
+  backdrop-filter:blur(8px);
+}
+.btn-outline:hover{border-color:var(--soft-pink);background:rgba(237,86,143,0.08)}
+.btn svg{width:16px;height:16px;transition:transform .25s var(--ease)}
+.btn:hover svg{transform:translateX(4px)}
+
+/* —— Cards de talento flotantes —— */
+.hero-visual{position:relative;height:580px;perspective:1100px}
+.tcard{
+  position:absolute;border-radius:22px;overflow:hidden;
+  box-shadow:0 24px 70px rgba(0,0,0,0.55);
+  transform-style:preserve-3d;will-change:transform;
+  transition:box-shadow .3s;
+  border:1px solid rgba(244,244,244,0.12);
+}
+.tcard img{width:100%;height:100%;object-fit:cover}
+.tcard::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,transparent 55%,rgba(20,20,22,0.82));
+}
+.tcard .tname{
+  position:absolute;bottom:14px;left:16px;z-index:2;
+  font-size:13px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+}
+.tcard .tname small{display:block;font-size:10.5px;font-weight:500;color:var(--soft-pink);letter-spacing:0.12em}
+.tc1{width:250px;height:330px;top:30px;left:8%;z-index:3;animation:float1 7s ease-in-out infinite}
+.tc2{width:210px;height:280px;top:0;right:4%;z-index:2;animation:float2 8.5s ease-in-out infinite}
+.tc3{width:230px;height:300px;bottom:10px;left:30%;z-index:4;animation:float3 7.8s ease-in-out infinite}
+@keyframes float1{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-18px) rotate(-4deg)}}
+@keyframes float2{0%,100%{transform:translateY(0) rotate(5deg)}50%{transform:translateY(-24px) rotate(5deg)}}
+@keyframes float3{0%,100%{transform:translateY(0) rotate(2deg)}50%{transform:translateY(-14px) rotate(2deg)}}
+@media(max-width:1024px){
+  .hero-grid{grid-template-columns:1fr}
+  .hero-visual{height:420px;margin-top:10px}
+  .tc1{left:2%}.tc2{right:2%}.tc3{left:36%}
+}
+@media(max-width:560px){
+  .hero{padding-top:120px}
+  .hero-visual{height:340px}
+  .tc1{width:180px;height:240px;top:10px}
+  .tc2{width:160px;height:210px}
+  .tc3{width:170px;height:225px;left:auto;right:24%}
+}
+
+/* —— Marquee de marcas —— */
+.marquee-band{
+  position:relative;z-index:3;margin-top:64px;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+  overflow:hidden;
+}
+.marquee{display:flex;width:max-content;animation:scroll 38s linear infinite;gap:64px;padding:10px 0}
+.marquee:hover{animation-play-state:paused}
+.marquee img{
+  height:30px;width:auto;max-width:130px;object-fit:contain;
+  filter:brightness(0) invert(1);opacity:.5;
+  transition:opacity .25s;
+}
+.marquee img:hover{opacity:1}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
 /* ============================================================
    SECCIONES BASE
 ============================================================ */
-section{padding:110px 0}
-@media(max-width:768px){section{padding:72px 0}}
-.sec-head{margin-bottom:64px}
-.sec-head h2{font-size:clamp(34px,4.6vw,60px);margin-top:20px;max-width:18ch}
-.sec-head p{margin-top:20px;max-width:58ch;color:var(--muted);font-weight:300;font-size:17px}
+section{position:relative;padding:130px 0}
+@media(max-width:768px){section{padding:84px 0}}
+.sec-tag{
+  display:inline-flex;align-items:center;gap:10px;
+  font-size:12px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;
+  color:var(--soft-pink);margin-bottom:22px;
+}
+.sec-tag::before{content:'';width:34px;height:2px;border-radius:2px;background:var(--g-magenta)}
+.sec-title{
+  font-size:clamp(34px,4.6vw,64px);font-weight:900;
+  line-height:1.05;letter-spacing:-0.025em;max-width:20ch;
+}
+.sec-title .grad{
+  background:var(--g-hero);background-size:220% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:gradShift 8s ease-in-out infinite;
+}
+.sec-sub{margin-top:22px;max-width:56ch;color:var(--gray);font-weight:300;font-size:17px;line-height:1.75}
 
 /* ============================================================
-   MANIFIESTO / PILARES
+   STATS
 ============================================================ */
-.manifesto{background:var(--ink);color:var(--paper);position:relative;overflow:hidden}
-.manifesto .eyebrow{color:var(--primary-light)}
-.manifesto .eyebrow::before{background:var(--primary-light)}
-.manifesto-quote{
-  font-family:var(--serif);font-style:italic;
-  font-size:clamp(28px,4vw,52px);line-height:1.25;
-  max-width:22ch;margin-top:24px;
+.stats-band{padding:40px 0 110px}
+.stats{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:22px;
 }
-.manifesto-quote strong{font-style:normal;color:var(--primary-light);font-weight:500}
-.pilares{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:0;
-  margin-top:80px;border-top:1px solid rgba(247,244,238,0.18);
+.stat{
+  position:relative;padding:38px 30px;border-radius:24px;
+  background:linear-gradient(160deg,rgba(244,244,244,0.05),rgba(244,244,244,0.015));
+  border:1px solid rgba(244,244,244,0.09);
+  overflow:hidden;transition:transform .3s var(--ease),border-color .3s;
 }
-.pilar{
-  padding:36px 28px 8px;border-right:1px solid rgba(247,244,238,0.12);
+.stat:hover{transform:translateY(-6px);border-color:rgba(237,86,143,0.4)}
+.stat::before{
+  content:'';position:absolute;top:-50%;left:-20%;width:140%;height:100%;
+  background:radial-gradient(closest-side,rgba(var(--purple-rgb),0.22),transparent);
+  opacity:0;transition:opacity .4s;
 }
-.pilar:last-child{border-right:0}
-.pilar .num{font-family:var(--mono);font-size:12px;color:var(--primary-light);letter-spacing:0.2em}
-.pilar h3{font-family:var(--serif);font-size:24px;font-weight:500;margin:16px 0 12px}
-.pilar p{font-size:14px;font-weight:300;color:rgba(247,244,238,0.72);line-height:1.7}
-@media(max-width:920px){
-  .pilares{grid-template-columns:repeat(2,1fr)}
-  .pilar{border-bottom:1px solid rgba(247,244,238,0.12);padding-bottom:32px}
-  .pilar:nth-child(2){border-right:0}
+.stat:hover::before{opacity:1}
+.stat .n{
+  font-size:clamp(40px,4.4vw,62px);font-weight:900;letter-spacing:-0.03em;
+  line-height:1;font-variant-numeric:tabular-nums;
+  background:var(--g-magenta);-webkit-background-clip:text;background-clip:text;color:transparent;
 }
-@media(max-width:560px){
-  .pilares{grid-template-columns:1fr}
-  .pilar{border-right:0}
-}
+.stat .n .u{font-size:.5em}
+.stat .l{margin-top:12px;font-size:13px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray)}
+@media(max-width:920px){.stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.stats{gap:14px}.stat{padding:26px 20px}}
 
 /* ============================================================
    SERVICIOS
 ============================================================ */
-.servicios-grid{
-  display:grid;grid-template-columns:repeat(2,1fr);
-  border-top:1px solid var(--rule);
+.serv-grid{
+  margin-top:70px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;
 }
-.servicio{
-  padding:48px 40px 52px;
-  border-bottom:1px solid var(--rule-soft);
-  position:relative;
-  transition:background .25s ease;
+.serv{
+  position:relative;padding:40px 34px 44px;border-radius:26px;
+  background:linear-gradient(170deg,rgba(244,244,244,0.045),rgba(244,244,244,0.012));
+  border:1px solid rgba(244,244,244,0.09);
+  overflow:hidden;cursor:default;
+  transition:transform .35s var(--ease),border-color .35s,box-shadow .35s;
 }
-.servicio:nth-child(odd){border-right:1px solid var(--rule-soft)}
-.servicio:hover{background:rgba(178,0,93,0.035)}
-.servicio .num{
-  font-family:var(--mono);font-size:12px;color:var(--primary);
-  letter-spacing:0.2em;
+.serv:hover{
+  transform:translateY(-8px);
+  border-color:rgba(148,20,224,0.45);
+  box-shadow:0 24px 60px rgba(0,0,0,0.45),0 0 40px rgba(148,20,224,0.12);
 }
-.servicio h3{
-  font-family:var(--serif);font-size:clamp(22px,2.4vw,30px);
-  font-weight:500;margin:18px 0 14px;
+.serv::before{
+  content:'';position:absolute;inset:0;border-radius:26px;padding:1px;
+  background:var(--g-vibrant);
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+  opacity:0;transition:opacity .35s;
 }
-.servicio p{font-size:15px;font-weight:300;color:var(--muted);line-height:1.75;max-width:48ch}
-.servicio .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
-.servicio .tag{
-  font-family:var(--mono);font-size:10px;letter-spacing:0.14em;
-  text-transform:uppercase;color:var(--ink-soft);
-  border:1px solid var(--rule-soft);padding:6px 12px;
+.serv:hover::before{opacity:1}
+.serv .ico{
+  width:54px;height:54px;border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,rgba(178,0,93,0.25),rgba(148,20,224,0.25));
+  border:1px solid rgba(237,86,143,0.3);
+  margin-bottom:26px;
 }
-@media(max-width:860px){
-  .servicios-grid{grid-template-columns:1fr}
-  .servicio:nth-child(odd){border-right:0}
-  .servicio{padding:36px 24px 40px}
+.serv .ico svg{width:24px;height:24px;stroke:var(--soft-pink);fill:none;stroke-width:1.8}
+.serv h3{font-size:21px;font-weight:800;letter-spacing:-0.01em;margin-bottom:12px}
+.serv p{font-size:14.5px;font-weight:300;color:var(--gray);line-height:1.75}
+@media(max-width:1024px){.serv-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.serv-grid{grid-template-columns:1fr}}
+
+/* ============================================================
+   TALENTOS
+============================================================ */
+.talentos{overflow:hidden}
+.tal-head{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;flex-wrap:wrap}
+.tal-rail-wrap{margin-top:64px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;padding:20px 0 30px}
+.tal-rail-wrap::-webkit-scrollbar{display:none}
+.tal-rail{display:flex;gap:26px;width:max-content;padding:0 4px}
+.tal{
+  position:relative;width:300px;height:400px;border-radius:26px;overflow:hidden;
+  scroll-snap-align:start;flex:none;
+  border:1px solid rgba(244,244,244,0.1);
+  transition:transform .4s var(--ease),box-shadow .4s;
+  will-change:transform;
+}
+.tal:hover{transform:translateY(-10px) scale(1.02);box-shadow:0 30px 70px rgba(0,0,0,0.55),0 0 60px rgba(217,14,134,0.15)}
+.tal img{width:100%;height:100%;object-fit:cover;transition:transform .6s var(--ease)}
+.tal:hover img{transform:scale(1.07)}
+.tal::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(185deg,transparent 50%,rgba(20,20,22,0.9) 92%);
+}
+.tal .info{position:absolute;left:22px;bottom:20px;z-index:2}
+.tal .info .name{font-size:19px;font-weight:800;letter-spacing:-0.01em}
+.tal .info .cat{
+  margin-top:6px;display:inline-block;font-size:10.5px;font-weight:700;
+  letter-spacing:0.14em;text-transform:uppercase;color:#fff;
+  background:var(--g-vibrant);border-radius:99px;padding:5px 12px;
+}
+.tal-more{
+  width:300px;height:400px;border-radius:26px;flex:none;scroll-snap-align:start;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background:linear-gradient(160deg,rgba(178,0,93,0.16),rgba(148,20,224,0.16));
+  border:1px dashed rgba(237,86,143,0.4);
+  text-decoration:none;transition:background .3s,transform .4s var(--ease);
+}
+.tal-more:hover{transform:translateY(-10px);background:linear-gradient(160deg,rgba(178,0,93,0.26),rgba(148,20,224,0.26))}
+.tal-more .plus{
+  width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--g-vibrant);box-shadow:0 8px 30px rgba(217,14,134,0.4);
+}
+.tal-more .plus svg{width:26px;height:26px;stroke:#fff;stroke-width:2.2}
+.tal-more span{font-size:15px;font-weight:700}
+.tal-more small{font-size:12.5px;color:var(--gray);margin-top:-10px}
+
+/* ============================================================
+   PROCESO
+============================================================ */
+.proceso{background:linear-gradient(180deg,transparent,rgba(68,11,93,0.16) 30%,rgba(68,11,93,0.16) 70%,transparent)}
+.pro-grid{margin-top:80px;display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative}
+.pro-line{
+  position:absolute;top:34px;left:6%;right:6%;height:2px;
+  background:rgba(244,244,244,0.1);overflow:hidden;border-radius:2px;
+}
+.pro-line i{
+  position:absolute;inset:0;background:var(--g-hero);
+  transform:scaleX(0);transform-origin:0 50%;transition:transform 1.4s var(--ease);
+}
+.pro-grid.in .pro-line i{transform:scaleX(1)}
+.pro{padding:0 26px;text-align:center;position:relative}
+.pro .dot{
+  width:68px;height:68px;margin:0 auto 26px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;font-weight:900;
+  background:var(--black-2);border:2px solid rgba(237,86,143,0.45);
+  position:relative;z-index:2;
+  transition:transform .3s var(--ease),box-shadow .3s,background .3s;
+}
+.pro:hover .dot{
+  transform:scale(1.12);background:var(--g-vibrant);border-color:transparent;
+  box-shadow:0 0 40px rgba(217,14,134,0.5);
+}
+.pro h3{font-size:19px;font-weight:800;margin-bottom:10px}
+.pro p{font-size:13.5px;font-weight:300;color:var(--gray);line-height:1.7}
+@media(max-width:920px){
+  .pro-grid{grid-template-columns:1fr;gap:44px;max-width:480px}
+  .pro-line{display:none}
+  .pro{display:grid;grid-template-columns:68px 1fr;gap:22px;text-align:left}
+  .pro .dot{margin:0}
 }
 
 /* ============================================================
-   TALENTOS / ROSTER
+   MARCAS GRID
 ============================================================ */
-.roster{background:#fff;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
-.roster-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:72px;align-items:start}
-.cat-list{list-style:none;border-top:1px solid var(--rule)}
-.cat-list li{
-  display:flex;align-items:baseline;justify-content:space-between;
-  padding:18px 4px;border-bottom:1px solid var(--rule-soft);
-  font-family:var(--serif);font-size:clamp(20px,2.2vw,28px);font-weight:500;
-  transition:padding-left .25s ease,color .2s ease;
-}
-.cat-list li:hover{padding-left:16px;color:var(--primary)}
-.cat-list .c{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:0.12em}
-.roster-side p{font-size:16px;font-weight:300;color:var(--muted);line-height:1.8;margin-bottom:28px}
-.paises{display:flex;flex-wrap:wrap;gap:10px;margin:32px 0 40px}
-.pais{
-  font-family:var(--mono);font-size:11px;letter-spacing:0.14em;
-  text-transform:uppercase;border:1px solid var(--rule-soft);
-  padding:8px 14px;color:var(--ink-soft);
-}
-@media(max-width:860px){.roster-grid{grid-template-columns:1fr;gap:48px}}
-
-/* ============================================================
-   PROCESO — 9 PASOS
-============================================================ */
-.proceso-list{counter-reset:paso;border-top:1px solid var(--rule);max-width:880px}
-.paso{
-  display:grid;grid-template-columns:88px 1fr;gap:24px;
-  padding:30px 4px;border-bottom:1px solid var(--rule-soft);
-  align-items:baseline;
-}
-.paso .pn{
-  font-family:var(--serif);font-size:34px;font-weight:500;
-  color:var(--primary);font-variant-numeric:tabular-nums;
-}
-.paso h3{font-family:var(--serif);font-size:22px;font-weight:500;margin-bottom:6px}
-.paso p{font-size:14.5px;font-weight:300;color:var(--muted);max-width:58ch;line-height:1.7}
-@media(max-width:560px){
-  .paso{grid-template-columns:56px 1fr;gap:16px;padding:24px 0}
-  .paso .pn{font-size:26px}
-}
-
-/* ============================================================
-   MARCAS — grilla de logos
-============================================================ */
-.marcas{background:#fff;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
-.marcas-list{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
-  border-top:1px solid var(--rule);
-  border-left:1px solid var(--rule-soft);
+.marcas-grid{
+  margin-top:70px;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:16px;
 }
 .marca{
   display:flex;align-items:center;justify-content:center;
-  padding:34px 28px;min-height:110px;
-  border-right:1px solid var(--rule-soft);
-  border-bottom:1px solid var(--rule-soft);
-  transition:background .25s ease;
+  height:104px;border-radius:18px;padding:24px;
+  background:linear-gradient(160deg,rgba(244,244,244,0.04),rgba(244,244,244,0.012));
+  border:1px solid rgba(244,244,244,0.08);
+  transition:transform .3s var(--ease),border-color .3s,background .3s;
 }
+.marca:hover{transform:translateY(-5px);border-color:rgba(237,86,143,0.4);background:rgba(237,86,143,0.05)}
 .marca img{
-  max-height:38px;max-width:120px;width:auto;height:auto;
-  filter:grayscale(1);opacity:.65;
-  transition:filter .25s ease,opacity .25s ease;
+  max-height:34px;max-width:116px;width:auto;height:auto;
+  filter:brightness(0) invert(1);opacity:.55;transition:opacity .25s;
 }
-.marca:hover{background:rgba(178,0,93,0.03)}
-.marca:hover img{filter:none;opacity:1}
-.marcas-note{
-  margin-top:28px;font-family:var(--mono);font-size:11px;
-  letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);
-  line-height:2;
-}
-@media(max-width:560px){
-  .marcas-list{grid-template-columns:repeat(2,1fr)}
-  .marca{min-height:88px;padding:24px 18px}
-  .marca img{max-height:30px;max-width:104px}
-}
+.marca:hover img{opacity:1}
 
 /* ============================================================
    TESTIMONIOS
 ============================================================ */
-.testimonios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--rule)}
-.testimonio{
-  padding:44px 36px 48px;
-  border-right:1px solid var(--rule-soft);
-  display:flex;flex-direction:column;gap:24px;
+.testi-grid{margin-top:70px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.testi{
+  position:relative;padding:40px 34px;border-radius:26px;
+  background:linear-gradient(165deg,rgba(244,244,244,0.05),rgba(244,244,244,0.015));
+  border:1px solid rgba(244,244,244,0.09);
+  display:flex;flex-direction:column;gap:26px;
+  transition:transform .35s var(--ease),border-color .35s;
 }
-.testimonio:last-child{border-right:0}
-.testimonio blockquote{
-  font-family:var(--serif);font-style:italic;
-  font-size:19px;line-height:1.55;color:var(--ink-soft);
-  flex:1;
+.testi:hover{transform:translateY(-6px);border-color:rgba(148,20,224,0.4)}
+.testi .q{
+  font-size:44px;font-weight:900;line-height:0;height:18px;
+  background:var(--g-magenta);-webkit-background-clip:text;background-clip:text;color:transparent;
 }
-.testimonio blockquote::before{content:'“';color:var(--primary);font-size:1.4em;line-height:0}
-.testimonio cite{
-  font-style:normal;font-family:var(--mono);font-size:11px;
-  letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);
-  display:flex;align-items:center;gap:12px;
+.testi blockquote{font-size:16.5px;font-weight:300;line-height:1.7;color:#dadade;flex:1}
+.testi cite{font-style:normal;display:flex;align-items:center;gap:14px}
+.testi cite .av{
+  width:44px;height:44px;border-radius:50%;flex:none;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:800;color:#fff;background:var(--g-purple);
 }
-.testimonio cite::before{content:'';width:22px;height:1px;background:var(--primary)}
-@media(max-width:860px){
-  .testimonios-grid{grid-template-columns:1fr}
-  .testimonio{border-right:0;border-bottom:1px solid var(--rule-soft);padding:36px 8px 40px}
-}
+.testi cite .who b{display:block;font-size:14.5px;font-weight:700}
+.testi cite .who span{font-size:12.5px;color:var(--gray)}
+@media(max-width:920px){.testi-grid{grid-template-columns:1fr}}
 
 /* ============================================================
-   CONTACTO
+   CTA FINAL + CONTACTO
 ============================================================ */
-.contacto{background:#fff;border-top:1px solid var(--rule)}
-.contacto-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px}
-.c-item{padding:22px 0;border-bottom:1px solid var(--rule-soft)}
-.c-item .k{font-family:var(--mono);font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-.c-item .v{font-family:var(--serif);font-size:clamp(18px,2vw,24px);font-weight:500}
-.c-item .v a{text-decoration:none;transition:color .2s ease}
-.c-item .v a:hover{color:var(--primary)}
-.c-social{display:flex;gap:14px;margin-top:36px}
-.c-social a{
-  width:48px;height:48px;border:1px solid var(--rule);
+.cta-panel{
+  position:relative;border-radius:36px;overflow:hidden;
+  padding:90px 70px;
+  background:linear-gradient(120deg,#440b5d 0%,#b2005d 55%,#d90e86 100%);
+  box-shadow:0 40px 120px rgba(178,0,93,0.3);
+}
+.cta-panel .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.45}
+.cta-panel .cb1{width:380px;height:380px;background:#9414e0;top:-120px;right:-60px;animation:drift1 14s ease-in-out infinite alternate}
+.cta-panel .cb2{width:300px;height:300px;background:#ed568f;bottom:-110px;left:-50px;animation:drift2 17s ease-in-out infinite alternate}
+.cta-grid{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:start}
+.cta-grid h2{font-size:clamp(32px,4vw,54px);font-weight:900;line-height:1.05;letter-spacing:-0.02em}
+.cta-grid .lead{margin-top:20px;font-size:16.5px;font-weight:300;color:rgba(255,255,255,0.85);max-width:42ch;line-height:1.75}
+.cta-data{margin-top:38px;display:flex;flex-direction:column;gap:16px}
+.cta-data a{color:#fff;text-decoration:none;font-weight:600;font-size:16px;display:inline-flex;align-items:center;gap:12px}
+.cta-data a:hover{text-decoration:underline}
+.cta-data svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:1.8;flex:none}
+.cta-social{display:flex;gap:12px;margin-top:30px}
+.cta-social a{
+  width:48px;height:48px;border-radius:14px;
+  background:rgba(255,255,255,0.14);backdrop-filter:blur(6px);
   display:flex;align-items:center;justify-content:center;
-  transition:all .2s ease;
+  transition:background .25s,transform .25s var(--ease);
 }
-.c-social a:hover{background:var(--ink);border-color:var(--ink)}
-.c-social a:hover svg{stroke:#fff}
-.c-social svg{width:19px;height:19px;stroke:var(--ink);fill:none;stroke-width:1.6}
+.cta-social a:hover{background:rgba(255,255,255,0.28);transform:translateY(-4px)}
+.cta-social svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.7}
 
-/* —— Formulario —— */
-.form label{
-  display:block;font-family:var(--mono);font-size:11px;
-  letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);
-  margin:26px 0 10px;
+.form{
+  background:rgba(20,20,22,0.55);backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,0.16);
+  border-radius:26px;padding:40px 36px;
 }
-.form label:first-child{margin-top:0}
+.form label{display:block;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.75);margin:22px 0 8px}
+.form label:first-of-type{margin-top:0}
 .form input,.form textarea{
-  width:100%;background:transparent;
-  border:0;border-bottom:1px solid var(--rule);
-  font-family:var(--sans);font-size:17px;font-weight:300;color:var(--ink);
-  padding:10px 2px 12px;border-radius:0;
-  transition:border-color .2s ease;
-  min-height:44px;
+  width:100%;background:rgba(255,255,255,0.07);
+  border:1px solid rgba(255,255,255,0.14);border-radius:13px;
+  font-family:inherit;font-size:15.5px;color:#fff;
+  padding:14px 16px;min-height:48px;
+  transition:border-color .2s,background .2s;
 }
-.form textarea{resize:vertical;min-height:96px}
-.form input:focus,.form textarea:focus{outline:none;border-bottom-color:var(--primary)}
-.form button{margin-top:36px}
-.form-msg{margin-top:18px;font-size:14px;display:none}
-.form-msg.ok{display:block;color:#1a7a3c}
-.form-msg.err{display:block;color:#b3261e}
-@media(max-width:860px){.contacto-grid{grid-template-columns:1fr;gap:56px}}
+.form input::placeholder,.form textarea::placeholder{color:rgba(255,255,255,0.35)}
+.form input:focus,.form textarea:focus{outline:none;border-color:var(--soft-pink);background:rgba(255,255,255,0.1)}
+.form textarea{resize:vertical;min-height:104px}
+.form button{width:100%;justify-content:center;margin-top:30px}
+.form button:disabled{opacity:.6;cursor:wait}
+.form-msg{margin-top:16px;font-size:14px;display:none;text-align:center}
+.form-msg.ok{display:block;color:#7ef0a8}
+.form-msg.err{display:block;color:#ffb3ad}
+@media(max-width:1024px){.cta-panel{padding:64px 40px}.cta-grid{grid-template-columns:1fr;gap:50px}}
+@media(max-width:560px){.cta-panel{padding:48px 24px;border-radius:26px}.form{padding:30px 22px}}
 
 /* ============================================================
    FOOTER
 ============================================================ */
-.footer{background:var(--ink);color:rgba(247,244,238,0.65);padding:64px 0 40px}
-.footer-grid{display:flex;justify-content:space-between;align-items:flex-start;gap:40px;flex-wrap:wrap}
-.footer .logo{font-family:var(--serif);font-size:26px;font-weight:700;color:var(--paper)}
-.footer .logo span{color:var(--primary-light)}
-.footer-nav{display:flex;gap:28px;list-style:none;flex-wrap:wrap}
+.footer{padding:90px 0 46px;position:relative}
+.footer-grid{display:flex;justify-content:space-between;gap:46px;flex-wrap:wrap;align-items:flex-start}
+.footer .flogo img{height:54px;width:auto}
+.footer .fclaim{margin-top:18px;font-size:14px;font-weight:300;color:var(--gray);max-width:30ch;line-height:1.7}
+.footer-nav{display:flex;gap:8px;list-style:none;flex-wrap:wrap}
 .footer-nav a{
-  text-decoration:none;font-size:12px;font-weight:500;
-  letter-spacing:0.1em;text-transform:uppercase;
-  color:rgba(247,244,238,0.65);transition:color .2s ease;
-  padding:6px 0;display:inline-block;
+  text-decoration:none;font-size:13.5px;font-weight:500;color:var(--gray);
+  padding:10px 16px;border-radius:99px;transition:color .2s,background .2s;
 }
-.footer-nav a:hover{color:var(--primary-light)}
+.footer-nav a:hover{color:#fff;background:rgba(244,244,244,0.07)}
 .footer-bottom{
-  margin-top:48px;padding-top:24px;
-  border-top:1px solid rgba(247,244,238,0.14);
+  margin-top:64px;padding-top:28px;border-top:1px solid rgba(244,244,244,0.08);
   display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
-  font-family:var(--mono);font-size:11px;letter-spacing:0.12em;
-  color:rgba(247,244,238,0.4);
+  font-size:12.5px;color:#6f6f78;
 }
 
-/* —— Reveal on scroll (solo si JS está activo: html.js) —— */
-html.js .reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+/* ============================================================
+   REVEALS (solo con JS activo)
+============================================================ */
+html.js .reveal{opacity:0;transform:translateY(34px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
 html.js .reveal.in{opacity:1;transform:none}
-@media (prefers-reduced-motion:reduce){html.js .reveal{opacity:1;transform:none}}
+html.js .reveal-d1{transition-delay:.08s}
+html.js .reveal-d2{transition-delay:.16s}
+html.js .reveal-d3{transition-delay:.24s}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important}
+  html{scroll-behavior:auto}
+  html.js .reveal{opacity:1;transform:none}
+  .marquee{animation:none;flex-wrap:wrap;width:auto}
+}
 </style>
 </head>
 <body>
 
+<div id="glow" aria-hidden="true"></div>
+<div id="progress" aria-hidden="true"></div>
+
 <!-- ================= NAV ================= -->
-<header class="nav">
+<header class="nav" id="nav">
   <div class="nav-inner">
-    <a class="nav-logo" href="#top" aria-label="BEME Agency — inicio">BEME<span>.</span></a>
+    <a class="nav-logo" href="#top" aria-label="Beme Agency — inicio">
+      <img src="assets/brand/logos/Beme1blanco.png" alt="Beme" width="120" height="40" style="height:44px">
+    </a>
     <nav aria-label="Navegación principal">
       <ul class="nav-links" id="navLinks">
         <li><a href="#servicios">Servicios</a></li>
         <li><a href="#talentos">Talentos</a></li>
         <li><a href="#proceso">Proceso</a></li>
         <li><a href="#marcas">Marcas</a></li>
-        <li><a class="nav-cta" href="#contacto">Hablemos</a></li>
+        <li><a class="nav-cta" href="#contacto">Crear campaña</a></li>
       </ul>
     </nav>
     <button class="nav-burger" id="navBurger" aria-label="Abrir menú" aria-expanded="false" aria-controls="navLinks">
@@ -470,162 +583,157 @@ html.js .reveal.in{opacity:1;transform:none}
 
 <!-- ================= HERO ================= -->
 <section class="hero" aria-labelledby="hero-title">
-  <div class="wrap hero-grid">
-    <p class="eyebrow">Agencia de talento · América Latina &amp; Europa</p>
-    <h1 class="display" id="hero-title">El talento no se contrata. <em>Se acompaña.</em></h1>
-    <p class="hero-sub">BEME representa a un grupo curado de creadores y diseña campañas de influencer marketing para marcas que exigen procesos, no improvisación. Del brief al reporte: contratos firmados, datos verificables, métricas auditables.</p>
-    <div class="hero-actions">
-      <a class="btn btn-dark" href="#contacto">Iniciar una conversación
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </a>
-      <a class="btn btn-ghost" href="roster-general.html">Ver el roster</a>
+  <div class="blob b1" aria-hidden="true"></div>
+  <div class="blob b2" aria-hidden="true"></div>
+  <div class="blob b3" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <span class="hero-badge"><span class="dot"></span>Agencia de talento · LATAM &amp; Europa</span>
+        <h1 id="hero-title">Creadores que mueven <span class="grad">la cultura</span>. Marcas que lo saben.</h1>
+        <p class="hero-sub">Beme conecta marcas globales con los creadores correctos. <strong>+1.000 talentos</strong>, <strong>1.200 millones de alcance combinado</strong> y campañas con contratos, datos y resultados verificables.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary magnetic" href="#contacto">Crear campaña
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="btn btn-outline magnetic" href="roster-general.html">Explorar roster
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="hero-visual" id="heroVisual" aria-hidden="true">
+        <div class="tcard tc1" data-depth="22"><img src="assets/web/talento-vicca.png" alt="" loading="eager"><span class="tname">Vicca<small>Lifestyle</small></span></div>
+        <div class="tcard tc2" data-depth="34"><img src="assets/web/talento-libardo.png" alt="" loading="eager"><span class="tname">Libardo<small>Entretenimiento</small></span></div>
+        <div class="tcard tc3" data-depth="16"><img src="assets/web/talento-carol.png" alt="" loading="eager"><span class="tname">Carol<small>Belleza</small></span></div>
+      </div>
     </div>
   </div>
-  <div class="wrap">
-    <div class="stats" role="list">
-      <div class="stat reveal" role="listitem"><div class="n">1.000<sup>+</sup></div><div class="l">Talentos en roster</div></div>
-      <div class="stat reveal" role="listitem"><div class="n">1.200<sup>M+</sup></div><div class="l">Alcance combinado</div></div>
-      <div class="stat reveal" role="listitem"><div class="n">10<sup>+</sup></div><div class="l">Países de operación</div></div>
-      <div class="stat reveal" role="listitem"><div class="n">15</div><div class="l">Categorías de contenido</div></div>
+  <div class="marquee-band" aria-label="Marcas que confían en Beme">
+    <div class="marquee" id="marquee">
+      <img src="assets/marcas/cocacola.png" alt="Coca-Cola">
+      <img src="assets/marcas/huawei.png" alt="Huawei">
+      <img src="assets/marcas/universalmusic.png" alt="Universal Music">
+      <img src="assets/marcas/shein.png" alt="SHEIN">
+      <img src="assets/marcas/oppo.png" alt="OPPO">
+      <img src="assets/marcas/kerastase.svg" alt="Kérastase">
+      <img src="assets/marcas/redken.png" alt="Redken">
+      <img src="assets/marcas/avene.png" alt="Avène">
+      <img src="assets/marcas/kleenex.png" alt="Kleenex">
+      <img src="assets/marcas/tresemme.png" alt="TRESemmé">
+      <img src="assets/marcas/anker.svg" alt="Anker">
+      <img src="assets/marcas/binance.png" alt="Binance">
+      <img src="assets/marcas/sharkbeauty.webp" alt="Shark Beauty">
+      <img src="assets/marcas/garnier.svg" alt="Garnier">
     </div>
   </div>
 </section>
 
-<!-- ================= MANIFIESTO ================= -->
-<section class="manifesto" aria-labelledby="manifiesto-title">
+<!-- ================= STATS ================= -->
+<div class="stats-band">
   <div class="wrap">
-    <p class="eyebrow">Manifiesto</p>
-    <p class="manifesto-quote" id="manifiesto-title">Trabajamos en una industria saturada de ruido. Por eso elegimos un lenguaje <strong>sobrio</strong>: decisiones largas, ejecuciones precisas, resultados verificables.</p>
-    <div class="pilares">
-      <div class="pilar reveal">
-        <div class="num">01</div>
-        <h3>Criterio</h3>
-        <p>Antes de proponer, escuchamos. Antes de ejecutar, validamos. El criterio editorial precede al volumen.</p>
-      </div>
-      <div class="pilar reveal">
-        <div class="num">02</div>
-        <h3>Transparencia</h3>
-        <p>Mostrar números, contratos, métricas y procesos. La confianza se construye con visibilidad, no con relato.</p>
-      </div>
-      <div class="pilar reveal">
-        <div class="num">03</div>
-        <h3>Confidencialidad</h3>
-        <p>Lo que sucede entre marca, talento y agencia se queda entre marca, talento y agencia.</p>
-      </div>
-      <div class="pilar reveal">
-        <div class="num">04</div>
-        <h3>Autoría</h3>
-        <p>Defendemos el trabajo creativo del talento. La marca acompaña; el talento autora.</p>
-      </div>
+    <div class="stats" id="stats" role="list">
+      <div class="stat reveal" role="listitem"><div class="n"><span class="cnt" data-to="1000">0</span><span class="u">+</span></div><div class="l">Talentos en roster</div></div>
+      <div class="stat reveal reveal-d1" role="listitem"><div class="n"><span class="cnt" data-to="1200">0</span><span class="u">M+</span></div><div class="l">Alcance combinado</div></div>
+      <div class="stat reveal reveal-d2" role="listitem"><div class="n"><span class="cnt" data-to="10">0</span><span class="u">+</span></div><div class="l">Países de operación</div></div>
+      <div class="stat reveal reveal-d3" role="listitem"><div class="n"><span class="cnt" data-to="15">0</span></div><div class="l">Categorías de contenido</div></div>
     </div>
   </div>
-</section>
+</div>
 
 <!-- ================= SERVICIOS ================= -->
 <section id="servicios" aria-labelledby="servicios-title">
   <div class="wrap">
-    <div class="sec-head">
-      <p class="eyebrow">Servicios</p>
-      <h2 class="display" id="servicios-title">Lo que hacemos, con papel de por medio.</h2>
-      <p>Cada servicio opera sobre la misma base: contratos firmados, presupuestos con validez definida y métricas que se pueden auditar.</p>
-    </div>
-    <div class="servicios-grid">
-      <article class="servicio reveal">
-        <div class="num">S·01</div>
+    <span class="sec-tag">Servicios</span>
+    <h2 class="sec-title" id="servicios-title">Todo lo que tu marca necesita, <span class="grad">en un solo equipo</span>.</h2>
+    <p class="sec-sub">De la estrategia al reporte final: cada servicio opera con contratos firmados, presupuestos claros y métricas que se pueden auditar.</p>
+    <div class="serv-grid">
+      <article class="serv reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 19c0-3.2 2.7-5.5 6-5.5s6 2.3 6 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 19c0-2.2-1.2-4-3-5"/></svg></div>
         <h3>Representación de talento</h3>
-        <p>Un roster curado de más de mil creadores en quince categorías. Gestión directa con managers, datos de audiencia verificados y trayectoria documentada con marcas previas.</p>
-        <div class="tags"><span class="tag">Roster curado</span><span class="tag">Manager directo</span><span class="tag">Datos verificados</span></div>
+        <p>Un roster curado de más de mil creadores en quince categorías, con datos de audiencia verificados y gestión directa con managers.</p>
       </article>
-      <article class="servicio reveal">
-        <div class="num">S·02</div>
+      <article class="serv reveal reveal-d1">
+        <div class="ico"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 4 14h6l-1 7 9-11h-6l1-7z"/></svg></div>
         <h3>Campañas de influencer marketing</h3>
-        <p>Del brief al reporte final. Cada contenido pasa por producción, aprobación de la marca y publicación con seguimiento documentado en cada etapa.</p>
-        <div class="tags"><span class="tag">Seguimiento documentado</span><span class="tag">TikTok · IG · YouTube</span></div>
+        <p>Del brief al reporte final. Cada contenido pasa por producción, aprobación de la marca y publicación con seguimiento documentado.</p>
       </article>
-      <article class="servicio reveal">
-        <div class="num">S·03</div>
+      <article class="serv reveal reveal-d2">
+        <div class="ico"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
         <h3>Prospección y selección</h3>
-        <p>Búsqueda de creadores por categoría, país y engagement. Perfiles con seguidores, vistas promedio e interacción medidos sobre TikTok, Instagram y YouTube — no estimados.</p>
-        <div class="tags"><span class="tag">Por categoría</span><span class="tag">Por país</span><span class="tag">Por engagement</span></div>
+        <p>Búsqueda de creadores por categoría, país y engagement. Métricas reales de TikTok, Instagram y YouTube — no estimados.</p>
       </article>
-      <article class="servicio reveal">
-        <div class="num">S·04</div>
+      <article class="serv reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M21 20H3"/></svg></div>
         <h3>Reportes y métricas</h3>
-        <p>Alcance, interacción, clics y conversiones por contenido publicado. Estadísticas cargadas y archivadas por campaña, disponibles para revisión de la marca en todo momento.</p>
-        <div class="tags"><span class="tag">KPIs por contenido</span><span class="tag">Auditable</span></div>
+        <p>Alcance, interacción, clics y conversiones por contenido publicado. Estadísticas archivadas por campaña, siempre disponibles.</p>
       </article>
-      <article class="servicio reveal">
-        <div class="num">S·05</div>
+      <article class="serv reveal reveal-d1">
+        <div class="ico"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 13h6M10 17h6"/></svg></div>
         <h3>Contratos y presupuestos</h3>
-        <p>Contratos en varios idiomas y presupuestos en la moneda que corresponda: USD, MXN, ARS o EUR. Ningún acuerdo queda en una conversación.</p>
-        <div class="tags"><span class="tag">Multidioma</span><span class="tag">USD · MXN · ARS · EUR</span></div>
+        <p>Contratos en varios idiomas y presupuestos en USD, MXN, ARS o EUR. Ningún acuerdo queda en una conversación.</p>
       </article>
-      <article class="servicio reveal">
-        <div class="num">S·06</div>
-        <h3>Estrategia de marca</h3>
-        <p>Selección de creadores alineados con los valores de cada marca. Una colaboración de seis meses con cinco creadores construye más que veinte publicaciones sueltas.</p>
-        <div class="tags"><span class="tag">Largo plazo</span><span class="tag">Contexto cultural</span></div>
+      <article class="serv reveal reveal-d2">
+        <div class="ico"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div>
+        <h3>Estrategia de largo plazo</h3>
+        <p>Creadores alineados con los valores de tu marca. Una colaboración sostenida construye más que veinte publicaciones sueltas.</p>
       </article>
     </div>
   </div>
 </section>
 
-<!-- ================= TALENTOS / ROSTER ================= -->
-<section class="roster" id="talentos" aria-labelledby="talentos-title">
+<!-- ================= TALENTOS ================= -->
+<section class="talentos" id="talentos" aria-labelledby="talentos-title">
   <div class="wrap">
-    <div class="sec-head">
-      <p class="eyebrow">Talentos</p>
-      <h2 class="display" id="talentos-title">Un roster que compite en estándar, no en volumen.</h2>
-    </div>
-    <div class="roster-grid">
-      <ul class="cat-list" aria-label="Categorías principales del roster">
-        <li class="reveal">Entretenimiento <span class="c">147 perfiles</span></li>
-        <li class="reveal">Gaming <span class="c">79 perfiles</span></li>
-        <li class="reveal">Belleza <span class="c">76 perfiles</span></li>
-        <li class="reveal">Moda <span class="c">74 perfiles</span></li>
-        <li class="reveal">Lifestyle <span class="c">71 perfiles</span></li>
-        <li class="reveal">Tecnología · Deporte · Familia <span class="c">y 9 categorías más</span></li>
-      </ul>
-      <div class="roster-side">
-        <p>Cada perfil del roster incluye audiencia por plataforma, engagement, vistas promedio y marcas con las que ha trabajado. La selección para cada campaña se hace con datos, no con intuición.</p>
-        <p class="eyebrow" style="margin-bottom:6px">Presencia</p>
-        <div class="paises">
-          <span class="pais">México</span><span class="pais">Estados Unidos</span><span class="pais">Alemania</span><span class="pais">Brasil</span><span class="pais">Argentina</span><span class="pais">Italia</span><span class="pais">Colombia</span><span class="pais">España</span><span class="pais">Reino Unido</span>
-        </div>
-        <a class="btn btn-dark" href="roster-general.html">Explorar el roster
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </a>
+    <div class="tal-head">
+      <div>
+        <span class="sec-tag">Talentos</span>
+        <h2 class="sec-title" id="talentos-title">Caras que tu audiencia <span class="grad">ya conoce</span>.</h2>
+        <p class="sec-sub">México, Estados Unidos, Alemania, Brasil, Argentina, Italia, Colombia, España y más. Cada perfil con audiencia, engagement y trayectoria documentada.</p>
       </div>
+      <a class="btn btn-outline magnetic" href="roster-general.html" style="flex:none">Ver roster completo
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </div>
+  <div class="wrap tal-rail-wrap">
+    <div class="tal-rail">
+      <div class="tal reveal"><img src="assets/web/talento-vicca.png" alt="Vicca" loading="lazy"><div class="info"><div class="name">Vicca</div><span class="cat">Lifestyle</span></div></div>
+      <div class="tal reveal reveal-d1"><img src="assets/web/talento-libardo.png" alt="Libardo" loading="lazy"><div class="info"><div class="name">Libardo</div><span class="cat">Entretenimiento</span></div></div>
+      <div class="tal reveal reveal-d2"><img src="assets/web/talento-ferduran.png" alt="Fer Durán" loading="lazy"><div class="info"><div class="name">Fer Durán</div><span class="cat">Moda</span></div></div>
+      <div class="tal reveal reveal-d3"><img src="assets/web/talento-carol.png" alt="Carol" loading="lazy"><div class="info"><div class="name">Carol</div><span class="cat">Belleza</span></div></div>
+      <div class="tal reveal reveal-d3"><img src="assets/web/talento-brenda.png" alt="Brenda" loading="lazy"><div class="info"><div class="name">Brenda</div><span class="cat">Lifestyle</span></div></div>
+      <a class="tal-more reveal reveal-d3" href="roster-general.html">
+        <span class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span>+1.000 talentos</span>
+        <small>Explorar el roster completo</small>
+      </a>
     </div>
   </div>
 </section>
 
 <!-- ================= PROCESO ================= -->
-<section id="proceso" aria-labelledby="proceso-title">
+<section class="proceso" id="proceso" aria-labelledby="proceso-title">
   <div class="wrap">
-    <div class="sec-head">
-      <p class="eyebrow">Proceso</p>
-      <h2 class="display" id="proceso-title">Del brief al reporte, sin sorpresas.</h2>
-      <p>La marca sabe en qué etapa está su inversión en todo momento. Nada se publica sin su aprobación.</p>
-    </div>
-    <div class="proceso-list">
-      <div class="paso reveal"><div class="pn">01</div><div><h3>Brief y selección</h3><p>La marca define objetivo y plataformas. Proponemos creadores con datos de audiencia y trayectoria; la marca aprueba la lista final.</p></div></div>
-      <div class="paso reveal"><div class="pn">02</div><div><h3>Acuerdo por escrito</h3><p>Condiciones, entregables y fechas en contrato. Presupuesto con validez definida, en la moneda acordada.</p></div></div>
-      <div class="paso reveal"><div class="pn">03</div><div><h3>Producción y aprobación</h3><p>El talento crea con su lenguaje; la marca revisa y aprueba antes de cada publicación.</p></div></div>
-      <div class="paso reveal"><div class="pn">04</div><div><h3>Publicación y reporte</h3><p>Publicación coordinada y reporte final con alcance, interacción y conversiones por contenido. La campaña cierra con números, no con adjetivos.</p></div></div>
+    <span class="sec-tag">Proceso</span>
+    <h2 class="sec-title" id="proceso-title">Del brief al reporte, <span class="grad">sin sorpresas</span>.</h2>
+    <p class="sec-sub">Tu marca sabe en qué etapa está su inversión en todo momento. Nada se publica sin su aprobación.</p>
+    <div class="pro-grid" id="proGrid">
+      <div class="pro-line" aria-hidden="true"><i></i></div>
+      <div class="pro reveal"><div class="dot">1</div><div><h3>Brief y selección</h3><p>Tu marca define objetivo y plataformas. Proponemos creadores con datos; la marca aprueba la lista final.</p></div></div>
+      <div class="pro reveal reveal-d1"><div class="dot">2</div><div><h3>Acuerdo por escrito</h3><p>Condiciones, entregables y fechas en contrato, en la moneda que corresponda.</p></div></div>
+      <div class="pro reveal reveal-d2"><div class="dot">3</div><div><h3>Producción y aprobación</h3><p>El talento crea con su lenguaje; tu marca revisa y aprueba antes de cada publicación.</p></div></div>
+      <div class="pro reveal reveal-d3"><div class="dot">4</div><div><h3>Publicación y reporte</h3><p>Publicación coordinada y reporte con alcance, interacción y conversiones por contenido.</p></div></div>
     </div>
   </div>
 </section>
 
 <!-- ================= MARCAS ================= -->
-<section class="marcas" id="marcas" aria-labelledby="marcas-title">
+<section id="marcas" aria-labelledby="marcas-title">
   <div class="wrap">
-    <div class="sec-head">
-      <p class="eyebrow">Marcas</p>
-      <h2 class="display" id="marcas-title">Compañía conocida.</h2>
-      <p>Marcas globales que han trabajado con BEME y con creadores de nuestro roster.</p>
-    </div>
-    <div class="marcas-list">
+    <span class="sec-tag">Marcas</span>
+    <h2 class="sec-title" id="marcas-title">Compañía <span class="grad">conocida</span>.</h2>
+    <p class="sec-sub">Marcas globales que han trabajado con Beme y con creadores de nuestro roster.</p>
+    <div class="marcas-grid">
       <div class="marca reveal"><img src="assets/marcas/cocacola.png" alt="Coca-Cola" loading="lazy"></div>
       <div class="marca reveal"><img src="assets/marcas/huawei.png" alt="Huawei" loading="lazy"></div>
       <div class="marca reveal"><img src="assets/marcas/universalmusic.png" alt="Universal Music" loading="lazy"></div>
@@ -648,87 +756,82 @@ html.js .reveal.in{opacity:1;transform:none}
       <div class="marca reveal"><img src="assets/marcas/autozone.png" alt="AutoZone" loading="lazy"></div>
       <div class="marca reveal"><img src="assets/marcas/radioshack.png" alt="RadioShack" loading="lazy"></div>
       <div class="marca reveal"><img src="assets/marcas/armorall.png" alt="Armor All" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/anker.svg" alt="Anker" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/avon.svg" alt="Avon" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/kiehls.svg" alt="Kiehl's" loading="lazy"></div>
+      <div class="marca reveal"><img src="assets/marcas/garnier.svg" alt="Garnier" loading="lazy"></div>
       <div class="marca reveal"><img src="assets/marcas/xiomara.png" alt="Xiomara" loading="lazy"></div>
     </div>
-    <p class="marcas-note">También: Anker · Avon · Kiehl's · Garnier · Prorganics · Dr.Melaxi · Xtreme</p>
   </div>
 </section>
 
 <!-- ================= TESTIMONIOS ================= -->
 <section aria-labelledby="testimonios-title">
   <div class="wrap">
-    <div class="sec-head">
-      <p class="eyebrow">Testimonios</p>
-      <h2 class="display" id="testimonios-title">Lo dicen las marcas.</h2>
-    </div>
-    <div class="testimonios-grid">
-      <figure class="testimonio reveal">
+    <span class="sec-tag">Testimonios</span>
+    <h2 class="sec-title" id="testimonios-title">Lo dicen <span class="grad">las marcas</span>.</h2>
+    <div class="testi-grid">
+      <figure class="testi reveal">
+        <div class="q">“</div>
         <blockquote>La colaboración fue impecable. Desde la selección de influencers hasta el seguimiento y optimización en tiempo real, todo estuvo perfectamente organizado.</blockquote>
-        <figcaption><cite>Sofía Hernández</cite></figcaption>
+        <figcaption><cite><span class="av">SH</span><span class="who"><b>Sofía Hernández</b><span>Marketing Manager</span></span></cite></figcaption>
       </figure>
-      <figure class="testimonio reveal">
+      <figure class="testi reveal reveal-d1">
+        <div class="q">“</div>
         <blockquote>Beme Agency entiende que el marketing de influencia no es solo números, sino crear conexiones reales.</blockquote>
-        <figcaption><cite>Rodrigo Méndez</cite></figcaption>
+        <figcaption><cite><span class="av">RM</span><span class="who"><b>Rodrigo Méndez</b><span>Brand Director</span></span></cite></figcaption>
       </figure>
-      <figure class="testimonio reveal">
+      <figure class="testi reveal reveal-d2">
+        <div class="q">“</div>
         <blockquote>Lo que más nos impresionó fue la claridad en los reportes y la transparencia en cada etapa del proceso.</blockquote>
-        <figcaption><cite>Jorge Ramírez</cite></figcaption>
+        <figcaption><cite><span class="av">JR</span><span class="who"><b>Jorge Ramírez</b><span>CMO</span></span></cite></figcaption>
       </figure>
     </div>
   </div>
 </section>
 
-<!-- ================= CONTACTO ================= -->
-<section class="contacto" id="contacto" aria-labelledby="contacto-title">
+<!-- ================= CTA + CONTACTO ================= -->
+<section id="contacto" aria-labelledby="contacto-title" style="padding-top:30px">
   <div class="wrap">
-    <div class="sec-head">
-      <p class="eyebrow">Contacto</p>
-      <h2 class="display" id="contacto-title">Iniciemos una conversación seria.</h2>
-      <p>Cuéntenos qué busca su marca. Respondemos con una propuesta concreta: creadores, formatos y presupuesto.</p>
-    </div>
-    <div class="contacto-grid">
-      <div>
-        <div class="c-item">
-          <div class="k">Correo</div>
-          <div class="v"><a href="mailto:contacto@bemeagency.com">contacto@bemeagency.com</a></div>
+    <div class="cta-panel">
+      <div class="blob cb1" aria-hidden="true"></div>
+      <div class="blob cb2" aria-hidden="true"></div>
+      <div class="cta-grid">
+        <div>
+          <h2 id="contacto-title">Tu próxima campaña empieza con un mensaje.</h2>
+          <p class="lead">Contanos qué busca tu marca y respondemos con una propuesta concreta: creadores, formatos y presupuesto.</p>
+          <div class="cta-data">
+            <a href="mailto:contacto@bemeagency.com"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>contacto@bemeagency.com</a>
+            <a href="tel:+34662568768"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>+34 662 56 87 68 · España</a>
+            <a href="tel:+5493515602867"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>+54 9 3515 60 2867 · Argentina</a>
+            <span style="display:inline-flex;align-items:center;gap:12px;font-size:15px;color:rgba(255,255,255,0.8)"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#fff;fill:none;stroke-width:1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.1 7-11a7 7 0 1 0-14 0c0 5.9 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>Av. Popocatépetl 435, Benito Juárez, CDMX</span>
+          </div>
+          <div class="cta-social">
+            <a href="https://www.instagram.com/beme.agency/" target="_blank" rel="noopener" aria-label="Instagram de Beme Agency">
+              <svg viewBox="0 0 24 24"><rect x="2.5" y="2.5" width="19" height="19" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="0.9" fill="currentColor" stroke="none"/></svg>
+            </a>
+            <a href="https://www.linkedin.com/company/bemeagency/" target="_blank" rel="noopener" aria-label="LinkedIn de Beme Agency">
+              <svg viewBox="0 0 24 24"><path d="M4.5 9.5v10M4.5 5.2v.1M10 19.5v-6a3.5 3.5 0 0 1 7 0v6M10 9.5v10" stroke-linecap="round"/></svg>
+            </a>
+          </div>
         </div>
-        <div class="c-item">
-          <div class="k">España</div>
-          <div class="v"><a href="tel:+34662568768">+34 662 56 87 68</a></div>
-        </div>
-        <div class="c-item">
-          <div class="k">Argentina</div>
-          <div class="v"><a href="tel:+5493515602867">+54 9 3515 60 2867</a></div>
-        </div>
-        <div class="c-item">
-          <div class="k">Oficina · Ciudad de México</div>
-          <div class="v" style="font-size:18px">Av. Popocatépetl 435, Sta Cruz Atoyac,<br>Benito Juárez, 03310 CDMX</div>
-        </div>
-        <div class="c-social">
-          <a href="https://www.instagram.com/beme.agency/" target="_blank" rel="noopener" aria-label="Instagram de BEME Agency">
-            <svg viewBox="0 0 24 24"><rect x="2.5" y="2.5" width="19" height="19" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="0.9" fill="currentColor" stroke="none"/></svg>
-          </a>
-          <a href="https://www.linkedin.com/company/bemeagency/" target="_blank" rel="noopener" aria-label="LinkedIn de BEME Agency">
-            <svg viewBox="0 0 24 24"><path d="M4.5 9.5v10M4.5 5.2v.1M10 19.5v-6a3.5 3.5 0 0 1 7 0v6M10 9.5v10" stroke-linecap="round"/></svg>
-          </a>
-        </div>
+        <form class="form" name="contacto-web" method="POST" data-netlify="true" netlify-honeypot="bot-field" id="contactForm">
+          <input type="hidden" name="form-name" value="contacto-web">
+          <p style="display:none"><label>No llenar: <input name="bot-field"></label></p>
+          <label for="f-nombre">Nombre *</label>
+          <input id="f-nombre" name="nombre" type="text" required autocomplete="name" placeholder="Tu nombre">
+          <label for="f-marca">Marca o empresa *</label>
+          <input id="f-marca" name="marca" type="text" required autocomplete="organization" placeholder="Nombre de la marca">
+          <label for="f-email">Correo *</label>
+          <input id="f-email" name="email" type="email" required autocomplete="email" placeholder="nombre@empresa.com">
+          <label for="f-mensaje">¿Qué busca tu marca?</label>
+          <textarea id="f-mensaje" name="mensaje" rows="4" placeholder="Objetivo, plataformas, mercado…"></textarea>
+          <button class="btn btn-primary" type="submit" id="formBtn">Enviar mensaje
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+          <p class="form-msg" id="formMsg" role="status" aria-live="polite"></p>
+        </form>
       </div>
-      <form class="form" name="contacto-web" method="POST" data-netlify="true" netlify-honeypot="bot-field" id="contactForm">
-        <input type="hidden" name="form-name" value="contacto-web">
-        <p style="display:none"><label>No llenar: <input name="bot-field"></label></p>
-        <label for="f-nombre">Nombre *</label>
-        <input id="f-nombre" name="nombre" type="text" required autocomplete="name">
-        <label for="f-marca">Marca o empresa *</label>
-        <input id="f-marca" name="marca" type="text" required autocomplete="organization">
-        <label for="f-email">Correo *</label>
-        <input id="f-email" name="email" type="email" required autocomplete="email">
-        <label for="f-mensaje">Qué busca su marca</label>
-        <textarea id="f-mensaje" name="mensaje" rows="4"></textarea>
-        <button class="btn btn-dark" type="submit" id="formBtn">Enviar
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </button>
-        <p class="form-msg" id="formMsg" role="status" aria-live="polite"></p>
-      </form>
     </div>
   </div>
 </section>
@@ -740,8 +843,8 @@ html.js .reveal.in{opacity:1;transform:none}
   <div class="wrap">
     <div class="footer-grid">
       <div>
-        <div class="logo">BEME<span>.</span></div>
-        <p style="margin-top:12px;font-size:13px;font-weight:300;max-width:34ch">Donde el talento se vuelve oficio, y la marca, una conversación seria.</p>
+        <a class="flogo" href="#top" aria-label="Beme Agency"><img src="assets/brand/logos/Beme1blanco.png" alt="Beme" width="140" height="54"></a>
+        <p class="fclaim">El talento no se contrata. Se acompaña.</p>
       </div>
       <ul class="footer-nav">
         <li><a href="#servicios">Servicios</a></li>
@@ -753,7 +856,7 @@ html.js .reveal.in{opacity:1;transform:none}
       </ul>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 BEME Agency</span>
+      <span>© 2026 Beme Agency</span>
       <span>CDMX · Madrid · Córdoba</span>
     </div>
   </div>
@@ -761,6 +864,24 @@ html.js .reveal.in{opacity:1;transform:none}
 
 <script>
 document.documentElement.classList.add('js');
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// —— Nav: glass al scrollear + barra de progreso ——
+const nav = document.getElementById('nav');
+const progress = document.getElementById('progress');
+let ticking = false;
+function onScroll(){
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => {
+    nav.classList.toggle('scrolled', window.scrollY > 30);
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    progress.style.transform = `scaleX(${h > 0 ? window.scrollY / h : 0})`;
+    ticking = false;
+  });
+}
+window.addEventListener('scroll', onScroll, { passive: true });
+onScroll();
 
 // —— Menú móvil ——
 const burger = document.getElementById('navBurger');
@@ -773,13 +894,89 @@ links.addEventListener('click', e => {
   if (e.target.tagName === 'A') { links.classList.remove('open'); burger.setAttribute('aria-expanded','false'); }
 });
 
-// —— Reveal on scroll ——
+// —— Cursor glow ——
+if (!reduceMotion && matchMedia('(pointer:fine)').matches) {
+  const glow = document.getElementById('glow');
+  window.addEventListener('pointermove', e => {
+    glow.style.setProperty('--mx', e.clientX + 'px');
+    glow.style.setProperty('--my', e.clientY + 'px');
+  }, { passive: true });
+}
+
+// —— Reveals con stagger ——
 const io = new IntersectionObserver(entries => {
   entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
-}, { threshold: 0.12 });
+}, { threshold: 0.12, rootMargin: '0px 0px -5% 0px' });
 document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
-// —— Envío del formulario (Netlify Forms, sin recargar) ——
+// —— Línea del proceso ——
+const proGrid = document.getElementById('proGrid');
+new IntersectionObserver((ents, obs) => {
+  ents.forEach(en => { if (en.isIntersecting) { proGrid.classList.add('in'); obs.disconnect(); } });
+}, { threshold: 0.4 }).observe(proGrid);
+
+// —— Contadores animados ——
+function animateCount(el){
+  const to = +el.dataset.to, dur = 1600, t0 = performance.now();
+  const fmt = n => n.toLocaleString('es-AR');
+  function tick(t){
+    const p = Math.min((t - t0) / dur, 1);
+    el.textContent = fmt(Math.round(to * (1 - Math.pow(1 - p, 3))));
+    if (p < 1) requestAnimationFrame(tick);
+  }
+  if (reduceMotion) { el.textContent = fmt(to); return; }
+  requestAnimationFrame(tick);
+}
+new IntersectionObserver((ents, obs) => {
+  ents.forEach(en => {
+    if (en.isIntersecting) { en.target.querySelectorAll('.cnt').forEach(animateCount); obs.disconnect(); }
+  });
+}, { threshold: 0.4 }).observe(document.getElementById('stats'));
+
+// —— Tilt 3D + parallax de las cards del hero ——
+const heroVisual = document.getElementById('heroVisual');
+if (heroVisual && !reduceMotion && matchMedia('(pointer:fine)').matches) {
+  const cards = heroVisual.querySelectorAll('.tcard');
+  let raf = null;
+  heroVisual.addEventListener('pointermove', e => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      const r = heroVisual.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - .5;
+      const y = (e.clientY - r.top) / r.height - .5;
+      cards.forEach(c => {
+        const d = +c.dataset.depth;
+        c.style.translate = `${-x * d}px ${-y * d}px`;
+        c.style.rotate = '';
+        c.style.transform = '';
+      });
+      raf = null;
+    });
+  });
+  heroVisual.addEventListener('pointerleave', () => {
+    cards.forEach(c => { c.style.translate = ''; });
+  });
+}
+
+// —— Magnetic buttons ——
+if (!reduceMotion && matchMedia('(pointer:fine)').matches) {
+  document.querySelectorAll('.magnetic').forEach(btn => {
+    btn.addEventListener('pointermove', e => {
+      const r = btn.getBoundingClientRect();
+      const x = e.clientX - r.left - r.width / 2;
+      const y = e.clientY - r.top - r.height / 2;
+      btn.style.transform = `translate(${x * .18}px, ${y * .3}px)`;
+    });
+    btn.addEventListener('pointerleave', () => { btn.style.transform = ''; });
+  });
+}
+
+// —— Marquee: duplicar contenido para loop infinito ——
+const mq = document.getElementById('marquee');
+mq.innerHTML += mq.innerHTML;
+mq.querySelectorAll('img').forEach(i => i.setAttribute('aria-hidden', 'true'));
+
+// —— Formulario (Netlify Forms, sin recargar) ——
 const form = document.getElementById('contactForm');
 const formMsg = document.getElementById('formMsg');
 const formBtn = document.getElementById('formBtn');
@@ -795,7 +992,7 @@ form.addEventListener('submit', async e => {
     formMsg.textContent = 'Mensaje recibido. Respondemos dentro de las próximas 48 horas hábiles.';
     formMsg.classList.add('ok');
   } catch (err) {
-    formMsg.textContent = 'No se pudo enviar el formulario. Escríbanos a contacto@bemeagency.com.';
+    formMsg.textContent = 'No se pudo enviar. Escribinos a contacto@bemeagency.com';
     formMsg.classList.add('err');
   } finally {
     formBtn.disabled = false;
