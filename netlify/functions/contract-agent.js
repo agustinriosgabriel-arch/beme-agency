@@ -1,3 +1,4 @@
+const { corsOrigin } = require('./lib/cors');
 // Netlify Function: Contract Generator + AI Customizer
 // POST /.netlify/functions/contract-agent
 // Actions: generate (template), translate (template), customize (AI)
@@ -136,7 +137,7 @@ ${clausulaSpark}
 
 exports.handler = async (event) => {
   const headers = {
-    'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || 'https://bemeagency.netlify.app',
+    'Access-Control-Allow-Origin': corsOrigin(event),
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
   };

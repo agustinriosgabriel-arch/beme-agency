@@ -1,10 +1,11 @@
+const { corsOrigin } = require('./lib/cors');
 // Netlify Function: extract profile photo from TikTok or Instagram profile pages
 // Uses multiple strategies: crawler UAs, platform-specific JSON parsing, meta tags
 // Returns the image as base64 data URL so it persists (CDN URLs expire)
 
 exports.handler = async (event) => {
   const headers = {
-    'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || 'https://bemeagency.netlify.app',
+    'Access-Control-Allow-Origin': corsOrigin(event),
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
   };

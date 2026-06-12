@@ -1,3 +1,4 @@
+const { corsOrigin } = require('./lib/cors');
 // Netlify Function: EnsembleData API proxy (primary) + Apify fallback
 // POST /.netlify/functions/ensemble-scraper
 // Body: { platform, username, action, ensembleToken, apifyToken? }
@@ -256,7 +257,7 @@ async function apifyFallback(platform, username, apifyToken) {
 // ─── Handler ────────────────────────────────────────────────
 exports.handler = async (event) => {
   const headers = {
-    'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || 'https://bemeagency.netlify.app',
+    'Access-Control-Allow-Origin': corsOrigin(event),
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
   };

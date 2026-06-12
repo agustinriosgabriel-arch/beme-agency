@@ -1,3 +1,4 @@
+const { corsOrigin } = require('./lib/cors');
 // Netlify Function: proxy Apify para Instagram + TikTok
 // POST /.netlify/functions/apify-scraper
 // Body: { platform, username, apifyToken }
@@ -58,7 +59,7 @@ function parseFollowers(platform, item) {
 
 exports.handler = async (event) => {
   const headers = {
-    'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || 'https://bemeagency.netlify.app',
+    'Access-Control-Allow-Origin': corsOrigin(event),
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
   };

@@ -1,3 +1,4 @@
+const { corsOrigin } = require('./lib/cors');
 // Netlify Function: AI Roster Recommendation Agent
 // POST /.netlify/functions/roster-agent
 // Uses Claude Sonnet to rank talents against campaign requirements
@@ -6,7 +7,7 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
 exports.handler = async (event) => {
   const headers = {
-    'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || 'https://bemeagency.netlify.app',
+    'Access-Control-Allow-Origin': corsOrigin(event),
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
   };
