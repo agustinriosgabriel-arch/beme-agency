@@ -122,6 +122,14 @@ body.dark .logo .logo-dark{display:block}
 .venc-pronto{background:rgba(251,191,36,0.12);color:var(--orange)}
 .venc-vencida{background:rgba(248,113,113,0.15);color:var(--red)}
 
+/* Estado de la campaña (indicador de "hay que facturar") */
+.camp-estado{font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;flex-shrink:0;border:1px solid transparent;white-space:nowrap}
+.ce-sin_iniciar{background:rgba(136,136,136,0.12);color:#888}
+.ce-en_curso{background:rgba(14,165,233,0.12);color:#0ea5e9}
+.ce-etapa_finanzas{background:rgba(245,158,11,0.16);color:#d97706;border-color:rgba(245,158,11,0.45)}
+.ce-finalizada{background:rgba(34,197,94,0.12);color:#16a34a}
+.ce-cancelada{background:rgba(239,68,68,0.12);color:#ef4444}
+
 /* Resumen mensual */
 .res-table{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 .res-table th{text-align:right;padding:9px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);border-bottom:1px solid var(--border);background:var(--surface2)}
@@ -290,7 +298,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   <div id="section-cxc">
     <div class="toolbar">
       <div class="search-wrap"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" class="search-input" id="cxc-search" placeholder="Buscar campana, cliente, marca, talento, identificador, folio..." oninput="renderCxC()"></div>
-      <select class="filter-select" id="cxc-filter" onchange="renderCxC()"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="emitida">Emitida</option><option value="enviada">Enviada</option><option value="pagada_parcial">Pago Parcial</option><option value="cobrada">Cobrada</option><option value="vencida">Vencidas</option></select>
+      <select class="filter-select" id="cxc-filter" onchange="renderCxC()"><option value="">Todos</option><option value="por_facturar">⚡ Lista para facturar</option><option value="pendiente">Pendiente</option><option value="emitida">Emitida</option><option value="enviada">Enviada</option><option value="pagada_parcial">Pago Parcial</option><option value="cobrada">Cobrada</option><option value="vencida">Vencidas</option></select>
     </div>
     <div id="cxc-container"></div>
   </div>
@@ -622,6 +630,7 @@ function renderCxC(){
       if(!match) return;
     }
     if(filt==='vencida'){if(!facs.some(f=>facVencida(f)))return;}
+    else if(filt==='por_facturar'){if(!CAMP_EST_LISTA.includes(c.estado)||facs.some(f=>f.estado!=='cancelada'))return;}
     else if(filt){if(!facs.length&&filt!=='pendiente')return;if(facs.length&&!facs.some(f=>f.estado===filt))return;}
     if(!byClient[cli.id])byClient[cli.id]={cliente:cli,campanas:[]};
     byClient[cli.id].campanas.push({...c,facs});
@@ -646,6 +655,14 @@ function renderCxC(){
   }).join('');
 }
 
+// Estado de la campaña → badge (etapa_finanzas = lista para facturar)
+const CAMP_EST={sin_iniciar:'Sin iniciar',en_curso:'En curso',etapa_finanzas:'Etapa Finanzas',finalizada:'Finalizada',cancelada:'Cancelada'};
+const CAMP_EST_LISTA=['etapa_finanzas','finalizada']; // estados donde normalmente ya se factura
+function campEstadoBadge(estado){
+  if(!estado||!CAMP_EST[estado])return '';
+  return `<span class="camp-estado ce-${estado}" title="Estado de la campaña">${CAMP_EST[estado]}</span>`;
+}
+
 function renderCxCRow(c){
   const cts=campanasTalentos.filter(ct=>ct.campana_id===c.id);
   const totalFee=cts.reduce((s,ct)=>s+(Number(ct.fee_marca)||0),0);
@@ -660,6 +677,7 @@ function renderCxCRow(c){
     <div class="fin-row" onclick="toggleDetail('detail-${c.id}')" style="cursor:pointer">
       <div class="fin-row-name">${esc(c.nombre)}</div>
       <div class="fin-row-meta">${esc(c.marcas?.nombre||'')}</div>
+      ${campEstadoBadge(c.estado)}
       ${venc?`<span class="venc-badge ${venc.cls}">${venc.label}</span>`:''}
       <span class="status-pill ${estadoClass}">${estadoLabel[estado]||estado}</span>
       <div class="fin-row-amount">${fac?fmtMoney(fac.monto,fac.moneda):fmtMoney(totalFee)}${fac&&saldo>0&&facPagado(fac)>0?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,fac.moneda)}</div>`:''}</div>
@@ -1107,12 +1125,22 @@ function renderResumen(){
   const campConFactura=new Set(facturas.filter(f=>f.estado!=='cancelada').map(f=>f.campana_id));
   const porFacturar={};
   let porFacturarCount=0;
+  const pfRows=[];
   campanas.forEach(c=>{
-    if(campConFactura.has(c.id))return;
+    if(campConFactura.has(c.id)||c.estado==='cancelada')return;
     const cts=campanasTalentos.filter(ct=>ct.campana_id===c.id);
     const tot=cts.reduce((s,ct)=>s+(Number(ct.fee_marca)||0),0);
-    if(tot>0){cts.forEach(ct=>addCur(porFacturar,ct.moneda,Number(ct.fee_marca)||0));porFacturarCount++;}
+    if(tot>0){
+      const map={};
+      cts.forEach(ct=>{addCur(porFacturar,ct.moneda,Number(ct.fee_marca)||0);addCur(map,ct.moneda,Number(ct.fee_marca)||0);});
+      porFacturarCount++;
+      pfRows.push({c,map});
+    }
   });
+  // Priorizar las que ya están listas para facturar (etapa finanzas / finalizadas)
+  const _ord={etapa_finanzas:0,finalizada:1,en_curso:2,sin_iniciar:3};
+  pfRows.sort((a,b)=>((_ord[a.c.estado]??9)-(_ord[b.c.estado]??9))||(a.c.nombre||'').localeCompare(b.c.nombre||''));
+  const pfListas=pfRows.filter(r=>CAMP_EST_LISTA.includes(r.c.estado)).length;
 
   container.innerHTML=`
     <div class="res-section">
@@ -1129,10 +1157,20 @@ function renderResumen(){
       </div>
     </div>
     <div class="res-section">
-      <h3>Por Facturar <span class="hint">campañas con fees acordados y sin factura emitida</span></h3>
-      <div class="fin-detail-card" style="border-left:3px solid var(--blue);max-width:380px">
-        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800">${fmtMulti(porFacturar)}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${porFacturarCount} campaña${porFacturarCount!==1?'s':''} sin facturar</div>
+      <h3>Por Facturar <span class="hint">campañas con fees acordados y sin factura · ordenadas por estado</span></h3>
+      <div class="fin-detail-card" style="border-left:3px solid var(--blue);max-width:560px">
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+          <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800">${fmtMulti(porFacturar)}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${porFacturarCount} campaña${porFacturarCount!==1?'s':''} sin facturar${pfListas?` · <b style="color:#d97706">${pfListas} lista${pfListas!==1?'s':''} para facturar</b>`:''}</div>
+        </div>
+        <div style="margin-top:10px;display:flex;flex-direction:column">
+          ${pfRows.slice(0,15).map(r=>`<div style="display:flex;align-items:center;gap:8px;font-size:11.5px;padding:4px 0;border-top:1px solid var(--border)">
+            ${campEstadoBadge(r.c.estado)||'<span style="width:0"></span>'}
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.c.nombre)} <span style="color:var(--text-dim)">· ${esc(r.c.marcas?.nombre||'')}</span></span>
+            <b style="white-space:nowrap">${fmtMulti(r.map)}</b>
+          </div>`).join('')}
+          ${pfRows.length>15?`<div style="font-size:10px;color:var(--text-dim);padding-top:4px">+${pfRows.length-15} más</div>`:''}
+        </div>
       </div>
     </div>`;
 }
