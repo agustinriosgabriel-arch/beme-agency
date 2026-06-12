@@ -13,11 +13,11 @@ const transporter = nodemailer.createTransport({
   auth: { user: SMTP_USER, pass: SMTP_PASS },
 });
 
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://bemeagency.netlify.app';
+const { corsOrigin } = require('./lib/cors');
 
 exports.handler = async (event) => {
   const headers = {
-    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+    'Access-Control-Allow-Origin': corsOrigin(event),
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
   };
