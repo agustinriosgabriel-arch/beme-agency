@@ -89,6 +89,11 @@ body.dark .logo .logo-dark{display:block}
 .chip{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;font-family:inherit;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:all 0.15s}
 .chip:hover{border-color:var(--border2);color:var(--text)}
 .chip.active{background:var(--gradient);color:#fff;border-color:transparent}
+/* Casillas QuickBooks (contabilidad) */
+.qb-check{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--text-dim);cursor:pointer;white-space:nowrap;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 7px;transition:all 0.15s}
+.qb-check:hover{border-color:var(--border2)}
+.qb-check input{accent-color:var(--green);width:13px;height:13px;cursor:pointer;margin:0}
+.qb-check.on{color:var(--green);background:rgba(74,222,128,0.08);border-color:rgba(74,222,128,0.3)}
 
 /* Finance rows */
 .fin-group{margin-bottom:20px}
@@ -584,6 +589,24 @@ function fmtMulti(map){
 }
 function addCur(map,cur,v){const c=cur||'USD';map[c]=(map[c]||0)+v;}
 
+// ── Casillas QuickBooks (control de la contadora) ──
+function qbCheck(label,checked,onchangeExpr){
+  return `<label class="qb-check${checked?' on':''}" onclick="event.stopPropagation()"><input type="checkbox" ${checked?'checked':''} onchange="${onchangeExpr}"> ${label}</label>`;
+}
+async function setQbFlag(table,id,field,checked){
+  try{
+    const{error}=await sb.from(table).update({[field]:checked}).eq('id',id);
+    if(error)throw error;
+    const arr=table==='facturas'?facturas:campanasTalentos;
+    const row=arr.find(x=>x.id===id);if(row)row[field]=checked;
+    if(table==='facturas')renderCxC();else renderCxP();
+  }catch(e){showToast('Error: '+e.message,'error');}
+}
+const setQbFactura =(id,v)=>setQbFlag('facturas',id,'qb_factura',v);
+const setQbCobro   =(id,v)=>setQbFlag('facturas',id,'qb_cobro',v);
+const setQbCtFactura=(id,v)=>setQbFlag('campana_talentos',id,'qb_factura',v);
+const setQbCtPago  =(id,v)=>setQbFlag('campana_talentos',id,'qb_pago',v);
+
 // STATS — por moneda, basadas en saldos reales (no estados binarios).
 // CxC/CxP pendiente reflejan los FILTROS de su sección (ver cxc/cxpFiltered*).
 function renderStats(){
@@ -742,6 +765,8 @@ function renderCxCRow(c){
       <div class="fin-row-date">${fac&&fac.fecha_vencimiento?`${formatDate(fac.fecha_vencimiento)}${venc&&venc.dias<0?` <span class="venc-badge ${venc.cls}">${-venc.dias}d</span>`:''}`:'—'}</div>
       <div class="fin-row-amount">${fac?fmtMoney(fac.monto,fac.moneda):fmtMoney(totalFee)}${fac&&saldo>0&&facPagado(fac)>0?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,fac.moneda)}</div>`:''}</div>
       <div class="fin-row-actions">
+        ${fac?qbCheck('QB Factura',fac.qb_factura,`setQbFactura(${fac.id},this.checked)`):''}
+        ${fac?qbCheck('QB Cobro',fac.qb_cobro,`setQbCobro(${fac.id},this.checked)`):''}
         ${!fac?`<button class="btn btn-primary btn-xs" onclick="event.stopPropagation();openNuevaFactura(${c.id},${c.marcas?.clientes?.id||0})">+ Factura</button>`:''}
         <a class="btn btn-ghost btn-xs" href="campana-detalle.html?id=${c.id}" target="_blank" onclick="event.stopPropagation()" title="Ver detalle completo de la campaña">Detalle ↗</a>
       </div>
@@ -1132,6 +1157,8 @@ function renderCxPRow(ct){
     <div><input type="date" value="${fechaEst}" title="Fecha de pago estimada" onchange="setFechaPagoEstimada(${ct.id},this.value)" style="${dInput}"></div>
     <div class="fin-row-amount">${fmtMoney(ct.fee_talento||0,ct.moneda_talento||ct.moneda)}${estado==='parcial'?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,ct.moneda_talento||ct.moneda)}</div>`:''}</div>
     <div class="fin-row-actions">
+      ${qbCheck('QB Factura',ct.qb_factura,`setQbCtFactura(${ct.id},this.checked)`)}
+      ${qbCheck('QB Pago',ct.qb_pago,`setQbCtPago(${ct.id},this.checked)`)}
       ${estado!=='pagado'?`<button class="btn btn-green btn-xs" onclick="openPagoTalento(${ct.id},${ct.campana_id},${ct.talent_id})">${estado==='parcial'?'Pagar saldo':'Pagar'}</button>`:''}
       <input type="file" id="inv-${ct.id}" style="display:none" accept=".pdf,.png,.jpg,.jpeg" onchange="subirInvoiceTalento(${ct.id},${ct.campana_id},${ct.talent_id},this)">
       ${ct.invoice_url?`<a class="btn btn-ghost btn-xs" href="${ct.invoice_url}" target="_blank" title="Invoice del talento">Invoice ✓</a>`:`<button class="btn btn-outline btn-xs" onclick="document.getElementById('inv-${ct.id}').click()" title="Cargar invoice del talento">+ Invoice</button>`}

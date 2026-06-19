@@ -74,3 +74,14 @@ ALTER TABLE campana_talentos ADD COLUMN IF NOT EXISTS moneda_talento text;
 UPDATE campana_talentos
    SET moneda_marca   = COALESCE(moneda_marca, moneda, 'USD'),
        moneda_talento = COALESCE(moneda_talento, moneda, 'USD');
+
+-- ┌──────────────────────────────────────────────────────────────┐
+-- │ E. CONTABILIDAD — casillas QuickBooks (control de la contadora)│
+-- │    Marca si el movimiento ya fue cargado en QuickBooks.       │
+-- └──────────────────────────────────────────────────────────────┘
+-- CxC: a nivel factura → factura cargada en QB y cobro cargado en QB
+ALTER TABLE facturas ADD COLUMN IF NOT EXISTS qb_factura boolean DEFAULT false;
+ALTER TABLE facturas ADD COLUMN IF NOT EXISTS qb_cobro   boolean DEFAULT false;
+-- CxP: a nivel talento de la campaña → invoice del talento en QB y pago en QB
+ALTER TABLE campana_talentos ADD COLUMN IF NOT EXISTS qb_factura boolean DEFAULT false;
+ALTER TABLE campana_talentos ADD COLUMN IF NOT EXISTS qb_pago    boolean DEFAULT false;
