@@ -15,10 +15,25 @@
 // Env vars: SUPABASE_URL, SUPABASE_SERVICE_KEY, RESEND_API_KEY,
 //           PUBLIC_APP_URL (opcional, default app.bemeagency.com)
 
+const nodemailer = require('nodemailer');
+
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const APP_URL = (process.env.PUBLIC_APP_URL || 'https://app.bemeagency.com').replace(/\/$/, '');
+
+// Email por SMTP (Hostinger) — mismo canal que prospección, que ya funciona.
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.hostinger.com';
+const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
+const SMTP_USER = process.env.SMTP_USER || 'contacto@bemeagency.com'; // buzón autenticado
+const SMTP_PASS = process.env.SMTP_PASS;
+// Remitente visible — debe existir como buzón/alias en Hostinger. Configurable.
+const NOTIFY_FROM = process.env.BRAND_NOTIFY_FROM || 'Beme Agency <notifications@bemeagency.com>';
+const NOTIFY_FROM_ADDR = (NOTIFY_FROM.match(/<([^>]+)>/) || [, NOTIFY_FROM])[1];
+
+const transporter = nodemailer.createTransport({
+  host: SMTP_HOST, port: SMTP_PORT, secure: SMTP_PORT === 465,
+  auth: { user: SMTP_USER, pass: SMTP_PASS },
+});
 
 const WINDOW_HOURS = 3; // solo eventos de las últimas N horas (evita backfill masivo)
 
@@ -45,17 +60,14 @@ async function sbInsert(table, data) {
 }
 
 async function sendEmail(to, subject, html) {
-  if (!RESEND_API_KEY) { console.log(`[DRY-RUN] To: ${to} — ${subject}`); return true; }
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from: process.env.RESEND_FROM || 'Beme Agency <notifications@bemeagency.com>',
-      to: Array.isArray(to) ? to : [to], subject, html,
-    }),
-  });
-  if (!res.ok) console.error(`Resend ${res.status}: ${await res.text()}`);
-  return res.ok;
+  if (!SMTP_PASS) { console.log(`[DRY-RUN] To: ${to} — ${subject}`); return true; }
+  try {
+    await transporter.sendMail({ from: NOTIFY_FROM, to, subject, html, replyTo: NOTIFY_FROM_ADDR });
+    return true;
+  } catch (e) {
+    console.error('SMTP error:', e.message || e);
+    return false;
+  }
 }
 
 function emailWrap(title, bodyHTML, ctaUrl) {
@@ -126,18 +138,17 @@ exports.handler = async (event) => {
         <div style="font-size:14px;font-weight:700;color:#111">TikTok Video — Talento de ejemplo</div>
       </div>
       <div style="font-size:13px;color:#111;font-weight:600">👉 El contenido está listo para tu aprobación.</div>`;
-    if (!RESEND_API_KEY) return { statusCode: 200, body: JSON.stringify({ ok: false, test: true, to: testEmail, mode: 'dry-run (falta RESEND_API_KEY)' }) };
-    const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM || 'Beme Agency <notifications@bemeagency.com>',
-        to: [testEmail], subject: 'Beme — Email de prueba ✅',
+    if (!SMTP_PASS) return { statusCode: 200, body: JSON.stringify({ ok: false, test: true, to: testEmail, mode: 'dry-run (falta SMTP_PASS)' }) };
+    let ok = false, error = null, messageId = null;
+    try {
+      const info = await transporter.sendMail({
+        from: NOTIFY_FROM, to: testEmail, replyTo: NOTIFY_FROM_ADDR,
+        subject: 'Beme — Email de prueba ✅',
         html: emailWrap('Email de prueba', body, `${APP_URL}/marca-link.html`),
-      }),
-    });
-    const detail = await r.text();
-    return { statusCode: 200, body: JSON.stringify({ ok: r.ok, test: true, to: testEmail, from: process.env.RESEND_FROM || 'notifications@bemeagency.com', status: r.status, resend: detail }) };
+      });
+      ok = true; messageId = info.messageId;
+    } catch (e) { error = e.message || String(e); }
+    return { statusCode: 200, body: JSON.stringify({ ok, test: true, to: testEmail, from: NOTIFY_FROM, via: 'smtp', messageId, error }) };
   }
 
   if (!SUPABASE_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'Falta SUPABASE_SERVICE_KEY' }) };
