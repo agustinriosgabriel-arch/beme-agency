@@ -85,7 +85,22 @@ async function alreadySent(tipo, refId, email) {
   return rows.length > 0;
 }
 
-exports.handler = async () => {
+exports.handler = async (event) => {
+  // ── Modo prueba: /.netlify/functions/brand-notify?test=email@dominio.com ──
+  let testEmail = event?.queryStringParameters?.test || '';
+  if (!testEmail && event?.body) { try { testEmail = JSON.parse(event.body).test_email || ''; } catch {} }
+  if (testEmail) {
+    const body = `
+      <div style="font-size:13px;color:#666;margin-bottom:12px">Esto es un <strong>email de prueba</strong> del sistema de avisos a marcas.</div>
+      <div style="background:#f8f8f8;border:1px solid #eee;border-radius:8px;padding:12px;margin-bottom:12px">
+        <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.5px">Ejemplo de aviso</div>
+        <div style="font-size:14px;font-weight:700;color:#111">TikTok Video — Talento de ejemplo</div>
+      </div>
+      <div style="font-size:13px;color:#111;font-weight:600">👉 El contenido está listo para tu aprobación.</div>`;
+    const ok = await sendEmail(testEmail, 'Beme — Email de prueba ✅', emailWrap('Email de prueba', body, `${APP_URL}/marca-link.html`));
+    return { statusCode: 200, body: JSON.stringify({ ok, test: true, to: testEmail, mode: RESEND_API_KEY ? 'sent' : 'dry-run (falta RESEND_API_KEY)' }) };
+  }
+
   if (!SUPABASE_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'Falta SUPABASE_SERVICE_KEY' }) };
 
   try {
