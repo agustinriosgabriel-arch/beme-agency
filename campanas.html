@@ -144,6 +144,8 @@ body.dark .logo .logo-dark{display:block}
 .estado-en_curso{background:rgba(245,158,11,0.1);color:#d97706}
 .estado-etapa_finanzas{background:rgba(245,158,11,0.1);color:#d97706}
 .estado-finalizada{background:rgba(34,197,94,0.1);color:#16a34a}
+.estado-pausada{background:rgba(139,92,246,0.14);color:#7c3aed}
+.estado-cancelada{background:rgba(239,68,68,0.1);color:#ef4444}
 .estado-cancelada{background:rgba(120,120,120,0.12);color:#888}
 
 .campana-card-body{display:flex;flex-direction:column;gap:6px}
@@ -534,8 +536,8 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
         <option value="">Todos los estados</option>
         <option value="sin_iniciar">Sin iniciar</option>
         <option value="en_curso">En curso</option>
-        <option value="etapa_finanzas">Etapa Finanzas</option>
         <option value="finalizada">Finalizada</option>
+        <option value="pausada">Pausada</option>
         <option value="cancelada">Cancelada</option>
       </select>
       <select class="filter-select" id="filter-marca" onchange="renderCampanas()">
@@ -1137,7 +1139,7 @@ async function loadCampanas() {
     campana_managers(user_id),
     campana_handlers(user_id),
     campana_talentos(
-      id,talent_id,identificador,
+      id,talent_id,identificador,estado,
       talentos(id,nombre,foto),
       contenidos(id,paso_actual,tipo)
     )
@@ -1265,7 +1267,7 @@ function renderCampanas() {
 }
 
 function estadoBadgeHTML(estado) {
-  const labels = {sin_iniciar:'Sin iniciar',en_curso:'En curso',etapa_finanzas:'Finanzas',finalizada:'Finalizada',cancelada:'Cancelada'};
+  const labels = {sin_iniciar:'Sin iniciar',en_curso:'En curso',finalizada:'Finalizada',cancelada:'Cancelada',pausada:'Pausada'};
   return `<span class="estado-badge estado-${estado}">${labels[estado]||estado}</span>`;
 }
 
@@ -1413,9 +1415,9 @@ function renderKanban(container, filtered) {
   const cols = [
     {key:'sin_iniciar', label:'Sin iniciar', color:'#888'},
     {key:'en_curso',    label:'En curso',    color:'#d97706'},
-    {key:'etapa_finanzas', label:'Finanzas', color:'#d97706'},
     {key:'finalizada',  label:'Finalizada',  color:'#16a34a'},
-    {key:'cancelada',   label:'Cancelada',   color:'#888'},
+    {key:'pausada',     label:'Pausada',     color:'#7c3aed'},
+    {key:'cancelada',   label:'Cancelada',   color:'#ef4444'},
   ];
   container.innerHTML = `<div class="kanban-wrap">
     ${cols.map(col => {
@@ -1458,7 +1460,8 @@ function renderKanban(container, filtered) {
 
 function renderStats() {
   var enCurso = campanas.filter(c=>c.estado==='en_curso').length;
-  var finanzas = campanas.filter(c=>c.estado==='etapa_finanzas').length;
+  // "Finanzas" = campañas con al menos un talento (sub-campaña) en etapa de finanzas
+  var finanzas = campanas.filter(c=>(c.campana_talentos||[]).some(ct=>ct.estado==='etapa_finanzas')).length;
   var finalizadas = campanas.filter(c=>c.estado==='finalizada').length;
   var talentosActivos = new Set(
     campanas.filter(c=>c.estado==='en_curso')

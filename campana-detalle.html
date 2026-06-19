@@ -98,7 +98,9 @@ body.dark .tab-nav{background:var(--surface)}
 .es-en_curso{background-color:rgba(245,158,11,0.1);color:#d97706}
 .es-etapa_finanzas{background-color:rgba(245,158,11,0.1);color:#d97706}
 .es-finalizada{background-color:rgba(22,163,74,0.1);color:#16a34a}
-.es-cancelada{background-color:rgba(136,136,136,0.12);color:#888}
+.es-cancelada{background-color:rgba(239,68,68,0.1);color:#ef4444}
+.es-pausada{background-color:rgba(139,92,246,0.14);color:#7c3aed}
+.tal-estado-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;margin-left:6px}
 
 /* ── Section ── */
 .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-dim);display:flex;align-items:center;gap:8px;margin-bottom:12px}
@@ -1284,7 +1286,7 @@ function renderHeader() {
   const doneCont = campana.campana_talentos?.flatMap(ct=>ct.contenidos||[]).filter(c=>c.paso_actual>=8).length || 0;
   const pct = totalCont ? Math.round(doneCont/totalCont*100) : 0;
 
-  const estadoClass = {sin_iniciar:'es-sin_iniciar',en_curso:'es-en_curso',etapa_finanzas:'es-etapa_finanzas',finalizada:'es-finalizada',cancelada:'es-cancelada'};
+  const estadoClass = {sin_iniciar:'es-sin_iniciar',en_curso:'es-en_curso',finalizada:'es-finalizada',cancelada:'es-cancelada',pausada:'es-pausada'};
   const disabled = isInternal() ? '' : 'disabled';
 
   document.getElementById('camp-header').innerHTML = `
@@ -1303,10 +1305,11 @@ function renderHeader() {
         <select class="estado-select ${estadoClass[campana.estado]||'es-sin_iniciar'}" onchange="updateEstado(this.value)" ${disabled}>
           <option value="sin_iniciar" ${campana.estado==='sin_iniciar'?'selected':''}>Sin iniciar</option>
           <option value="en_curso" ${campana.estado==='en_curso'?'selected':''}>En curso</option>
-          <option value="etapa_finanzas" ${campana.estado==='etapa_finanzas'?'selected':''}>Etapa Finanzas</option>
           <option value="finalizada" ${campana.estado==='finalizada'?'selected':''}>Finalizada</option>
+          <option value="pausada" ${campana.estado==='pausada'?'selected':''}>Pausada</option>
           <option value="cancelada" ${campana.estado==='cancelada'?'selected':''}>Cancelada</option>
         </select>
+        <div style="font-size:10px;color:var(--text-dim);margin-top:4px;text-align:right">Finaliza solo al cobrar y pagar todo</div>
       </div>
     </div>
     <div class="camp-meta-strip">
@@ -1609,9 +1612,18 @@ function renderTalentoCard(ct) {
           ${ct.identificador?`<span title="Orden de Compra / Identificador de campaña" style="margin-left:8px;font-size:10px;font-family:'SF Mono',monospace;font-weight:700;color:var(--primary);background:rgba(178,0,93,0.08);padding:2px 8px;border-radius:6px;cursor:pointer" onclick="event.stopPropagation();navigator.clipboard.writeText('${esc(ct.identificador)}');toast('Identificador copiado: ${esc(ct.identificador)}','ok')">${esc(ct.identificador)}</span>`:''}
         </div>
         <div class="t-meta">${contenidos.length} contenido${contenidos.length!==1?'s':''} · ${done} completado${done!==1?'s':''}
+          <span class="tal-estado-badge ${TAL_EST_CLASS[ct.estado]||'es-en_curso'}" title="Estado de la sub-campaña del talento (Finanzas filtra por esto)">${TAL_EST_LABEL[ct.estado]||'En curso'}</span>
           <span class="pago-badge ${ct.pago_estado==='pagado'?'pago-pagado':'pago-pendiente'}" style="margin-left:6px">${ct.pago_estado==='pagado'?'✓ Pagado':'Pago pendiente'}</span>
         </div>
       </div>
+      ${isInternal()?`<select class="estado-select ${TAL_EST_CLASS[ct.estado]||'es-en_curso'}" onclick="event.stopPropagation()" onchange="setTalentoEstado(${ct.id},this.value)" title="Estado del talento (Pausada/Cancelada son manuales; el resto se calcula solo)" style="flex-shrink:0;font-size:11px">
+        <option value="sin_iniciar" ${ct.estado==='sin_iniciar'?'selected':''}>Sin iniciar</option>
+        <option value="en_curso" ${(ct.estado||'en_curso')==='en_curso'?'selected':''}>En curso</option>
+        <option value="etapa_finanzas" ${ct.estado==='etapa_finanzas'?'selected':''}>Etapa Finanzas</option>
+        <option value="finalizada" ${ct.estado==='finalizada'?'selected':''}>Finalizada</option>
+        <option value="pausada" ${ct.estado==='pausada'?'selected':''}>Pausada</option>
+        <option value="cancelada" ${ct.estado==='cancelada'?'selected':''}>Cancelada</option>
+      </select>`:''}
       ${isInternal()?`<button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openTalentLink(${ct.talent_id},'${esc(t.nombre||'')}')" title="Link único del talento (sin login)" style="flex-shrink:0;color:var(--primary)">🔗 Link</button>`:''}
       ${isInternal()?`<button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openEditContenidoBtn(${ct.id})" style="flex-shrink:0">+ Contenido</button>`:''}
       ${isInternal()?`<button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();deleteCampanaTalento(${ct.id})" title="Eliminar talento de la campaña" style="flex-shrink:0;color:var(--red)">
@@ -2888,6 +2900,21 @@ async function updateEstado(val) {
   await sb.from('campanas').update({estado:val, updated_by: currentUser.id}).eq('id',campanaId);
   campana.estado = val;
   toast('Estado actualizado ✓','ok');
+}
+
+// Estado por talento (sub-campaña). Pausada/Cancelada son manuales; el resto se
+// recalcula solo por el trigger SQL (contenidos completos → etapa_finanzas; pago → finalizada).
+const TAL_EST_LABEL = {sin_iniciar:'Sin iniciar',en_curso:'En curso',etapa_finanzas:'Etapa Finanzas',finalizada:'Finalizada',cancelada:'Cancelada',pausada:'Pausada'};
+const TAL_EST_CLASS = {sin_iniciar:'es-sin_iniciar',en_curso:'es-en_curso',etapa_finanzas:'es-etapa_finanzas',finalizada:'es-finalizada',cancelada:'es-cancelada',pausada:'es-pausada'};
+async function setTalentoEstado(ctId, val) {
+  try {
+    const {error} = await sb.from('campana_talentos').update({estado: val}).eq('id', ctId);
+    if (error) throw error;
+    const ct = campana.campana_talentos?.find(x=>x.id===ctId);
+    if (ct) ct.estado = val;
+    renderTalentos();
+    toast('Estado del talento actualizado ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
 }
 
 function openEditCampana() {

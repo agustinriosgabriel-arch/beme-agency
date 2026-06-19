@@ -91,57 +91,154 @@ ALTER TABLE campana_talentos ADD COLUMN IF NOT EXISTS qb_factura boolean DEFAULT
 ALTER TABLE campana_talentos ADD COLUMN IF NOT EXISTS qb_pago    boolean DEFAULT false;
 
 -- ┌──────────────────────────────────────────────────────────────┐
--- │ F. ESTADO AUTOMÁTICO — campaña → 'finalizada'                 │
--- │    Cuando TODAS las facturas están 'cobrada' (CxC) y TODOS    │
--- │    los talentos 'pagado' (CxP), la campaña pasa a finalizada. │
+-- │ F. ESTADOS EN DOS NIVELES (general de campaña + por talento)  │
+-- │                                                              │
+-- │  General de campaña (campanas.estado):                       │
+-- │    sin_iniciar · en_curso · finalizada · cancelada · pausada │
+-- │    - finalizada: TODAS las facturas cobradas (CxC) y TODOS   │
+-- │      los talentos finalizados (= pagados en CxP).            │
+-- │    - cancelada / pausada: manuales (kanban), no se auto-pisan.│
+-- │                                                              │
+-- │  Sub-campaña por talento (campana_talentos.estado):          │
+-- │    sin_iniciar · en_curso · etapa_finanzas · finalizada ·    │
+-- │    cancelada · pausada                                       │
+-- │    - etapa_finanzas: el talento completó todos sus contenidos│
+-- │      (paso_actual >= 8).                                     │
+-- │    - finalizada: se le pagó al talento (pago_estado=pagado). │
+-- │    - cancelada / pausada: manuales, no se auto-pisan.        │
+-- │                                                              │
+-- │  Finanzas filtra por el estado del TALENTO.                  │
 -- └──────────────────────────────────────────────────────────────┘
-CREATE OR REPLACE FUNCTION check_campana_finalizada(p_campana_id integer) RETURNS void AS $$
+
+-- Estado por talento (sub-campaña)
+ALTER TABLE campana_talentos ADD COLUMN IF NOT EXISTS estado text DEFAULT 'en_curso';
+
+-- Migración del estado GENERAL: 'etapa_finanzas' ya no es estado general → en_curso.
+-- (Se conserva 'sin_iniciar'.)
+UPDATE campanas SET estado = 'en_curso' WHERE estado = 'etapa_finanzas';
+
+-- ── Recalcular estado de un talento ──
+CREATE OR REPLACE FUNCTION recompute_talento_estado(p_ct_id integer) RETURNS void AS $$
 DECLARE
-  v_estado          text;
-  v_facts_activas   int;
-  v_facts_cobradas  int;
-  v_tal_total       int;
-  v_tal_pagados     int;
+  v_ct          campana_talentos%ROWTYPE;
+  v_total_cont  int;
+  v_pendientes  int;
+  v_nuevo       text;
 BEGIN
-  IF p_campana_id IS NULL THEN RETURN; END IF;
-  SELECT estado INTO v_estado FROM campanas WHERE id = p_campana_id;
-  IF v_estado IS NULL OR v_estado IN ('finalizada','cancelada') THEN RETURN; END IF;
+  SELECT * INTO v_ct FROM campana_talentos WHERE id = p_ct_id;
+  IF NOT FOUND THEN RETURN; END IF;
+  -- Estados manuales son fijos (no se auto-pisan)
+  IF v_ct.estado IN ('cancelada','pausada') THEN RETURN; END IF;
 
-  SELECT count(*) FILTER (WHERE estado <> 'cancelada'),
-         count(*) FILTER (WHERE estado = 'cobrada')
-    INTO v_facts_activas, v_facts_cobradas
-    FROM facturas WHERE campana_id = p_campana_id;
+  SELECT count(*), count(*) FILTER (WHERE COALESCE(paso_actual,0) < 8)
+    INTO v_total_cont, v_pendientes
+    FROM contenidos WHERE campana_talento_id = p_ct_id;
 
-  SELECT count(*),
-         count(*) FILTER (WHERE pago_estado = 'pagado' OR COALESCE(fee_talento,0) = 0)
-    INTO v_tal_total, v_tal_pagados
-    FROM campana_talentos WHERE campana_id = p_campana_id;
-
-  -- Debe haber al menos una factura activa, todas cobradas, y todos los talentos pagados
-  IF v_facts_activas > 0 AND v_facts_cobradas = v_facts_activas
-     AND (v_tal_total = 0 OR v_tal_pagados = v_tal_total) THEN
-    UPDATE campanas SET estado = 'finalizada', updated_at = now()
-      WHERE id = p_campana_id AND estado NOT IN ('finalizada','cancelada');
+  IF v_ct.pago_estado = 'pagado' THEN
+    v_nuevo := 'finalizada';                 -- se le pagó al talento → finalizada
+  ELSIF v_total_cont > 0 AND v_pendientes = 0 THEN
+    v_nuevo := 'etapa_finanzas';             -- todos sus contenidos completados
+  ELSIF v_total_cont = 0 THEN
+    v_nuevo := 'sin_iniciar';                -- sin contenidos cargados
+  ELSE
+    v_nuevo := 'en_curso';
   END IF;
+
+  UPDATE campana_talentos SET estado = v_nuevo, updated_at = now()
+    WHERE id = p_ct_id AND estado IS DISTINCT FROM v_nuevo
+      AND estado NOT IN ('cancelada','pausada');
 END;
 $$ LANGUAGE plpgsql;
 
--- Dispara la verificación cuando cambia una factura (p.ej. pasa a 'cobrada')
-CREATE OR REPLACE FUNCTION trg_chk_camp_fin_fact() RETURNS trigger AS $$
+-- ── Recalcular estado GENERAL de la campaña ──
+CREATE OR REPLACE FUNCTION recompute_campana_estado(p_camp_id integer) RETURNS void AS $$
+DECLARE
+  v_estado      text;
+  v_tal_total   int;
+  v_tal_fin     int;
+  v_tal_sin     int;
+  v_facts_act   int;
+  v_facts_cob   int;
+  v_nuevo       text;
 BEGIN
-  PERFORM check_campana_finalizada(NEW.campana_id);
-  RETURN NULL;
-END; $$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS trg_camp_fin_fact ON facturas;
-CREATE TRIGGER trg_camp_fin_fact AFTER INSERT OR UPDATE ON facturas
-  FOR EACH ROW EXECUTE FUNCTION trg_chk_camp_fin_fact();
+  IF p_camp_id IS NULL THEN RETURN; END IF;
+  SELECT estado INTO v_estado FROM campanas WHERE id = p_camp_id;
+  IF v_estado IS NULL OR v_estado IN ('cancelada','pausada') THEN RETURN; END IF;
 
--- Dispara la verificación cuando cambia el pago de un talento (p.ej. pasa a 'pagado')
-CREATE OR REPLACE FUNCTION trg_chk_camp_fin_ct() RETURNS trigger AS $$
+  SELECT count(*),
+         count(*) FILTER (WHERE estado = 'finalizada'),
+         count(*) FILTER (WHERE estado = 'sin_iniciar')
+    INTO v_tal_total, v_tal_fin, v_tal_sin
+    FROM campana_talentos WHERE campana_id = p_camp_id;
+
+  SELECT count(*) FILTER (WHERE estado <> 'cancelada'),
+         count(*) FILTER (WHERE estado = 'cobrada')
+    INTO v_facts_act, v_facts_cob
+    FROM facturas WHERE campana_id = p_camp_id;
+
+  IF v_tal_total > 0 AND v_tal_fin = v_tal_total
+     AND v_facts_act > 0 AND v_facts_cob = v_facts_act THEN
+    v_nuevo := 'finalizada';                 -- todo cobrado (CxC) y pagado (CxP)
+  ELSIF v_tal_total = 0 OR v_tal_sin = v_tal_total THEN
+    v_nuevo := 'sin_iniciar';
+  ELSE
+    v_nuevo := 'en_curso';
+  END IF;
+
+  UPDATE campanas SET estado = v_nuevo, updated_at = now()
+    WHERE id = p_camp_id AND estado IS DISTINCT FROM v_nuevo
+      AND estado NOT IN ('cancelada','pausada');
+END;
+$$ LANGUAGE plpgsql;
+
+-- ── Triggers que disparan los recálculos ──
+-- Contenido cambia (paso_actual) → recalcula su talento y la campaña
+CREATE OR REPLACE FUNCTION trg_recompute_from_contenido() RETURNS trigger AS $$
+DECLARE v_ct int; v_camp int;
 BEGIN
-  PERFORM check_campana_finalizada(COALESCE(NEW.campana_id, OLD.campana_id));
+  v_ct := COALESCE(NEW.campana_talento_id, OLD.campana_talento_id);
+  PERFORM recompute_talento_estado(v_ct);
+  SELECT campana_id INTO v_camp FROM campana_talentos WHERE id = v_ct;
+  PERFORM recompute_campana_estado(v_camp);
   RETURN NULL;
 END; $$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS trg_camp_fin_ct ON campana_talentos;
-CREATE TRIGGER trg_camp_fin_ct AFTER INSERT OR UPDATE OR DELETE ON campana_talentos
-  FOR EACH ROW EXECUTE FUNCTION trg_chk_camp_fin_ct();
+DROP TRIGGER IF EXISTS trg_cont_recompute ON contenidos;
+CREATE TRIGGER trg_cont_recompute AFTER INSERT OR UPDATE OR DELETE ON contenidos
+  FOR EACH ROW EXECUTE FUNCTION trg_recompute_from_contenido();
+
+-- Factura cambia (p.ej. pasa a 'cobrada') → recalcula todos los talentos + campaña
+CREATE OR REPLACE FUNCTION trg_recompute_from_factura() RETURNS trigger AS $$
+DECLARE v_camp int; r record;
+BEGIN
+  v_camp := COALESCE(NEW.campana_id, OLD.campana_id);
+  FOR r IN SELECT id FROM campana_talentos WHERE campana_id = v_camp LOOP
+    PERFORM recompute_talento_estado(r.id);
+  END LOOP;
+  PERFORM recompute_campana_estado(v_camp);
+  RETURN NULL;
+END; $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_fact_recompute ON facturas;
+CREATE TRIGGER trg_fact_recompute AFTER INSERT OR UPDATE OR DELETE ON facturas
+  FOR EACH ROW EXECUTE FUNCTION trg_recompute_from_factura();
+
+-- Talento cambia (pago_estado, etc.) → recalcula su estado y el de la campaña.
+-- El guard "estado IS DISTINCT FROM" en los recompute evita bucles infinitos.
+CREATE OR REPLACE FUNCTION trg_recompute_from_ct() RETURNS trigger AS $$
+DECLARE v_camp int;
+BEGIN
+  IF TG_OP <> 'DELETE' THEN
+    PERFORM recompute_talento_estado(NEW.id);
+  END IF;
+  v_camp := COALESCE(NEW.campana_id, OLD.campana_id);
+  PERFORM recompute_campana_estado(v_camp);
+  RETURN NULL;
+END; $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_ct_recompute ON campana_talentos;
+CREATE TRIGGER trg_ct_recompute AFTER INSERT OR UPDATE OR DELETE ON campana_talentos
+  FOR EACH ROW EXECUTE FUNCTION trg_recompute_from_ct();
+
+-- ── Backfill inicial de estados ──
+DO $$ DECLARE r record; BEGIN
+  FOR r IN SELECT id FROM campana_talentos LOOP PERFORM recompute_talento_estado(r.id); END LOOP;
+  FOR r IN SELECT id FROM campanas LOOP PERFORM recompute_campana_estado(r.id); END LOOP;
+END $$;

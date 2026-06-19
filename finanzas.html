@@ -159,6 +159,7 @@ body.dark .logo .logo-dark{display:block}
 .ce-etapa_finanzas{background:rgba(245,158,11,0.16);color:#d97706;border-color:rgba(245,158,11,0.45)}
 .ce-finalizada{background:rgba(34,197,94,0.12);color:#16a34a}
 .ce-cancelada{background:rgba(239,68,68,0.12);color:#ef4444}
+.ce-pausada{background:rgba(139,92,246,0.14);color:#7c3aed}
 
 /* Resumen mensual */
 .res-table{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
@@ -332,11 +333,12 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       <select class="filter-select" id="cxc-sort" onchange="renderCxC()"><option value="desc">Inicio: reciente → antigua</option><option value="asc">Inicio: antigua → reciente</option></select>
     </div>
     <div class="chip-filter" id="cxc-estado-chips" style="margin-bottom:16px">
-      <span class="chip-filter-label">Estado campaña:</span>
+      <span class="chip-filter-label">Estado talento:</span>
       <button class="chip" data-est="sin_iniciar" onclick="toggleEstChip(this)">Sin iniciar</button>
       <button class="chip" data-est="en_curso" onclick="toggleEstChip(this)">En curso</button>
       <button class="chip" data-est="etapa_finanzas" onclick="toggleEstChip(this)">Etapa Finanzas</button>
       <button class="chip" data-est="finalizada" onclick="toggleEstChip(this)">Finalizada</button>
+      <button class="chip" data-est="pausada" onclick="toggleEstChip(this)">Pausada</button>
       <button class="chip" data-est="cancelada" onclick="toggleEstChip(this)">Cancelada</button>
     </div>
     <div id="cxc-container"></div>
@@ -348,11 +350,12 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       <select class="filter-select" id="cxp-filter" onchange="renderCxP()"><option value="">Pago: Todos</option><option value="pendiente">Pendiente</option><option value="parcial">Parcial</option><option value="pagado">Pagado</option></select>
     </div>
     <div class="chip-filter" id="cxp-estado-chips" style="margin-bottom:16px">
-      <span class="chip-filter-label">Estado campaña:</span>
+      <span class="chip-filter-label">Estado talento:</span>
       <button class="chip" data-est="sin_iniciar" onclick="toggleEstChip(this)">Sin iniciar</button>
       <button class="chip" data-est="en_curso" onclick="toggleEstChip(this)">En curso</button>
       <button class="chip" data-est="etapa_finanzas" onclick="toggleEstChip(this)">Etapa Finanzas</button>
       <button class="chip" data-est="finalizada" onclick="toggleEstChip(this)">Finalizada</button>
+      <button class="chip" data-est="pausada" onclick="toggleEstChip(this)">Pausada</button>
       <button class="chip" data-est="cancelada" onclick="toggleEstChip(this)">Cancelada</button>
     </div>
     <div id="cxp-container"></div>
@@ -696,7 +699,11 @@ function cxcFilteredCampanas(){
     const facsActivas=facs.filter(f=>f.estado!=='cancelada');
     if(facFilt==='con'&&!facsActivas.length)return;
     if(facFilt==='sin'&&facsActivas.length)return;
-    if(estCamps.length&&!estCamps.includes(c.estado||''))return;
+    // Filtra por estado de TALENTO: muestra la campaña si AL MENOS un talento coincide
+    if(estCamps.length){
+      const tEstados=cts.map(ct=>ct.estado||'en_curso');
+      if(!tEstados.some(s=>estCamps.includes(s)))return;
+    }
     out.push({...c,facs,cliente:cli});
   });
   return out;
@@ -752,12 +759,19 @@ function renderCxC(){
   renderStats();
 }
 
-// Estado de la campaña → badge (etapa_finanzas = lista para facturar)
-const CAMP_EST={sin_iniciar:'Sin iniciar',en_curso:'En curso',etapa_finanzas:'Etapa Finanzas',finalizada:'Finalizada',cancelada:'Cancelada'};
-const CAMP_EST_LISTA=['etapa_finanzas','finalizada']; // estados donde normalmente ya se factura
+// Estado GENERAL de la campaña → badge (sin_iniciar/en_curso/finalizada/cancelada/pausada)
+const CAMP_EST={sin_iniciar:'Sin iniciar',en_curso:'En curso',finalizada:'Finalizada',cancelada:'Cancelada',pausada:'Pausada'};
+const CAMP_EST_LISTA=['etapa_finanzas','finalizada']; // (legacy) estados donde normalmente ya se factura
 function campEstadoBadge(estado){
   if(!estado||!CAMP_EST[estado])return '';
-  return `<span class="camp-estado ce-${estado}" title="Estado de la campaña">${CAMP_EST[estado]}</span>`;
+  return `<span class="camp-estado ce-${estado}" title="Estado general de la campaña">${CAMP_EST[estado]}</span>`;
+}
+// Estado por TALENTO (sub-campaña) → badge. Es por el que filtra Finanzas.
+const TAL_EST={sin_iniciar:'Sin iniciar',en_curso:'En curso',etapa_finanzas:'Etapa Finanzas',finalizada:'Finalizada',cancelada:'Cancelada',pausada:'Pausada'};
+function talEstadoBadge(estado){
+  const e=estado||'en_curso';
+  if(!TAL_EST[e])return '';
+  return `<span class="camp-estado ce-${e}" title="Estado de la sub-campaña (talento)">${TAL_EST[e]}</span>`;
 }
 
 // Finaliza la campaña automáticamente cuando TODAS las facturas están COBRADAS (CxC)
@@ -765,7 +779,7 @@ function campEstadoBadge(estado){
 async function maybeFinalizarCampana(campId){
   if(!campId)return;
   const camp=campanas.find(c=>c.id===campId);
-  if(!camp||['finalizada','cancelada'].includes(camp.estado))return;
+  if(!camp||['finalizada','cancelada','pausada'].includes(camp.estado))return;
   const facs=facturas.filter(f=>f.campana_id===campId&&f.estado!=='cancelada');
   const cts=campanasTalentos.filter(ct=>ct.campana_id===campId);
   const facturasCobradas = facs.length>0 && facs.every(f=>f.estado==='cobrada');
@@ -1130,7 +1144,7 @@ function cxpFilteredTalentos(){
   return campanasTalentos.filter(ct=>{
     if(filt&&ctEstadoPago(ct)!==filt)return false;
     const camp=campanas.find(c=>c.id===ct.campana_id);
-    if(estCamps.length&&!estCamps.includes(camp?.estado||''))return false;
+    if(estCamps.length&&!estCamps.includes(ct.estado||'en_curso'))return false;
     const tName=(ct.talentos?.nombre||'').toLowerCase();
     const cName=(camp?.nombre||'').toLowerCase();
     const ident=(ct.identificador||'').toLowerCase();
@@ -1189,6 +1203,7 @@ function renderCxPRow(ct){
   const dInput="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-size:11px;color:var(--text);font-family:inherit;width:100%;font-variant-numeric:tabular-nums";
   return `<div class="fin-row cxp-row">
     <div class="fin-row-name">${esc(ct.talentos?.nombre||'—')}
+      ${talEstadoBadge(ct.estado)}
       ${ct.identificador?`<span title="Identificador / OC" style="margin-left:6px;font-size:10px;font-family:'SF Mono',monospace;font-weight:700;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px;cursor:pointer" onclick="event.stopPropagation();navigator.clipboard.writeText('${esc(ct.identificador)}');showToast('Copiado: ${esc(ct.identificador)}','success')">${esc(ct.identificador)}</span>`:''}
     </div>
     <div><span class="status-pill st-${estado}">${estadoLbl}</span></div>
