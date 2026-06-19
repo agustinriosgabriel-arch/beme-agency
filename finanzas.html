@@ -400,7 +400,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
 
 <!-- Modal: Comprobante Marca -->
 <div class="modal-overlay" id="modal-comprobante">
-  <div class="modal" style="max-width:480px"><div class="modal-header"><div class="modal-title">Registrar Pago</div><button class="modal-close" onclick="closeModal('modal-comprobante')"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  <div class="modal" style="max-width:480px"><div class="modal-header"><div class="modal-title">Registrar Cobro</div><button class="modal-close" onclick="closeModal('modal-comprobante')"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
   <div class="modal-body">
     <div class="form-grid" style="grid-template-columns:1fr">
       <div id="comp-saldo-info" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;display:none">
@@ -408,14 +408,14 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
         <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Ya pagado</span><b id="comp-info-pagado" style="color:var(--green)"></b></div>
         <div style="display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span style="color:var(--text-muted)">Saldo pendiente</span><b id="comp-info-saldo" style="color:var(--orange)"></b></div>
       </div>
-      <div class="form-group"><label class="form-label">Monto de este pago</label><input type="number" id="comp-monto" class="form-input" step="0.01"><div class="form-hint">Puede ser parcial (50/50, anticipo, etc.) — el estado se actualiza solo</div></div>
+      <div class="form-group"><label class="form-label">Monto de este cobro</label><input type="number" id="comp-monto" class="form-input" step="0.01"><div class="form-hint">Puede ser parcial (50/50, anticipo, etc.) — el estado se actualiza solo</div></div>
       <div class="form-group"><label class="form-label">Fecha de Pago</label><input type="date" id="comp-fecha" class="form-input"></div>
       <div class="form-group"><label class="form-label">Corredor (dónde se cobró) *</label><select id="comp-corredor" class="form-input"><option value="">Seleccionar...</option><option value="mercury">Mercury</option><option value="wise">Wise</option><option value="cxc_agustin">CxC Agustin</option><option value="cxc_flor">CxC Flor</option></select></div>
       <div class="form-group"><label class="form-label">Comprobante</label><input type="file" id="comp-file" class="form-input" accept=".pdf,.png,.jpg,.jpeg"></div>
       <div class="form-group"><label class="form-label">Notas</label><textarea id="comp-notas" class="form-input"></textarea></div>
     </div>
   </div>
-  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-comprobante')">Cancelar</button><button class="btn btn-green" onclick="saveComprobanteMarca()">Registrar Pago</button></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-comprobante')">Cancelar</button><button class="btn btn-green" onclick="saveComprobanteMarca()">Registrar Cobro</button></div>
   </div>
 </div>
 
@@ -760,6 +760,26 @@ function campEstadoBadge(estado){
   return `<span class="camp-estado ce-${estado}" title="Estado de la campaña">${CAMP_EST[estado]}</span>`;
 }
 
+// Finaliza la campaña automáticamente cuando TODAS las facturas están COBRADAS (CxC)
+// y TODOS los talentos PAGADOS (CxP). Fallback client-side del trigger SQL.
+async function maybeFinalizarCampana(campId){
+  if(!campId)return;
+  const camp=campanas.find(c=>c.id===campId);
+  if(!camp||['finalizada','cancelada'].includes(camp.estado))return;
+  const facs=facturas.filter(f=>f.campana_id===campId&&f.estado!=='cancelada');
+  const cts=campanasTalentos.filter(ct=>ct.campana_id===campId);
+  const facturasCobradas = facs.length>0 && facs.every(f=>f.estado==='cobrada');
+  const talentosPagados  = cts.every(ct=>ctEstadoPago(ct)==='pagado'||Number(ct.fee_talento||0)===0);
+  if(facturasCobradas && talentosPagados){
+    try{
+      const{error}=await sb.from('campanas').update({estado:'finalizada',updated_at:new Date().toISOString()}).eq('id',campId).neq('estado','cancelada');
+      if(error)throw error;
+      camp.estado='finalizada';
+      showToast('Campaña FINALIZADA — todo cobrado y pagado ✓','success');
+    }catch(e){/* si falla, el trigger SQL igual la finalizará */}
+  }
+}
+
 function renderCxCRow(c){
   const cts=campanasTalentos.filter(ct=>ct.campana_id===c.id);
   const totalFee=cts.reduce((s,ct)=>s+(Number(ct.fee_marca)||0),0);
@@ -820,7 +840,7 @@ function renderFacturaDetail(f,c){
       ${audits.length?`<div style="margin-top:8px"><div class="fd-title" style="margin-bottom:2px">Últimos cambios</div>${audits.map(a=>`<div class="audit-row"><b>${esc(a.campo)}</b>: ${esc(a.valor_anterior??'—')} → <b>${esc(a.valor_nuevo??'—')}</b> <span style="opacity:0.7">${new Date(a.created_at).toLocaleDateString('es-ES',{day:'2-digit',month:'short'})}</span></div>`).join('')}</div>`:''}
     </div>
     <div class="fin-detail-card">
-      <div class="fd-title">Pagos · ${fmtMoney(pagado,f.moneda)} de ${fmtMoney(f.monto,f.moneda)}</div>
+      <div class="fd-title">Cobros · ${fmtMoney(pagado,f.moneda)} de ${fmtMoney(f.monto,f.moneda)}</div>
       <div class="pay-progress"><div class="pay-progress-fill ${pct<100?'partial':''}" style="width:${pct}%"></div></div>
       ${saldo>0&&hasPago?`<div style="font-size:11px;color:var(--orange);font-weight:700;margin-top:4px">Saldo pendiente: ${fmtMoney(saldo,f.moneda)}</div>`:''}
       <div style="margin-top:6px">
@@ -831,7 +851,7 @@ function renderFacturaDetail(f,c){
       </div>`).join(''):`<p style="font-size:12px;color:var(--text-dim)">Sin pago registrado</p>`}
       </div>
       <div class="fd-actions">
-        ${f.estado!=='cobrada'&&f.estado!=='cancelada'?`<button class="btn btn-green btn-xs" onclick="openComprobante(${f.id},${c.id})">${hasPago?'Registrar otro pago':'Registrar Pago'}</button>`:''}
+        ${f.estado!=='cobrada'&&f.estado!=='cancelada'?`<button class="btn btn-green btn-xs" onclick="openComprobante(${f.id},${c.id})">${hasPago?'Registrar otro cobro':'Registrar Cobro'}</button>`:''}
       </div>
     </div>
     ${isPPD?`<div class="fin-detail-card">
@@ -840,7 +860,7 @@ function renderFacturaDetail(f,c){
         <span class="status-pill st-${cp.estado==='enviado'?'enviada':'emitida'}">${cp.estado}</span>
         ${cp.complemento_pdf_url?`<a class="fd-file-link" href="${cp.complemento_pdf_url}" target="_blank">PDF</a>`:''}
         ${cp.complemento_xml_url?`<a class="fd-file-link" href="${cp.complemento_xml_url}" target="_blank">XML</a>`:''}
-      </div>`).join(''):`<p style="font-size:12px;color:var(--text-dim)">${hasPago?'Pago registrado, falta complemento':'Registrar pago primero'}</p>`}
+      </div>`).join(''):`<p style="font-size:12px;color:var(--text-dim)">${hasPago?'Cobro registrado, falta complemento':'Registrar cobro primero'}</p>`}
       <div class="fd-actions">
         ${hasPago?`<button class="btn btn-outline btn-xs" onclick="openComplemento(${f.id},${pagos[0]?.id||0})">+ Complemento</button>`:''}
       </div>
@@ -1028,7 +1048,7 @@ async function saveComprobanteMarca(){
   if(monto<=0){showToast('El monto debe ser mayor a 0','error');return;}
   const f=facturas.find(x=>x.id===compFacturaId);
   const saldo=f?facSaldo(f):0;
-  if(f&&monto>saldo*1.001&&!confirm(`El pago (${fmtMoney(monto,f.moneda)}) supera el saldo pendiente (${fmtMoney(saldo,f.moneda)}). ¿Registrar igual?`))return;
+  if(f&&monto>saldo*1.001&&!confirm(`El cobro (${fmtMoney(monto,f.moneda)}) supera el saldo pendiente (${fmtMoney(saldo,f.moneda)}). ¿Registrar igual?`))return;
   const payload={
     factura_id:compFacturaId,campana_id:f?.campana_id,
     monto,
@@ -1044,8 +1064,10 @@ async function saveComprobanteMarca(){
     const totalPagado=(f?facPagado(f):0)+monto;
     const nuevoEstado=f&&totalPagado>=Number(f.monto)?'cobrada':'pagada_parcial';
     await sb.from('facturas').update({estado:nuevoEstado,updated_at:new Date().toISOString()}).eq('id',compFacturaId);
-    closeModal('modal-comprobante');await loadData();renderAll();
-    showToast(nuevoEstado==='cobrada'?'Pago registrado — factura COBRADA al 100%':'Pago parcial registrado — queda saldo pendiente','success');
+    closeModal('modal-comprobante');await loadData();
+    await maybeFinalizarCampana(f?.campana_id);
+    renderAll();
+    showToast(nuevoEstado==='cobrada'?'Cobro registrado — factura COBRADA al 100%':'Cobro parcial registrado — queda saldo pendiente','success');
   }catch(e){showToast('Error: '+e.message,'error');}
 }
 
@@ -1250,7 +1272,9 @@ async function savePagoTalento(){
     const fee=Number(ct?.fee_talento)||0;
     const nuevoEstado=fee>0&&totalPagado>=fee?'pagado':'parcial';
     await sb.from('campana_talentos').update({pago_estado:nuevoEstado,pago_fecha:payload.fecha_pago}).eq('id',ptCampanaTalentoId);
-    closeModal('modal-pago-talento');await loadData();renderAll();
+    closeModal('modal-pago-talento');await loadData();
+    await maybeFinalizarCampana(ptCampanaId);
+    renderAll();
     showToast(nuevoEstado==='pagado'?'Pago registrado — talento pagado al 100%':'Adelanto registrado — queda saldo pendiente','success');
   }catch(e){showToast('Error: '+e.message,'error');}
 }
