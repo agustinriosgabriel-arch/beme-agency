@@ -251,7 +251,7 @@ exports.handler = async (event) => {
         if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
         const { data, error } = await sb.rpc('avanzar_paso_contenido', {
           p_contenido_id: contenido_id, p_autor_id: null,
-          p_autor_nombre: accion ? `${autorNombre}` : autorNombre,
+          p_autor_nombre: autorNombre,
           p_accion: accion || 'Enviado por talento',
         });
         if (error) throw error;

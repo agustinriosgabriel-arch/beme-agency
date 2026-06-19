@@ -688,6 +688,33 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
   </div>
 </div>
 
+<!-- ══ MODAL: Magic Link (talento / marca) ══ -->
+<div class="modal-overlay" id="modal-link">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="ml-title">Link de acceso</div>
+      <button class="modal-close" onclick="closeModal('modal-link')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="ml-desc" style="font-size:13px;color:var(--text-muted);margin-bottom:14px"></p>
+      <div id="ml-loading" style="font-size:13px;color:var(--text-muted)">Cargando…</div>
+      <div id="ml-content" style="display:none">
+        <label class="form-label">Link único</label>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input type="text" id="ml-url" class="form-input" readonly style="flex:1;font-size:12px" onclick="this.select()">
+          <button class="btn btn-primary" onclick="copyMagicLink()">Copiar</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a id="ml-open" href="#" target="_blank" class="btn btn-outline btn-sm">Abrir en pestaña</a>
+          <button class="btn btn-outline btn-sm" onclick="regenMagicLink()">↻ Regenerar (invalida el anterior)</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="revokeMagicLink()">Revocar acceso</button>
+        </div>
+        <p style="font-size:11px;color:var(--text-dim);margin-top:14px" id="ml-note"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL: Agregar Contenido ══ -->
 <div class="modal-overlay" id="modal-contenido">
   <div class="modal">
@@ -2971,6 +2998,97 @@ function openModal(id){document.getElementById(id)?.classList.add('open');}
 function closeModal(id){document.getElementById(id)?.classList.remove('open');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));});
 
+// ════════════════════════════════════════════════
+// MAGIC LINKS — acceso sin login (talento / marca)
+// ════════════════════════════════════════════════
+let _mlState = null; // {tipo, talent_id, campana_id, page, label}
+
+function randomToken(){
+  const a = new Uint8Array(20); crypto.getRandomValues(a);
+  return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function openTalentLink(talentId, nombre){
+  _mlState = { tipo:'talent', talent_id:talentId, campana_id:null, page:'talento-link.html', label:nombre||'el talento' };
+  document.getElementById('ml-title').textContent = 'Link del talento';
+  document.getElementById('ml-desc').textContent = `Link único para ${nombre||'el talento'}. Con él ve todas sus campañas activas, sube scripts/videos y revisa su fee y estado de pago — sin login. Es el mismo link para todas sus campañas.`;
+  document.getElementById('ml-note').textContent = 'El acceso a cada campaña se cierra solo 10 días después de quedar finalizada y con el pago al talento completado.';
+  _mlOpen();
+}
+function openBrandLink(){
+  if (!campana) return;
+  _mlState = { tipo:'brand', talent_id:null, campana_id:campana.id, page:'marca-link.html', label:'la marca' };
+  document.getElementById('ml-title').textContent = 'Link de marca';
+  document.getElementById('ml-desc').textContent = `Link único de esta campaña para la marca. Incluye a todos los talentos: puede aprobar, pedir cambios y comentar contenidos, y ve el fee que paga por cada talento — sin login.`;
+  document.getElementById('ml-note').textContent = 'El link se cierra solo 10 días después de que la campaña quede finalizada y todos los talentos estén pagados.';
+  _mlOpen();
+}
+
+async function _mlOpen(){
+  document.getElementById('ml-loading').style.display='block';
+  document.getElementById('ml-content').style.display='none';
+  openModal('modal-link');
+  try {
+    const link = await _mlFetchOrNull();
+    if (link) _mlShow(link.token);
+    else _mlShow(await _mlCreate());
+  } catch(e){ toast('Error: '+e.message,'err'); closeModal('modal-link'); }
+}
+
+async function _mlFetchOrNull(){
+  let q = sb.from('magic_links').select('*').eq('tipo',_mlState.tipo).eq('activo',true).limit(1);
+  q = _mlState.tipo==='talent' ? q.eq('talent_id',_mlState.talent_id) : q.eq('campana_id',_mlState.campana_id);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data && data[0]) || null;
+}
+
+async function _mlCreate(){
+  const token = randomToken();
+  const row = { tipo:_mlState.tipo, token, activo:true, created_by: currentUser?.id || null,
+    talent_id: _mlState.tipo==='talent'?_mlState.talent_id:null,
+    campana_id: _mlState.tipo==='brand'?_mlState.campana_id:null };
+  const { error } = await sb.from('magic_links').insert(row);
+  if (error) throw error;
+  return token;
+}
+
+function _mlShow(token){
+  const url = `${location.origin}/${_mlState.page}?t=${token}`;
+  document.getElementById('ml-url').value = url;
+  document.getElementById('ml-open').href = url;
+  document.getElementById('ml-loading').style.display='none';
+  document.getElementById('ml-content').style.display='block';
+  _mlState.token = token;
+}
+
+function copyMagicLink(){
+  const inp = document.getElementById('ml-url');
+  navigator.clipboard.writeText(inp.value).then(()=>toast('Link copiado ✓','ok')).catch(()=>{ inp.select(); document.execCommand('copy'); toast('Link copiado ✓','ok'); });
+}
+
+async function regenMagicLink(){
+  if (!confirm('Esto invalida el link anterior. ¿Generar uno nuevo?')) return;
+  try {
+    await _mlRevokeActive();
+    _mlShow(await _mlCreate());
+    toast('Nuevo link generado ✓','ok');
+  } catch(e){ toast('Error: '+e.message,'err'); }
+}
+
+async function revokeMagicLink(){
+  if (!confirm('Se revoca el acceso. El link dejará de funcionar. ¿Continuar?')) return;
+  try { await _mlRevokeActive(); closeModal('modal-link'); toast('Acceso revocado','inf'); }
+  catch(e){ toast('Error: '+e.message,'err'); }
+}
+
+async function _mlRevokeActive(){
+  let q = sb.from('magic_links').update({ activo:false, revoked_at:new Date().toISOString() }).eq('tipo',_mlState.tipo).eq('activo',true);
+  q = _mlState.tipo==='talent' ? q.eq('talent_id',_mlState.talent_id) : q.eq('campana_id',_mlState.campana_id);
+  const { error } = await q;
+  if (error) throw error;
+}
+
 function toast(msg, type='inf', dur=3500) {
   const icons={ok:'✓',err:'✕',inf:'ℹ'};
   const t=document.createElement('div');
@@ -2990,10 +3108,10 @@ setTimeout(function(){ var lo=document.getElementById('load-overlay'); if(lo && 
   var s=document.createElement('style');
   s.textContent='input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield;appearance:textfield}';
   document.head.appendChild(s);
-  document.addEventListener('wheel',function(e){
+  document.addEventListener('wheel',function(){
     var el=document.activeElement;
-    if(el&&el.tagName==='INPUT'&&el.type==='number'&&el===e.target){e.preventDefault();}
-  },{passive:false});
+    if(el&&el.tagName==='INPUT'&&el.type==='number'){el.blur();}
+  },{passive:true});
 })();
 </script>
 </body>
