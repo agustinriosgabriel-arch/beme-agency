@@ -85,7 +85,36 @@ async function alreadySent(tipo, refId, email) {
   return rows.length > 0;
 }
 
+// Cuerpo de email para un evento (reutilizado por preview y por el envío real)
+function buildEventEmail({ campName, label, contTitle, talentName, reason }, ctaUrl) {
+  const body = `
+    <div style="font-size:13px;color:#666;margin-bottom:12px">Novedad en <strong>${esc(campName)}</strong></div>
+    <div style="background:#f8f8f8;border:1px solid #eee;border-radius:8px;padding:12px;margin-bottom:12px">
+      <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.5px">${esc(label)}</div>
+      <div style="font-size:14px;font-weight:700;color:#111">${esc(contTitle)} — ${esc(talentName)}</div>
+    </div>
+    <div style="font-size:13px;color:#111;font-weight:600">👉 ${esc(reason)}</div>`;
+  return emailWrap(label, body, ctaUrl);
+}
+
+const SAMPLE_STATES = [
+  { label: 'Script para revisar', reason: 'El script está listo para tu revisión.', subject: 'Script para revisar' },
+  { label: 'Contenido para aprobar', reason: 'El contenido está listo para tu aprobación.', subject: 'Contenido para aprobar' },
+  { label: 'Spark Code disponible', reason: 'Se cargó el Spark Code.', subject: 'Spark Code disponible' },
+  { label: 'Estadísticas disponibles', reason: 'Se cargaron las estadísticas.', subject: 'Estadísticas disponibles' },
+];
+
 exports.handler = async (event) => {
+  // ── Modo preview: /.netlify/functions/brand-notify?preview=1 → muestra los 4 mails ──
+  if (event?.queryStringParameters?.preview) {
+    const ctaUrl = `${APP_URL}/marca-link.html`;
+    const blocks = SAMPLE_STATES.map(s => `
+      <div style="max-width:600px;margin:0 auto 8px;padding:8px 16px;font:700 12px/1.4 -apple-system,sans-serif;color:#9414E0;text-transform:uppercase;letter-spacing:1px">▼ Asunto: "Campaña Demo — ${s.subject}"</div>
+      ${buildEventEmail({ campName: 'Campaña Demo', label: s.label, contTitle: 'TikTok Video', talentName: 'Talento de ejemplo', reason: s.reason }, ctaUrl)}
+      <hr style="max-width:600px;margin:24px auto;border:none;border-top:2px dashed #ccc">`).join('');
+    return { statusCode: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' }, body: `<div style="background:#e9e9ee;padding:20px 0">${blocks}</div>` };
+  }
+
   // ── Modo prueba: /.netlify/functions/brand-notify?test=email@dominio.com ──
   let testEmail = event?.queryStringParameters?.test || '';
   if (!testEmail && event?.body) { try { testEmail = JSON.parse(event.body).test_email || ''; } catch {} }
