@@ -116,6 +116,13 @@ body.dark .logo .logo-dark{display:block}
 .search-input:not(:placeholder-shown) ~ .search-clear{display:inline-flex}
 .filter-select{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-family:inherit;color:var(--text);outline:none;cursor:pointer;appearance:none}
 .filter-select:focus{border-color:var(--border2)}
+/* Sub-pestañas Activas / Finalizadas */
+.camp-tabs{display:flex;gap:4px;margin:0 0 16px;border-bottom:1px solid var(--border)}
+.camp-tab{display:inline-flex;align-items:center;gap:7px;background:none;border:none;border-bottom:2px solid transparent;padding:9px 14px;margin-bottom:-1px;font-family:inherit;font-size:13px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:all 0.15s}
+.camp-tab:hover{color:var(--text)}
+.camp-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.camp-tab-count{font-size:11px;font-weight:700;padding:1px 8px;border-radius:20px;background:var(--surface3);color:var(--text-muted)}
+.camp-tab.active .camp-tab-count{background:rgba(178,0,93,0.12);color:var(--primary)}
 .view-toggle{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px}
 .view-btn{width:30px;height:30px;border:none;background:none;border-radius:6px;color:var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
 .view-btn.active{background:var(--surface3);color:var(--text)}
@@ -549,7 +556,6 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
         <option value="">Todos los estados</option>
         <option value="sin_iniciar">Sin iniciar</option>
         <option value="en_curso">En curso</option>
-        <option value="finalizada">Finalizada</option>
         <option value="pausada">Pausada</option>
         <option value="cancelada">Cancelada</option>
       </select>
@@ -581,6 +587,12 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- Sub-pestañas: Activas / Finalizadas -->
+    <div class="camp-tabs">
+      <button class="camp-tab active" id="ctab-activas" onclick="setCampTab('activas')">Activas <span class="camp-tab-count" id="ctab-activas-count">0</span></button>
+      <button class="camp-tab" id="ctab-finalizadas" onclick="setCampTab('finalizadas')">Finalizadas <span class="camp-tab-count" id="ctab-finalizadas-count">0</span></button>
     </div>
 
     <!-- Campañas container -->
@@ -1211,6 +1223,9 @@ function getFilteredCampanas() {
   const myId = currentUser?.id;
 
   return campanas.filter(c => {
+    // Pestaña Activas (default) oculta las finalizadas; pestaña Finalizadas solo muestra esas
+    if (campTab === 'finalizadas') { if (c.estado !== 'finalizada') return false; }
+    else if (c.estado === 'finalizada') return false;
     if (filterMine) {
       const isMine = c.created_by === myId
         || (c.campana_managers||[]).some(m => m.user_id === myId)
@@ -1283,6 +1298,12 @@ async function permanentDeleteCampana(id, e) {
 }
 
 function renderCampanas() {
+  // Contadores de las pestañas (sobre todas las campañas cargadas)
+  const finCount = campanas.filter(c => c.estado === 'finalizada').length;
+  const actCount = campanas.length - finCount;
+  const fEl = document.getElementById('ctab-finalizadas-count'); if (fEl) fEl.textContent = finCount;
+  const aEl = document.getElementById('ctab-activas-count'); if (aEl) aEl.textContent = actCount;
+
   const filtered = getFilteredCampanas();
   const container = document.getElementById('campanas-container');
 
@@ -1296,6 +1317,14 @@ function renderCampanas() {
 
   document.getElementById('subtitle-count').textContent =
     `${filtered.length} campaña${filtered.length!==1?'s':''} ${campanas.length !== filtered.length ? '(filtradas de '+campanas.length+')' : ''}`;
+}
+
+let campTab = 'activas';
+function setCampTab(t) {
+  campTab = t;
+  document.getElementById('ctab-activas')?.classList.toggle('active', t === 'activas');
+  document.getElementById('ctab-finalizadas')?.classList.toggle('active', t === 'finalizadas');
+  renderCampanas();
 }
 
 function estadoBadgeHTML(estado) {
@@ -1444,13 +1473,14 @@ function renderList(container, filtered) {
 
 function renderKanban(container, filtered) {
   container.className = '';
-  const cols = [
-    {key:'sin_iniciar', label:'Sin iniciar', color:'#888'},
-    {key:'en_curso',    label:'En curso',    color:'#d97706'},
-    {key:'finalizada',  label:'Finalizada',  color:'#16a34a'},
-    {key:'pausada',     label:'Pausada',     color:'#7c3aed'},
-    {key:'cancelada',   label:'Cancelada',   color:'#ef4444'},
-  ];
+  const cols = (campTab === 'finalizadas'
+    ? [{key:'finalizada', label:'Finalizada', color:'#16a34a'}]
+    : [
+        {key:'sin_iniciar', label:'Sin iniciar', color:'#888'},
+        {key:'en_curso',    label:'En curso',    color:'#d97706'},
+        {key:'pausada',     label:'Pausada',     color:'#7c3aed'},
+        {key:'cancelada',   label:'Cancelada',   color:'#ef4444'},
+      ]);
   container.innerHTML = `<div class="kanban-wrap">
     ${cols.map(col => {
       const items = filtered.filter(c=>c.estado===col.key);
