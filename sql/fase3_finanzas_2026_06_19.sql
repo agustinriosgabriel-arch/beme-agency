@@ -78,8 +78,12 @@ UPDATE campana_talentos
 -- ┌──────────────────────────────────────────────────────────────┐
 -- │ E. CONTABILIDAD — casillas QuickBooks (control de la contadora)│
 -- │    Marca si el movimiento ya fue cargado en QuickBooks.       │
+-- │    Permanentes en la fila (no dependen de que exista factura, │
+-- │    porque a veces la contadora crea/sube la factura después). │
 -- └──────────────────────────────────────────────────────────────┘
--- CxC: a nivel factura → factura cargada en QB y cobro cargado en QB
+-- CxC: a nivel FACTURA → factura cargada en QB y cobro cargado en QB.
+-- La columna se muestra siempre en la fila; si aún no hay factura, la casilla
+-- va deshabilitada hasta que la factura exista.
 ALTER TABLE facturas ADD COLUMN IF NOT EXISTS qb_factura boolean DEFAULT false;
 ALTER TABLE facturas ADD COLUMN IF NOT EXISTS qb_cobro   boolean DEFAULT false;
 -- CxP: a nivel talento de la campaña → invoice del talento en QB y pago en QB

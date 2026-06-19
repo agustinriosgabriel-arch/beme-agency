@@ -90,10 +90,12 @@ body.dark .logo .logo-dark{display:block}
 .chip:hover{border-color:var(--border2);color:var(--text)}
 .chip.active{background:var(--gradient);color:#fff;border-color:transparent}
 /* Casillas QuickBooks (contabilidad) */
-.qb-check{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--text-dim);cursor:pointer;white-space:nowrap;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 7px;transition:all 0.15s}
+.qb-check{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px;transition:all 0.15s}
 .qb-check:hover{border-color:var(--border2)}
-.qb-check input{accent-color:var(--green);width:13px;height:13px;cursor:pointer;margin:0}
-.qb-check.on{color:var(--green);background:rgba(74,222,128,0.08);border-color:rgba(74,222,128,0.3)}
+.qb-check input{accent-color:var(--green);width:15px;height:15px;cursor:pointer;margin:0;display:block}
+.qb-check.on{background:rgba(74,222,128,0.1);border-color:rgba(74,222,128,0.4)}
+.qb-check.disabled{cursor:not-allowed;opacity:0.4;border-style:dashed}
+.qb-check.disabled input{cursor:not-allowed}
 
 /* Finance rows */
 .fin-group{margin-bottom:20px}
@@ -113,12 +115,17 @@ body.dark .logo .logo-dark{display:block}
 .fin-row-date{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .fin-row-amount{font-weight:700;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .fin-row-actions{display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap}
-/* Grids por sección (header y filas comparten template) */
-.cxc-row{grid-template-columns:minmax(0,2fr) minmax(0,1.3fr) 78px 96px 92px 96px minmax(90px,1fr) minmax(70px,auto)}
-.cxp-row{grid-template-columns:minmax(0,2fr) 86px 78px 118px minmax(90px,1fr) minmax(120px,auto)}
-.fin-row-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-dim);background:var(--surface2);padding:8px 14px;border-bottom:1px solid var(--border)}
+/* Grids por sección (header y filas comparten template).
+   Solo la 1ª columna es flexible (1fr); el resto px fijos → alineación
+   consistente entre cada fila-grid independiente. */
+.cxc-row{grid-template-columns:minmax(140px,1fr) 128px 84px 118px 92px 100px 100px 64px 64px 124px}
+.cxp-row{grid-template-columns:minmax(140px,1fr) 88px 88px 114px 104px 64px 64px 136px}
+#cxc-container,#cxp-container{overflow-x:auto}
+.fin-row-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-dim);background:var(--surface2);padding:8px 14px;border-bottom:1px solid var(--border)}
 .fin-row-head>div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fin-row-head .th-r{text-align:right}
+.fin-row-head .th-c{text-align:center}
+.qb-cell{display:flex;justify-content:center;align-items:center}
 .fin-total-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:var(--surface2);border-top:1px solid var(--border);font-size:13px}
 .fin-total-row .lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim)}
 .fin-grand-total{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;margin-top:4px;background:linear-gradient(135deg,rgba(178,0,93,0.06),rgba(148,20,224,0.06));border:1px solid rgba(178,0,93,0.15);border-radius:var(--radius)}
@@ -321,9 +328,16 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   <div id="section-cxc">
     <div class="toolbar">
       <div class="search-wrap"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" class="search-input" id="cxc-search" placeholder="Buscar campana, cliente, marca, talento, identificador, folio..." oninput="renderCxC()"></div>
-      <select class="filter-select" id="cxc-filter" onchange="renderCxC()"><option value="">Estado: Todos</option><option value="por_facturar">⚡ Lista para facturar</option><option value="pendiente">Pendiente</option><option value="emitida">Emitida</option><option value="enviada">Enviada</option><option value="pagada_parcial">Pago Parcial</option><option value="cobrada">Cobrada</option><option value="vencida">Vencidas</option></select>
       <select class="filter-select" id="cxc-factura" onchange="renderCxC()"><option value="">Factura: Todas</option><option value="con">Con factura</option><option value="sin">Sin factura</option></select>
       <select class="filter-select" id="cxc-sort" onchange="renderCxC()"><option value="desc">Inicio: reciente → antigua</option><option value="asc">Inicio: antigua → reciente</option></select>
+    </div>
+    <div class="chip-filter" id="cxc-estado-chips" style="margin-bottom:16px">
+      <span class="chip-filter-label">Estado campaña:</span>
+      <button class="chip" data-est="sin_iniciar" onclick="toggleEstChip(this)">Sin iniciar</button>
+      <button class="chip" data-est="en_curso" onclick="toggleEstChip(this)">En curso</button>
+      <button class="chip" data-est="etapa_finanzas" onclick="toggleEstChip(this)">Etapa Finanzas</button>
+      <button class="chip" data-est="finalizada" onclick="toggleEstChip(this)">Finalizada</button>
+      <button class="chip" data-est="cancelada" onclick="toggleEstChip(this)">Cancelada</button>
     </div>
     <div id="cxc-container"></div>
   </div>
@@ -590,8 +604,11 @@ function fmtMulti(map){
 function addCur(map,cur,v){const c=cur||'USD';map[c]=(map[c]||0)+v;}
 
 // ── Casillas QuickBooks (control de la contadora) ──
-function qbCheck(label,checked,onchangeExpr){
-  return `<label class="qb-check${checked?' on':''}" onclick="event.stopPropagation()"><input type="checkbox" ${checked?'checked':''} onchange="${onchangeExpr}"> ${label}</label>`;
+// Celda con solo la casilla (el título va en el encabezado de columna). Columna SIEMPRE
+// visible; si aún no hay factura, la casilla va deshabilitada (placeholder permanente).
+function qbBox(checked,onchangeExpr,disabled){
+  if(disabled)return `<div class="qb-cell"><label class="qb-check disabled" title="Creá la factura primero" onclick="event.stopPropagation()"><input type="checkbox" disabled></label></div>`;
+  return `<div class="qb-cell"><label class="qb-check${checked?' on':''}" onclick="event.stopPropagation()"><input type="checkbox" ${checked?'checked':''} onchange="${onchangeExpr}"></label></div>`;
 }
 async function setQbFlag(table,id,field,checked){
   try{
@@ -605,7 +622,7 @@ async function setQbFlag(table,id,field,checked){
 const setQbFactura =(id,v)=>setQbFlag('facturas',id,'qb_factura',v);
 const setQbCobro   =(id,v)=>setQbFlag('facturas',id,'qb_cobro',v);
 const setQbCtFactura=(id,v)=>setQbFlag('campana_talentos',id,'qb_factura',v);
-const setQbCtPago  =(id,v)=>setQbFlag('campana_talentos',id,'qb_pago',v);
+const setQbCtPago   =(id,v)=>setQbFlag('campana_talentos',id,'qb_pago',v);
 
 // STATS — por moneda, basadas en saldos reales (no estados binarios).
 // CxC/CxP pendiente reflejan los FILTROS de su sección (ver cxc/cxpFiltered*).
@@ -653,7 +670,7 @@ function switchSection(s){
 // Devuelve las campañas de CxC que pasan los filtros actuales (reutilizable por stats)
 function cxcFilteredCampanas(){
   const q=(document.getElementById('cxc-search')?.value||'').toLowerCase().trim();
-  const filt=document.getElementById('cxc-filter')?.value||'';
+  const estCamps=[...document.querySelectorAll('#cxc-estado-chips .chip.active')].map(b=>b.dataset.est);
   const facFilt=document.getElementById('cxc-factura')?.value||'';
   const out=[];
   campanas.forEach(c=>{
@@ -680,9 +697,7 @@ function cxcFilteredCampanas(){
     const facsActivas=facs.filter(f=>f.estado!=='cancelada');
     if(facFilt==='con'&&!facsActivas.length)return;
     if(facFilt==='sin'&&facsActivas.length)return;
-    if(filt==='vencida'){if(!facs.some(f=>facVencida(f)))return;}
-    else if(filt==='por_facturar'){if(!CAMP_EST_LISTA.includes(c.estado)||facs.some(f=>f.estado!=='cancelada'))return;}
-    else if(filt){if(!facs.length&&filt!=='pendiente')return;if(facs.length&&!facs.some(f=>f.estado===filt))return;}
+    if(estCamps.length&&!estCamps.includes(c.estado||''))return;
     out.push({...c,facs,cliente:cli});
   });
   return out;
@@ -718,7 +733,8 @@ function renderCxC(){
 
   const head=`<div class="fin-row fin-row-head cxc-row">
     <div>Campaña</div><div>Marca</div><div>Inicio</div><div>Estado campaña</div>
-    <div>Factura</div><div>Cobro estimado</div><div class="th-r">Monto</div><div></div></div>`;
+    <div>Factura</div><div>Cobro estimado</div><div class="th-r">Monto</div>
+    <div class="th-c">QB Factura</div><div class="th-c">QB Cobro</div><div></div></div>`;
 
   const grand={};
   container.innerHTML=groups.map(g=>{
@@ -764,9 +780,9 @@ function renderCxCRow(c){
       <div><span class="status-pill ${estadoClass}">${estadoLabel[estado]||estado}</span></div>
       <div class="fin-row-date">${fac&&fac.fecha_vencimiento?`${formatDate(fac.fecha_vencimiento)}${venc&&venc.dias<0?` <span class="venc-badge ${venc.cls}">${-venc.dias}d</span>`:''}`:'—'}</div>
       <div class="fin-row-amount">${fac?fmtMoney(fac.monto,fac.moneda):fmtMoney(totalFee)}${fac&&saldo>0&&facPagado(fac)>0?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,fac.moneda)}</div>`:''}</div>
+      ${qbBox(fac?.qb_factura,`setQbFactura(${fac?.id},this.checked)`,!fac)}
+      ${qbBox(fac?.qb_cobro,`setQbCobro(${fac?.id},this.checked)`,!fac)}
       <div class="fin-row-actions">
-        ${fac?qbCheck('QB Factura',fac.qb_factura,`setQbFactura(${fac.id},this.checked)`):''}
-        ${fac?qbCheck('QB Cobro',fac.qb_cobro,`setQbCobro(${fac.id},this.checked)`):''}
         ${!fac?`<button class="btn btn-primary btn-xs" onclick="event.stopPropagation();openNuevaFactura(${c.id},${c.marcas?.clientes?.id||0})">+ Factura</button>`:''}
         <a class="btn btn-ghost btn-xs" href="campana-detalle.html?id=${c.id}" target="_blank" onclick="event.stopPropagation()" title="Ver detalle completo de la campaña">Detalle ↗</a>
       </div>
@@ -1081,7 +1097,11 @@ function addDaysStr(dateStr,n){
 function defaultPagoEstimado(ct){return addDaysStr(campCobroEstimado(ct.campana_id),15);}
 
 // Talentos de CxP que pasan los filtros actuales (reutilizable por stats)
-function toggleEstChip(btn){btn.classList.toggle('active');renderCxP();}
+function toggleEstChip(btn){
+  btn.classList.toggle('active');
+  const cont=btn.closest('[id$="-estado-chips"]');
+  if(cont&&cont.id.startsWith('cxc'))renderCxC();else renderCxP();
+}
 function cxpEstadosActivos(){return [...document.querySelectorAll('#cxp-estado-chips .chip.active')].map(b=>b.dataset.est);}
 
 function cxpFilteredTalentos(){
@@ -1114,7 +1134,7 @@ function renderCxP(){
 
   const head=`<div class="fin-row fin-row-head cxp-row">
     <div>Talento</div><div>Estado</div><div>Corredor</div><div>Pago estimado</div>
-    <div class="th-r">Fee / saldo</div><div></div></div>`;
+    <div class="th-r">Fee / saldo</div><div class="th-c">QB Factura</div><div class="th-c">QB Pago</div><div></div></div>`;
 
   const grand={};
   container.innerHTML=Object.keys(byCamp).map(campId=>{
@@ -1156,9 +1176,9 @@ function renderCxPRow(ct){
     <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${corredores?esc(corredores):'—'}</div>
     <div><input type="date" value="${fechaEst}" title="Fecha de pago estimada" onchange="setFechaPagoEstimada(${ct.id},this.value)" style="${dInput}"></div>
     <div class="fin-row-amount">${fmtMoney(ct.fee_talento||0,ct.moneda_talento||ct.moneda)}${estado==='parcial'?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,ct.moneda_talento||ct.moneda)}</div>`:''}</div>
+    ${qbBox(ct.qb_factura,`setQbCtFactura(${ct.id},this.checked)`)}
+    ${qbBox(ct.qb_pago,`setQbCtPago(${ct.id},this.checked)`)}
     <div class="fin-row-actions">
-      ${qbCheck('QB Factura',ct.qb_factura,`setQbCtFactura(${ct.id},this.checked)`)}
-      ${qbCheck('QB Pago',ct.qb_pago,`setQbCtPago(${ct.id},this.checked)`)}
       ${estado!=='pagado'?`<button class="btn btn-green btn-xs" onclick="openPagoTalento(${ct.id},${ct.campana_id},${ct.talent_id})">${estado==='parcial'?'Pagar saldo':'Pagar'}</button>`:''}
       <input type="file" id="inv-${ct.id}" style="display:none" accept=".pdf,.png,.jpg,.jpeg" onchange="subirInvoiceTalento(${ct.id},${ct.campana_id},${ct.talent_id},this)">
       ${ct.invoice_url?`<a class="btn btn-ghost btn-xs" href="${ct.invoice_url}" target="_blank" title="Invoice del talento">Invoice ✓</a>`:`<button class="btn btn-outline btn-xs" onclick="document.getElementById('inv-${ct.id}').click()" title="Cargar invoice del talento">+ Invoice</button>`}
