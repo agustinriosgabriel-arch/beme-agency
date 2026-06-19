@@ -142,16 +142,20 @@ exports.handler = async (event) => {
       </div>
       <div style="font-size:13px;color:#111;font-weight:600">👉 El contenido está listo para tu aprobación.</div>`;
     if (!SMTP_PASS) return { statusCode: 200, body: JSON.stringify({ ok: false, test: true, to: testEmail, mode: 'dry-run (falta SMTP_PASS)' }) };
+    // Permite forzar el remitente para probar (ej. ?from=notifications@bemeagency.com)
+    const fromOverride = event?.queryStringParameters?.from || '';
+    const fromUse = fromOverride ? `Beme Agency <${fromOverride}>` : NOTIFY_FROM;
+    const replyUse = fromOverride || NOTIFY_FROM_ADDR;
     let ok = false, error = null, messageId = null;
     try {
       const info = await transporter.sendMail({
-        from: NOTIFY_FROM, to: testEmail, replyTo: NOTIFY_FROM_ADDR,
+        from: fromUse, to: testEmail, replyTo: replyUse,
         subject: 'Beme — Email de prueba ✅',
         html: emailWrap('Email de prueba', body, `${APP_URL}/marca-link.html`),
       });
       ok = true; messageId = info.messageId;
     } catch (e) { error = e.message || String(e); }
-    return { statusCode: 200, body: JSON.stringify({ ok, test: true, to: testEmail, from: NOTIFY_FROM, via: 'smtp', messageId, error }) };
+    return { statusCode: 200, body: JSON.stringify({ ok, test: true, to: testEmail, from: fromUse, via: 'smtp', messageId, error }) };
   }
 
   if (!SUPABASE_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'Falta SUPABASE_SERVICE_KEY' }) };
