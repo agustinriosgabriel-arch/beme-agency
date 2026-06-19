@@ -405,6 +405,10 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       <p id="subtitle-count">Cargando...</p>
     </div>
     <div class="page-header-actions">
+      <button class="btn btn-ghost" onclick="openAdjuntarContrato()" title="Subir un contrato externo (PDF) y vincularlo a una campaña">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        Adjuntar contrato
+      </button>
       <button class="btn btn-primary" onclick="openNuevoContrato()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
         Nuevo Contrato
@@ -524,6 +528,62 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-select-talent');openModal('modal-select-campaign')">Atras</button>
       <button class="btn btn-primary" id="btn-next-details" onclick="goToContractDetails()" disabled>Siguiente</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Adjuntar contrato externo (PDF)
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-adjuntar">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Adjuntar contrato externo</div>
+      <button class="modal-close" onclick="closeModal('modal-adjuntar')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Subí el PDF que te mandaron y vinculalo a la campaña. Hay dos partes: elegí el tipo según quién firma con la agencia.</p>
+      <div class="form-group">
+        <label class="form-label">Campaña *</label>
+        <select id="adj-campana" class="form-input" onchange="adjOnCampana()"><option value="">Seleccioná una campaña...</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Talento (opcional)</label>
+        <select id="adj-talento" class="form-input" onchange="adjOnTalento()"><option value="">— General de la campaña —</option></select>
+        <div class="form-hint">Si el contrato es con un talento puntual, elegilo. Si es con la marca, dejalo en "General".</div>
+      </div>
+      <div class="form-grid" style="margin-bottom:0">
+        <div class="form-group">
+          <label class="form-label">Tipo de contrato</label>
+          <select id="adj-tipo" class="form-input">
+            <option value="talento">Agencia ↔ Talento</option>
+            <option value="marca">Marca ↔ Agencia</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estado</label>
+          <select id="adj-estado" class="form-input">
+            <option value="firmado">Firmado</option>
+            <option value="enviado">Enviado</option>
+            <option value="borrador">Borrador</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contraparte (nombre)</label>
+        <input type="text" id="adj-parte" class="form-input" placeholder="Nombre del talento o la marca que firma">
+        <div class="form-hint">Se usa para identificar el contrato en la lista.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Archivo del contrato (PDF / imagen) *</label>
+        <input type="file" id="adj-file" class="form-input" accept=".pdf,image/*">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-adjuntar')">Cancelar</button>
+      <button class="btn btn-primary" id="adj-save-btn" onclick="saveAdjunto()">Adjuntar y vincular</button>
     </div>
   </div>
 </div>
@@ -1007,6 +1067,7 @@ function renderContratos() {
       <div class="contrato-card-body">
         <div class="contrato-tags">
           <span class="contrato-tag">${c.idioma==='en'?'EN':'ES'}</span>
+          ${c.archivo_url?`<span class="contrato-tag" style="color:var(--primary);border-color:rgba(178,0,93,0.25)">📎 PDF adjunto</span>`:''}
           ${c.canales ? c.canales.split(',').map(ch=>`<span class="contrato-tag">${escHtml(ch.trim())}</span>`).join('') : ''}
         </div>
         <div style="display:flex;align-items:center;gap:12px">
@@ -1035,6 +1096,96 @@ function renderStats() {
   document.getElementById('stat-borradores').textContent = contratos.filter(c=>c.estado==='borrador').length;
   document.getElementById('stat-enviados').textContent = contratos.filter(c=>c.estado==='enviado').length;
   document.getElementById('stat-firmados').textContent = contratos.filter(c=>c.estado==='firmado').length;
+}
+
+// ══════════════════════════════════════════════════════════
+// ADJUNTAR CONTRATO EXTERNO (PDF)
+// ══════════════════════════════════════════════════════════
+function safeStorageName(name) {
+  return String(name||'archivo').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9._-]/g,'_');
+}
+
+function openAdjuntarContrato() {
+  const camp = document.getElementById('adj-campana');
+  camp.innerHTML = '<option value="">Seleccioná una campaña...</option>' +
+    campanas.map(c => {
+      const m = c.marcas?.nombre || marcas[c.marca_id]?.nombre || '';
+      return `<option value="${c.id}">${escHtml(c.nombre)}${m?' — '+escHtml(m):''}</option>`;
+    }).join('');
+  document.getElementById('adj-talento').innerHTML = '<option value="">— General de la campaña —</option>';
+  document.getElementById('adj-tipo').value = 'talento';
+  document.getElementById('adj-estado').value = 'firmado';
+  document.getElementById('adj-parte').value = '';
+  document.getElementById('adj-file').value = '';
+  openModal('modal-adjuntar');
+}
+
+function adjOnCampana() {
+  const campId = parseInt(document.getElementById('adj-campana').value) || 0;
+  const tSel = document.getElementById('adj-talento');
+  const cts = campanasTalentos[campId] || [];
+  tSel.innerHTML = '<option value="">— General de la campaña —</option>' +
+    cts.map(ct => `<option value="${ct.id}">${escHtml(ct.talentos?.nombre || ('Talento #'+ct.id))}</option>`).join('');
+  // Por defecto, sin talento → contrato con la marca
+  document.getElementById('adj-tipo').value = 'marca';
+}
+
+function adjOnTalento() {
+  const ctId = document.getElementById('adj-talento').value;
+  document.getElementById('adj-tipo').value = ctId ? 'talento' : 'marca';
+}
+
+async function saveAdjunto() {
+  const campId = parseInt(document.getElementById('adj-campana').value) || 0;
+  const file = document.getElementById('adj-file').files[0];
+  if (!campId) { showToast('Elegí una campaña', 'error'); return; }
+  if (!file) { showToast('Subí el archivo del contrato', 'error'); return; }
+
+  const ctId = parseInt(document.getElementById('adj-talento').value) || null;
+  const tipo = document.getElementById('adj-tipo').value;
+  const estado = document.getElementById('adj-estado').value;
+  const parte = document.getElementById('adj-parte').value.trim();
+  const camp = campanas.find(c => c.id === campId);
+  const marcaNombre = camp?.marcas?.nombre || marcas[camp?.marca_id]?.nombre || '';
+  const ct = (campanasTalentos[campId] || []).find(x => x.id === ctId);
+  const talentName = ct?.talentos?.nombre || '';
+
+  const btn = document.getElementById('adj-save-btn');
+  btn.disabled = true; btn.textContent = 'Subiendo...';
+  try {
+    const path = `campana-${campId}/${Date.now()}-${safeStorageName(file.name)}`;
+    const { error: upErr } = await sb.storage.from('contratos').upload(path, file);
+    if (upErr) throw upErr;
+    const { data:{ publicUrl } } = sb.storage.from('contratos').getPublicUrl(path);
+
+    const nombreCard = (tipo === 'talento' ? (talentName || parte) : (parte || marcaNombre)) || 'Contrato externo';
+    const payload = {
+      campana_id: campId,
+      campana_talento_id: ctId,
+      numero_contrato: ct?.identificador || '',
+      tipo, idioma: 'es', estado,
+      parte_a_nombre: tipo === 'marca' ? (parte || marcaNombre) : (BEME_DATA.nombre || 'BEME AGENCY'),
+      parte_b_nombre: tipo === 'talento' ? (talentName || parte) : (BEME_DATA.nombre || 'BEME AGENCY'),
+      influencer_nombre: nombreCard,
+      marca_producto: marcaNombre,
+      archivo_url: publicUrl || path,
+      archivo_nombre: file.name,
+      es_externo: true,
+      fecha_contrato: new Date().toISOString().slice(0, 10),
+      created_by: currentUser.id,
+    };
+    const { data, error } = await sb.from('contratos').insert(payload).select().single();
+    if (error) throw error;
+    contratos.unshift(data);
+    renderContratos();
+    renderStats();
+    closeModal('modal-adjuntar');
+    showToast('Contrato adjuntado y vinculado ✓', 'success');
+  } catch(e) {
+    showToast('Error: ' + (e.message || e), 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Adjuntar y vincular';
+  }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1347,7 +1498,18 @@ function openPreview(id) {
   document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato} — ${c.influencer_nombre||c.parte_b_nombre}`;
   document.getElementById('preview-estado').value = c.estado;
 
-  if (c.contenido_html) {
+  if (c.archivo_url) {
+    const isPdf = /\.pdf(\?|$)/i.test(c.archivo_url) || (c.archivo_nombre||'').toLowerCase().endsWith('.pdf');
+    document.getElementById('preview-content').innerHTML = `<div style="padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <div style="font-size:13px;color:var(--text-muted)">📎 Contrato externo adjunto: <strong style="color:var(--text)">${escHtml(c.archivo_nombre||'archivo')}</strong></div>
+        <a href="${escHtml(c.archivo_url)}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Abrir / Descargar</a>
+      </div>
+      ${isPdf
+        ? `<iframe src="${escHtml(c.archivo_url)}" style="width:100%;height:65vh;border:1px solid var(--border);border-radius:8px"></iframe>`
+        : `<img src="${escHtml(c.archivo_url)}" style="max-width:100%;border-radius:8px;border:1px solid var(--border)">`}
+    </div>`;
+  } else if (c.contenido_html) {
     document.getElementById('preview-content').innerHTML = c.contenido_html;
   } else {
     document.getElementById('preview-content').innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-dim)">
