@@ -606,23 +606,22 @@ function addCur(map,cur,v){const c=cur||'USD';map[c]=(map[c]||0)+v;}
 // ── Casillas QuickBooks (control de la contadora) ──
 // Celda con solo la casilla (el título va en el encabezado de columna). Columna SIEMPRE
 // visible; si aún no hay factura, la casilla va deshabilitada (placeholder permanente).
-function qbBox(checked,onchangeExpr,disabled){
-  if(disabled)return `<div class="qb-cell"><label class="qb-check disabled" title="Creá la factura primero" onclick="event.stopPropagation()"><input type="checkbox" disabled></label></div>`;
+function qbBox(checked,onchangeExpr){
   return `<div class="qb-cell"><label class="qb-check${checked?' on':''}" onclick="event.stopPropagation()"><input type="checkbox" ${checked?'checked':''} onchange="${onchangeExpr}"></label></div>`;
 }
 async function setQbFlag(table,id,field,checked){
   try{
     const{error}=await sb.from(table).update({[field]:checked}).eq('id',id);
     if(error)throw error;
-    const arr=table==='facturas'?facturas:campanasTalentos;
+    const arr=table==='campanas'?campanas:campanasTalentos;
     const row=arr.find(x=>x.id===id);if(row)row[field]=checked;
-    if(table==='facturas')renderCxC();else renderCxP();
+    if(table==='campanas')renderCxC();else renderCxP();
   }catch(e){showToast('Error: '+e.message,'error');}
 }
-const setQbFactura =(id,v)=>setQbFlag('facturas',id,'qb_factura',v);
-const setQbCobro   =(id,v)=>setQbFlag('facturas',id,'qb_cobro',v);
-const setQbCtFactura=(id,v)=>setQbFlag('campana_talentos',id,'qb_factura',v);
-const setQbCtPago   =(id,v)=>setQbFlag('campana_talentos',id,'qb_pago',v);
+const setQbCampFactura=(id,v)=>setQbFlag('campanas',id,'qb_factura',v);
+const setQbCampCobro  =(id,v)=>setQbFlag('campanas',id,'qb_cobro',v);
+const setQbCtFactura  =(id,v)=>setQbFlag('campana_talentos',id,'qb_factura',v);
+const setQbCtPago     =(id,v)=>setQbFlag('campana_talentos',id,'qb_pago',v);
 
 // STATS — por moneda, basadas en saldos reales (no estados binarios).
 // CxC/CxP pendiente reflejan los FILTROS de su sección (ver cxc/cxpFiltered*).
@@ -771,8 +770,7 @@ function renderCxCRow(c){
   const venc=fac?vencInfo(fac):null;
   const saldo=fac?facSaldo(fac):0;
 
-  return `<div>
-    <div class="fin-row cxc-row" onclick="toggleDetail('detail-${c.id}')" style="cursor:pointer">
+  return `<div class="fin-row cxc-row" onclick="toggleDetail('detail-${c.id}')" style="cursor:pointer">
       <div class="fin-row-name">${esc(c.nombre)}</div>
       <div class="fin-row-meta">${esc(c.marcas?.nombre||'')}</div>
       <div class="fin-row-date">${c.fecha_inicio?formatDate(c.fecha_inicio):'—'}</div>
@@ -780,8 +778,8 @@ function renderCxCRow(c){
       <div><span class="status-pill ${estadoClass}">${estadoLabel[estado]||estado}</span></div>
       <div class="fin-row-date">${fac&&fac.fecha_vencimiento?`${formatDate(fac.fecha_vencimiento)}${venc&&venc.dias<0?` <span class="venc-badge ${venc.cls}">${-venc.dias}d</span>`:''}`:'—'}</div>
       <div class="fin-row-amount">${fac?fmtMoney(fac.monto,fac.moneda):fmtMoney(totalFee)}${fac&&saldo>0&&facPagado(fac)>0?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,fac.moneda)}</div>`:''}</div>
-      ${qbBox(fac?.qb_factura,`setQbFactura(${fac?.id},this.checked)`,!fac)}
-      ${qbBox(fac?.qb_cobro,`setQbCobro(${fac?.id},this.checked)`,!fac)}
+      ${qbBox(c.qb_factura,`setQbCampFactura(${c.id},this.checked)`)}
+      ${qbBox(c.qb_cobro,`setQbCampCobro(${c.id},this.checked)`)}
       <div class="fin-row-actions">
         ${!fac?`<button class="btn btn-primary btn-xs" onclick="event.stopPropagation();openNuevaFactura(${c.id},${c.marcas?.clientes?.id||0})">+ Factura</button>`:''}
         <a class="btn btn-ghost btn-xs" href="campana-detalle.html?id=${c.id}" target="_blank" onclick="event.stopPropagation()" title="Ver detalle completo de la campaña">Detalle ↗</a>
@@ -790,8 +788,7 @@ function renderCxCRow(c){
     <div class="fin-detail" id="detail-${c.id}">
       ${fac?c.facs.map(fx=>renderFacturaDetail(fx,c)).join('<div style="height:10px"></div>'):`<p style="font-size:12px;color:var(--text-dim);padding:8px">Sin factura creada. Click "+ Factura" para crear.</p>`}
       ${fac?`<div style="margin-top:8px"><button class="btn btn-outline btn-xs" onclick="openNuevaFactura(${c.id},${c.marcas?.clientes?.id||0})">+ Otra factura</button></div>`:''}
-    </div>
-  </div>`;
+    </div>`;
 }
 
 function renderFacturaDetail(f,c){

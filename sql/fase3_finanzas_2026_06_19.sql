@@ -81,11 +81,11 @@ UPDATE campana_talentos
 -- │    Permanentes en la fila (no dependen de que exista factura, │
 -- │    porque a veces la contadora crea/sube la factura después). │
 -- └──────────────────────────────────────────────────────────────┘
--- CxC: a nivel FACTURA → factura cargada en QB y cobro cargado en QB.
--- La columna se muestra siempre en la fila; si aún no hay factura, la casilla
--- va deshabilitada hasta que la factura exista.
-ALTER TABLE facturas ADD COLUMN IF NOT EXISTS qb_factura boolean DEFAULT false;
-ALTER TABLE facturas ADD COLUMN IF NOT EXISTS qb_cobro   boolean DEFAULT false;
+-- CxC: a nivel CAMPAÑA (la fila de CxC es por campaña) → factura y cobro en QB.
+-- Clickeables siempre, aunque la factura todavía no exista (la contadora la
+-- carga/sube después).
+ALTER TABLE campanas ADD COLUMN IF NOT EXISTS qb_factura boolean DEFAULT false;
+ALTER TABLE campanas ADD COLUMN IF NOT EXISTS qb_cobro   boolean DEFAULT false;
 -- CxP: a nivel talento de la campaña → invoice del talento en QB y pago en QB
 ALTER TABLE campana_talentos ADD COLUMN IF NOT EXISTS qb_factura boolean DEFAULT false;
 ALTER TABLE campana_talentos ADD COLUMN IF NOT EXISTS qb_pago    boolean DEFAULT false;

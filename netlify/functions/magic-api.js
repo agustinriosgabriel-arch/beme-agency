@@ -21,7 +21,7 @@ const { corsOrigin } = require('./lib/cors');
 const SB_URL = process.env.SUPABASE_URL || 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SB_SERVICE = process.env.SUPABASE_SERVICE_KEY;
 
-const ALLOWED_BUCKETS = ['content-scripts', 'content-drafts', 'content-stats'];
+const ALLOWED_BUCKETS = ['content-scripts', 'content-drafts', 'content-stats', 'campaign-briefs'];
 const EXPIRY_DAYS = 10; // días tras campaña finalizada + pago completado
 
 // Selects reutilizados (mismos joins que el portal del talento)
@@ -306,6 +306,69 @@ exports.handler = async (event) => {
         const tipo = paso >= 4 ? 'borrador' : 'script';
         const { error } = await sb.from('contenido_observaciones').insert({
           contenido_id, paso, tipo, observacion: observacion.trim(), autor_id: null, autor_nombre: autorNombre,
+        });
+        if (error) throw error;
+        return json(200, { ok: true }, origin);
+      }
+
+      // ── MARCA: URL firmada para subir briefs ────────────────
+      case 'signed-upload-brief': {
+        if (link.tipo !== 'brand') return json(403, { error: 'Solo la marca sube briefs' }, origin);
+        const { kind, contenido_id, filename } = body;
+        const safeName = String(filename || 'file').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9._-]/g, '_');
+        let path;
+        if (kind === 'content') {
+          const scope = await assertContenidoScope(contenido_id);
+          if (!scope.ok) return json(403, { error: 'Contenido fuera de alcance' }, origin);
+          path = `contenido-${contenido_id}/brief-${Date.now()}-${safeName}`;
+        } else {
+          path = `campana-${link.campana_id}/${Date.now()}-${safeName}`;
+        }
+        const { data, error } = await sb.storage.from('campaign-briefs').createSignedUploadUrl(path);
+        if (error) throw error;
+        const { data: pub } = sb.storage.from('campaign-briefs').getPublicUrl(path);
+        return json(200, { path, token: data.token, signedUrl: data.signedUrl, publicUrl: pub.publicUrl }, origin);
+      }
+
+      // ── MARCA: registrar brief GENERAL de campaña ───────────
+      case 'record-brief-general': {
+        if (link.tipo !== 'brand') return json(403, { error: 'Solo la marca sube briefs' }, origin);
+        const { url, nombre, size_bytes } = body;
+        if (!url) return json(400, { error: 'Falta el archivo' }, origin);
+        const { error } = await sb.from('campana_briefs').insert({
+          campana_id: link.campana_id, nombre: nombre || 'Brief', url, size_bytes: size_bytes || 0, uploaded_by: null,
+        });
+        if (error) throw error;
+        // Auto-avanzar contenidos en paso 1 → "Esperando Script" (igual que el panel interno)
+        const { data: cts } = await sb.from('campana_talentos').select('contenidos(id,paso_actual)').eq('campana_id', link.campana_id);
+        const en1 = (cts || []).flatMap(ct => ct.contenidos || []).filter(c => c.paso_actual === 1);
+        for (const c of en1) {
+          await sb.rpc('avanzar_paso_contenido', { p_contenido_id: c.id, p_autor_id: null, p_autor_nombre: autorNombre, p_accion: 'Brief cargado por marca' });
+        }
+        return json(200, { ok: true, avanzados: en1.length }, origin);
+      }
+
+      // ── MARCA: registrar brief de un CONTENIDO ──────────────
+      case 'record-brief-content': {
+        if (link.tipo !== 'brand') return json(403, { error: 'Solo la marca sube briefs' }, origin);
+        const { contenido_id, url, nombre, size_bytes } = body;
+        if (!url) return json(400, { error: 'Falta el archivo' }, origin);
+        const scope = await assertContenidoScope(contenido_id);
+        if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
+        const { error } = await sb.from('contenido_briefs').insert({
+          contenido_id, nombre: nombre || 'Brief', url, size_bytes: size_bytes || 0, uploaded_by: null,
+        });
+        if (error) throw error;
+        return json(200, { ok: true }, origin);
+      }
+
+      // ── MARCA: comentario general de campaña (extra) ────────
+      case 'campaign-comment': {
+        if (link.tipo !== 'brand') return json(403, { error: 'No permitido' }, origin);
+        const { mensaje } = body;
+        if (!mensaje || !mensaje.trim()) return json(400, { error: 'Comentario vacío' }, origin);
+        const { error } = await sb.from('campana_mensajes').insert({
+          campana_id: link.campana_id, autor_id: null, autor_nombre: autorNombre, mensaje: mensaje.trim(),
         });
         if (error) throw error;
         return json(200, { ok: true }, origin);

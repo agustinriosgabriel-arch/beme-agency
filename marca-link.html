@@ -138,6 +138,9 @@ body.dark .topbar{background:rgba(15,15,15,0.92)}
 </div>
 
 <script>
+const SB_URL = 'https://ngstqwbzvnpggpklifat.supabase.co';
+const SB_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
+const sbStore = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false } }); // solo para uploadToSignedUrl
 const API_URL = '/.netlify/functions/magic-api';
 const TOKEN = new URLSearchParams(location.search).get('t') || '';
 let campana = null;
@@ -192,9 +195,19 @@ function renderAll() {
   </div>`;
 
   const briefs = campana.campana_briefs||[];
-  document.getElementById('briefs').innerHTML = briefs.length
-    ? `<div class="brief-section"><div class="brief-title">📄 Brief de la campaña</div>${briefs.map(f=>`<a href="${esc(f.url)}" target="_blank" class="brief-file">📄 ${esc((f.nombre||'Brief').substring(0,40))}</a>`).join('')}</div>`
-    : '';
+  const briefsLinks = briefs.length
+    ? briefs.map(f=>`<a href="${esc(f.url)}" target="_blank" class="brief-file">📄 ${esc((f.nombre||'Brief').substring(0,40))}</a>`).join('')
+    : '<span style="font-size:12px;color:var(--text-dim)">Todavía no hay briefs generales.</span>';
+  document.getElementById('briefs').innerHTML = `<div class="brief-section">
+    <div class="brief-title">📄 Brief general de la campaña</div>
+    <div style="margin-bottom:10px">${briefsLinks}</div>
+    <label class="btn btn-outline btn-sm" style="cursor:pointer"><input type="file" style="display:none" multiple onchange="uploadBriefGeneral(this)">⬆ Subir brief general</label>
+  </div>
+  <div class="brief-section">
+    <div class="brief-title">💬 Comentario general para el equipo</div>
+    <textarea class="cbox" id="camp-comment" placeholder="Dejá indicaciones o comentarios extra sobre la campaña en general..."></textarea>
+    <div class="action-btns"><button class="btn btn-outline btn-sm" onclick="sendCampaignComment()">Enviar comentario</button></div>
+  </div>`;
 
   const cts = campana.campana_talentos||[];
   const cont = document.getElementById('talentos-container');
@@ -260,6 +273,15 @@ function renderContenido(c) {
     actionHTML = `<div class="info-box">El talento está trabajando en este paso. Te avisaremos cuando esté listo para tu aprobación.</div>`;
   }
 
+  // Brief específico de este contenido
+  const cBriefs = (c.contenido_briefs||[]).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  const briefBtns = cBriefs.length ? cBriefs.map(b=>`<a href="${esc(b.url)}" target="_blank" class="file-btn" style="color:var(--purple)">📋 ${esc((b.nombre||'Brief').substring(0,20))}</a>`).join('') : '';
+  const briefHTML = `<div style="margin-bottom:12px">
+    <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Brief de este contenido</div>
+    ${briefBtns?`<div class="files-row">${briefBtns}</div>`:''}
+    <label class="btn btn-outline btn-sm" style="cursor:pointer"><input type="file" style="display:none" multiple onchange="uploadBriefContent(this,${c.id})">⬆ Subir brief del contenido</label>
+  </div>`;
+
   // Comentario libre (siempre disponible)
   const commentHTML = `<div class="comment-box">
     <textarea class="cbox" id="com-${c.id}" placeholder="Dejá un comentario para el equipo y el talento..."></textarea>
@@ -279,6 +301,7 @@ function renderContenido(c) {
       <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Etapa actual: ${PASO_LABELS[paso]||('Paso '+paso)}</div>
       ${filesHTML}
       ${actionHTML}
+      ${briefHTML}
       ${commentHTML}
       ${obsHTML}
     </div>
@@ -309,6 +332,34 @@ async function comment(contId) {
   if (!obs) { toast('Escribí un comentario','err'); return; }
   try { await API('comment', { contenido_id: contId, observacion: obs }); await refresh(); toast('Comentario enviado ✓','ok'); }
   catch(e){ toast('Error: '+e.message,'err'); }
+}
+async function sendCampaignComment() {
+  const msg = document.getElementById('camp-comment')?.value.trim() || '';
+  if (!msg) { toast('Escribí un comentario','err'); return; }
+  try { await API('campaign-comment', { mensaje: msg }); document.getElementById('camp-comment').value=''; toast('Comentario enviado al equipo ✓','ok'); }
+  catch(e){ toast('Error: '+e.message,'err'); }
+}
+
+// ── SUBIR BRIEFS (marca) ───────────────────────────────────────
+async function uploadBriefOne(kind, contId, file) {
+  const su = await API('signed-upload-brief', { kind, contenido_id: contId||null, filename: file.name });
+  const { error } = await sbStore.storage.from('campaign-briefs').uploadToSignedUrl(su.path, su.token, file);
+  if (error) throw error;
+  return su.publicUrl || su.path;
+}
+async function uploadBriefGeneral(input) {
+  const files = Array.from(input.files); input.value=''; if (!files.length) return;
+  toast('Subiendo brief general...','inf');
+  try { for (const f of files){ const url = await uploadBriefOne('general', null, f); await API('record-brief-general',{url,nombre:f.name,size_bytes:f.size}); }
+    await refresh(); toast(files.length>1?`${files.length} briefs subidos ✓`:'Brief general subido ✓','ok');
+  } catch(e){ toast('Error: '+e.message,'err'); }
+}
+async function uploadBriefContent(input, contId) {
+  const files = Array.from(input.files); input.value=''; if (!files.length) return;
+  toast('Subiendo brief del contenido...','inf');
+  try { for (const f of files){ const url = await uploadBriefOne('content', contId, f); await API('record-brief-content',{contenido_id:contId,url,nombre:f.name,size_bytes:f.size}); }
+    await refresh(); toast('Brief del contenido subido ✓','ok');
+  } catch(e){ toast('Error: '+e.message,'err'); }
 }
 
 // ── UTILS ──────────────────────────────────────────────────────
