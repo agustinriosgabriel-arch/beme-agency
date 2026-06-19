@@ -2523,9 +2523,19 @@ async function saveTalento() {
       toast('No se insertó el talento (posible bloqueo RLS)','err');
       return;
     }
+    // Agregar un talento reabre la campaña: si estaba finalizada vuelve a "en curso"
+    // y en cualquier caso reinicia el reloj de auto-finalización (completado_en).
+    const reabrir = (campana.estado === 'finalizada');
+    await sb.from('campanas').update({
+      ...(reabrir ? {estado: 'en_curso'} : {}),
+      completado_en: null,
+      updated_by: currentUser.id
+    }).eq('id', campanaId);
+    if (reabrir) campana.estado = 'en_curso';
+    campana.completado_en = null;
     closeModal('modal-talento');
-    bumpCampana(); await loadCampana(); renderAll();
-    toast('Talento agregado ✓','ok');
+    await loadCampana(); renderAll();
+    toast(reabrir ? 'Talento agregado — campaña reactivada ✓' : 'Talento agregado ✓','ok');
   } catch(e) {
     console.error('saveTalento exception:', e);
     toast('Error: '+e.message,'err');
@@ -2897,8 +2907,10 @@ async function saveProducto() {
 // ESTADO CAMPAÑA
 // ════════════════════════════════════════════════
 async function updateEstado(val) {
-  await sb.from('campanas').update({estado:val, updated_by: currentUser.id}).eq('id',campanaId);
+  // Cambio manual de estado → reinicia el reloj de auto-finalización (completado_en).
+  await sb.from('campanas').update({estado:val, completado_en: null, updated_by: currentUser.id}).eq('id',campanaId);
   campana.estado = val;
+  campana.completado_en = null;
   toast('Estado actualizado ✓','ok');
 }
 

@@ -1176,7 +1176,7 @@ let onlyMyCampanas = false; // Para campaign_manager: por defecto sólo ver sus 
 
 async function loadCampanas() {
   let query = sb.from('campanas').select(`
-    id,nombre,estado,fecha_inicio,fecha_fin,created_at,updated_at,updated_by,deleted_at,created_by,
+    id,nombre,estado,fecha_inicio,fecha_fin,created_at,updated_at,updated_by,deleted_at,created_by,completado_en,
     marca_id,cliente_id,descripcion,
     metodo_pago_marca,pais_facturacion,requiere_factura,notas_finanzas,
     marcas(id,nombre,logo_url,numero,clientes(id,nombre,numero)),
@@ -1198,6 +1198,52 @@ async function loadCampanas() {
   const {data, error} = await query;
   if (error) throw error;
   campanas = data || [];
+  await autoFinalizeCampanas();
+}
+
+// ── Auto-finalización ──────────────────────────────────────────────
+// Una campaña pasa a "finalizada" sola cuando TODAS sus sub-campañas tienen
+// todos los contenidos completados (paso_actual >= 8), no está sin_iniciar, y
+// pasaron 3 días desde que quedó 100% completa (completado_en).
+// Se reabre solo si alguien cambia el estado a mano o agrega un talento nuevo
+// (ver updateEstado / saveTalento en campana-detalle.html, que limpian completado_en).
+const AUTO_FIN_DIAS = 3;
+function isCampanaCompleta(c) {
+  const cts = c.campana_talentos || [];
+  if (!cts.length) return false; // sin sub-campañas → no aplica
+  return cts.every(ct => {
+    const conts = ct.contenidos || [];
+    return conts.length > 0 && conts.every(x => (x.paso_actual || 0) >= 8);
+  });
+}
+async function autoFinalizeCampanas() {
+  if (!isInternal()) return; // sólo usuarios internos tienen permiso de escritura
+  const now = Date.now();
+  const limite = AUTO_FIN_DIAS * 24 * 60 * 60 * 1000;
+  const updates = [];
+  for (const c of campanas) {
+    if (c.deleted_at) continue;
+    const elegible = !['sin_iniciar', 'finalizada', 'cancelada'].includes(c.estado);
+    if (!elegible || !isCampanaCompleta(c)) {
+      // Ya no califica → limpiar marca de completitud si la tenía
+      if (c.completado_en) { c.completado_en = null; updates.push({id: c.id, payload: {completado_en: null}}); }
+      continue;
+    }
+    if (!c.completado_en) {
+      // Primera detección de campaña 100% completa → arranca el reloj
+      const ts = new Date(now).toISOString();
+      c.completado_en = ts;
+      updates.push({id: c.id, payload: {completado_en: ts}});
+    } else if (now - new Date(c.completado_en).getTime() >= limite) {
+      // Pasaron los 3 días sin cambios → finalizar
+      c.estado = 'finalizada';
+      updates.push({id: c.id, payload: {estado: 'finalizada'}});
+    }
+  }
+  if (updates.length) {
+    try { await Promise.all(updates.map(u => sb.from('campanas').update(u.payload).eq('id', u.id))); }
+    catch(e) { console.warn('autoFinalizeCampanas:', e); }
+  }
 }
 
 async function loadAlertas() {
