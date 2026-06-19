@@ -620,7 +620,8 @@ async function loadCampaigns() {
   `).eq('talent_id', currentProfile.talent_id).order('created_at',{ascending:false});
 
   if (error) { console.error('loadCampaigns:',error); toast('Error: '+error.message,'err'); return; }
-  campaigns = (cts||[]).filter(ct => ct.campanas); // filter out orphans
+  // Excluir huérfanos y campañas enviadas a papelera (deleted_at) — el talento no debe verlas.
+  campaigns = (cts||[]).filter(ct => ct.campanas && !ct.campanas.deleted_at);
 }
 
 // Las campañas nunca se eliminan del portal — aunque estén finalizadas/completadas
