@@ -2,10 +2,32 @@
 // Runs every day at 5:00 AM (UTC-6 / Mexico City) = 11:00 UTC
 // Endpoint: /.netlify/functions/campaign-summary (can also be triggered manually)
 
+const nodemailer = require('nodemailer');
+
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY; // requerida — sin fallback a anon (RLS bloquearía las queries)
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const NOTIFY_EMAILS = (process.env.CAMPAIGN_SUMMARY_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+
+// Email por SMTP (Hostinger), desde notifications@ (reusa BRAND_SMTP_USER/PASS).
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.hostinger.com';
+const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
+const AUTH_USER = process.env.BRAND_SMTP_USER || process.env.SMTP_USER || 'contacto@bemeagency.com';
+const AUTH_PASS = process.env.BRAND_SMTP_PASS || process.env.SMTP_PASS;
+const NOTIFY_FROM = process.env.BRAND_NOTIFY_FROM || `Beme Agency <${AUTH_USER}>`;
+const NOTIFY_FROM_ADDR = (NOTIFY_FROM.match(/<([^>]+)>/) || [, NOTIFY_FROM])[1];
+
+const transporter = nodemailer.createTransport({
+  host: SMTP_HOST, port: SMTP_PORT, secure: SMTP_PORT === 465,
+  auth: { user: AUTH_USER, pass: AUTH_PASS },
+});
+
+// Destinatarios del resumen diario (override opcional con CAMPAIGN_SUMMARY_EMAILS)
+const DEFAULT_SUMMARY_TO = [
+  'angelica.pichardo@bemeagency.com',
+  'management@bemeagency.com',
+  'contacto@bemeagency.com',
+];
+const envEmails = (process.env.CAMPAIGN_SUMMARY_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+const NOTIFY_EMAILS = envEmails.length ? envEmails : DEFAULT_SUMMARY_TO;
 
 const PASO_LABELS = {
   1:'Esperando Brief', 2:'Esperando Script', 3:'Aprobación Script',
@@ -37,27 +59,19 @@ async function supabaseQuery(table, select, filters = {}) {
 }
 
 async function sendEmail(to, subject, html) {
-  if (!RESEND_API_KEY) {
-    console.log('RESEND_API_KEY not set — logging email instead:');
-    console.log(`To: ${to.join(', ')}\nSubject: ${subject}\n---\n${html.substring(0, 500)}...`);
+  if (!AUTH_PASS) {
+    console.log('SMTP_PASS/BRAND_SMTP_PASS no configurado — log en vez de enviar:');
+    console.log(`To: ${(Array.isArray(to) ? to : [to]).join(', ')}\nSubject: ${subject}`);
     return { success: true, mode: 'dry-run' };
   }
-
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from: process.env.RESEND_FROM || 'Beme Agency <notifications@bemeagency.com>',
-      to,
-      subject,
-      html
-    })
+  const text = String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const info = await transporter.sendMail({
+    from: NOTIFY_FROM,
+    to: Array.isArray(to) ? to : [to],
+    subject, html, text,
+    replyTo: NOTIFY_FROM_ADDR,
   });
-  if (!res.ok) throw new Error(`Resend error: ${res.status} ${await res.text()}`);
-  return res.json();
+  return { success: true, messageId: info.messageId };
 }
 
 function buildEmailHTML(campaigns, today) {
