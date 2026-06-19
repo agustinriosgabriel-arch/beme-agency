@@ -1223,13 +1223,11 @@ async function loadCampanas() {
 
 // ── Auto-finalización ──────────────────────────────────────────────
 // Una campaña pasa a "finalizada" sola cuando TODAS sus sub-campañas tienen
-// todos los contenidos completados (paso_actual >= 8), no está sin_iniciar, y
-// pasaron 3 días desde que quedó 100% completa (completado_en).
-// Se reabre solo si alguien cambia el estado a mano o agrega un talento nuevo
-// (ver updateEstado / saveTalento en campana-detalle.html, que limpian completado_en).
-const AUTO_FIN_DIAS = 3;
+// todos los contenidos completados (paso_actual >= 8), INDEPENDIENTE del cobro
+// y del pago. Fallback client-side del trigger SQL (recompute_campana_estado).
+// Se reabre solo si alguien cambia el estado a mano o agrega un talento nuevo.
 function isCampanaCompleta(c) {
-  const cts = c.campana_talentos || [];
+  const cts = (c.campana_talentos || []).filter(ct => ct.estado !== 'cancelada');
   if (!cts.length) return false; // sin sub-campañas → no aplica
   return cts.every(ct => {
     const conts = ct.contenidos || [];
@@ -1238,24 +1236,12 @@ function isCampanaCompleta(c) {
 }
 async function autoFinalizeCampanas() {
   if (!isInternal()) return; // sólo usuarios internos tienen permiso de escritura
-  const now = Date.now();
-  const limite = AUTO_FIN_DIAS * 24 * 60 * 60 * 1000;
   const updates = [];
   for (const c of campanas) {
     if (c.deleted_at) continue;
-    const elegible = !['sin_iniciar', 'finalizada', 'cancelada'].includes(c.estado);
-    if (!elegible || !isCampanaCompleta(c)) {
-      // Ya no califica → limpiar marca de completitud si la tenía
-      if (c.completado_en) { c.completado_en = null; updates.push({id: c.id, payload: {completado_en: null}}); }
-      continue;
-    }
-    if (!c.completado_en) {
-      // Primera detección de campaña 100% completa → arranca el reloj
-      const ts = new Date(now).toISOString();
-      c.completado_en = ts;
-      updates.push({id: c.id, payload: {completado_en: ts}});
-    } else if (now - new Date(c.completado_en).getTime() >= limite) {
-      // Pasaron los 3 días sin cambios → finalizar
+    const elegible = !['sin_iniciar', 'finalizada', 'cancelada', 'pausada'].includes(c.estado);
+    if (elegible && isCampanaCompleta(c)) {
+      // Todos los contenidos terminados → finalizar (sin esperar cobro/pago)
       c.estado = 'finalizada';
       updates.push({id: c.id, payload: {estado: 'finalizada'}});
     }

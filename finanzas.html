@@ -814,22 +814,21 @@ function cxcTalEstados(campId){
     `<span class="camp-estado ce-${e}" title="${n} talento(s) en ${TAL_EST[e]||e}">${TAL_EST_SHORT[e]||e}${n>1?' ·'+n:''}</span>`).join('');
 }
 
-// Finaliza la campaña automáticamente cuando TODAS las facturas están COBRADAS (CxC)
-// y TODOS los talentos PAGADOS (CxP). Fallback client-side del trigger SQL.
+// Finaliza la campaña automáticamente cuando se TERMINAN TODOS LOS CONTENIDOS
+// (todos los talentos en etapa_finanzas o finalizada), INDEPENDIENTE del cobro
+// y del pago. Fallback client-side del trigger SQL.
 async function maybeFinalizarCampana(campId){
   if(!campId)return;
   const camp=campanas.find(c=>c.id===campId);
   if(!camp||['finalizada','cancelada','pausada'].includes(camp.estado))return;
-  const facs=facturas.filter(f=>f.campana_id===campId&&f.estado!=='cancelada');
-  const cts=campanasTalentos.filter(ct=>ct.campana_id===campId);
-  const facturasCobradas = facs.length>0 && facs.every(f=>f.estado==='cobrada');
-  const talentosPagados  = cts.every(ct=>ctEstadoPago(ct)==='pagado'||Number(ct.fee_talento||0)===0);
-  if(facturasCobradas && talentosPagados){
+  const cts=campanasTalentos.filter(ct=>ct.campana_id===campId&&ct.estado!=='cancelada');
+  const contenidosTerminados = cts.length>0 && cts.every(ct=>['etapa_finanzas','finalizada'].includes(ct.estado));
+  if(contenidosTerminados){
     try{
       const{error}=await sb.from('campanas').update({estado:'finalizada',updated_at:new Date().toISOString()}).eq('id',campId).neq('estado','cancelada');
       if(error)throw error;
       camp.estado='finalizada';
-      showToast('Campaña FINALIZADA — todo cobrado y pagado ✓','success');
+      showToast('Campaña FINALIZADA — todos los contenidos terminados ✓','success');
     }catch(e){/* si falla, el trigger SQL igual la finalizará */}
   }
 }

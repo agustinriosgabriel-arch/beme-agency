@@ -2957,7 +2957,7 @@ async function updateEstado(val) {
 }
 
 // Estado por talento (sub-campaña). Pausada/Cancelada son manuales; el resto se
-// recalcula solo por el trigger SQL (contenidos completos → etapa_finanzas; pago → finalizada).
+// recalcula solo por el trigger SQL (contenidos completos → etapa_finanzas; contenidos completos + pagado → finalizada).
 const TAL_EST_LABEL = {sin_iniciar:'Sin iniciar',en_curso:'En curso',etapa_finanzas:'Etapa Finanzas',finalizada:'Finalizada',cancelada:'Cancelada',pausada:'Pausada'};
 const TAL_EST_CLASS = {sin_iniciar:'es-sin_iniciar',en_curso:'es-en_curso',etapa_finanzas:'es-etapa_finanzas',finalizada:'es-finalizada',cancelada:'es-cancelada',pausada:'es-pausada'};
 async function setTalentoEstado(ctId, val) {
