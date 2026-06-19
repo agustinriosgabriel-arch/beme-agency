@@ -97,8 +97,18 @@ exports.handler = async (event) => {
         <div style="font-size:14px;font-weight:700;color:#111">TikTok Video — Talento de ejemplo</div>
       </div>
       <div style="font-size:13px;color:#111;font-weight:600">👉 El contenido está listo para tu aprobación.</div>`;
-    const ok = await sendEmail(testEmail, 'Beme — Email de prueba ✅', emailWrap('Email de prueba', body, `${APP_URL}/marca-link.html`));
-    return { statusCode: 200, body: JSON.stringify({ ok, test: true, to: testEmail, mode: RESEND_API_KEY ? 'sent' : 'dry-run (falta RESEND_API_KEY)' }) };
+    if (!RESEND_API_KEY) return { statusCode: 200, body: JSON.stringify({ ok: false, test: true, to: testEmail, mode: 'dry-run (falta RESEND_API_KEY)' }) };
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM || 'Beme Agency <notifications@bemeagency.com>',
+        to: [testEmail], subject: 'Beme — Email de prueba ✅',
+        html: emailWrap('Email de prueba', body, `${APP_URL}/marca-link.html`),
+      }),
+    });
+    const detail = await r.text();
+    return { statusCode: 200, body: JSON.stringify({ ok: r.ok, test: true, to: testEmail, from: process.env.RESEND_FROM || 'notifications@bemeagency.com', status: r.status, resend: detail }) };
   }
 
   if (!SUPABASE_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'Falta SUPABASE_SERVICE_KEY' }) };
