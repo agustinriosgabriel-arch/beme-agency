@@ -1669,7 +1669,7 @@ function renderTalentoCard(ct) {
         <div class="extra-box">
           <div class="extra-title">Derechos de Imagen</div>
           ${ct.derechos_imagen_dias
-            ? `<div style="font-size:12px;font-weight:600">${ct.derechos_imagen_dias}d${isAdmin()?` · ${fmtMoney(ct.derechos_imagen_valor||0,mon)}`:''}</div>
+            ? `<div style="font-size:12px;font-weight:600">${ct.derechos_imagen_dias}d${isAdmin()?` · ${fmtMoney(ct.derechos_imagen_valor||0,monT)}`:''}</div>
                <div style="font-size:11px;color:var(--text-dim)">Desde ${ct.derechos_imagen_desde?fmtDate(ct.derechos_imagen_desde):'—'}</div>`
             : `<div style="font-size:12px;color:var(--text-dim)">Sin derechos</div>`}
           ${isInternal()?`<button class="btn btn-ghost btn-xs" style="margin-top:6px" onclick="openDerechos(${ct.id})">Editar</button>`:''}
