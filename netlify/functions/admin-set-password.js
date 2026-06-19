@@ -56,8 +56,22 @@ exports.handler = async (event) => {
       .eq('id', userData.user.id)
       .single();
 
-    if (pErr || !profile || profile.role !== 'admin') {
-      return { statusCode: 403, body: JSON.stringify({ error: 'Solo admins pueden cambiar contraseñas' }) };
+    const callerRole = profile?.role;
+    const isInternal = callerRole === 'admin' || callerRole === 'campaign_manager';
+    if (pErr || !profile || !isInternal) {
+      return { statusCode: 403, body: JSON.stringify({ error: 'No tenés permiso para cambiar contraseñas' }) };
+    }
+
+    // 1b) El Admin de Campaña NO puede cambiar la contraseña de un administrador.
+    if (callerRole !== 'admin') {
+      const { data: target } = await sbAdmin
+        .from('user_profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      if (target?.role === 'admin') {
+        return { statusCode: 403, body: JSON.stringify({ error: 'Solo el Administrador general puede cambiar la contraseña de un administrador' }) };
+      }
     }
 
     // 2) Cambiar la contraseña con el service_role key

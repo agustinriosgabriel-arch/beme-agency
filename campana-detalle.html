@@ -971,8 +971,8 @@ async function init() {
     if (isAdmin()) {
       document.getElementById('side-fin').style.display = 'block';
     }
-    // Ocultar tab "Finanzas" para no-admin
-    if (!isAdmin()) {
+    // Ocultar tab "Finanzas" — solo el Administrador general accede a la sección
+    if (!isSuperAdmin()) {
       document.querySelectorAll('.nav-tab[href="finanzas.html"]').forEach(el => el.style.display = 'none');
     }
 
@@ -1045,7 +1045,13 @@ function startAutoRefresh() {
   _autoRefreshTimer = setInterval(autoRefreshTick, 4000);
 }
 
-function isAdmin() { return currentProfile?.role === 'admin'; }
+// "Admin de Campaña" (campaign_manager) tiene los MISMOS permisos que el Admin
+// general — incluido ver/editar precios, fees y cobro dentro de la campaña —
+// EXCEPTO la sección Finanzas y la gestión de administradores. Por eso isAdmin()
+// (gating de dinero dentro de campaña) incluye a campaign_manager.
+function isAdmin() { return ['admin','campaign_manager'].includes(currentProfile?.role); }
+// Solo el Administrador general: acceso a la sección Finanzas + gestión de admins.
+function isSuperAdmin() { return currentProfile?.role === 'admin'; }
 function isInternal() { return ['admin','campaign_manager'].includes(currentProfile?.role); }
 function isHandler() { return currentProfile?.role === 'brand_handler'; }
 

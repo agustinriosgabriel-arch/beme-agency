@@ -1061,17 +1061,17 @@ async function initApp() {
       document.getElementById('btn-usuarios').style.display = 'inline-flex';
       document.getElementById('btn-trash').style.display = 'inline-flex';
     }
-    // Ocultar tab "Finanzas" para no-admin
-    if (!isAdmin()) {
+    // Ocultar tab "Finanzas" — solo el Administrador general accede a la sección
+    if (!isSuperAdmin()) {
       document.querySelectorAll('.nav-tab[href="finanzas.html"]').forEach(el => el.style.display = 'none');
     }
-    // Toggle "Mis campañas / Todas" — solo para campaign_manager (admin siempre ve todas)
+    // Toggle "Mis campañas / Todas" — el Admin de Campaña ve TODAS por defecto
+    // (mismos permisos que el Admin general), pero puede filtrar a las suyas.
     if (currentProfile.role === 'campaign_manager') {
-      onlyMyCampanas = true;
+      onlyMyCampanas = false;
       const btn = document.getElementById('btn-mis-campanas');
       btn.style.display = 'inline-flex';
-      btn.style.color = 'var(--primary)';
-      document.getElementById('mis-campanas-label').textContent = 'Solo mis campañas';
+      document.getElementById('mis-campanas-label').textContent = 'Todas las campañas';
     }
 
     renderCampanas();
@@ -1151,7 +1151,12 @@ function setupUserUI() {
   badge.className = 'role-badge '+({admin:'admin',campaign_manager:'manager',brand_handler:'handler',talent:'talent'}[currentProfile.role]||'');
 }
 
-function isAdmin() { return currentProfile?.role === 'admin'; }
+// "Admin de Campaña" (campaign_manager) = mismos permisos que el Admin general
+// (incluido ver/editar finanzas de la campaña) EXCEPTO la sección Finanzas y la
+// gestión de administradores. isAdmin() incluye a campaign_manager; las dos
+// excepciones usan isSuperAdmin() (solo role === 'admin').
+function isAdmin() { return ['admin','campaign_manager'].includes(currentProfile?.role); }
+function isSuperAdmin() { return currentProfile?.role === 'admin'; }
 function isInternal() { return ['admin','campaign_manager'].includes(currentProfile?.role); }
 
 // ══════════════════════════════════════════════════════════
@@ -1187,7 +1192,7 @@ async function loadTalentosBD() {
 }
 
 let showTrash = false;
-let onlyMyCampanas = false; // Para campaign_manager: por defecto sólo ver sus campañas
+let onlyMyCampanas = false; // El Admin de Campaña ve TODAS por defecto; puede filtrar a las suyas
 
 async function loadCampanas() {
   let query = sb.from('campanas').select(`
@@ -2253,7 +2258,7 @@ function renderUsuariosLista() {
         <span class="role-badge ${roleColors[u.role]||''}">${roleLabels[u.role]||u.role}</span>
         <button class="btn btn-ghost btn-sm" title="${u.activo?'Desactivar':'Activar'}" onclick="toggleActivoUsuario('${u.id}')" style="padding:4px 8px;font-size:11px">${u.activo?'● Activo':'○ Inactivo'}</button>
         <button class="btn btn-ghost btn-sm" title="Editar" onclick="editUsuario('${u.id}')" style="padding:4px 8px">✎</button>
-        ${isAdmin()?`<button class="btn btn-ghost btn-sm" title="Eliminar" onclick="deleteUsuario('${u.id}')" style="padding:4px 8px;color:var(--red,#dc2626)">✕</button>`:''}
+        ${(isSuperAdmin()||u.role!=='admin')?`<button class="btn btn-ghost btn-sm" title="Eliminar" onclick="deleteUsuario('${u.id}')" style="padding:4px 8px;color:var(--red,#dc2626)">✕</button>`:''}
       </div>`;
     }).join('')}
   </div>`;
@@ -2264,6 +2269,9 @@ let editingUsuarioId = null;
 function editUsuario(userId) {
   const u = usuarios.find(x => x.id === userId);
   if (!u) { showToast('Usuario no encontrado','error'); return; }
+  // El Admin de Campaña no puede editar administradores (solo el Admin general)
+  if (u.role === 'admin' && !isSuperAdmin()) { showToast('Solo el Administrador general puede editar administradores','error'); return; }
+  syncRolOptions();
   editingUsuarioId = userId;
   document.getElementById('modal-user-title').textContent = 'Editar Usuario';
   document.getElementById('u-nombre').value = u.nombre || '';
@@ -2293,9 +2301,11 @@ async function toggleActivoUsuario(userId) {
 }
 
 async function deleteUsuario(userId) {
-  if (!isAdmin()) { showToast('Solo el Administrador puede eliminar usuarios','error'); return; }
+  if (!isInternal()) { showToast('No tenés permiso para eliminar usuarios','error'); return; }
   const u = usuarios.find(x => x.id === userId);
   if (!u) return;
+  // El Admin de Campaña no puede eliminar administradores (solo el Admin general)
+  if (u.role === 'admin' && !isSuperAdmin()) { showToast('Solo el Administrador general puede eliminar administradores','error'); return; }
   if (u.id === currentUser.id) { showToast('No te podés eliminar a vos mismo','error'); return; }
   if (!confirm(`¿Eliminar el perfil de "${u.nombre}"?\n\nEsto borra el perfil de la app. La cuenta de auth (login) queda en Supabase y debe limpiarse manualmente desde el dashboard de Supabase si querés que no pueda volver a loguearse.`)) return;
   const {error} = await sb.from('user_profiles').delete().eq('id', userId);
@@ -2310,6 +2320,7 @@ function openNuevoUsuario() {
   document.getElementById('modal-user-title').textContent = 'Nuevo Usuario';
   ['u-nombre','u-email','u-password','u-telefono'].forEach(id=>{ document.getElementById(id).value=''; });
   document.getElementById('u-password').placeholder = 'Mín 6 caracteres';
+  syncRolOptions();
   document.getElementById('u-rol').value = 'campaign_manager';
   document.getElementById('u-talent-group').style.display = 'none';
   document.querySelector('#modal-nuevo-usuario .btn-primary').textContent = 'Crear Usuario';
@@ -2325,6 +2336,13 @@ function onRolChange() {
   document.getElementById('u-talent-group').style.display = rol==='talent' ? 'block' : 'none';
 }
 
+// El Admin de Campaña (campaign_manager) no puede crear/asignar administradores:
+// se oculta la opción "Administrador" del selector de rol para los no-superadmin.
+function syncRolOptions() {
+  const opt = document.querySelector('#u-rol option[value="admin"]');
+  if (opt) opt.hidden = !isSuperAdmin();
+}
+
 async function saveUsuario() {
   const nombre   = document.getElementById('u-nombre').value.trim();
   const email    = document.getElementById('u-email').value.trim();
@@ -2333,6 +2351,12 @@ async function saveUsuario() {
   const isEdit   = !!editingUsuarioId;
 
   if (!nombre||!email) { showToast('Nombre y email son obligatorios','error'); return; }
+  // Solo el Administrador general puede crear/asignar el rol Administrador
+  if (rol === 'admin' && !isSuperAdmin()) { showToast('Solo el Administrador general puede crear o asignar administradores','error'); return; }
+  if (isEdit) {
+    const target = usuarios.find(x => x.id === editingUsuarioId);
+    if (target && target.role === 'admin' && !isSuperAdmin()) { showToast('Solo el Administrador general puede editar administradores','error'); return; }
+  }
   // En modo creación, contraseña obligatoria. En edición es opcional (solo si querés cambiarla).
   if (!isEdit && !password) { showToast('Contraseña obligatoria para nuevo usuario','error'); return; }
   if (password && password.length < 6) { showToast('La contraseña debe tener al menos 6 caracteres','error'); return; }
