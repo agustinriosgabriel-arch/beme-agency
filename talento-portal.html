@@ -177,6 +177,79 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
 .empty h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
 .empty p{font-size:13px}
 
+/* ── Bottom nav (mobile-style) ── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(247,247,250,0.96);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;height:62px;padding-bottom:env(safe-area-inset-bottom)}
+body.dark .bottom-nav{background:rgba(15,15,15,0.96)}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text-dim);font-family:inherit;font-size:10px;font-weight:700;transition:color 0.15s}
+.bnav-item svg{width:21px;height:21px}
+.bnav-item.active{color:var(--primary)}
+.main{padding-bottom:88px}
+
+/* ── FAB ── */
+.fab{position:fixed;right:18px;bottom:80px;z-index:150;width:54px;height:54px;border-radius:50%;background:var(--gradient);border:none;color:#fff;font-size:28px;line-height:1;cursor:pointer;box-shadow:0 6px 22px rgba(178,0,93,0.4);display:flex;align-items:center;justify-content:center}
+
+/* ── View head / segmented ── */
+.view-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:none;background:none;font-family:inherit;font-size:12px;font-weight:700;color:var(--text-muted);padding:6px 12px;border-radius:8px;cursor:pointer}
+.seg button.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+.mini-select{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 10px;font-size:12px;font-weight:700;font-family:inherit;color:var(--text);outline:none;cursor:pointer}
+
+/* ── Billetera ── */
+.wallet-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.wallet-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.ws-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:6px}
+.ws-value{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;line-height:1.25}
+.wallet-stat.ganado .ws-value{color:var(--green)}
+.wallet-stat.pendiente .ws-value{color:var(--yellow)}
+.wallet-row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px}
+.wr-logo{width:38px;height:38px;border-radius:10px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--text-muted);flex-shrink:0}
+.wr-main{flex:1;min-width:0}
+.wr-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wr-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+.wr-amount{text-align:right;flex-shrink:0}
+.wr-amount .amt{font-size:15px;font-weight:800;white-space:nowrap}
+.pay-chip{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:3px}
+.pay-chip.pagado{background:rgba(22,163,74,0.12);color:var(--green)}
+.pay-chip.pendiente{background:rgba(217,119,6,0.12);color:var(--yellow)}
+
+/* ── Ideas ── */
+.idea-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.idea-top{display:flex;align-items:flex-start;gap:10px}
+.idea-title{font-size:15px;font-weight:700;flex:1;min-width:0}
+.idea-desc{font-size:13px;color:var(--text-muted);margin-top:8px;white-space:pre-wrap;line-height:1.5}
+.idea-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted)}
+.chip.cat{background:rgba(148,20,224,0.08);border-color:rgba(148,20,224,0.2);color:var(--purple)}
+.chip.tiktok{background:rgba(0,0,0,0.06);color:#333}
+body.dark .chip.tiktok{background:rgba(255,255,255,0.08);color:#ccc}
+.chip.instagram{background:rgba(225,48,108,0.1);border-color:rgba(225,48,108,0.2);color:#e1306c}
+.chip.youtube{background:rgba(255,0,0,0.08);border-color:rgba(255,0,0,0.2);color:#cc0000}
+.idea-date{font-size:11px;color:var(--text-dim);margin-left:auto}
+.icon-act{background:none;border:none;cursor:pointer;color:var(--text-dim);padding:5px;border-radius:6px;line-height:0}
+.icon-act:hover{background:var(--surface2);color:var(--text)}
+
+/* ── Form fields (modal) ── */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:5px}
+.field input,.field textarea,.field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit;color:var(--text);outline:none}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--primary)}
+.field textarea{min-height:90px;resize:vertical}
+.platform-pick{display:flex;gap:8px;flex-wrap:wrap}
+.plat-toggle{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:10px;border:1px solid var(--border2);background:var(--surface);font-size:13px;font-weight:600;cursor:pointer;color:var(--text-muted)}
+.plat-toggle.on{border-color:var(--primary);background:rgba(178,0,93,0.06);color:var(--primary)}
+
+/* ── Modal sheet ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:flex-end;justify-content:center;z-index:500}
+.modal-overlay.open{display:flex}
+.modal-card{background:var(--surface);border-radius:18px 18px 0 0;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:22px 20px calc(22px + env(safe-area-inset-bottom));box-shadow:0 -8px 40px rgba(0,0,0,0.25);animation:sheetUp 0.25s ease}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal-head h3{font-family:'Syne',sans-serif;font-size:18px;font-weight:800}
+.cat-row{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;font-size:13px;font-weight:600}
+.cat-row .cr-name{flex:1}
+@media(min-width:560px){.modal-overlay{align-items:center}.modal-card{border-radius:18px}}
+
 /* ── Responsive: Tablet ── */
 @media(max-width:768px){
   .topbar{padding:0 12px;gap:8px}
@@ -296,10 +369,88 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
   </header>
 
   <main class="main">
-    <h1 class="page-title">Mis Campañas</h1>
+    <h1 class="page-title" id="view-title">Mis Campañas</h1>
     <p class="page-sub" id="page-sub">Cargando...</p>
-    <div id="campaigns-container"></div>
+
+    <div id="view-campanas">
+      <div id="campaigns-container"></div>
+    </div>
+
+    <div id="view-billetera" style="display:none"></div>
+
+    <div id="view-ideas" style="display:none"></div>
   </main>
+
+  <!-- FAB nueva idea (solo en vista Ideas) -->
+  <button id="fab-idea" class="fab" style="display:none" onclick="openIdeaModal()" title="Nueva idea" aria-label="Nueva idea">+</button>
+
+  <!-- BOTTOM NAV (solo talentos exclusivos) -->
+  <nav class="bottom-nav" id="bottom-nav" style="display:none">
+    <button class="bnav-item active" id="nav-campanas" onclick="setView('campanas')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      Campañas
+    </button>
+    <button class="bnav-item" id="nav-billetera" onclick="setView('billetera')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v0H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2"/><circle cx="16.5" cy="13" r="1.3" fill="currentColor" stroke="none"/></svg>
+      Billetera
+    </button>
+    <button class="bnav-item" id="nav-ideas" onclick="setView('ideas')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.2 1 2.5h6c0-1.3.3-1.8 1-2.5A6 6 0 0 0 12 3Z"/></svg>
+      Ideas
+    </button>
+  </nav>
+</div>
+
+<!-- MODAL: Idea -->
+<div class="modal-overlay" id="idea-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="idea-modal-title">Nueva idea</h3>
+      <button class="icon-btn" onclick="closeModal('idea-modal')" aria-label="Cerrar">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="field">
+      <label>Título</label>
+      <input type="text" id="idea-titulo" placeholder="Ej: Reto de maquillaje en 60 segundos">
+    </div>
+    <div class="field">
+      <label>Descripción / notas</label>
+      <textarea id="idea-desc" placeholder="Describí la idea, el gancho, referencias..."></textarea>
+    </div>
+    <div class="field">
+      <label>Categoría de contenido</label>
+      <select id="idea-cat" onchange="onIdeaCatChange()"></select>
+    </div>
+    <div class="field">
+      <label>¿Para qué red?</label>
+      <div class="platform-pick" id="idea-platforms">
+        <button type="button" class="plat-toggle" data-plat="tiktok" onclick="togglePlat('tiktok')">🎵 TikTok</button>
+        <button type="button" class="plat-toggle" data-plat="instagram" onclick="togglePlat('instagram')">📸 Instagram</button>
+        <button type="button" class="plat-toggle" data-plat="youtube" onclick="togglePlat('youtube')">▶️ YouTube</button>
+      </div>
+    </div>
+    <div class="action-btns" style="margin-top:18px">
+      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="saveIdea()" id="idea-save-btn">Guardar idea</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Categorías -->
+<div class="modal-overlay" id="cat-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Mis categorías</h3>
+      <button class="icon-btn" onclick="closeModal('cat-modal')" aria-label="Cerrar">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="link-group" style="margin-bottom:14px">
+      <input type="text" class="link-input" id="new-cat-input" placeholder="Nueva categoría..." onkeydown="if(event.key==='Enter')createCatFromInput()">
+      <button class="btn btn-primary btn-sm" onclick="createCatFromInput()">Agregar</button>
+    </div>
+    <div id="cat-list"></div>
+  </div>
 </div>
 
 <script>
@@ -310,8 +461,17 @@ const SB_URL = 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SB_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 
-let currentUser = null, currentProfile = null;
+let currentUser = null, currentProfile = null, currentTalent = null;
 let campaigns = []; // [{campana, campana_talento, contenidos}]
+let currentView = 'campanas';
+let walletMonth = 'all';
+let ideas = [], ideaCats = [], _ideasLoaded = false;
+let ideasOrder = 'recientes', ideasCatFilter = 'all';
+let editingIdeaId = null, _ideaPlatforms = [];
+let campEstadoFilter = 'all', campOrder = 'recientes';
+
+const PLAT_LABELS = {tiktok:'TikTok', instagram:'Instagram', youtube:'YouTube'};
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 
 const PASO_LABELS = {1:'Esperando Brief',2:'Esperando Script',3:'Aprobación Script',4:'Producción',5:'Aprobación Contenido',6:'Publicar',7:'Estadísticas',8:'Completado',9:'Pagado'};
 const TIPO_LABELS = {tiktok_video:'TikTok Video',reel:'Reel',ig_story:'IG Story',youtube_video:'YouTube Video',youtube_short:'YouTube Short'};
@@ -426,6 +586,10 @@ async function initApp() {
     if (!p) { showLoginErr('No tenés perfil configurado. Contactá al administrador.'); document.getElementById('load-overlay').style.display='none'; document.getElementById('login-overlay').style.display='flex'; return; }
     if (p.role !== 'talent' || !p.talent_id) { showLoginErr('Este portal es solo para talentos. Tu rol: '+p.role); document.getElementById('load-overlay').style.display='none'; document.getElementById('login-overlay').style.display='flex'; return; }
 
+    // Datos del talento (incluye flag exclusivo → habilita Billetera + Ideas)
+    const {data:tal} = await sb.from('talentos').select('id,nombre,foto,es_exclusivo').eq('id', p.talent_id).single();
+    currentTalent = tal || {id:p.talent_id, es_exclusivo:false};
+
     // Setup UI
     const names = (p.nombre||'').split(' ');
     document.getElementById('user-avatar').textContent = names.map(n=>n[0]||'').join('').substring(0,2).toUpperCase()||'?';
@@ -436,6 +600,8 @@ async function initApp() {
     document.getElementById('login-overlay').style.display='none';
     document.getElementById('load-overlay').style.display='none';
     document.getElementById('app').style.display='block';
+    // Talentos exclusivos: mostrar la barra de navegación con las 3 áreas
+    if (currentTalent.es_exclusivo) document.getElementById('bottom-nav').style.display='flex';
     renderAll();
   } catch(e) {
     console.error('initApp:', e);
@@ -457,20 +623,51 @@ async function loadCampaigns() {
   campaigns = (cts||[]).filter(ct => ct.campanas); // filter out orphans
 }
 
+// Las campañas nunca se eliminan del portal — aunque estén finalizadas/completadas
+// quedan siempre accesibles para el talento; sólo se filtran/ordenan acá.
+function campSortKey(ct) {
+  const c = ct.campanas || {};
+  return new Date(c.fecha_inicio || c.created_at || ct.created_at || 0).getTime();
+}
+function getPortalCampanas() {
+  let list = campaigns.slice();
+  if (campEstadoFilter !== 'all') list = list.filter(ct => (ct.campanas?.estado||'') === campEstadoFilter);
+  list.sort((a,b) => campOrder==='recientes' ? campSortKey(b)-campSortKey(a) : campSortKey(a)-campSortKey(b));
+  return list;
+}
+
 function renderAll() {
   const c = document.getElementById('campaigns-container');
-  document.getElementById('page-sub').textContent = campaigns.length
-    ? campaigns.length + ' campaña' + (campaigns.length!==1?'s':'')
-    : 'No tenés campañas asignadas todavía.';
 
   if (!campaigns.length) {
+    document.getElementById('page-sub').textContent = 'No tenés campañas asignadas todavía.';
     c.innerHTML = '<div class="empty"><h3>Sin campañas</h3><p>Cuando te asignen a una campaña, va a aparecer acá.</p></div>';
     return;
   }
 
+  const shown = getPortalCampanas();
+  document.getElementById('page-sub').textContent = (campEstadoFilter==='all'
+    ? campaigns.length + ' campaña' + (campaigns.length!==1?'s':'')
+    : shown.length + ' de ' + campaigns.length + ' campañas');
+
+  // Controles de filtro/orden (cuando hay varias campañas)
+  const estados = {all:'Todos los estados', sin_iniciar:'Sin iniciar', en_curso:'En curso', etapa_finanzas:'Finanzas', finalizada:'Finalizada', cancelada:'Cancelada'};
+  const head = campaigns.length > 1 ? `<div class="view-head">
+    <div class="seg">
+      <button class="${campOrder==='recientes'?'active':''}" onclick="campOrder='recientes';renderAll()">Recientes</button>
+      <button class="${campOrder==='antiguas'?'active':''}" onclick="campOrder='antiguas';renderAll()">Antiguas</button>
+    </div>
+    <select class="mini-select" onchange="campEstadoFilter=this.value;renderAll()">
+      ${Object.keys(estados).map(k=>`<option value="${k}" ${campEstadoFilter===k?'selected':''}>${estados[k]}</option>`).join('')}
+    </select>
+  </div>` : '';
+
   // Preserve open state
   const openIds = []; c.querySelectorAll('.open').forEach(el=>{ if(el.id) openIds.push(el.id); });
-  c.innerHTML = campaigns.map(ct => renderCampaignCard(ct)).join('');
+  const cardsHTML = shown.length
+    ? shown.map(ct => renderCampaignCard(ct)).join('')
+    : '<div class="empty"><p>No hay campañas con este estado.</p></div>';
+  c.innerHTML = head + cardsHTML;
   openIds.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('open'); });
 }
 
@@ -798,11 +995,296 @@ async function saveSparkCode(contId, texto) {
 }
 
 // ════════════════════════════════════════════════
+// NAVEGACIÓN ENTRE ÁREAS
+// ════════════════════════════════════════════════
+function setView(view) {
+  if ((view==='billetera'||view==='ideas') && !currentTalent?.es_exclusivo) return;
+  currentView = view;
+  ['campanas','billetera','ideas'].forEach(v => {
+    const el = document.getElementById('view-'+v); if (el) el.style.display = (v===view ? 'block' : 'none');
+    const nav = document.getElementById('nav-'+v); if (nav) nav.classList.toggle('active', v===view);
+  });
+  document.getElementById('fab-idea').style.display = (view==='ideas' ? 'flex' : 'none');
+  const titles = {campanas:'Mis Campañas', billetera:'Mi Billetera', ideas:'Mis Ideas'};
+  document.getElementById('view-title').textContent = titles[view] || '';
+  if (view==='campanas') renderAll();
+  else if (view==='billetera') renderBilletera();
+  else if (view==='ideas') { if (!_ideasLoaded) loadIdeas().then(()=>{ _ideasLoaded=true; renderIdeas(); }); else renderIdeas(); }
+}
+
+// ════════════════════════════════════════════════
+// BILLETERA
+// ════════════════════════════════════════════════
+function estCobro(ct) {
+  const camp = ct.campanas || {};
+  if (!camp.fecha_fin || camp.dias_pago_marca == null) return null;
+  const d = new Date(camp.fecha_fin + 'T00:00:00');
+  d.setDate(d.getDate() + (parseInt(camp.dias_pago_marca)||0) + 15);
+  return d;
+}
+function fmtMoney(n, cur) {
+  const v = Number(n) || 0;
+  return (cur||'USD') + ' ' + v.toLocaleString('es-ES', {minimumFractionDigits:0, maximumFractionDigits:2});
+}
+function monthKey(d) { return d ? d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') : ''; }
+function monthLabel(key) { const [y,m] = key.split('-'); return MESES[parseInt(m)-1] + ' ' + y; }
+
+function walletEntries() {
+  return (campaigns||[]).map(ct => {
+    const camp = ct.campanas || {};
+    const pagado = ct.pago_estado === 'pagado';
+    const est = estCobro(ct);
+    const refDate = pagado
+      ? (ct.pago_fecha ? new Date(ct.pago_fecha+'T00:00:00') : null)
+      : est;
+    return { ct, camp, pagado, est, refDate, monto: Number(ct.fee_talento)||0, moneda: ct.moneda||'USD' };
+  });
+}
+
+function renderBilletera() {
+  const cont = document.getElementById('view-billetera');
+  const all = walletEntries();
+  document.getElementById('page-sub').textContent = 'Lo que vas ganando con la agencia.';
+
+  if (!all.length) {
+    cont.innerHTML = '<div class="empty"><h3>Sin movimientos</h3><p>Cuando participes en campañas, acá vas a ver tus pagos y lo que falta por cobrar.</p></div>';
+    return;
+  }
+
+  // Opciones de mes (por fecha relevante)
+  const monthSet = {};
+  all.forEach(e => { if (e.refDate) monthSet[monthKey(e.refDate)] = true; });
+  const months = Object.keys(monthSet).sort().reverse();
+  if (walletMonth !== 'all' && !monthSet[walletMonth]) walletMonth = 'all';
+
+  const shown = all.filter(e => walletMonth==='all' || (e.refDate && monthKey(e.refDate)===walletMonth));
+
+  // Totales por moneda
+  const ganado = {}, pendiente = {};
+  shown.forEach(e => {
+    const bucket = e.pagado ? ganado : pendiente;
+    bucket[e.moneda] = (bucket[e.moneda]||0) + e.monto;
+  });
+  const fmtTotals = obj => { const ks = Object.keys(obj); return ks.length ? ks.map(c=>fmtMoney(obj[c],c)).join(' · ') : (obj.__ || fmtMoney(0,'USD')); };
+
+  const monthSelect = `<select class="mini-select" onchange="walletMonth=this.value;renderBilletera()">
+    <option value="all" ${walletMonth==='all'?'selected':''}>Todos los meses</option>
+    ${months.map(m=>`<option value="${m}" ${walletMonth===m?'selected':''}>${monthLabel(m)}</option>`).join('')}
+  </select>`;
+
+  // Filas (más reciente primero)
+  const sorted = [...shown].sort((a,b)=>(b.refDate?b.refDate.getTime():0)-(a.refDate?a.refDate.getTime():0));
+  const rows = sorted.map(e => {
+    const camp = e.camp;
+    const marca = camp.marcas?.nombre || '';
+    const logo = (marca||camp.nombre||'?').substring(0,2).toUpperCase();
+    const dateLine = e.pagado
+      ? (e.ct.pago_fecha ? 'Pagado el ' + fmtDate(e.ct.pago_fecha) : 'Pagado')
+      : (e.est ? 'Cobro estimado: ' + fmtDateD(e.est) : 'Fecha de cobro a confirmar');
+    return `<div class="wallet-row">
+      <div class="wr-logo">${esc(logo)}</div>
+      <div class="wr-main">
+        <div class="wr-name">${esc(camp.nombre||'Campaña')}</div>
+        <div class="wr-sub">${esc(marca)}${marca?' · ':''}${esc(dateLine)}</div>
+      </div>
+      <div class="wr-amount">
+        <div class="amt">${e.monto?fmtMoney(e.monto,e.moneda):'—'}</div>
+        <span class="pay-chip ${e.pagado?'pagado':'pendiente'}">${e.pagado?'✓ Pagado':'Por cobrar'}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  cont.innerHTML = `
+    <div class="wallet-summary">
+      <div class="wallet-stat ganado"><div class="ws-label">Ganado</div><div class="ws-value">${fmtTotals(ganado)}</div></div>
+      <div class="wallet-stat pendiente"><div class="ws-label">Por cobrar</div><div class="ws-value">${fmtTotals(pendiente)}</div></div>
+    </div>
+    <div class="view-head"><div style="font-size:13px;font-weight:700;color:var(--text-muted)">${shown.length} campaña${shown.length!==1?'s':''}</div>${monthSelect}</div>
+    ${rows}`;
+}
+
+// ════════════════════════════════════════════════
+// IDEAS
+// ════════════════════════════════════════════════
+async function loadIdeas() {
+  try {
+    const [ri, rc] = await Promise.all([
+      sb.from('talento_ideas').select('*').eq('talent_id', currentTalent.id).order('created_at',{ascending:false}),
+      sb.from('talento_idea_categorias').select('*').eq('talent_id', currentTalent.id).order('nombre'),
+    ]);
+    ideas = ri.data || [];
+    ideaCats = rc.data || [];
+  } catch(e) { console.error('loadIdeas:', e); toast('Error al cargar ideas: '+e.message,'err'); }
+}
+
+function renderIdeas() {
+  const cont = document.getElementById('view-ideas');
+  document.getElementById('page-sub').textContent = 'Tus ideas de contenido. Solo vos las ves.';
+
+  const catOptions = `<option value="all">Todas las categorías</option>` +
+    ideaCats.map(c=>`<option value="${esc(c.nombre)}" ${ideasCatFilter===c.nombre?'selected':''}>${esc(c.nombre)}</option>`).join('');
+
+  const head = `<div class="view-head">
+    <div class="seg">
+      <button class="${ideasOrder==='recientes'?'active':''}" onclick="ideasOrder='recientes';renderIdeas()">Recientes</button>
+      <button class="${ideasOrder==='antiguas'?'active':''}" onclick="ideasOrder='antiguas';renderIdeas()">Antiguas</button>
+    </div>
+    <select class="mini-select" onchange="ideasCatFilter=this.value;renderIdeas()">${catOptions}</select>
+    <button class="btn btn-outline btn-sm" onclick="openCatModal()" style="margin-left:auto">⚙ Categorías</button>
+  </div>`;
+
+  let list = ideas.slice();
+  if (ideasCatFilter !== 'all') list = list.filter(i => (i.categoria||'') === ideasCatFilter);
+  list.sort((a,b)=> ideasOrder==='recientes'
+    ? new Date(b.created_at)-new Date(a.created_at)
+    : new Date(a.created_at)-new Date(b.created_at));
+
+  if (!ideas.length) {
+    cont.innerHTML = head + '<div class="empty"><h3>Sin ideas todavía</h3><p>Tocá el botón ➕ para anotar tu primera idea de contenido.</p></div>';
+    return;
+  }
+  if (!list.length) {
+    cont.innerHTML = head + '<div class="empty"><p>No hay ideas en esta categoría.</p></div>';
+    return;
+  }
+
+  cont.innerHTML = head + list.map(i => {
+    const plats = (i.plataformas||[]).map(p=>`<span class="chip ${p}">${esc(PLAT_LABELS[p]||p)}</span>`).join('');
+    return `<div class="idea-card">
+      <div class="idea-top">
+        <div class="idea-title">${esc(i.titulo||'(sin título)')}</div>
+        <button class="icon-act" onclick="openIdeaModal(${i.id})" title="Editar"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="icon-act" onclick="deleteIdea(${i.id})" title="Eliminar"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+      </div>
+      ${i.descripcion?`<div class="idea-desc">${esc(i.descripcion)}</div>`:''}
+      <div class="idea-meta">
+        ${i.categoria?`<span class="chip cat">${esc(i.categoria)}</span>`:''}
+        ${plats}
+        <span class="idea-date">${fmtDT(i.created_at)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function populateIdeaCatSelect(selected) {
+  const sel = document.getElementById('idea-cat');
+  sel.innerHTML = `<option value="">Sin categoría</option>` +
+    ideaCats.map(c=>`<option value="${esc(c.nombre)}" ${selected===c.nombre?'selected':''}>${esc(c.nombre)}</option>`).join('') +
+    `<option value="__new__">➕ Crear categoría…</option>`;
+}
+async function onIdeaCatChange() {
+  const sel = document.getElementById('idea-cat');
+  if (sel.value === '__new__') {
+    const name = prompt('Nombre de la nueva categoría:');
+    const created = await addCategoria(name);
+    populateIdeaCatSelect(created ? created.nombre : '');
+  }
+}
+function togglePlat(p) {
+  const i = _ideaPlatforms.indexOf(p);
+  if (i>=0) _ideaPlatforms.splice(i,1); else _ideaPlatforms.push(p);
+  document.querySelectorAll('#idea-platforms .plat-toggle').forEach(b=>{
+    b.classList.toggle('on', _ideaPlatforms.includes(b.dataset.plat));
+  });
+}
+
+function openIdeaModal(id) {
+  editingIdeaId = id || null;
+  const idea = id ? ideas.find(i=>i.id===id) : null;
+  document.getElementById('idea-modal-title').textContent = idea ? 'Editar idea' : 'Nueva idea';
+  document.getElementById('idea-titulo').value = idea?.titulo || '';
+  document.getElementById('idea-desc').value = idea?.descripcion || '';
+  _ideaPlatforms = idea ? (idea.plataformas||[]).slice() : [];
+  populateIdeaCatSelect(idea?.categoria || '');
+  document.querySelectorAll('#idea-platforms .plat-toggle').forEach(b=>{
+    b.classList.toggle('on', _ideaPlatforms.includes(b.dataset.plat));
+  });
+  openModal('idea-modal');
+}
+
+async function saveIdea() {
+  const titulo = document.getElementById('idea-titulo').value.trim();
+  const descripcion = document.getElementById('idea-desc').value.trim();
+  let categoria = document.getElementById('idea-cat').value;
+  if (categoria === '__new__') categoria = '';
+  if (!titulo) { toast('Poné un título a la idea','err'); return; }
+  const btn = document.getElementById('idea-save-btn');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    const payload = { talent_id: currentTalent.id, titulo, descripcion, categoria, plataformas: _ideaPlatforms.slice() };
+    if (editingIdeaId) {
+      const {error} = await sb.from('talento_ideas').update(payload).eq('id', editingIdeaId);
+      if (error) throw error;
+    } else {
+      payload.created_by = currentUser.id;
+      const {error} = await sb.from('talento_ideas').insert(payload);
+      if (error) throw error;
+    }
+    await loadIdeas();
+    closeModal('idea-modal');
+    renderIdeas();
+    toast(editingIdeaId?'Idea actualizada ✓':'Idea guardada ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+  btn.disabled = false; btn.textContent = 'Guardar idea';
+}
+
+async function deleteIdea(id) {
+  if (!confirm('¿Eliminar esta idea?')) return;
+  try {
+    const {error} = await sb.from('talento_ideas').delete().eq('id', id);
+    if (error) throw error;
+    ideas = ideas.filter(i=>i.id!==id);
+    renderIdeas();
+    toast('Idea eliminada','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+}
+
+// ── Categorías ──────────────────────────────────
+async function addCategoria(nombre) {
+  nombre = (nombre||'').trim();
+  if (!nombre) return null;
+  if (ideaCats.some(c=>c.nombre.toLowerCase()===nombre.toLowerCase())) {
+    return ideaCats.find(c=>c.nombre.toLowerCase()===nombre.toLowerCase());
+  }
+  try {
+    const {data,error} = await sb.from('talento_idea_categorias')
+      .insert({talent_id:currentTalent.id, nombre, created_by:currentUser.id}).select().single();
+    if (error) throw error;
+    ideaCats.push(data);
+    ideaCats.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+    return data;
+  } catch(e) { toast('Error: '+e.message,'err'); return null; }
+}
+function openCatModal() { renderCatList(); openModal('cat-modal'); }
+function renderCatList() {
+  const el = document.getElementById('cat-list');
+  el.innerHTML = ideaCats.length
+    ? ideaCats.map(c=>`<div class="cat-row"><span class="cr-name">${esc(c.nombre)}</span>
+        <button class="icon-act" onclick="deleteCategoria(${c.id})" title="Eliminar"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></div>`).join('')
+    : '<p style="font-size:13px;color:var(--text-muted)">Todavía no creaste categorías.</p>';
+}
+async function createCatFromInput() {
+  const inp = document.getElementById('new-cat-input');
+  const created = await addCategoria(inp.value);
+  if (created) { inp.value=''; renderCatList(); }
+}
+async function deleteCategoria(id) {
+  try {
+    const {error} = await sb.from('talento_idea_categorias').delete().eq('id', id);
+    if (error) throw error;
+    ideaCats = ideaCats.filter(c=>c.id!==id);
+    renderCatList();
+    if (currentView==='ideas') renderIdeas();
+  } catch(e) { toast('Error: '+e.message,'err'); }
+}
+
+// ════════════════════════════════════════════════
 // UTILS
 // ════════════════════════════════════════════════
 function toggle(id) { document.getElementById(id)?.classList.toggle('open'); }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmtDate(d) { if(!d) return ''; return new Date(d+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtDateD(d) { if(!d) return ''; return d.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}); }
 function fmtDT(d) { if(!d) return ''; return new Date(d).toLocaleString('es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
 
 function toast(msg,type='inf',dur=3500) {

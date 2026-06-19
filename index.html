@@ -356,7 +356,11 @@ body.light .logo .logo-dark{display:none;}
 
 /* ====== CAMPAIGN HISTORY ====== */
 .card-history{border-top:1px solid var(--border);padding-top:8px;margin-top:8px;}
-.card-history-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:6px}
+.card-history-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:0;cursor:pointer;list-style:none;display:flex;align-items:center;gap:5px;user-select:none}
+.card-history-title::-webkit-details-marker{display:none}
+.card-history-title::before{content:'▸';font-size:10px;color:var(--text-dim);transition:transform 0.2s}
+.card-history[open]>.card-history-title{margin-bottom:6px}
+.card-history[open]>.card-history-title::before{transform:rotate(90deg)}
 .card-history-row{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:11px;border-bottom:1px solid var(--border)}
 .card-history-row:last-child{border-bottom:none}
 .ch-marca{font-weight:700;color:var(--text);min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

@@ -1891,8 +1891,8 @@ function renderCampaignHistory(talentId) {
   const history = talentCampaigns.filter(c => c.talent_id === talentId);
   if (!history.length) return '';
   const tipoLabels = {tiktok_video:'TikTok',reel:'Reel',ig_story:'Story',youtube_video:'YouTube',youtube_short:'YT Short'};
-  return `<div class="card-history">
-    <div class="card-history-title">Historial de Campanas</div>
+  return `<details class="card-history" data-action="noop" data-stop="1">
+    <summary class="card-history-title">Historial de Campañas (${history.length})</summary>
     ${history.map(h => {
       const acciones = h.acciones.map(a => tipoLabels[a]||a).join(', ');
       return `<div class="card-history-row">
@@ -1901,7 +1901,7 @@ function renderCampaignHistory(talentId) {
         <div class="ch-fees">${formatMoney(h.fee_marca,h.moneda)} / ${formatMoney(h.fee_talento,h.moneda)}</div>
       </div>`;
     }).join('')}
-  </div>`;
+  </details>`;
 }
 
 function formatMoney(n,cur) {
