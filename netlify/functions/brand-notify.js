@@ -64,10 +64,14 @@ async function sbInsert(table, data) {
   if (!res.ok) throw new Error(`Insert ${res.status}: ${await res.text()}`);
 }
 
-async function sendEmail(to, subject, html) {
+function htmlToText(html) {
+  return String(html || '').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
+}
+
+async function sendEmail(to, subject, html, text) {
   if (!AUTH_PASS) { console.log(`[DRY-RUN] To: ${to} — ${subject}`); return true; }
   try {
-    await transporter.sendMail({ from: NOTIFY_FROM, to, subject, html, replyTo: NOTIFY_FROM_ADDR });
+    await transporter.sendMail({ from: NOTIFY_FROM, to, subject, html, text: text || htmlToText(html), replyTo: NOTIFY_FROM_ADDR });
     return true;
   } catch (e) {
     console.error('SMTP error:', e.message || e);
@@ -122,6 +126,19 @@ const SAMPLE_STATES = [
 ];
 
 exports.handler = async (event) => {
+  // ── Modo muestras: ?samples=email → manda las 4 variaciones, una por una ──
+  const samplesTo = event?.queryStringParameters?.samples || '';
+  if (samplesTo) {
+    const ctaUrl = `${APP_URL}/marca-link.html`;
+    const results = [];
+    for (const s of SAMPLE_STATES) {
+      const html = buildEventEmail({ campName: 'Campaña Demo', label: s.label, contTitle: 'TikTok Video', talentName: 'Talento de ejemplo', reason: s.reason }, ctaUrl);
+      const ok = await sendEmail(samplesTo, `Campaña Demo — ${s.subject}`, html);
+      results.push({ estado: s.subject, ok });
+    }
+    return { statusCode: 200, body: JSON.stringify({ ok: results.every(r => r.ok), to: samplesTo, from: NOTIFY_FROM, enviados: results }) };
+  }
+
   // ── Modo preview: /.netlify/functions/brand-notify?preview=1 → muestra los 4 mails ──
   if (event?.queryStringParameters?.preview) {
     const ctaUrl = `${APP_URL}/marca-link.html`;
