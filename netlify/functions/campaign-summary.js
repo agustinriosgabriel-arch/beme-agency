@@ -88,6 +88,9 @@ function buildEmailHTML(campaigns, today) {
     const doneConts = allConts.filter(c => c.paso_actual >= 8).length;
     const pct = totalConts ? Math.round(doneConts / totalConts * 100) : 0;
 
+    // No mostrar campañas completadas (todos los contenidos terminados) — sin nada pendiente
+    if (totalConts > 0 && doneConts === totalConts) continue;
+
     // Group contents by paso
     const byPaso = {};
     for (const c of allConts) {
