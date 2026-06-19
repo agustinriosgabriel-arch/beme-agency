@@ -118,8 +118,9 @@ body.dark .logo .logo-dark{display:block}
 /* Grids por sección (header y filas comparten template).
    Solo la 1ª columna es flexible (1fr); el resto px fijos → alineación
    consistente entre cada fila-grid independiente. */
-.cxc-row{grid-template-columns:minmax(140px,1fr) 128px 84px 118px 92px 100px 100px 64px 64px 124px}
-.cxp-row{grid-template-columns:minmax(140px,1fr) 88px 88px 114px 104px 64px 64px 136px}
+.cxc-row{grid-template-columns:minmax(140px,1fr) 116px 80px 108px 128px 88px 96px 96px 58px 58px 116px}
+.cxp-row{grid-template-columns:minmax(140px,1fr) 122px 84px 84px 110px 100px 58px 58px 126px}
+.fin-estado-cell{display:flex;flex-wrap:wrap;gap:3px;align-items:center;min-width:0}
 #cxc-container,#cxp-container{overflow-x:auto}
 .fin-row-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-dim);background:var(--surface2);padding:8px 14px;border-bottom:1px solid var(--border)}
 .fin-row-head>div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -330,6 +331,8 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
     <div class="toolbar">
       <div class="search-wrap"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" class="search-input" id="cxc-search" placeholder="Buscar campana, cliente, marca, talento, identificador, folio..." oninput="renderCxC()"></div>
       <select class="filter-select" id="cxc-factura" onchange="renderCxC()"><option value="">Factura: Todas</option><option value="con">Con factura</option><option value="sin">Sin factura</option></select>
+      <select class="filter-select" id="cxc-qb-factura" onchange="renderCxC()"><option value="">QB Factura: todas</option><option value="si">QB Factura ✓ registrada</option><option value="no">QB Factura pendiente</option></select>
+      <select class="filter-select" id="cxc-qb-cobro" onchange="renderCxC()"><option value="">QB Cobro: todos</option><option value="si">QB Cobro ✓ registrado</option><option value="no">QB Cobro pendiente</option></select>
       <select class="filter-select" id="cxc-sort" onchange="renderCxC()"><option value="desc">Inicio: reciente → antigua</option><option value="asc">Inicio: antigua → reciente</option></select>
     </div>
     <div class="chip-filter" id="cxc-estado-chips" style="margin-bottom:16px">
@@ -348,6 +351,8 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
     <div class="toolbar">
       <div class="search-wrap"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" class="search-input" id="cxp-search" placeholder="Buscar talento, campana, identificador, marca..." oninput="renderCxP()"></div>
       <select class="filter-select" id="cxp-filter" onchange="renderCxP()"><option value="">Pago: Todos</option><option value="pendiente">Pendiente</option><option value="parcial">Parcial</option><option value="pagado">Pagado</option></select>
+      <select class="filter-select" id="cxp-qb-factura" onchange="renderCxP()"><option value="">QB Factura: todas</option><option value="si">QB Factura ✓ registrada</option><option value="no">QB Factura pendiente</option></select>
+      <select class="filter-select" id="cxp-qb-pago" onchange="renderCxP()"><option value="">QB Pago: todos</option><option value="si">QB Pago ✓ registrado</option><option value="no">QB Pago pendiente</option></select>
     </div>
     <div class="chip-filter" id="cxp-estado-chips" style="margin-bottom:16px">
       <span class="chip-filter-label">Estado talento:</span>
@@ -412,7 +417,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
         <div style="display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span style="color:var(--text-muted)">Saldo pendiente</span><b id="comp-info-saldo" style="color:var(--orange)"></b></div>
       </div>
       <div class="form-group"><label class="form-label">Monto de este cobro</label><input type="number" id="comp-monto" class="form-input" step="0.01"><div class="form-hint">Puede ser parcial (50/50, anticipo, etc.) — el estado se actualiza solo</div></div>
-      <div class="form-group"><label class="form-label">Fecha de Pago</label><input type="date" id="comp-fecha" class="form-input"></div>
+      <div class="form-group"><label class="form-label">Fecha de Cobro *</label><input type="date" id="comp-fecha" class="form-input" required></div>
       <div class="form-group"><label class="form-label">Corredor (dónde se cobró) *</label><select id="comp-corredor" class="form-input"><option value="">Seleccionar...</option><option value="mercury">Mercury</option><option value="wise">Wise</option><option value="cxc_agustin">CxC Agustin</option><option value="cxc_flor">CxC Flor</option></select></div>
       <div class="form-group"><label class="form-label">Comprobante</label><input type="file" id="comp-file" class="form-input" accept=".pdf,.png,.jpg,.jpeg"></div>
       <div class="form-group"><label class="form-label">Notas</label><textarea id="comp-notas" class="form-input"></textarea></div>
@@ -449,7 +454,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       </div>
       <div class="form-group"><label class="form-label">Monto de este pago</label><input type="number" id="pt-monto" class="form-input" step="0.01"><div class="form-hint">Puede ser parcial (adelanto, 50/50) — el estado se actualiza solo</div></div>
       <div class="form-group"><label class="form-label">Moneda</label><select id="pt-moneda" class="form-input"><option value="USD">USD</option><option value="MXN">MXN</option><option value="EUR">EUR</option></select></div>
-      <div class="form-group"><label class="form-label">Fecha de Pago</label><input type="date" id="pt-fecha" class="form-input"></div>
+      <div class="form-group"><label class="form-label">Fecha de Pago *</label><input type="date" id="pt-fecha" class="form-input" required></div>
       <div class="form-group"><label class="form-label">Corredor *</label><select id="pt-corredor" class="form-input"><option value="">Seleccionar...</option><option value="mercury">Mercury</option><option value="wise">Wise</option><option value="flor">FLOR</option><option value="cxp_agustin_cash">CxP Agustin (CASH)</option></select></div>
       <div class="form-group"><label class="form-label">Comprobante</label><input type="file" id="pt-file" class="form-input" accept=".pdf,.png,.jpg,.jpeg"></div>
       <div class="form-group"><label class="form-label">Notas</label><textarea id="pt-notas" class="form-input"></textarea></div>
@@ -674,6 +679,8 @@ function cxcFilteredCampanas(){
   const q=(document.getElementById('cxc-search')?.value||'').toLowerCase().trim();
   const estCamps=[...document.querySelectorAll('#cxc-estado-chips .chip.active')].map(b=>b.dataset.est);
   const facFilt=document.getElementById('cxc-factura')?.value||'';
+  const qbFac=document.getElementById('cxc-qb-factura')?.value||'';
+  const qbCob=document.getElementById('cxc-qb-cobro')?.value||'';
   const out=[];
   campanas.forEach(c=>{
     const cli=c.marcas?.clientes;
@@ -699,6 +706,10 @@ function cxcFilteredCampanas(){
     const facsActivas=facs.filter(f=>f.estado!=='cancelada');
     if(facFilt==='con'&&!facsActivas.length)return;
     if(facFilt==='sin'&&facsActivas.length)return;
+    if(qbFac==='si'&&!c.qb_factura)return;
+    if(qbFac==='no'&&c.qb_factura)return;
+    if(qbCob==='si'&&!c.qb_cobro)return;
+    if(qbCob==='no'&&c.qb_cobro)return;
     // Filtra por estado de TALENTO: muestra la campaña si AL MENOS un talento coincide
     if(estCamps.length){
       const tEstados=cts.map(ct=>ct.estado||'en_curso');
@@ -738,7 +749,7 @@ function renderCxC(){
   groups.forEach(g=>g.campanas.sort((a,b)=>sort==='asc'?ts(a.fecha_inicio)-ts(b.fecha_inicio):ts(b.fecha_inicio)-ts(a.fecha_inicio)));
 
   const head=`<div class="fin-row fin-row-head cxc-row">
-    <div>Campaña</div><div>Marca</div><div>Inicio</div><div>Estado campaña</div>
+    <div>Campaña</div><div>Marca</div><div>Inicio</div><div>Estado campaña</div><div>Estado talento</div>
     <div>Factura</div><div>Cobro estimado</div><div class="th-r">Monto</div>
     <div class="th-c">QB Factura</div><div class="th-c">QB Cobro</div><div></div></div>`;
 
@@ -768,10 +779,20 @@ function campEstadoBadge(estado){
 }
 // Estado por TALENTO (sub-campaña) → badge. Es por el que filtra Finanzas.
 const TAL_EST={sin_iniciar:'Sin iniciar',en_curso:'En curso',etapa_finanzas:'Etapa Finanzas',finalizada:'Finalizada',cancelada:'Cancelada',pausada:'Pausada'};
+const TAL_EST_SHORT={sin_iniciar:'Sin iniciar',en_curso:'En curso',etapa_finanzas:'Finanzas',finalizada:'Finalizada',cancelada:'Cancelada',pausada:'Pausada'};
 function talEstadoBadge(estado){
   const e=estado||'en_curso';
   if(!TAL_EST[e])return '';
   return `<span class="camp-estado ce-${e}" title="Estado de la sub-campaña (talento)">${TAL_EST[e]}</span>`;
+}
+// Resumen de estados de talento de una campaña (badges distintos, con conteo)
+function cxcTalEstados(campId){
+  const cts=campanasTalentos.filter(ct=>ct.campana_id===campId);
+  if(!cts.length)return '<span style="color:var(--text-dim);font-size:11px">—</span>';
+  const counts={};
+  cts.forEach(ct=>{const e=ct.estado||'en_curso';counts[e]=(counts[e]||0)+1;});
+  return Object.entries(counts).map(([e,n])=>
+    `<span class="camp-estado ce-${e}" title="${n} talento(s) en ${TAL_EST[e]||e}">${TAL_EST_SHORT[e]||e}${n>1?' ·'+n:''}</span>`).join('');
 }
 
 // Finaliza la campaña automáticamente cuando TODAS las facturas están COBRADAS (CxC)
@@ -809,6 +830,7 @@ function renderCxCRow(c){
       <div class="fin-row-meta">${esc(c.marcas?.nombre||'')}</div>
       <div class="fin-row-date">${c.fecha_inicio?formatDate(c.fecha_inicio):'—'}</div>
       <div>${campEstadoBadge(c.estado)||'<span style="color:var(--text-dim);font-size:11px">—</span>'}</div>
+      <div class="fin-estado-cell">${cxcTalEstados(c.id)}</div>
       <div><span class="status-pill ${estadoClass}">${estadoLabel[estado]||estado}</span></div>
       <div class="fin-row-date">${fac&&fac.fecha_vencimiento?`${formatDate(fac.fecha_vencimiento)}${venc&&venc.dias<0?` <span class="venc-badge ${venc.cls}">${-venc.dias}d</span>`:''}`:'—'}</div>
       <div class="fin-row-amount">${fac?fmtMoney(fac.monto,fac.moneda):fmtMoney(totalFee)}${fac&&saldo>0&&facPagado(fac)>0?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,fac.moneda)}</div>`:''}</div>
@@ -1058,6 +1080,8 @@ function openComprobante(facturaId,campanaId){
 async function saveComprobanteMarca(){
   const corredor=document.getElementById('comp-corredor').value;
   if(!corredor){showToast('Selecciona un corredor','error');return;}
+  const fecha=document.getElementById('comp-fecha').value;
+  if(!fecha){showToast('La fecha de cobro es obligatoria','error');return;}
   const monto=parseFloat(document.getElementById('comp-monto').value)||0;
   if(monto<=0){showToast('El monto debe ser mayor a 0','error');return;}
   const f=facturas.find(x=>x.id===compFacturaId);
@@ -1140,9 +1164,15 @@ function cxpEstadosActivos(){return [...document.querySelectorAll('#cxp-estado-c
 function cxpFilteredTalentos(){
   const q=(document.getElementById('cxp-search')?.value||'').toLowerCase().trim();
   const filt=document.getElementById('cxp-filter')?.value||'';
+  const qbFac=document.getElementById('cxp-qb-factura')?.value||'';
+  const qbPago=document.getElementById('cxp-qb-pago')?.value||'';
   const estCamps=cxpEstadosActivos();
   return campanasTalentos.filter(ct=>{
     if(filt&&ctEstadoPago(ct)!==filt)return false;
+    if(qbFac==='si'&&!ct.qb_factura)return false;
+    if(qbFac==='no'&&ct.qb_factura)return false;
+    if(qbPago==='si'&&!ct.qb_pago)return false;
+    if(qbPago==='no'&&ct.qb_pago)return false;
     const camp=campanas.find(c=>c.id===ct.campana_id);
     if(estCamps.length&&!estCamps.includes(ct.estado||'en_curso'))return false;
     const tName=(ct.talentos?.nombre||'').toLowerCase();
@@ -1166,7 +1196,7 @@ function renderCxP(){
   rows.forEach(ct=>{(byCamp[ct.campana_id]=byCamp[ct.campana_id]||[]).push(ct);});
 
   const head=`<div class="fin-row fin-row-head cxp-row">
-    <div>Talento</div><div>Estado</div><div>Corredor</div><div>Pago estimado</div>
+    <div>Talento</div><div>Estado</div><div>Pago</div><div>Corredor</div><div>Pago estimado</div>
     <div class="th-r">Fee / saldo</div><div class="th-c">QB Factura</div><div class="th-c">QB Pago</div><div></div></div>`;
 
   const grand={};
@@ -1203,9 +1233,9 @@ function renderCxPRow(ct){
   const dInput="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-size:11px;color:var(--text);font-family:inherit;width:100%;font-variant-numeric:tabular-nums";
   return `<div class="fin-row cxp-row">
     <div class="fin-row-name">${esc(ct.talentos?.nombre||'—')}
-      ${talEstadoBadge(ct.estado)}
       ${ct.identificador?`<span title="Identificador / OC" style="margin-left:6px;font-size:10px;font-family:'SF Mono',monospace;font-weight:700;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px;cursor:pointer" onclick="event.stopPropagation();navigator.clipboard.writeText('${esc(ct.identificador)}');showToast('Copiado: ${esc(ct.identificador)}','success')">${esc(ct.identificador)}</span>`:''}
     </div>
+    <div class="fin-estado-cell">${talEstadoBadge(ct.estado)}</div>
     <div><span class="status-pill st-${estado}">${estadoLbl}</span></div>
     <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${corredores?esc(corredores):'—'}</div>
     <div><input type="date" value="${fechaEst}" title="Fecha de pago estimada" onchange="setFechaPagoEstimada(${ct.id},this.value)" style="${dInput}"></div>
@@ -1265,6 +1295,8 @@ function openPagoTalento(ctId,campId,talId){
 async function savePagoTalento(){
   const corredor=document.getElementById('pt-corredor').value;
   if(!corredor){showToast('Selecciona un corredor','error');return;}
+  const fecha=document.getElementById('pt-fecha').value;
+  if(!fecha){showToast('La fecha de pago es obligatoria','error');return;}
   const monto=parseFloat(document.getElementById('pt-monto').value)||0;
   if(monto<=0){showToast('El monto debe ser mayor a 0','error');return;}
   const ct=campanasTalentos.find(x=>x.id===ptCampanaTalentoId);
