@@ -42,6 +42,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS magic_links_brand_active_idx
 
 CREATE INDEX IF NOT EXISTS magic_links_token_idx ON magic_links (token);
 
+-- Emails que la marca registra para recibir notificaciones (solo links 'brand').
+-- Se dispara cuando un contenido entra a una etapa que le compete revisar:
+-- script listo (paso 3), contenido listo (paso 5), spark code y estadísticas.
+ALTER TABLE magic_links ADD COLUMN IF NOT EXISTS notify_emails text[] NOT NULL DEFAULT '{}';
+
 -- ── RLS ────────────────────────────────────────────────────────
 ALTER TABLE magic_links ENABLE ROW LEVEL SECURITY;
 

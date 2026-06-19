@@ -155,7 +155,7 @@ exports.handler = async (event) => {
           const { fee, fee_talento, ...rest } = ct;
           return rest; // conserva fee_marca, moneda, pago_estado
         });
-        return json(200, { tipo: 'brand', campana: camp }, origin);
+        return json(200, { tipo: 'brand', campana: camp, notifyEmails: link.notify_emails || [] }, origin);
       }
 
       // ── SIGNED UPLOAD URL ───────────────────────────────────
@@ -360,6 +360,18 @@ exports.handler = async (event) => {
         });
         if (error) throw error;
         return json(200, { ok: true }, origin);
+      }
+
+      // ── MARCA: registrar/actualizar emails de notificación ──
+      case 'set-emails': {
+        if (link.tipo !== 'brand') return json(403, { error: 'No permitido' }, origin);
+        let { emails } = body;
+        if (!Array.isArray(emails)) emails = [];
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const clean = [...new Set(emails.map(e => String(e || '').trim().toLowerCase()).filter(e => re.test(e)))].slice(0, 10);
+        const { error } = await sb.from('magic_links').update({ notify_emails: clean }).eq('id', link.id);
+        if (error) throw error;
+        return json(200, { ok: true, notifyEmails: clean }, origin);
       }
 
       // ── MARCA: comentario general de campaña (extra) ────────

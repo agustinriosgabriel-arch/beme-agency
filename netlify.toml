@@ -23,6 +23,10 @@
   timeout = 26
   schedule = "*/15 * * * *"  # every 15 minutes — prospección email sequences
 
+[functions."brand-notify"]
+  timeout = 20
+  schedule = "*/10 * * * *"  # every 10 minutes — avisos a marcas (script/contenido/spark/stats)
+
 # Sitio público — cuando bemeagency.com apunte a Netlify, la raíz sirve la web
 # de marketing (web.html). La app interna sigue en bemeagency.netlify.app.
 [[redirects]]
