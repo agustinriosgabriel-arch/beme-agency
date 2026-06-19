@@ -946,6 +946,9 @@ async function init() {
     // Talentos van al portal
     if (currentProfile.role === 'talent') { location.href = 'talento-portal.html'; return; }
 
+    // Entró a ver la campaña → limpiar el badge de cambios para este usuario
+    markCambiosVistos();
+
     await Promise.all([loadCampanaCore(), loadTalentos()]);
 
     if (!campana) return; // loadCampanaCore showed toast and returned
@@ -1045,6 +1048,35 @@ function startAutoRefresh() {
 function isAdmin() { return currentProfile?.role === 'admin'; }
 function isInternal() { return ['admin','campaign_manager'].includes(currentProfile?.role); }
 function isHandler() { return currentProfile?.role === 'brand_handler'; }
+
+// Al entrar a la campaña, marcar como leídas las alertas de "cambio externo" de este
+// usuario para esta campaña → limpia el badge del Dashboard (no se borra hasta entrar acá).
+async function markCambiosVistos() {
+  if (!campanaId || !currentUser?.id) return;
+  try {
+    await sb.from('alertas').update({ leida: true })
+      .eq('user_id', currentUser.id)
+      .eq('campana_id', campanaId)
+      .eq('tipo', 'cambio_externo')
+      .eq('leida', false);
+  } catch(e) { console.warn('markCambiosVistos:', e); }
+}
+
+// La marca (brand_handler) genera notificación al equipo interno cuando hace un cambio
+// desde el panel. Los cambios internos (admin / manager) NO notifican.
+async function notifyCambioMarca(contenido_id, accion) {
+  if (!isHandler()) return;
+  try {
+    await fetch('/.netlify/functions/notify-cambio', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        campana_id: campanaId, contenido_id: contenido_id || null, actor_tipo: 'marca',
+        actor_nombre: currentProfile?.nombre || 'Marca',
+        exclude_user_id: currentUser?.id, accion,
+      }),
+    });
+  } catch(e) { console.warn('notifyCambioMarca:', e); }
+}
 function isTalentOf(ct) { return currentProfile?.role === 'talent' && currentProfile?.talent_id === ct.talent_id; }
 
 // ════════════════════════════════════════════════
@@ -1509,6 +1541,7 @@ async function addBriefNote() {
   campana.brief_notas = notas;
   textarea.value = '';
   renderBriefNotes();
+  if (isHandler()) notifyCambioMarca(null, 'Dejó una nota en el brief');
   toast('Nota agregada','ok');
 }
 
@@ -2135,6 +2168,7 @@ async function aprobarScript(contId) {
       autor_id: currentUser.id, autor_nombre: currentProfile.nombre
     });
   }
+  notifyCambioMarca(contId, 'Aprobó el script');
   await avanzar(contId);
 }
 
@@ -2147,6 +2181,7 @@ async function aprobarContenido(contId) {
       autor_id: currentUser.id, autor_nombre: currentProfile.nombre
     });
   }
+  notifyCambioMarca(contId, 'Aprobó el contenido');
   await avanzar(contId);
 }
 
@@ -2162,6 +2197,7 @@ async function rechazarPaso(contId, paso, obsId) {
     bumpCampana(); await loadCampana(); renderAll();
     document.getElementById('cont-'+contId)?.classList.add('open');
     toast('Rechazo enviado — vuelve al paso anterior','inf');
+    notifyCambioMarca(contId, 'Rechazó el contenido');
 
     // Notify talent that their content was rejected (goes back to upload step)
     const pasoNuevo = paso === 3 ? 2 : paso === 5 ? 4 : paso - 1;

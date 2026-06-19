@@ -76,6 +76,13 @@ body.dark .logo .logo-dark{display:block}
 .bell-dot{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--primary);border:2px solid var(--bg);display:none}
 .bell-dot.visible{display:block}
 
+/* ── Badge de "cambio del talento/marca" sobre la campaña ── */
+.cambio-badge{display:inline-flex;align-items:center;gap:5px;margin-top:5px;font-size:10px;font-weight:800;letter-spacing:0.3px;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#b2005d,#9414E0);padding:2px 9px 2px 7px;border-radius:20px;box-shadow:0 1px 6px rgba(178,0,93,0.35);white-space:nowrap}
+.cambio-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:#fff;animation:cambioPulse 1.4s ease-in-out infinite}
+.cambio-badge.dot-only{padding:0;width:11px;height:11px;border-radius:50%;box-shadow:0 0 0 3px var(--bg),0 1px 6px rgba(178,0,93,0.5);gap:0;margin:0 0 1px 7px;vertical-align:middle}
+.cambio-badge.dot-only::before{width:5px;height:5px}
+@keyframes cambioPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.35;transform:scale(0.7)}}
+
 /* ── Main ───────────────────────────────────────────────── */
 .main{flex:1;padding:28px;max-width:1400px;width:100%;margin:0 auto}
 
@@ -717,6 +724,11 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
               <input type="text" id="c-metodo-pago" class="form-input" placeholder="Ej: Transferencia, PayPal...">
             </div>
             <div class="form-group">
+              <label class="form-label">Días de pago de la Marca</label>
+              <input type="number" id="c-dias-pago-marca" class="form-input" min="0" placeholder="Ej: 30">
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px">El talento ve la fecha estimada de cobro: fin de campaña + estos días + 15.</div>
+            </div>
+            <div class="form-group">
               <label class="form-label">País de Facturación</label>
               <select id="c-pais-facturacion" class="form-input">
                 <option value="">Sin especificar</option>
@@ -1103,6 +1115,9 @@ async function autoRefreshTick() {
   _autoRefreshing = true;
   try {
     const now = Date.now();
+    // Refrescar alertas/badges de cambios externos en cada tick (consulta liviana por usuario).
+    // loadAlertas() re-renderiza las tarjetas si hay campañas cargadas.
+    await loadAlertas();
     const {data: mk} = await sb.from('campanas')
       .select('updated_at')
       .order('updated_at', {ascending:false, nullsFirst:false})
@@ -1178,7 +1193,7 @@ async function loadCampanas() {
   let query = sb.from('campanas').select(`
     id,nombre,estado,fecha_inicio,fecha_fin,created_at,updated_at,updated_by,deleted_at,created_by,completado_en,
     marca_id,cliente_id,descripcion,
-    metodo_pago_marca,pais_facturacion,requiere_factura,notas_finanzas,
+    metodo_pago_marca,dias_pago_marca,pais_facturacion,requiere_factura,notas_finanzas,
     marcas(id,nombre,logo_url,numero,clientes(id,nombre,numero)),
     campana_managers(user_id),
     campana_handlers(user_id),
@@ -1256,6 +1271,21 @@ async function loadAlertas() {
   alertas = data || [];
   const dot = document.getElementById('bell-dot');
   if (dot) dot.classList.toggle('visible', alertas.length > 0);
+  // Refrescar las tarjetas para pintar los badges de cambios externos
+  if (campanas && campanas.length && document.getElementById('campanas-container')) {
+    try { renderCampanas(); } catch(e) {}
+  }
+}
+
+// ¿Esta campaña tiene un cambio del talento/marca sin revisar (para este usuario)?
+function tieneCambioPendiente(campId) {
+  return alertas.some(a => a.tipo === 'cambio_externo' && a.campana_id === campId);
+}
+function cambioBadgeHTML(campId, dotOnly) {
+  if (!tieneCambioPendiente(campId)) return '';
+  return dotOnly
+    ? `<span class="cambio-badge dot-only" title="Cambio del talento o marca sin revisar"></span>`
+    : `<span class="cambio-badge" title="Cambio del talento o marca sin revisar">Nuevo cambio</span>`;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1420,6 +1450,7 @@ function renderGrid(container, filtered) {
           <div class="campana-nombre">${escHtml(c.nombre)}</div>
           <div class="campana-cliente" title="${escHtml(clienteMarca)}">${escHtml(clienteMarca)}</div>
           ${prefix?`<div style="margin-top:4px"><span style="font-size:10px;font-family:'SF Mono',monospace;font-weight:600;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px">${prefix}</span></div>`:''}
+          ${cambioBadgeHTML(c.id)?`<div>${cambioBadgeHTML(c.id)}</div>`:''}
         </div>
         ${estadoBadgeHTML(c.estado)}
       </div>
@@ -1490,7 +1521,7 @@ function renderList(container, filtered) {
         const updLine = updIso ? `Act. ${timeAgo(updIso)}${updWho?` · ${escHtml(updWho)}`:''}` : '';
         return `<div class="campana-row" onclick="openCampana(${c.id})">
           <div>
-            <div class="campana-nombre">${escHtml(c.nombre)}</div>
+            <div class="campana-nombre">${escHtml(c.nombre)}${cambioBadgeHTML(c.id, true)}</div>
             ${prefix?`<div style="margin-top:2px"><span style="font-size:10px;font-family:'SF Mono',monospace;font-weight:600;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px">${prefix}</span></div>`:''}
             ${c.fecha_fin?`<div class="campana-cliente">${formatDate(c.fecha_fin)}</div>`:''}
             ${updLine?`<div class="campana-cliente" style="font-size:10px" title="${escHtml(updLine)}">${updLine}</div>`:''}
@@ -1549,7 +1580,7 @@ function renderKanban(container, filtered) {
             const updLine = updIso ? `Act. ${timeAgo(updIso)}${updWho?` · ${escHtml(updWho)}`:''}` : '';
             return `
             <div class="kanban-card" onclick="openCampana(${c.id})">
-              <div class="kanban-card-nombre">${escHtml(c.nombre)}</div>
+              <div class="kanban-card-nombre">${escHtml(c.nombre)}${cambioBadgeHTML(c.id, true)}</div>
               ${clienteMarca?`<div class="kanban-card-meta" title="${escHtml(clienteMarca)}">${escHtml(clienteMarca)}</div>`:''}
               <div class="kanban-card-meta" style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
                 ${prefix?`<span style="font-size:10px;font-family:'SF Mono',monospace;font-weight:600;color:var(--primary);background:rgba(178,0,93,0.08);padding:1px 6px;border-radius:4px">${prefix}</span>`:''}
@@ -1704,6 +1735,7 @@ function editCampana(id) {
   if (isAdmin()) {
     document.getElementById('seccion-finanzas').style.display = 'block';
     const mp = document.getElementById('c-metodo-pago'); if(mp) mp.value = c.metodo_pago_marca||'';
+    const dpm = document.getElementById('c-dias-pago-marca'); if(dpm) dpm.value = (c.dias_pago_marca!=null?c.dias_pago_marca:'');
     const pf = document.getElementById('c-pais-facturacion'); if(pf) pf.value = c.pais_facturacion||'';
     const rf = document.getElementById('c-requiere-factura'); if(rf) rf.value = c.requiere_factura||'no';
     const nf = document.getElementById('c-notas-finanzas'); if(nf) nf.value = c.notas_finanzas||'';
@@ -1747,6 +1779,7 @@ async function saveCampana() {
   if (isAdmin()) {
     Object.assign(payload, {
       metodo_pago_marca: document.getElementById('c-metodo-pago')?.value.trim()||'',
+      dias_pago_marca: (function(){ const v=document.getElementById('c-dias-pago-marca')?.value; return v!==''&&v!=null?parseInt(v):null; })(),
       pais_facturacion: document.getElementById('c-pais-facturacion')?.value||'',
       requiere_factura: document.getElementById('c-requiere-factura')?.value||'no',
       notas_finanzas: document.getElementById('c-notas-finanzas')?.value.trim()||'',
@@ -2414,6 +2447,7 @@ function renderAlertasList() {
     return;
   }
   const tipoLabels = {
+    cambio_externo:'🔔 Cambio del talento/marca',
     vencimiento_spark_code:'Spark Code',
     vencimiento_derechos_imagen:'Derechos de Imagen',
     vencimiento_pauta:'Pauta',
@@ -2421,13 +2455,18 @@ function renderAlertasList() {
     esperando_aprobacion:'Esperando aprobación',
     pendiente_pago:'Pendiente de pago',
   };
-  list.innerHTML = alertas.map(a=>`
-    <div class="alerta-item ${a.leida?'':'no-leida'}" onclick="markRead(${a.id})">
+  list.innerHTML = alertas.map(a=>{
+    // Las alertas de cambio externo abren la campaña (entrar marca como visto y limpia el badge)
+    const isCambio = a.tipo === 'cambio_externo';
+    const onClick = isCambio && a.campana_id ? `openCampana(${a.campana_id})` : `markRead(${a.id})`;
+    return `
+    <div class="alerta-item ${a.leida?'':'no-leida'}" onclick="${onClick}">
       <div class="alerta-tipo">${tipoLabels[a.tipo]||a.tipo}</div>
       <div class="alerta-titulo">${escHtml(a.titulo)}</div>
       ${a.descripcion?`<div class="alerta-desc">${escHtml(a.descripcion)}</div>`:''}
       <div class="alerta-fecha">${formatDateTime(a.created_at)}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function markRead(id) {

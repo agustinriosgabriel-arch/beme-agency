@@ -381,7 +381,7 @@ async function loadFromSupabase() {
 
     // Load all data in parallel for speed
     // Load WITHOUT foto first (base64 photos are huge, loaded in background after render)
-    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at';
+    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at,es_exclusivo';
     const [configResult, talentResult, rosterResult, linksResult] = await Promise.all([
       sb.from('app_config').select('key,value'),
       loadTalentosWithRetry(TALENT_COLS),
@@ -596,7 +596,7 @@ function setupRealtimeSubscription() {
         if (!t || !t.id) {
           // payload.new is empty — reload only changed columns (skip foto to save IO)
           // payload.new is empty — merge updated columns into existing talents (preserve foto, etc.)
-          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at';
+          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at,es_exclusivo';
           loadTalentosWithRetry(TALENT_COLS_RT).then(({ data }) => {
             if (data) {
               // Merge into existing talents to preserve fields not in RT select (like foto)
@@ -2167,6 +2167,7 @@ function fillForm(t) {
   document.getElementById('f-valores').value = t.valores||'';
   var _fg = document.getElementById('f-genero'); if(_fg) _fg.value = t.genero||'';
   var _fk = document.getElementById('f-keywords'); if(_fk) _fk.value = t.keywords||'';
+  var _fex = document.getElementById('f-es-exclusivo'); if(_fex) _fex.checked = !!t.es_exclusivo;
   var _ftc = document.getElementById('f-tipo-contenido'); if(_ftc) _ftc.value = t.tipo_contenido||'';
   var _fcal = document.getElementById('f-calidad'); if(_fcal) _fcal.value = t.calidad||'';
   var _fmp = document.getElementById('f-marcas-previas'); if(_fmp) _fmp.value = t.marcas_previas||'';
@@ -2496,6 +2497,7 @@ async function saveTalent() {
       };
     })(),
     categorias: cats,
+    es_exclusivo: (document.getElementById('f-es-exclusivo') ? document.getElementById('f-es-exclusivo').checked : false),
     updated: new Date().toISOString().split('T')[0]
   };
   const _needsReview = !!(document.getElementById('f-needs-review') && document.getElementById('f-needs-review').checked);
@@ -2553,7 +2555,8 @@ async function saveTalent() {
       needs_review: !!savedTalent.needs_review,
       review_comment: savedTalent.review_comment||'',
       review_marked_by: savedTalent.review_marked_by||'',
-      review_marked_at: savedTalent.review_marked_at||null
+      review_marked_at: savedTalent.review_marked_at||null,
+      es_exclusivo: !!savedTalent.es_exclusivo
     };
     sb.from('talentos').upsert([row], {onConflict:'id'})
       .then(({error}) => {

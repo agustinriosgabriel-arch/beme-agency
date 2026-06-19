@@ -664,6 +664,30 @@ function renderTimeline(hist) {
 }
 
 // ════════════════════════════════════════════════
+// NOTIFICAR CAMBIO AL EQUIPO INTERNO (badge + alerta en el Dashboard)
+// ════════════════════════════════════════════════
+function campanaIdForContenido(contId) {
+  for (const ct of (campaigns||[])) {
+    if ((ct.contenidos||[]).some(c => c.id === contId)) return ct.campana_id;
+  }
+  return null;
+}
+async function notifyCambio(contId, accion) {
+  const campId = campanaIdForContenido(contId);
+  if (!campId) return;
+  try {
+    await fetch('/.netlify/functions/notify-cambio', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        campana_id: campId, contenido_id: contId, actor_tipo: 'talento',
+        actor_nombre: currentProfile?.nombre || 'Talento',
+        exclude_user_id: currentUser?.id, accion,
+      }),
+    });
+  } catch(e) { console.warn('notifyCambio:', e); }
+}
+
+// ════════════════════════════════════════════════
 // WORKFLOW ACTIONS
 // ════════════════════════════════════════════════
 async function avanzar(contId) {
@@ -673,6 +697,7 @@ async function avanzar(contId) {
       p_autor_nombre:currentProfile.nombre, p_accion:'Enviado por talento'
     });
     if (error) throw error;
+    notifyCambio(contId, 'Envió a revisión');
     await loadCampaigns(); renderAll();
     toast('Paso actualizado → '+(PASO_LABELS[data]||data),'ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
@@ -696,6 +721,7 @@ async function uploadScript(input, contId) {
       const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
       await sb.from('contenido_scripts').insert({contenido_id:contId, url_archivo:publicUrl||path, subido_por:currentUser.id});
     }
+    notifyCambio(contId, 'Subió un script');
     await loadCampaigns(); renderAll();
     toast(files.length > 1 ? `${files.length} scripts subidos ✓` : 'Script subido ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
@@ -711,6 +737,7 @@ async function replaceScript(input, contId, scriptId) {
     if (error) throw error;
     const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
     await sb.from('contenido_scripts').update({url_archivo:publicUrl||path}).eq('id',scriptId);
+    notifyCambio(contId, 'Reemplazó un script');
     await loadCampaigns(); renderAll();
     toast('Script reemplazado ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
@@ -728,6 +755,7 @@ async function uploadDraft(input, contId) {
       const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);
       await sb.from('contenido_borradores').insert({contenido_id:contId, url_archivo:publicUrl||path, nombre_archivo:file.name, size_bytes:file.size, subido_por:currentUser.id});
     }
+    notifyCambio(contId, 'Subió contenido');
     await loadCampaigns(); renderAll();
     toast(files.length > 1 ? `${files.length} archivos subidos ✓` : 'Contenido subido ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
@@ -743,6 +771,7 @@ async function replaceDraft(input, contId, draftId) {
     if (error) throw error;
     const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);
     await sb.from('contenido_borradores').update({url_archivo:publicUrl||path, nombre_archivo:file.name, size_bytes:file.size}).eq('id',draftId);
+    notifyCambio(contId, 'Reemplazó el contenido');
     await loadCampaigns(); renderAll();
     toast('Borrador reemplazado ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
@@ -763,6 +792,7 @@ async function saveCopyAndAdvance(contId) {
 async function saveSparkCode(contId, texto) {
   try {
     await sb.from('contenidos').update({spark_code_texto:texto.trim()}).eq('id',contId);
+    notifyCambio(contId, 'Guardó el Spark Code');
     toast('Spark Code guardado ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
 }

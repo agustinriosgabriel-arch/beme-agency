@@ -17,6 +17,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const { corsOrigin } = require('./lib/cors');
+const { registrarCambio } = require('./lib/registrar-cambio');
 
 const SB_URL = process.env.SUPABASE_URL || 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SB_SERVICE = process.env.SUPABASE_SERVICE_KEY;
@@ -80,6 +81,15 @@ exports.handler = async (event) => {
   // Datos de autoría según tipo de link (sin uuid de auth)
   let autorNombre = 'Talento';
   if (link.tipo === 'brand') autorNombre = 'Marca';
+  const actorTipo = link.tipo === 'brand' ? 'marca' : 'talento';
+
+  // Registra el cambio como notificación in-app para el equipo interno (no rompe la acción si falla)
+  async function regCambio(campana_id, contenido_id, accion) {
+    if (!campana_id) return;
+    try {
+      await registrarCambio(sb, { campana_id, contenido_id: contenido_id || null, actor_tipo: actorTipo, actor_nombre: autorNombre, accion });
+    } catch (e) { console.warn('regCambio:', e.message); }
+  }
 
   // Helper: verificar que un contenido pertenece al alcance del token
   async function assertContenidoScope(contId) {
@@ -185,6 +195,7 @@ exports.handler = async (event) => {
           const { error } = await sb.from('contenido_scripts').insert({ contenido_id, url_archivo });
           if (error) throw error;
         }
+        await regCambio(scope.ct.campana_id, contenido_id, replace_id ? 'Reemplazó un script' : 'Subió un script');
         return json(200, { ok: true }, origin);
       }
 
@@ -200,6 +211,7 @@ exports.handler = async (event) => {
           const { error } = await sb.from('contenido_borradores').insert({ contenido_id, url_archivo, nombre_archivo, size_bytes });
           if (error) throw error;
         }
+        await regCambio(scope.ct.campana_id, contenido_id, replace_id ? 'Reemplazó el contenido' : 'Subió contenido');
         return json(200, { ok: true }, origin);
       }
 
@@ -210,6 +222,7 @@ exports.handler = async (event) => {
         if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
         const { error } = await sb.from('contenido_estadisticas').insert({ contenido_id, periodo, url_screenshot, nombre_archivo });
         if (error) throw error;
+        await regCambio(scope.ct.campana_id, contenido_id, 'Subió estadísticas');
         return json(200, { ok: true }, origin);
       }
 
@@ -221,6 +234,7 @@ exports.handler = async (event) => {
         if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
         const { error } = await sb.from('contenidos').update({ url_publicacion }).eq('id', contenido_id);
         if (error) throw error;
+        await regCambio(scope.ct.campana_id, contenido_id, 'Cargó el link de publicación');
         return json(200, { ok: true }, origin);
       }
 
@@ -231,6 +245,7 @@ exports.handler = async (event) => {
         if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
         const { error } = await sb.from('contenidos').update({ copy_texto }).eq('id', contenido_id);
         if (error) throw error;
+        await regCambio(scope.ct.campana_id, contenido_id, 'Guardó el copy/caption');
         return json(200, { ok: true }, origin);
       }
 
@@ -241,6 +256,7 @@ exports.handler = async (event) => {
         if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
         const { error } = await sb.from('contenidos').update({ spark_code_texto }).eq('id', contenido_id);
         if (error) throw error;
+        await regCambio(scope.ct.campana_id, contenido_id, 'Guardó el Spark Code');
         return json(200, { ok: true }, origin);
       }
 
@@ -255,6 +271,7 @@ exports.handler = async (event) => {
           p_accion: accion || 'Enviado por talento',
         });
         if (error) throw error;
+        await regCambio(scope.ct.campana_id, contenido_id, 'Envió a revisión');
         return json(200, { ok: true, paso: data }, origin);
       }
 
@@ -277,6 +294,7 @@ exports.handler = async (event) => {
           p_contenido_id: contenido_id, p_autor_id: null, p_autor_nombre: autorNombre, p_accion: 'Aprobado por marca',
         });
         if (error) throw error;
+        await regCambio(scope.ct.campana_id, contenido_id, tipo === 'script' ? 'Aprobó el script' : 'Aprobó el contenido');
         return json(200, { ok: true, paso: data }, origin);
       }
 
@@ -291,6 +309,7 @@ exports.handler = async (event) => {
           p_contenido_id: contenido_id, p_observacion: observacion.trim(), p_autor_id: null, p_autor_nombre: autorNombre,
         });
         if (error) throw error;
+        await regCambio(scope.ct.campana_id, contenido_id, 'Rechazó el contenido');
         return json(200, { ok: true, paso: data }, origin);
       }
 
@@ -308,6 +327,7 @@ exports.handler = async (event) => {
           contenido_id, paso, tipo, observacion: observacion.trim(), autor_id: null, autor_nombre: autorNombre,
         });
         if (error) throw error;
+        await regCambio(scope.ct.campana_id, contenido_id, 'Dejó un comentario');
         return json(200, { ok: true }, origin);
       }
 
@@ -345,6 +365,7 @@ exports.handler = async (event) => {
         for (const c of en1) {
           await sb.rpc('avanzar_paso_contenido', { p_contenido_id: c.id, p_autor_id: null, p_autor_nombre: autorNombre, p_accion: 'Brief cargado por marca' });
         }
+        await regCambio(link.campana_id, null, 'Cargó el brief de la campaña');
         return json(200, { ok: true, avanzados: en1.length }, origin);
       }
 
@@ -359,6 +380,7 @@ exports.handler = async (event) => {
           contenido_id, nombre: nombre || 'Brief', url, size_bytes: size_bytes || 0, uploaded_by: null,
         });
         if (error) throw error;
+        await regCambio(scope.ct.campana_id, contenido_id, 'Cargó un brief de contenido');
         return json(200, { ok: true }, origin);
       }
 
@@ -383,6 +405,7 @@ exports.handler = async (event) => {
           campana_id: link.campana_id, autor_id: null, autor_nombre: autorNombre, mensaje: mensaje.trim(),
         });
         if (error) throw error;
+        await regCambio(link.campana_id, null, 'Envió un mensaje');
         return json(200, { ok: true }, origin);
       }
 
