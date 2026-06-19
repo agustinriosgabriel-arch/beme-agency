@@ -61,3 +61,16 @@ UPDATE facturas SET fecha_vencimiento = add_business_days(fecha_emision, COALESC
 -- └──────────────────────────────────────────────────────────────┘
 ALTER TABLE campana_talentos ADD COLUMN IF NOT EXISTS fecha_pago_estimada date;
 ALTER TABLE campana_talentos ADD COLUMN IF NOT EXISTS invoice_url text DEFAULT '';
+
+-- ┌──────────────────────────────────────────────────────────────┐
+-- │ D. CAMPANA_TALENTOS — moneda separada marca (CxC) vs talento  │
+-- │    El fee que cobra la marca puede estar en una moneda        │
+-- │    distinta del fee que se paga al talento.                   │
+-- └──────────────────────────────────────────────────────────────┘
+ALTER TABLE campana_talentos ADD COLUMN IF NOT EXISTS moneda_marca text;
+ALTER TABLE campana_talentos ADD COLUMN IF NOT EXISTS moneda_talento text;
+
+-- Backfill: ambas heredan la moneda única existente (o USD)
+UPDATE campana_talentos
+   SET moneda_marca   = COALESCE(moneda_marca, moneda, 'USD'),
+       moneda_talento = COALESCE(moneda_talento, moneda, 'USD');

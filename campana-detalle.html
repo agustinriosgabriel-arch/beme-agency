@@ -150,6 +150,8 @@ body.dark .tab-nav{background:var(--surface)}
 .fee-value{font-family:'Plus Jakarta Sans',sans-serif;font-variant-numeric:tabular-nums;font-feature-settings:"tnum";font-size:18px;font-weight:800;line-height:1}
 .fee-value.pos{color:var(--green)}
 .fee-value .fee-cur{font-size:11px;font-weight:700;letter-spacing:0.4px;opacity:0.6;margin-left:3px}
+.fee-cur-sel{margin-top:5px;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:2px 5px;font-size:10px;font-weight:700;color:var(--text-muted);font-family:inherit;cursor:pointer;outline:none}
+.fee-cur-sel:focus{border-color:var(--primary)}
 .fee-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:13px;font-family:inherit;color:var(--text);outline:none;margin-top:5px}
 .fee-input:focus{border-color:var(--primary)}
 
@@ -657,12 +659,21 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
       </div>
       <div class="form-grid-2">
         <div class="form-group">
-          <label class="form-label">Moneda</label>
-          <select id="at-moneda" class="form-input">
+          <label class="form-label">Moneda Fee Marca</label>
+          <select id="at-moneda-marca" class="form-input">
             <option value="USD">USD</option><option value="ARS">ARS</option>
             <option value="MXN">MXN</option><option value="EUR">EUR</option>
           </select>
         </div>
+        <div class="form-group">
+          <label class="form-label">Moneda Fee Talento</label>
+          <select id="at-moneda-talento" class="form-input">
+            <option value="USD">USD</option><option value="ARS">ARS</option>
+            <option value="MXN">MXN</option><option value="EUR">EUR</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid-2">
         <div class="form-group">
           <label class="form-label">Método de Pago</label>
           <input type="text" id="at-metodo" class="form-input" placeholder="Transferencia...">
@@ -1554,7 +1565,9 @@ function renderTalentoCard(ct) {
   const contenidos = ct.contenidos || [];
   const done = contenidos.filter(c=>c.paso_actual>=8).length;
   const fm = ct.fee_marca||0, ft = ct.fee_talento||0, gan = fm-ft;
-  const mon = ct.moneda||'USD';
+  const monM = ct.moneda_marca||ct.moneda||'USD';
+  const monT = ct.moneda_talento||ct.moneda||'USD';
+  const sameMon = monM===monT;
 
   const prColor = {no_aplica:'var(--text-dim)',en_espera:'var(--yellow)',recibido:'var(--green)',con_inconvenientes:'var(--red)'};
   const prLabel = {no_aplica:'No aplica',en_espera:'En espera',recibido:'Recibido',con_inconvenientes:'Con inconvenientes'};
@@ -1580,17 +1593,21 @@ function renderTalentoCard(ct) {
     ${isAdmin()?`<div class="fees-row">
       <div class="fee-box" style="cursor:pointer" onclick="toggleFeeEdit(${ct.id},'fm')">
         <div class="fee-label">Fee Marca <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.4"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></div>
-        <div class="fee-value" id="fmv-${ct.id}">${fmtMoneyCompact(fm,mon)}</div>
+        <div class="fee-value" id="fmv-${ct.id}">${fmtMoneyCompact(fm,monM)}</div>
         <input type="number" class="fee-input" id="fm-${ct.id}" value="${fm||''}" placeholder="0.00" onblur="saveFees(${ct.id})" style="display:none">
+        <select class="fee-cur-sel" onclick="event.stopPropagation()" onchange="saveFeeMoneda(${ct.id},'marca',this.value)">${curOptions(monM)}</select>
       </div>
       <div class="fee-box" style="cursor:pointer" onclick="toggleFeeEdit(${ct.id},'ft')">
         <div class="fee-label">Fee Talento <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.4"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></div>
-        <div class="fee-value" id="ftv-${ct.id}">${fmtMoneyCompact(ft,mon)}</div>
+        <div class="fee-value" id="ftv-${ct.id}">${fmtMoneyCompact(ft,monT)}</div>
         <input type="number" class="fee-input" id="ft-${ct.id}" value="${ft||''}" placeholder="0.00" onblur="saveFees(${ct.id})" style="display:none">
+        <select class="fee-cur-sel" onclick="event.stopPropagation()" onchange="saveFeeMoneda(${ct.id},'talento',this.value)">${curOptions(monT)}</select>
       </div>
       <div class="fee-box ganancia">
         <div class="fee-label">Ganancia Agencia</div>
-        <div class="fee-value pos">${fmtMoneyCompact(gan,mon)}</div>
+        ${sameMon
+          ? `<div class="fee-value pos">${fmtMoneyCompact(gan,monM)}</div>`
+          : `<div class="fee-value pos" style="font-size:13px" title="Fees en monedas distintas — no se puede restar directo">${fmtMoneyCompact(fm,monM)} − ${fmtMoneyCompact(ft,monT)}</div><div style="font-size:9px;color:var(--text-dim);margin-top:2px">monedas distintas</div>`}
       </div>
     </div>`:''}
 
@@ -2400,7 +2417,8 @@ function openAddTalento() {
   document.getElementById('at-id').value = '';
   document.getElementById('at-search').value = '';
   ['at-fee-marca','at-fee-talento','at-metodo'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('at-moneda').value='USD';
+  document.getElementById('at-moneda-marca').value='USD';
+  document.getElementById('at-moneda-talento').value='USD';
   filterTalentoOptions();
   document.getElementById('at-results').classList.remove('open');
   openModal('modal-talento');
@@ -2449,7 +2467,9 @@ async function saveTalento() {
       campana_id: campanaId, talent_id: tid,
       fee_marca: parseFloat(document.getElementById('at-fee-marca').value)||null,
       fee_talento: parseFloat(document.getElementById('at-fee-talento').value)||null,
-      moneda: document.getElementById('at-moneda').value,
+      moneda_marca: document.getElementById('at-moneda-marca').value,
+      moneda_talento: document.getElementById('at-moneda-talento').value,
+      moneda: document.getElementById('at-moneda-marca').value, // legacy
       metodo_pago: document.getElementById('at-metodo').value.trim()
     }).select().single();
     if (error) {
@@ -2545,6 +2565,11 @@ function toggleFeeEdit(ctId, type) {
   }
 }
 
+// Opciones de moneda con la actual seleccionada
+function curOptions(sel){
+  return ['USD','ARS','MXN','EUR'].map(c=>`<option value="${c}"${c===sel?' selected':''}>${c}</option>`).join('');
+}
+
 async function saveFees(ctId) {
   const fmInput = document.getElementById('fm-'+ctId);
   const ftInput = document.getElementById('ft-'+ctId);
@@ -2553,15 +2578,30 @@ async function saveFees(ctId) {
   await sb.from('campana_talentos').update({fee_marca:fm,fee_talento:ft}).eq('id',ctId);
   const ct = campana.campana_talentos?.find(x=>x.id===ctId);
   if (ct) { ct.fee_marca=fm; ct.fee_talento=ft; }
+  const monM = ct?(ct.moneda_marca||ct.moneda||'USD'):'USD';
+  const monT = ct?(ct.moneda_talento||ct.moneda||'USD'):'USD';
   // Hide inputs, show updated values
   if (fmInput) fmInput.style.display = 'none';
   if (ftInput) ftInput.style.display = 'none';
   var fmv = document.getElementById('fmv-'+ctId);
   var ftv = document.getElementById('ftv-'+ctId);
-  if (fmv) { fmv.style.display = ''; fmv.innerHTML = fmtMoneyCompact(fm, campana.moneda||'USD'); }
-  if (ftv) { ftv.style.display = ''; ftv.innerHTML = fmtMoneyCompact(ft, campana.moneda||'USD'); }
+  if (fmv) { fmv.style.display = ''; fmv.innerHTML = fmtMoneyCompact(fm, monM); }
+  if (ftv) { ftv.style.display = ''; ftv.innerHTML = fmtMoneyCompact(ft, monT); }
+  renderTalentos(); // refresca ganancia (puede cambiar si monedas distintas)
   renderFinanzas();
   toast('Fees actualizados ✓','ok');
+}
+
+async function saveFeeMoneda(ctId, lado, value) {
+  const col = lado==='marca' ? 'moneda_marca' : 'moneda_talento';
+  const patch = {[col]: value};
+  if (lado==='marca') patch.moneda = value; // legacy
+  await sb.from('campana_talentos').update(patch).eq('id',ctId);
+  const ct = campana.campana_talentos?.find(x=>x.id===ctId);
+  if (ct) { ct[col]=value; if(lado==='marca') ct.moneda=value; }
+  renderTalentos();
+  renderFinanzas();
+  toast('Moneda actualizada ✓','ok');
 }
 
 async function saveSparkCodeTexto(contId, texto) {
@@ -2848,7 +2888,7 @@ function renderFinanzas() {
   const rows = cts.map(ct=>{
     const fm=ct.fee_marca||0, ft=ct.fee_talento||0;
     tm+=fm; tt+=ft;
-    return `<div class="fin-row"><span class="lbl">${esc(ct.talentos?.nombre||'—')}</span><span>${fmtMoney(fm,ct.moneda||'USD')} / ${fmtMoney(ft,ct.moneda||'USD')}</span></div>`;
+    return `<div class="fin-row"><span class="lbl">${esc(ct.talentos?.nombre||'—')}</span><span>${fmtMoney(fm,ct.moneda_marca||ct.moneda||'USD')} / ${fmtMoney(ft,ct.moneda_talento||ct.moneda||'USD')}</span></div>`;
   }).join('');
   document.getElementById('fin-content').innerHTML = rows +
     `<div class="fin-row"><span class="lbl">Total Marca</span><span>${fmtMoney(tm,'USD')}</span></div>
