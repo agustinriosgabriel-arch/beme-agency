@@ -146,6 +146,18 @@ body.dark .logo .logo-dark{display:block}
 .estado-finalizada{background:rgba(34,197,94,0.1);color:#16a34a}
 .estado-pausada{background:rgba(139,92,246,0.14);color:#7c3aed}
 .estado-cancelada{background:rgba(239,68,68,0.1);color:#ef4444}
+/* Resumen (qué pedir / revisar) */
+.res-camp{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px;background:var(--surface)}
+.res-camp-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.res-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.res-side{border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--surface2)}
+.res-side-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.res-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--border);font-size:12px}
+.res-item:last-child{border-bottom:none}
+.res-accion{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.res-accion.marca{background:rgba(178,0,93,0.1);color:var(--primary)}
+.res-accion.talento{background:rgba(14,165,233,0.12);color:#0ea5e9}
+@media(max-width:640px){.res-cols{grid-template-columns:1fr}}
 .estado-cancelada{background:rgba(120,120,120,0.12);color:#888}
 
 .campana-card-body{display:flex;flex-direction:column;gap:6px}
@@ -544,6 +556,10 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
         <option value="">Todas las marcas</option>
       </select>
       <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <button class="btn btn-primary btn-sm" onclick="openResumen()" title="Resumen de pendientes por lado (Marca / Talento)">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11H3v10h6V11zM21 3h-6v18h6V3zM15 7H9v14h6V7z"/></svg>
+          Resumen
+        </button>
         <button class="btn btn-ghost btn-sm" id="btn-mis-campanas" onclick="toggleMisCampanas()" style="display:none" title="Alternar entre tus campañas y todas las activas">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
           <span id="mis-campanas-label">Solo mis campañas</span>
@@ -570,6 +586,21 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
     <div id="campanas-container"></div>
 
   </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Resumen de pendientes (Lado Marca / Lado Talento)
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-resumen">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">Resumen — qué pedir / revisar</div>
+      <button class="modal-close" onclick="closeModal('modal-resumen')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="resumen-body"></div>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════
@@ -2354,6 +2385,75 @@ function loadTheme() {
 // ══════════════════════════════════════════════════════════
 // MODALS
 // ══════════════════════════════════════════════════════════
+// ── Resumen: qué pedir / revisar, dividido por lado Marca vs Talento ──
+// Mapeo de paso del flujo (paso_actual) → lado responsable + acción pendiente.
+//  1 Brief(Marca) · 2 Script(Talento) · 3 Aprob.Script(Marca) · 4 Producción(Talento)
+//  5 Aprob.Contenido(Marca) · 6 Publicar(Talento) · 7 Stats(Talento) · 8/9 = listo
+const PASO_INFO_RES = {
+  1:{lado:'marca',  accion:'Falta Brief'},
+  2:{lado:'talento',accion:'Falta Script'},
+  3:{lado:'marca',  accion:'Aprobar Script'},
+  4:{lado:'talento',accion:'En Producción'},
+  5:{lado:'marca',  accion:'Aprobar Contenido'},
+  6:{lado:'talento',accion:'Falta Publicar (link)'},
+  7:{lado:'talento',accion:'Faltan Estadísticas'},
+};
+const TIPO_LABELS_RES = {tiktok_video:'TikTok',reel:'Reel',reel_tiktok_espejo:'Reel/TikTok',ig_story:'IG Story',youtube_video:'YouTube',youtube_short:'YT Short'};
+
+function openResumen() {
+  const activos = campanas.filter(c => !c.deleted_at && c.estado !== 'cancelada');
+  const data = [];
+  let totMarca = 0, totTalento = 0;
+  activos.forEach(c => {
+    const marcaItems = [], talentoItems = [];
+    (c.campana_talentos || []).forEach(ct => {
+      const tname = ct.talentos?.nombre || 'Talento';
+      (ct.contenidos || []).forEach(ci => {
+        const info = PASO_INFO_RES[ci.paso_actual];
+        if (!info) return; // paso 8/9 (listo) o sin paso → no pendiente
+        const item = { accion: info.accion, talento: tname, tipo: TIPO_LABELS_RES[ci.tipo] || ci.tipo || 'Contenido' };
+        (info.lado === 'marca' ? marcaItems : talentoItems).push(item);
+      });
+    });
+    if (!marcaItems.length && !talentoItems.length) return;
+    totMarca += marcaItems.length; totTalento += talentoItems.length;
+    data.push({ c, marcaItems, talentoItems });
+  });
+  // Más pendientes arriba
+  data.sort((a, b) => (b.marcaItems.length + b.talentoItems.length) - (a.marcaItems.length + a.talentoItems.length));
+
+  const itemHTML = (it, lado) => `<div class="res-item"><span class="res-accion ${lado}">${escHtml(it.accion)}</span><span style="flex:1;min-width:0">${escHtml(it.talento)} · <span style="color:var(--text-muted)">${escHtml(it.tipo)}</span></span></div>`;
+  const cards = data.map(({ c, marcaItems, talentoItems }) => {
+    const marca = c.marcas?.nombre || '';
+    return `<div class="res-camp">
+      <div class="res-camp-head">
+        <strong style="font-size:14px;cursor:pointer" onclick="openCampana(${c.id})">${escHtml(c.nombre)}</strong>
+        ${marca ? `<span style="font-size:12px;color:var(--text-muted)">· ${escHtml(marca)}</span>` : ''}
+        ${estadoBadgeHTML(c.estado)}
+        <span style="margin-left:auto;font-size:11px;color:var(--text-dim)">${marcaItems.length} marca · ${talentoItems.length} talento</span>
+      </div>
+      <div class="res-cols">
+        <div class="res-side">
+          <div class="res-side-title" style="color:var(--primary)">🏢 Lado Marca <span style="color:var(--text-dim);font-weight:600">(${marcaItems.length})</span></div>
+          ${marcaItems.length ? marcaItems.map(it => itemHTML(it, 'marca')).join('') : '<div style="font-size:12px;color:var(--text-dim)">Nada pendiente ✓</div>'}
+        </div>
+        <div class="res-side">
+          <div class="res-side-title" style="color:#0ea5e9">👤 Lado Talento <span style="color:var(--text-dim);font-weight:600">(${talentoItems.length})</span></div>
+          ${talentoItems.length ? talentoItems.map(it => itemHTML(it, 'talento')).join('') : '<div style="font-size:12px;color:var(--text-dim)">Nada pendiente ✓</div>'}
+        </div>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('resumen-body').innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:120px;background:rgba(178,0,93,0.06);border:1px solid rgba(178,0,93,0.15);border-radius:8px;padding:10px 12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-dim)">Pendiente lado Marca</div><div style="font-size:22px;font-weight:800;color:var(--primary)">${totMarca}</div></div>
+      <div style="flex:1;min-width:120px;background:rgba(14,165,233,0.06);border:1px solid rgba(14,165,233,0.18);border-radius:8px;padding:10px 12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-dim)">Pendiente lado Talento</div><div style="font-size:22px;font-weight:800;color:#0ea5e9">${totTalento}</div></div>
+    </div>
+    ${cards.length ? cards.join('') : '<div style="text-align:center;padding:30px;color:var(--text-muted)">No hay contenidos pendientes 🎉</div>'}`;
+  openModal('modal-resumen');
+}
+
 function openModal(id) {
   document.getElementById(id)?.classList.add('open');
 }
