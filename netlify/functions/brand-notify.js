@@ -24,18 +24,20 @@ const APP_URL = (process.env.PUBLIC_APP_URL || 'https://app.bemeagency.com').rep
 // Email por SMTP (Hostinger) — mismo canal que prospección, que ya funciona.
 const SMTP_HOST = process.env.SMTP_HOST || 'smtp.hostinger.com';
 const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
-const SMTP_USER = process.env.SMTP_USER || 'contacto@bemeagency.com'; // buzón autenticado
-const SMTP_PASS = process.env.SMTP_PASS;
-// Remitente visible — DEBE ser un buzón/alias propiedad del usuario autenticado
-// (Hostinger rechaza con 553 si no). Por defecto usa el mismo buzón autenticado.
-// Para usar notifications@..., creá ese buzón en Hostinger y apuntá SMTP_USER/SMTP_PASS
-// a él (o agregalo como alias de contacto@), y seteá BRAND_NOTIFY_FROM.
-const NOTIFY_FROM = process.env.BRAND_NOTIFY_FROM || `Beme Agency <${SMTP_USER}>`;
+// Credenciales propias de brand-notify (caen a las compartidas si no se definen).
+// Para enviar DESDE notifications@, seteá en Netlify:
+//   BRAND_SMTP_USER = notifications@bemeagency.com
+//   BRAND_SMTP_PASS = <password de ese buzón>
+// El remitente sigue automáticamente al usuario autenticado (Hostinger exige
+// que coincidan, si no rechaza con 553).
+const AUTH_USER = process.env.BRAND_SMTP_USER || process.env.SMTP_USER || 'contacto@bemeagency.com';
+const AUTH_PASS = process.env.BRAND_SMTP_PASS || process.env.SMTP_PASS;
+const NOTIFY_FROM = process.env.BRAND_NOTIFY_FROM || `Beme Agency <${AUTH_USER}>`;
 const NOTIFY_FROM_ADDR = (NOTIFY_FROM.match(/<([^>]+)>/) || [, NOTIFY_FROM])[1];
 
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST, port: SMTP_PORT, secure: SMTP_PORT === 465,
-  auth: { user: SMTP_USER, pass: SMTP_PASS },
+  auth: { user: AUTH_USER, pass: AUTH_PASS },
 });
 
 const WINDOW_HOURS = 3; // solo eventos de las últimas N horas (evita backfill masivo)
@@ -63,7 +65,7 @@ async function sbInsert(table, data) {
 }
 
 async function sendEmail(to, subject, html) {
-  if (!SMTP_PASS) { console.log(`[DRY-RUN] To: ${to} — ${subject}`); return true; }
+  if (!AUTH_PASS) { console.log(`[DRY-RUN] To: ${to} — ${subject}`); return true; }
   try {
     await transporter.sendMail({ from: NOTIFY_FROM, to, subject, html, replyTo: NOTIFY_FROM_ADDR });
     return true;
@@ -141,7 +143,7 @@ exports.handler = async (event) => {
         <div style="font-size:14px;font-weight:700;color:#111">TikTok Video — Talento de ejemplo</div>
       </div>
       <div style="font-size:13px;color:#111;font-weight:600">👉 El contenido está listo para tu aprobación.</div>`;
-    if (!SMTP_PASS) return { statusCode: 200, body: JSON.stringify({ ok: false, test: true, to: testEmail, mode: 'dry-run (falta SMTP_PASS)' }) };
+    if (!AUTH_PASS) return { statusCode: 200, body: JSON.stringify({ ok: false, test: true, to: testEmail, mode: 'dry-run (falta SMTP_PASS)' }) };
     // Permite forzar el remitente para probar (ej. ?from=notifications@bemeagency.com)
     const fromOverride = event?.queryStringParameters?.from || '';
     const fromUse = fromOverride ? `Beme Agency <${fromOverride}>` : NOTIFY_FROM;
