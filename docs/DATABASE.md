@@ -549,3 +549,28 @@ Tecnologia, Musica
 ```
 
 Each talento has `categorias text[]` (the unified categories) and `keywords text` (the original subcategories like "comedia, streamer, gaming").
+
+---
+
+## Terceros y Comisiones (sql/terceros_comisiones_2026_06_20.sql)
+
+Un tercer monto además de `fee_marca` (CxC) y `fee_talento` (CxP): comisiones que se pagan
+a una persona externa. Se muestran en Finanzas → CxP como entradas a pagar.
+
+- **`terceros`** — catálogo de personas: `id, nombre, rol, email, telefono, notas, activo`.
+  CRUD desde Finanzas (sub-tab Terceros) y Campañas (botón Terceros).
+- **`comisiones_terceros`** — comisión asignada a una campaña o a un talento:
+  `tercero_id, campana_id, campana_talento_id (null = nivel campaña), tipo ('porcentaje'|'fijo'),
+  valor, moneda, monto_calculado, pago_estado, pago_fecha`.
+  - Nivel **talento** (`campana_talento_id` set): % sobre el `fee_marca` de ese talento.
+  - Nivel **campaña** (`campana_talento_id` null): % sobre la SUMA de `fee_marca` de los
+    talentos no cancelados.
+  - `monto_calculado` lo computa el trigger `trg_comision_calc`; se recalcula si cambia el
+    `fee_marca` de un talento (`trg_ct_recalc_comisiones`).
+  - Se asigna desde campana-detalle.html (en cada talento + panel de campaña en el sidebar).
+- **`pagos_tercero`** — pagos (parciales) de cada comisión, igual que `pagos_talento`:
+  `comision_id, monto, moneda, fecha_pago, corredor, comprobante_url, notas`.
+  El trigger `trg_pagos_tercero_sync` sincroniza `comisiones_terceros.pago_estado`
+  (pendiente/parcial/pagado).
+
+RLS: las 3 tablas son solo para equipo interno vía `is_internal()`.

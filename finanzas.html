@@ -325,6 +325,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
     <button class="sub-tab" data-section="cxp" onclick="switchSection('cxp')">CxP Pagos</button>
     <button class="sub-tab" data-section="resumen" onclick="switchSection('resumen')" style="display:none">Resumen</button>
     <button class="sub-tab" data-section="clientes" onclick="switchSection('clientes')">Clientes</button>
+    <button class="sub-tab" data-section="terceros" onclick="switchSection('terceros')">Terceros</button>
   </div>
 
   <div id="section-cxc">
@@ -391,6 +392,14 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       <div class="search-wrap"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" class="search-input" id="cli-search" placeholder="Buscar cliente..." oninput="renderClientes()"></div>
     </div>
     <div id="cli-container"></div>
+  </div>
+
+  <div id="section-terceros" style="display:none">
+    <div class="toolbar">
+      <div class="search-wrap"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" class="search-input" id="ter-search" placeholder="Buscar tercero..." oninput="renderTerceros()"></div>
+      <button class="btn btn-primary btn-sm" onclick="openNuevoTercero()" style="margin-left:auto">+ Nuevo Tercero</button>
+    </div>
+    <div id="ter-container"></div>
   </div>
 </main>
 
@@ -480,6 +489,44 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   </div>
 </div>
 
+<!-- Modal: Nuevo / Editar Tercero -->
+<div class="modal-overlay" id="modal-tercero">
+  <div class="modal" style="max-width:460px"><div class="modal-header"><div class="modal-title" id="modal-ter-title">Nuevo Tercero</div><button class="modal-close" onclick="closeModal('modal-tercero')"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  <div class="modal-body">
+    <div class="form-grid" style="grid-template-columns:1fr">
+      <div class="form-group"><label class="form-label">Nombre *</label><input type="text" id="ter-nombre" class="form-input" placeholder="Nombre de la persona"></div>
+      <div class="form-group"><label class="form-label">Rol</label><input type="text" id="ter-rol" class="form-input" placeholder="Agente, referido, corredor..."></div>
+      <div class="form-group"><label class="form-label">Email</label><input type="email" id="ter-email" class="form-input"></div>
+      <div class="form-group"><label class="form-label">Teléfono</label><input type="text" id="ter-telefono" class="form-input"></div>
+      <div class="form-group"><label class="form-label">Notas</label><textarea id="ter-notas" class="form-input"></textarea></div>
+    </div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-tercero')">Cancelar</button><button class="btn btn-primary" onclick="saveTercero()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Modal: Pagar comisión de tercero -->
+<div class="modal-overlay" id="modal-pago-tercero">
+  <div class="modal" style="max-width:480px"><div class="modal-header"><div class="modal-title" id="modal-pc-title">Pagar comisión</div><button class="modal-close" onclick="closeModal('modal-pago-tercero')"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  <div class="modal-body">
+    <div class="form-grid" style="grid-template-columns:1fr">
+      <div id="pc-saldo-info" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;display:none">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Comisión</span><b id="pc-info-total"></b></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Ya pagado</span><b id="pc-info-pagado" style="color:var(--green)"></b></div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span style="color:var(--text-muted)">Saldo pendiente</span><b id="pc-info-saldo" style="color:var(--orange)"></b></div>
+      </div>
+      <div class="form-group"><label class="form-label">Monto de este pago</label><input type="number" id="pc-monto" class="form-input" step="0.01"><div class="form-hint">Puede ser parcial — el estado se actualiza solo</div></div>
+      <div class="form-group"><label class="form-label">Moneda</label><select id="pc-moneda" class="form-input"><option value="USD">USD</option><option value="MXN">MXN</option><option value="EUR">EUR</option><option value="ARS">ARS</option></select></div>
+      <div class="form-group"><label class="form-label">Fecha de Pago *</label><input type="date" id="pc-fecha" class="form-input" required></div>
+      <div class="form-group"><label class="form-label">Corredor *</label><select id="pc-corredor" class="form-input"><option value="">Seleccionar...</option><option value="mercury">Mercury</option><option value="wise">Wise</option><option value="flor">FLOR</option><option value="cxp_agustin_cash">CxP Agustin (CASH)</option></select></div>
+      <div class="form-group"><label class="form-label">Comprobante</label><input type="file" id="pc-file" class="form-input" accept=".pdf,.png,.jpg,.jpeg"></div>
+      <div class="form-group"><label class="form-label">Notas</label><textarea id="pc-notas" class="form-input"></textarea></div>
+    </div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-pago-tercero')">Cancelar</button><button class="btn btn-green" onclick="savePagoTercero()">Registrar Pago</button></div>
+  </div>
+</div>
+
 <!-- Modal: Editar Cliente Fiscal -->
 <div class="modal-overlay" id="modal-cliente">
   <div class="modal modal-lg"><div class="modal-header"><div class="modal-title">Datos Fiscales</div><button class="modal-close" onclick="closeModal('modal-cliente')"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
@@ -515,6 +562,7 @@ const sb=supabase.createClient(SB_URL,SB_KEY);
 
 let currentUser=null,currentProfile=null;
 let campanas=[],clientes=[],marcas=[],facturas=[],pagosMarca=[],complementos=[],pagosTalento=[],campanasTalentos=[],auditoria=[];
+let terceros=[],comisiones=[],pagosTercero=[];
 let activeSection='cxc',isDark=false;
 let editingFacturaId=null,editingFacturaCampanaId=null,editingFacturaClienteId=null;
 let compFacturaId=null,complFacturaId=null,complPagoId=null;
@@ -568,7 +616,7 @@ async function autoRefreshTick(){
 function startAutoRefresh(){if(_autoRefreshTimer)return;_autoRefreshTimer=setInterval(autoRefreshTick,4000);}
 
 async function loadData(){
-  const[cmpR,cliR,facR,pmR,compR,ptR,ctR,audR]=await Promise.all([
+  const[cmpR,cliR,facR,pmR,compR,ptR,ctR,audR,terR,comR,ptcR]=await Promise.all([
     sb.from('campanas').select('*,marcas(id,nombre,cliente_id,clientes(id,nombre,pais))').is('deleted_at',null).order('created_at',{ascending:false}),
     sb.from('clientes').select('*').order('nombre'),
     sb.from('facturas').select('*').order('created_at',{ascending:false}),
@@ -577,15 +625,19 @@ async function loadData(){
     sb.from('pagos_talento').select('*').order('created_at',{ascending:false}),
     sb.from('campana_talentos').select('*,talentos(id,nombre,foto)').order('created_at',{ascending:false}),
     sb.from('facturas_auditoria').select('*').order('created_at',{ascending:false}).limit(500),
+    sb.from('terceros').select('*').order('nombre'),
+    sb.from('comisiones_terceros').select('*,terceros(id,nombre,rol)').order('created_at',{ascending:false}),
+    sb.from('pagos_tercero').select('*').order('created_at',{ascending:false}),
   ]);
   campanas=cmpR.data||[];clientes=cliR.data||[];facturas=facR.data||[];
   pagosMarca=pmR.data||[];complementos=compR.data||[];pagosTalento=ptR.data||[];
   auditoria=audR.data||[]; // si la tabla no existe aún, queda []
+  terceros=terR.data||[];comisiones=comR.data||[];pagosTercero=ptcR.data||[]; // [] si la migración aún no corrió
   const campanasIds=new Set(campanas.map(c=>c.id));
   campanasTalentos=(ctR.data||[]).filter(ct=>campanasIds.has(ct.campana_id));
 }
 
-function renderAll(){renderStats();renderCxC();renderCxP();renderResumen();renderClientes();
+function renderAll(){renderStats();renderCxC();renderCxP();renderResumen();renderClientes();renderTerceros();
   document.getElementById('subtitle').textContent=`${campanas.length} campanas · ${clientes.length} clientes`;}
 
 // ═══════════════════════════════════════════
@@ -606,6 +658,36 @@ function ctEstadoPago(ct){
   if(paid>0)return'parcial';
   return ct.pago_estado==='pagado'?'pagado':'pendiente'; // respeta marcas manuales previas
 }
+
+// ── Comisiones de terceros (CxP) ──
+// Base del cálculo: fee_marca del talento (nivel talento) o suma de fee_marca de la
+// campaña (nivel campaña). Se recalcula en vivo por si fee_marca cambió.
+function comBase(com){
+  if(com.campana_talento_id){
+    const ct=campanasTalentos.find(x=>x.id===com.campana_talento_id);
+    return Number(ct?.fee_marca)||0;
+  }
+  return campanasTalentos.filter(ct=>ct.campana_id===com.campana_id&&ct.estado!=='cancelada')
+    .reduce((s,ct)=>s+(Number(ct.fee_marca)||0),0);
+}
+function comMonto(com){
+  if(com.tipo==='fijo')return Number(com.valor)||0;
+  return Math.round(comBase(com)*(Number(com.valor)||0)/100*100)/100;
+}
+function comMoneda(com){
+  if(com.moneda)return com.moneda;
+  if(com.campana_talento_id){const ct=campanasTalentos.find(x=>x.id===com.campana_talento_id);return ct?.moneda_marca||ct?.moneda||'USD';}
+  return 'USD';
+}
+function comPagado(com){return pagosTercero.filter(p=>p.comision_id===com.id).reduce((s,p)=>s+(Number(p.monto)||0),0);}
+function comSaldo(com){return Math.max(0,comMonto(com)-comPagado(com));}
+function comEstadoPago(com){
+  const meta=comMonto(com),paid=comPagado(com);
+  if(meta>0&&paid>=meta)return'pagado';
+  if(paid>0)return'parcial';
+  return com.pago_estado==='pagado'?'pagado':'pendiente';
+}
+function comTipoLabel(com){return com.tipo==='fijo'?'Monto fijo':`${(Number(com.valor)||0)}% sobre fee marca`;}
 // Info de vencimiento: días restantes/vencidos
 function vencInfo(f){
   if(!f.fecha_vencimiento||['cobrada','cancelada'].includes(f.estado))return null;
@@ -664,10 +746,16 @@ function renderStats(){
     const d=new Date(p.fecha_pago+'T00:00:00');
     if(d.getMonth()===month&&d.getFullYear()===year)addCur(cxcCobrado,p.moneda,Number(p.monto)||0);
   });
-  // CxP pendiente: saldo por talento filtrado (soporta parciales)
+  // CxP pendiente: saldo por talento filtrado (soporta parciales) + comisiones de terceros
   cxpFilteredTalentos().forEach(ct=>{addCur(cxpPend,ct.moneda_talento||ct.moneda,ctEstadoPago(ct)==='pagado'?0:ctSaldo(ct));});
-  // CxP pagado este mes
+  cxpFilteredComisiones().forEach(com=>{addCur(cxpPend,comMoneda(com),comEstadoPago(com)==='pagado'?0:comSaldo(com));});
+  // CxP pagado este mes (talentos + terceros)
   pagosTalento.forEach(p=>{
+    if(!p.fecha_pago)return;
+    const d=new Date(p.fecha_pago+'T00:00:00');
+    if(d.getMonth()===month&&d.getFullYear()===year)addCur(cxpPagado,p.moneda,Number(p.monto)||0);
+  });
+  pagosTercero.forEach(p=>{
     if(!p.fecha_pago)return;
     const d=new Date(p.fecha_pago+'T00:00:00');
     if(d.getMonth()===month&&d.getFullYear()===year)addCur(cxpPagado,p.moneda,Number(p.monto)||0);
@@ -685,6 +773,7 @@ function switchSection(s){
   document.getElementById('section-cxp').style.display=s==='cxp'?'block':'none';
   document.getElementById('section-resumen').style.display=s==='resumen'?'block':'none';
   document.getElementById('section-clientes').style.display=s==='clientes'?'block':'none';
+  document.getElementById('section-terceros').style.display=s==='terceros'?'block':'none';
 }
 
 // ═══════════════════════════════════════════
@@ -1205,27 +1294,52 @@ function cxpFilteredTalentos(){
   });
 }
 
+// Comisiones de terceros que pasan los filtros de CxP (pago + búsqueda + estado campaña)
+function cxpFilteredComisiones(){
+  const q=(document.getElementById('cxp-search')?.value||'').toLowerCase().trim();
+  const filt=document.getElementById('cxp-filter')?.value||'';
+  const estCampGen=[...document.querySelectorAll('#cxp-campest-chips .chip.active')].map(b=>b.dataset.est);
+  return comisiones.filter(com=>{
+    if(filt&&comEstadoPago(com)!==filt)return false;
+    const camp=campanas.find(c=>c.id===com.campana_id);
+    if(!camp)return false; // campaña en papelera / inexistente
+    if(estCampGen.length&&!estCampGen.includes(camp.estado||''))return false;
+    if(q){
+      const ter=(com.terceros?.nombre||'').toLowerCase();
+      const cName=(camp.nombre||'').toLowerCase();
+      const ct=com.campana_talento_id?campanasTalentos.find(x=>x.id===com.campana_talento_id):null;
+      const tName=(ct?.talentos?.nombre||'').toLowerCase();
+      if(!ter.includes(q)&&!cName.includes(q)&&!tName.includes(q))return false;
+    }
+    return true;
+  });
+}
+
 function renderCxP(){
   const container=document.getElementById('cxp-container');
   const rows=cxpFilteredTalentos();
+  const coms=cxpFilteredComisiones();
 
-  if(!rows.length){container.innerHTML='<div class="empty-state"><h3>Sin pagos</h3><p>No hay pagos que coincidan con los filtros</p></div>';renderStats();return;}
+  if(!rows.length&&!coms.length){container.innerHTML='<div class="empty-state"><h3>Sin pagos</h3><p>No hay pagos que coincidan con los filtros</p></div>';renderStats();return;}
 
-  // Agrupar por campaña
-  const byCamp={};
+  // Agrupar por campaña (talentos + comisiones)
+  const byCamp={},comByCamp={};
   rows.forEach(ct=>{(byCamp[ct.campana_id]=byCamp[ct.campana_id]||[]).push(ct);});
+  coms.forEach(com=>{(comByCamp[com.campana_id]=comByCamp[com.campana_id]||[]).push(com);});
+  const campIds=[...new Set([...Object.keys(byCamp),...Object.keys(comByCamp)])];
 
   const head=`<div class="fin-row fin-row-head cxp-row">
-    <div>Talento</div><div>Estado</div><div>Pago</div><div>Corredor</div><div>Pago estimado</div>
+    <div>Talento / Comisión</div><div>Estado</div><div>Pago</div><div>Corredor</div><div>Pago estimado</div>
     <div class="th-r">Fee / saldo</div><div class="th-c">QB Factura</div><div class="th-c">QB Pago</div><div></div></div>`;
 
   const grand={};
-  container.innerHTML=Object.keys(byCamp).map(campId=>{
+  container.innerHTML=campIds.map(campId=>{
     const camp=campanas.find(c=>c.id===Number(campId));
-    const cts=byCamp[campId];
+    const cts=byCamp[campId]||[];
+    const cms=comByCamp[campId]||[];
     const cobroEst=campCobroEstimado(Number(campId));
-    const totalMap={};
-    cts.forEach(ct=>{const s=ctEstadoPago(ct)==='pagado'?0:ctSaldo(ct);const mt=ct.moneda_talento||ct.moneda;addCur(totalMap,mt,s);addCur(grand,mt,s);});
+    cts.forEach(ct=>{const s=ctEstadoPago(ct)==='pagado'?0:ctSaldo(ct);addCur(grand,ct.moneda_talento||ct.moneda,s);});
+    cms.forEach(com=>{const s=comEstadoPago(com)==='pagado'?0:comSaldo(com);addCur(grand,comMoneda(com),s);});
     return `<div class="fin-group">
       <div class="fin-group-header">
         <div class="fin-group-name">${esc(camp?.nombre||'—')} <span style="font-weight:500;color:var(--text-muted);font-size:12px">· ${esc(camp?.marcas?.nombre||'')}</span></div>
@@ -1236,11 +1350,40 @@ function renderCxP(){
       <div class="fin-group-items">
         ${head}
         ${cts.map(ct=>renderCxPRow(ct)).join('')}
+        ${cms.map(com=>renderCxPComisionRow(com)).join('')}
       </div>
     </div>`;
   }).join('')
   + `<div class="fin-grand-total"><span class="lbl">Total CxP pendiente</span><span class="val">${fmtMulti(grand)}</span></div>`;
   renderStats();
+}
+
+// Fila de comisión de tercero en CxP (mismas columnas que la fila de talento)
+function renderCxPComisionRow(com){
+  const pcs=pagosTercero.filter(p=>p.comision_id===com.id);
+  const estado=comEstadoPago(com);
+  const saldo=comSaldo(com),meta=comMonto(com),mon=comMoneda(com);
+  const estadoLbl={pagado:'Pagado',parcial:'Parcial',pendiente:'Pendiente'}[estado];
+  const corredores=[...new Set(pcs.map(p=>p.corredor).filter(Boolean))].join(', ');
+  const ct=com.campana_talento_id?campanasTalentos.find(x=>x.id===com.campana_talento_id):null;
+  const alcance=ct?esc(ct.talentos?.nombre||'talento'):'Campaña completa';
+  return `<div class="fin-row cxp-row" style="background:rgba(148,20,224,0.04)">
+    <div class="fin-row-name">🤝 ${esc(com.terceros?.nombre||'Tercero')}
+      <span style="margin-left:6px;font-size:10px;color:#9414E0;background:rgba(148,20,224,0.10);padding:1px 6px;border-radius:4px;font-weight:700">${comTipoLabel(com)}</span>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:2px">Comisión · ${alcance}</div>
+    </div>
+    <div class="fin-estado-cell"><span class="status-pill" style="background:rgba(148,20,224,0.12);color:#9414E0">Tercero</span></div>
+    <div><span class="status-pill st-${estado}">${estadoLbl}</span></div>
+    <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${corredores?esc(corredores):'—'}</div>
+    <div style="color:var(--text-dim)">—</div>
+    <div class="fin-row-amount">${fmtMoney(meta,mon)}${estado==='parcial'?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,mon)}</div>`:''}</div>
+    <div></div>
+    <div></div>
+    <div class="fin-row-actions">
+      ${estado!=='pagado'?`<button class="btn btn-green btn-xs" onclick="openPagoTercero(${com.id})">${estado==='parcial'?'Pagar saldo':'Pagar'}</button>`:''}
+      ${pcs.filter(p=>p.comprobante_url).map((p,i)=>`<a class="btn btn-ghost btn-xs" href="${p.comprobante_url}" target="_blank">Comp.${pcs.length>1?' '+(i+1):''}</a>`).join('')}
+    </div>
+  </div>`;
 }
 
 function renderCxPRow(ct){
@@ -1343,6 +1486,125 @@ async function savePagoTalento(){
     await maybeFinalizarCampana(ptCampanaId);
     renderAll();
     showToast(nuevoEstado==='pagado'?'Pago registrado — talento pagado al 100%':'Adelanto registrado — queda saldo pendiente','success');
+  }catch(e){showToast('Error: '+e.message,'error');}
+}
+
+// ═══════════════════════════════════════════
+// TERCEROS — catálogo + comisiones (CxP)
+// ═══════════════════════════════════════════
+function renderTerceros(){
+  const container=document.getElementById('ter-container');
+  if(!container)return;
+  const q=(document.getElementById('ter-search')?.value||'').toLowerCase().trim();
+  const list=terceros.filter(t=>!q||(t.nombre||'').toLowerCase().includes(q)||(t.rol||'').toLowerCase().includes(q));
+  if(!list.length){container.innerHTML='<div class="empty-state"><h3>Sin terceros</h3><p>Agregá una persona para asignarle comisiones</p></div>';return;}
+  container.innerHTML=list.map(t=>{
+    const coms=comisiones.filter(c=>c.tercero_id===t.id);
+    const pend={};coms.forEach(c=>{if(comEstadoPago(c)!=='pagado')addCur(pend,comMoneda(c),comSaldo(c));});
+    return `<div class="client-card" id="ter-${t.id}" onclick="this.classList.toggle('open')">
+      <div class="client-card-top">
+        <div class="client-card-name">${esc(t.nombre)}</div>
+        ${t.rol?`<span style="font-size:11px;color:var(--text-dim)">${esc(t.rol)}</span>`:''}
+        <span style="font-size:11px;color:var(--text-muted);font-weight:600">${coms.length} comisión(es)</span>
+        ${Object.keys(pend).length?`<span class="status-pill st-pendiente">Pend: ${fmtMulti(pend)}</span>`:''}
+        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openEditTercero(${t.id})">Editar</button>
+        <button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="event.stopPropagation();deleteTercero(${t.id})">Eliminar</button>
+      </div>
+      <div class="client-detail">
+        ${t.email?field('Email',esc(t.email)):''}
+        ${t.telefono?field('Teléfono',esc(t.telefono)):''}
+        ${t.notas?field('Notas',esc(t.notas)):''}
+        ${coms.length?field('Comisiones',coms.map(c=>{
+          const camp=campanas.find(x=>x.id===c.campana_id);
+          const ct=c.campana_talento_id?campanasTalentos.find(x=>x.id===c.campana_talento_id):null;
+          const alcance=ct?`${esc(ct.talentos?.nombre||'talento')}`:'Campaña completa';
+          return `<div style="margin-bottom:3px">· ${esc(camp?.nombre||'—')} — ${alcance}: <b>${fmtMoney(comMonto(c),comMoneda(c))}</b> <span style="color:var(--text-dim)">(${comTipoLabel(c)})</span> — ${comEstadoPago(c)}</div>`;
+        }).join('')):''}
+      </div>
+    </div>`;
+  }).join('');
+}
+let editingTerceroId=null;
+function openNuevoTercero(){
+  editingTerceroId=null;
+  document.getElementById('modal-ter-title').textContent='Nuevo Tercero';
+  ['ter-nombre','ter-rol','ter-email','ter-telefono','ter-notas'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  openModal('modal-tercero');
+}
+function openEditTercero(id){
+  const t=terceros.find(x=>x.id===id);if(!t)return;
+  editingTerceroId=id;
+  document.getElementById('modal-ter-title').textContent='Editar Tercero';
+  document.getElementById('ter-nombre').value=t.nombre||'';
+  document.getElementById('ter-rol').value=t.rol||'';
+  document.getElementById('ter-email').value=t.email||'';
+  document.getElementById('ter-telefono').value=t.telefono||'';
+  document.getElementById('ter-notas').value=t.notas||'';
+  openModal('modal-tercero');
+}
+async function saveTercero(){
+  const nombre=document.getElementById('ter-nombre').value.trim();
+  if(!nombre){showToast('El nombre es obligatorio','error');return;}
+  const payload={nombre,
+    rol:document.getElementById('ter-rol').value.trim(),
+    email:document.getElementById('ter-email').value.trim(),
+    telefono:document.getElementById('ter-telefono').value.trim(),
+    notas:document.getElementById('ter-notas').value.trim()};
+  try{
+    if(editingTerceroId){const{error}=await sb.from('terceros').update(payload).eq('id',editingTerceroId);if(error)throw error;}
+    else{payload.created_by=currentUser.id;const{error}=await sb.from('terceros').insert(payload);if(error)throw error;}
+    closeModal('modal-tercero');await loadData();renderTerceros();
+    showToast('Tercero guardado','success');
+  }catch(e){showToast('Error: '+e.message,'error');}
+}
+async function deleteTercero(id){
+  const coms=comisiones.filter(c=>c.tercero_id===id);
+  if(coms.length){showToast('No se puede eliminar: tiene comisiones asignadas','error');return;}
+  if(!confirm('¿Eliminar este tercero?'))return;
+  try{const{error}=await sb.from('terceros').delete().eq('id',id);if(error)throw error;
+    await loadData();renderTerceros();showToast('Tercero eliminado','success');
+  }catch(e){showToast('Error: '+e.message,'error');}
+}
+
+// ── Pago de comisión de tercero (CxP) ──
+let pcComisionId=null;
+function openPagoTercero(comId){
+  const com=comisiones.find(c=>c.id===comId);if(!com)return;
+  pcComisionId=comId;
+  const pagado=comPagado(com),saldo=comSaldo(com),meta=comMonto(com),mon=comMoneda(com);
+  document.getElementById('modal-pc-title').textContent='Pagar: '+(com.terceros?.nombre||'comisión');
+  const info=document.getElementById('pc-saldo-info');
+  info.style.display='block';
+  document.getElementById('pc-info-total').textContent=fmtMoney(meta,mon);
+  document.getElementById('pc-info-pagado').textContent=fmtMoney(pagado,mon);
+  document.getElementById('pc-info-saldo').textContent=fmtMoney(saldo,mon);
+  document.getElementById('pc-monto').value=saldo||meta||'';
+  document.getElementById('pc-moneda').value=mon;
+  document.getElementById('pc-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('pc-corredor').value='';document.getElementById('pc-notas').value='';
+  const f=document.getElementById('pc-file');if(f)f.value='';
+  openModal('modal-pago-tercero');
+}
+async function savePagoTercero(){
+  const com=comisiones.find(c=>c.id===pcComisionId);if(!com){showToast('Comisión no encontrada','error');return;}
+  const corredor=document.getElementById('pc-corredor').value;
+  if(!corredor){showToast('Selecciona un corredor','error');return;}
+  const fecha=document.getElementById('pc-fecha').value;
+  if(!fecha){showToast('La fecha de pago es obligatoria','error');return;}
+  const monto=parseFloat(document.getElementById('pc-monto').value)||0;
+  if(monto<=0){showToast('El monto debe ser mayor a 0','error');return;}
+  const saldo=comSaldo(com),mon=comMoneda(com);
+  if(monto>saldo*1.001&&!confirm(`El pago (${fmtMoney(monto,mon)}) supera el saldo pendiente (${fmtMoney(saldo,mon)}). ¿Registrar igual?`))return;
+  const payload={comision_id:pcComisionId,monto,
+    moneda:document.getElementById('pc-moneda').value,
+    fecha_pago:fecha,corredor,
+    notas:document.getElementById('pc-notas').value.trim(),created_by:currentUser.id};
+  try{
+    const file=document.getElementById('pc-file').files[0];
+    if(file)payload.comprobante_url=await uploadFile(file,`comision-${pcComisionId}/comprobante`);
+    const{error}=await sb.from('pagos_tercero').insert(payload);if(error)throw error;
+    closeModal('modal-pago-tercero');await loadData();renderAll();
+    showToast('Pago de comisión registrado','success');
   }catch(e){showToast('Error: '+e.message,'error');}
 }
 

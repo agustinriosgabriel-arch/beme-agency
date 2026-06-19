@@ -514,6 +514,10 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           Usuarios
         </button>
+        <button class="btn btn-outline btn-sm" onclick="openTercerosModal()" id="btn-terceros" style="display:none">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          Terceros
+        </button>
         <button class="btn btn-primary" onclick="openNuevaCampana()" id="btn-nueva" style="display:none">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Nueva Campaña
@@ -785,6 +789,50 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
 </div>
 
 <!-- ═══════════════════════════════════════════════════
+     MODAL: Terceros (comisiones)
+     ═══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-terceros">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">Terceros</div>
+      <button class="modal-close" onclick="closeModal('modal-terceros')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:12px;margin-bottom:14px;align-items:center">
+        <input type="text" id="terceros-search" class="form-input" placeholder="Buscar tercero..." style="flex:1;font-size:13px;padding:7px 10px" oninput="renderTercerosLista()">
+        <button class="btn btn-primary btn-sm" onclick="openNuevoTercero()">+ Nuevo Tercero</button>
+      </div>
+      <div id="terceros-lista"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nuevo / Editar Tercero -->
+<div class="modal-overlay" id="modal-tercero">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-ter-title">Nuevo Tercero</div>
+      <button class="modal-close" onclick="closeModal('modal-tercero')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Nombre *</label><input type="text" id="ter-nombre" class="form-input" placeholder="Nombre de la persona"></div>
+      <div class="form-group"><label class="form-label">Rol</label><input type="text" id="ter-rol" class="form-input" placeholder="Agente, referido, corredor..."></div>
+      <div class="form-group"><label class="form-label">Email</label><input type="email" id="ter-email" class="form-input"></div>
+      <div class="form-group"><label class="form-label">Teléfono</label><input type="text" id="ter-telefono" class="form-input"></div>
+      <div class="form-group"><label class="form-label">Notas</label><textarea id="ter-notas" class="form-input" rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--border)">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-tercero')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="saveTercero()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
      MODAL: Gestión de Usuarios
 ════════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-usuarios">
@@ -967,6 +1015,7 @@ let currentProfile = null;
 let campanas = [];
 let clientes = [];
 let marcas = [];
+let terceros = [];
 let usuarios = [];
 let talentosList = [];
 let alertas = [];
@@ -1046,6 +1095,7 @@ async function initApp() {
       loadTalentosBD(),
       loadCampanas(),
       loadAlertas(),
+      loadTerceros(),
     ]);
 
     // Mostrar app
@@ -1059,6 +1109,7 @@ async function initApp() {
       document.getElementById('btn-nueva').style.display = 'inline-flex';
       document.getElementById('btn-clientes').style.display = 'inline-flex';
       document.getElementById('btn-usuarios').style.display = 'inline-flex';
+      document.getElementById('btn-terceros').style.display = 'inline-flex';
       document.getElementById('btn-trash').style.display = 'inline-flex';
     }
     // Ocultar tab "Finanzas" — solo el Administrador general accede a la sección
@@ -1174,6 +1225,79 @@ async function loadUsuarios() {
   // Cargar TODOS los usuarios (incluyendo inactivos) para que la gestión los muestre.
   const {data} = await sb.from('user_profiles').select('*').order('nombre');
   usuarios = data || [];
+}
+
+async function loadTerceros() {
+  if (!isInternal()) return;
+  try {
+    const {data} = await sb.from('terceros').select('*').order('nombre');
+    terceros = data || [];
+  } catch(e) { console.warn('loadTerceros:', e); terceros = []; }
+}
+
+// ── CRUD de Terceros ──
+function openTercerosModal() { renderTercerosLista(); openModal('modal-terceros'); }
+function renderTercerosLista() {
+  const cont = document.getElementById('terceros-lista');
+  if (!cont) return;
+  const q = (document.getElementById('terceros-search')?.value||'').toLowerCase().trim();
+  const list = terceros.filter(t => !q || (t.nombre||'').toLowerCase().includes(q) || (t.rol||'').toLowerCase().includes(q));
+  if (!list.length) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">Sin terceros. Agregá una persona para asignarle comisiones.</div>'; return; }
+  cont.innerHTML = list.map(t => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:14px">${esc(t.nombre)}${t.rol?` <span style="font-weight:500;font-size:12px;color:var(--text-muted)">· ${esc(t.rol)}</span>`:''}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${[t.email,t.telefono].filter(Boolean).map(esc).join(' · ')||'—'}</div>
+        ${t.notas?`<div style="font-size:12px;color:var(--text-dim);margin-top:2px">${esc(t.notas)}</div>`:''}
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="openEditTercero(${t.id})">Editar</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="deleteTercero(${t.id})">Eliminar</button>
+    </div>`).join('');
+}
+let editingTerceroId = null;
+function openNuevoTercero() {
+  editingTerceroId = null;
+  document.getElementById('modal-ter-title').textContent = 'Nuevo Tercero';
+  ['ter-nombre','ter-rol','ter-email','ter-telefono','ter-notas'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
+  openModal('modal-tercero');
+}
+function openEditTercero(id) {
+  const t = terceros.find(x => x.id === id); if (!t) return;
+  editingTerceroId = id;
+  document.getElementById('modal-ter-title').textContent = 'Editar Tercero';
+  document.getElementById('ter-nombre').value = t.nombre||'';
+  document.getElementById('ter-rol').value = t.rol||'';
+  document.getElementById('ter-email').value = t.email||'';
+  document.getElementById('ter-telefono').value = t.telefono||'';
+  document.getElementById('ter-notas').value = t.notas||'';
+  openModal('modal-tercero');
+}
+async function saveTercero() {
+  const nombre = document.getElementById('ter-nombre').value.trim();
+  if (!nombre) { showToast('El nombre es obligatorio','error'); return; }
+  const payload = { nombre,
+    rol: document.getElementById('ter-rol').value.trim(),
+    email: document.getElementById('ter-email').value.trim(),
+    telefono: document.getElementById('ter-telefono').value.trim(),
+    notas: document.getElementById('ter-notas').value.trim() };
+  try {
+    if (editingTerceroId) { const {error} = await sb.from('terceros').update(payload).eq('id', editingTerceroId); if (error) throw error; }
+    else { payload.created_by = currentUser.id; const {error} = await sb.from('terceros').insert(payload); if (error) throw error; }
+    closeModal('modal-tercero');
+    await loadTerceros();
+    renderTercerosLista();
+    showToast('Tercero guardado','success');
+  } catch(e) { showToast('Error: '+e.message,'error'); }
+}
+async function deleteTercero(id) {
+  if (!confirm('¿Eliminar este tercero? (No se puede si tiene comisiones asignadas)')) return;
+  try {
+    const {error} = await sb.from('terceros').delete().eq('id', id);
+    if (error) throw error;
+    await loadTerceros();
+    renderTercerosLista();
+    showToast('Tercero eliminado','success');
+  } catch(e) { showToast('No se pudo eliminar: '+e.message,'error'); }
 }
 
 async function loadTalentosBD() {

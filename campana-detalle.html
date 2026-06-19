@@ -603,6 +603,11 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
     <div class="side-section" id="side-fin" style="display:none">
       <div class="side-title">Resumen Financiero</div>
       <div id="fin-content"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:6px">
+        <div class="side-title" style="margin:0">Comisiones de terceros</div>
+        <button class="btn btn-ghost btn-xs" style="color:#9414E0" onclick="openNuevaComision(null)" title="Comisión sobre el total de fee de marca de la campaña">+ Campaña</button>
+      </div>
+      <div id="comisiones-camp-content"></div>
     </div>
 
     <!-- Equipo -->
@@ -831,6 +836,55 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
   </div>
 </div>
 
+<!-- ══ MODAL: Comisión de tercero ══ -->
+<div class="modal-overlay" id="modal-comision">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Comisión de tercero</div>
+      <button class="modal-close" onclick="closeModal('modal-comision')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:11px;color:#9414E0;font-weight:700;margin-bottom:10px" id="com-scope-label"></div>
+      <div class="form-group">
+        <label class="form-label">Tercero (persona)</label>
+        <div style="display:flex;gap:6px">
+          <select id="com-tercero" class="form-input" style="flex:1"></select>
+          <button class="btn btn-ghost btn-sm" onclick="quickNuevoTercero()" title="Crear tercero nuevo">+ Nuevo</button>
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Tipo</label>
+          <select id="com-tipo" class="form-input" onchange="onComTipoChange()">
+            <option value="porcentaje">Porcentaje del fee de marca</option>
+            <option value="fijo">Monto fijo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="com-valor-label">Porcentaje (%)</label>
+          <input type="number" id="com-valor" class="form-input" placeholder="0" step="0.01" oninput="updateComPreview()">
+        </div>
+      </div>
+      <div class="form-group" id="com-moneda-wrap" style="display:none">
+        <label class="form-label">Moneda</label>
+        <select id="com-moneda" class="form-input" onchange="updateComPreview()">
+          <option value="USD">USD</option><option value="ARS">ARS</option><option value="MXN">MXN</option><option value="EUR">EUR</option>
+        </select>
+      </div>
+      <div id="com-preview" style="font-size:12px;font-weight:600;color:var(--text-muted);margin:2px 0 10px"></div>
+      <div class="form-group">
+        <label class="form-label">Notas</label>
+        <input type="text" id="com-notas" class="form-input" placeholder="Opcional">
+      </div>
+      <div style="font-size:11px;color:var(--text-dim)">La comisión aparece en Finanzas → CxP como una entrada a pagar.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-comision')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveComision()">Agregar comisión</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL: Producto ══ -->
 <div class="modal-overlay" id="modal-producto">
   <div class="modal">
@@ -884,6 +938,7 @@ const campanaId = parseInt(new URLSearchParams(location.search).get('id'));
 
 let campana = null, currentUser = null, currentProfile = null;
 let talentosList = [], editingDrCtId = null, editingPrCtId = null;
+let terceros = [], comisiones = []; // comisiones de terceros de esta campaña
 let _savingContenido = false;
 
 const PASO_LABELS = {
@@ -1162,7 +1217,20 @@ async function loadCampana() {
   await Promise.all([
     loadCampanaChildren(),
     isInternal() ? loadCampanaMensajes() : Promise.resolve(),
+    isAdmin() ? loadComisiones() : Promise.resolve(),
   ]);
+}
+
+// Comisiones de terceros de esta campaña + catálogo de terceros (solo admin)
+async function loadComisiones() {
+  try {
+    const [terR, comR] = await Promise.all([
+      sb.from('terceros').select('*').order('nombre'),
+      sb.from('comisiones_terceros').select('*,terceros(id,nombre,rol)').eq('campana_id', campanaId).order('created_at'),
+    ]);
+    terceros = terR.data || [];
+    comisiones = comR.data || [];
+  } catch(e) { console.warn('loadComisiones:', e); terceros = terceros||[]; comisiones = comisiones||[]; }
 }
 
 // Marca la campaña como "tocada": setea updated_by (el trigger bumpea updated_at).
@@ -1225,6 +1293,7 @@ function renderAll() {
   renderTalentos();
   renderEquipo();
   renderFinanzas();
+  renderComisionesCampana();
   renderCobro();
   renderChat();
 
@@ -1690,7 +1759,8 @@ function renderTalentoCard(ct) {
           ? `<div class="fee-value pos">${fmtMoneyCompact(gan,monM)}</div>`
           : `<div class="fee-value pos" style="font-size:13px" title="Fees en monedas distintas — no se puede restar directo">${fmtMoneyCompact(fm,monM)} − ${fmtMoneyCompact(ft,monT)}</div><div style="font-size:9px;color:var(--text-dim);margin-top:2px">monedas distintas</div>`}
       </div>
-    </div>`:''}
+    </div>
+    ${renderComisionesTalento(ct)}`:''}
 
     <div class="talento-body">
       <div class="talento-extras">
@@ -2696,6 +2766,153 @@ async function saveFeeMoneda(ctId, lado, value) {
   renderTalentos();
   renderFinanzas();
   toast('Moneda actualizada ✓','ok');
+}
+
+// ════════════════════════════════════════════════
+// COMISIONES DE TERCEROS
+// ════════════════════════════════════════════════
+function comBaseTalento(ct){ return Number(ct?.fee_marca)||0; }
+function comBaseCampana(){
+  return (campana.campana_talentos||[]).filter(ct=>ct.estado!=='cancelada')
+    .reduce((s,ct)=>s+(Number(ct.fee_marca)||0),0);
+}
+function comMonto(com){
+  if(com.tipo==='fijo') return Number(com.valor)||0;
+  const base = com.campana_talento_id
+    ? comBaseTalento((campana.campana_talentos||[]).find(x=>x.id===com.campana_talento_id))
+    : comBaseCampana();
+  return Math.round(base*(Number(com.valor)||0)/100*100)/100;
+}
+function comMonedaC(com){
+  if(com.moneda) return com.moneda;
+  if(com.campana_talento_id){const ct=(campana.campana_talentos||[]).find(x=>x.id===com.campana_talento_id);return ct?.moneda_marca||ct?.moneda||'USD';}
+  return 'USD';
+}
+function comTipoLabelC(com){ return com.tipo==='fijo'?'Monto fijo':`${(Number(com.valor)||0)}% del fee marca`; }
+function comPagoBadge(com){
+  const e=com.pago_estado||'pendiente';
+  const map={pagado:['✓ Pagada','pago-pagado'],parcial:['Parcial','pago-pendiente'],pendiente:['Pendiente','pago-pendiente']};
+  const [l,c]=map[e]||map.pendiente;
+  return `<span class="pago-badge ${c}" style="font-size:9px">${l}</span>`;
+}
+
+// Lista de comisiones de UN talento (debajo de sus fees)
+function renderComisionesTalento(ct){
+  const coms = comisiones.filter(c=>c.campana_talento_id===ct.id);
+  const items = coms.map(c=>`
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:3px 0">
+      <span style="color:#9414E0;font-weight:700">🤝 ${esc(c.terceros?.nombre||'Tercero')}</span>
+      <span style="color:var(--text-dim)">${comTipoLabelC(c)}</span>
+      <span style="font-weight:700">${fmtMoney(comMonto(c),comMonedaC(c))}</span>
+      ${comPagoBadge(c)}
+      <button class="btn btn-ghost btn-xs" style="color:var(--red);margin-left:auto" onclick="event.stopPropagation();deleteComision(${c.id})" title="Quitar comisión">✕</button>
+    </div>`).join('');
+  return `<div style="padding:2px 18px 10px" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+      <span style="font-size:10px;font-weight:700;color:#9414E0;text-transform:uppercase;letter-spacing:.04em">Comisiones de terceros</span>
+      <button class="btn btn-ghost btn-xs" style="color:#9414E0" onclick="event.stopPropagation();openNuevaComision(${ct.id})">+ Comisión</button>
+    </div>
+    ${items||'<div style="font-size:11px;color:var(--text-dim)">Sin comisiones</div>'}
+  </div>`;
+}
+
+// Comisiones a nivel campaña (sidebar de Finanzas)
+function renderComisionesCampana(){
+  if(!isAdmin())return;
+  const cont=document.getElementById('comisiones-camp-content');
+  if(!cont)return;
+  const coms=comisiones.filter(c=>!c.campana_talento_id);
+  cont.innerHTML = coms.length
+    ? coms.map(c=>`<div class="fin-row"><span class="lbl">🤝 ${esc(c.terceros?.nombre||'Tercero')} <span style="color:var(--text-dim);font-size:11px">(${comTipoLabelC(c)})</span></span>
+        <span style="display:flex;align-items:center;gap:6px">${fmtMoney(comMonto(c),comMonedaC(c))} ${comPagoBadge(c)}
+        <button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteComision(${c.id})">✕</button></span></div>`).join('')
+    : '<div style="font-size:12px;color:var(--text-dim)">Sin comisiones de campaña</div>';
+}
+
+let _comCtId = null; // null = comisión a nivel campaña
+function openNuevaComision(ctId){
+  _comCtId = ctId;
+  const sel=document.getElementById('com-tercero');
+  sel.innerHTML='<option value="">Seleccionar tercero...</option>'+
+    terceros.map(t=>`<option value="${t.id}">${esc(t.nombre)}${t.rol?' · '+esc(t.rol):''}</option>`).join('');
+  document.getElementById('com-tipo').value='porcentaje';
+  document.getElementById('com-valor').value='';
+  document.getElementById('com-notas').value='';
+  onComTipoChange();
+  // Moneda por defecto: la del fee de marca del talento, o USD
+  let mon='USD';
+  if(ctId){const ct=(campana.campana_talentos||[]).find(x=>x.id===ctId);mon=ct?.moneda_marca||ct?.moneda||'USD';}
+  document.getElementById('com-moneda').value=mon;
+  const scope = ctId
+    ? (campana.campana_talentos||[]).find(x=>x.id===ctId)?.talentos?.nombre || 'talento'
+    : 'Campaña completa';
+  document.getElementById('com-scope-label').textContent = ctId ? `Talento: ${scope}` : 'Nivel: Campaña completa (todos los fees de marca)';
+  openModal('modal-comision');
+}
+function onComTipoChange(){
+  const tipo=document.getElementById('com-tipo').value;
+  document.getElementById('com-valor-label').textContent = tipo==='fijo'?'Monto fijo':'Porcentaje (%)';
+  document.getElementById('com-moneda-wrap').style.display = tipo==='fijo'?'block':'none';
+  // Preview del cálculo
+  updateComPreview();
+}
+function updateComPreview(){
+  const tipo=document.getElementById('com-tipo').value;
+  const valor=parseFloat(document.getElementById('com-valor').value)||0;
+  const prev=document.getElementById('com-preview');
+  if(tipo==='fijo'){ prev.textContent = valor?`= ${fmtMoney(valor,document.getElementById('com-moneda').value)}`:''; return; }
+  const base = _comCtId
+    ? comBaseTalento((campana.campana_talentos||[]).find(x=>x.id===_comCtId))
+    : comBaseCampana();
+  const mon = _comCtId ? ((campana.campana_talentos||[]).find(x=>x.id===_comCtId)?.moneda_marca||'USD') : 'USD';
+  prev.textContent = `Base fee marca: ${fmtMoney(base,mon)} → ${valor}% = ${fmtMoney(Math.round(base*valor/100*100)/100,mon)}`;
+}
+async function saveComision(){
+  const terceroId=parseInt(document.getElementById('com-tercero').value);
+  if(!terceroId){toast('Seleccioná un tercero','err');return;}
+  const tipo=document.getElementById('com-tipo').value;
+  const valor=parseFloat(document.getElementById('com-valor').value)||0;
+  if(valor<=0){toast('El valor debe ser mayor a 0','err');return;}
+  const payload={
+    tercero_id:terceroId, campana_id:campanaId,
+    campana_talento_id:_comCtId||null,
+    tipo, valor,
+    moneda: tipo==='fijo' ? document.getElementById('com-moneda').value : (_comCtId?((campana.campana_talentos||[]).find(x=>x.id===_comCtId)?.moneda_marca||'USD'):'USD'),
+    notas:document.getElementById('com-notas').value.trim(),
+    created_by:currentUser.id
+  };
+  try{
+    const{error}=await sb.from('comisiones_terceros').insert(payload);
+    if(error)throw error;
+    closeModal('modal-comision');
+    await loadComisiones();
+    renderTalentos(); renderComisionesCampana();
+    toast('Comisión agregada ✓','ok');
+  }catch(e){ toast('Error: '+e.message,'err'); }
+}
+async function deleteComision(id){
+  if(!confirm('¿Quitar esta comisión?'))return;
+  try{
+    const{error}=await sb.from('comisiones_terceros').delete().eq('id',id);
+    if(error)throw error;
+    await loadComisiones();
+    renderTalentos(); renderComisionesCampana();
+    toast('Comisión quitada','ok');
+  }catch(e){ toast('Error: '+e.message,'err'); }
+}
+// Crear un tercero nuevo sin salir del modal de comisión
+async function quickNuevoTercero(){
+  const nombre=prompt('Nombre del nuevo tercero:');
+  if(!nombre||!nombre.trim())return;
+  try{
+    const{data,error}=await sb.from('terceros').insert({nombre:nombre.trim(),created_by:currentUser.id}).select().single();
+    if(error)throw error;
+    terceros.push(data); terceros.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+    const sel=document.getElementById('com-tercero');
+    sel.innerHTML='<option value="">Seleccionar tercero...</option>'+
+      terceros.map(t=>`<option value="${t.id}"${t.id===data.id?' selected':''}>${esc(t.nombre)}${t.rol?' · '+esc(t.rol):''}</option>`).join('');
+    toast('Tercero creado ✓','ok');
+  }catch(e){ toast('Error: '+e.message,'err'); }
 }
 
 async function saveSparkCodeTexto(contId, texto) {
