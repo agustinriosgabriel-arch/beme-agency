@@ -26,8 +26,11 @@ const SMTP_HOST = process.env.SMTP_HOST || 'smtp.hostinger.com';
 const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
 const SMTP_USER = process.env.SMTP_USER || 'contacto@bemeagency.com'; // buzón autenticado
 const SMTP_PASS = process.env.SMTP_PASS;
-// Remitente visible — debe existir como buzón/alias en Hostinger. Configurable.
-const NOTIFY_FROM = process.env.BRAND_NOTIFY_FROM || 'Beme Agency <notifications@bemeagency.com>';
+// Remitente visible — DEBE ser un buzón/alias propiedad del usuario autenticado
+// (Hostinger rechaza con 553 si no). Por defecto usa el mismo buzón autenticado.
+// Para usar notifications@..., creá ese buzón en Hostinger y apuntá SMTP_USER/SMTP_PASS
+// a él (o agregalo como alias de contacto@), y seteá BRAND_NOTIFY_FROM.
+const NOTIFY_FROM = process.env.BRAND_NOTIFY_FROM || `Beme Agency <${SMTP_USER}>`;
 const NOTIFY_FROM_ADDR = (NOTIFY_FROM.match(/<([^>]+)>/) || [, NOTIFY_FROM])[1];
 
 const transporter = nodemailer.createTransport({
