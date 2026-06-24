@@ -891,6 +891,7 @@ function renderCxC(){
       <div class="fin-group-items">
         ${head}
         ${cts.length?cts.map(ct=>renderCxCTalRow(ct,c)).join(''):'<div class="fin-row" style="padding:10px 14px;color:var(--text-dim);font-size:12px">Sin talentos en esta campaña</div>'}
+        ${(()=>{const orf=facturasHuerfanas(c);return orf.length?`<div style="padding:8px 14px;background:rgba(251,191,36,0.12);border-top:1px solid var(--border);font-size:12px;color:var(--orange);display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b>⚠ ${orf.length} factura(s) sin asignar a un talento</b><span style="color:var(--text-muted)">— asignala en vez de crear una nueva:</span>${orf.map(f=>`<button class="btn btn-xs btn-outline" onclick="editFactura(${f.id})">Asignar ${f.numero_factura?'#'+esc(f.numero_factura):'factura'} · ${fmtMoney(f.monto,f.moneda)}</button>`).join('')}</div>`:'';})()}
         <div style="display:flex;gap:8px;align-items:center;padding:8px 14px">
           <button class="btn btn-primary btn-xs" id="cxc-group-btn-${c.id}" style="display:${selN>=2?'':'none'}" onclick="facturarEnConjunto(${c.id},${cliId})">Facturar en conjunto (${selN})</button>
           ${c.facs.length?`<button class="btn btn-ghost btn-xs" onclick="toggleDetail('cxc-facs-${c.id}')">Ver facturas (${c.facs.length}) ▾</button>`:''}
@@ -963,6 +964,13 @@ function ctFactura(ct){
 }
 // ¿La factura agrupa más de una sub-campaña?
 function facturaCubreVarios(f){return facturaTalentos.filter(ft=>ft.factura_id===f.id).length>1;}
+// ¿La factura está asignada a algún talento (enlace o # Orden que matchee un identificador)?
+function facturaAsignada(f){
+  if(facturaTalentos.some(ft=>ft.factura_id===f.id))return true;
+  return campanasTalentos.some(ct=>ct.campana_id===f.campana_id&&ocMatchesIdent(f,ct.identificador));
+}
+// Facturas activas de la campaña que NO están asignadas a ningún talento (huérfanas)
+function facturasHuerfanas(c){return (c.facs||[]).filter(f=>f.estado!=='cancelada'&&!facturaAsignada(f));}
 
 // Fila por SUB-CAMPAÑA (talento) en CxC
 function renderCxCTalRow(ct,c){
@@ -1107,7 +1115,7 @@ function populateFacTalentos(campanaId, selectedCtIds){
     const ident = ct.identificador || '';
     const meta = `${ident?esc(ident)+' · ':''}${fmtMoney(fee,moneda)}`;
     return `<label style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;font-size:12px">
-      <input type="checkbox" value="${ct.id}" data-fee="${fee}" data-moneda="${esc(moneda)}" data-ident="${esc(ident)}" ${sel.has(ct.id)?'checked':''} onchange="onFacTalentoChange()" style="width:auto;margin:0;flex:none">
+      <input type="checkbox" value="${ct.id}" data-fee="${fee}" data-moneda="${esc(moneda)}" data-ident="${esc(ident)}" ${sel.has(ct.id)?'checked':''} onchange="onFacTalentoChange(true)" style="width:auto;margin:0;flex:none">
       <span><b>${nombre}</b> <span style="color:var(--text-dim)">${meta}</span></span>
     </label>`;
   }).join('');
@@ -1117,13 +1125,15 @@ function populateFacTalentos(campanaId, selectedCtIds){
 function facCheckedTalentos(){
   return Array.from(document.querySelectorAll('#fac-talento input[type=checkbox]:checked'));
 }
-function onFacTalentoChange(){
+function onFacTalentoChange(fromUser){
   const checked = facCheckedTalentos();
   const idents  = checked.map(c=>c.dataset.ident).filter(Boolean);
   const numEl   = document.getElementById('fac-numero');
   const montoEl = document.getElementById('fac-monto');
   const monEl   = document.getElementById('fac-moneda');
   const warn    = document.getElementById('fac-talento-warn');
+  // Si el cambio viene de marcar/desmarcar un talento, el # Orden y el monto vuelven a seguir la selección
+  if(fromUser){ if(numEl)numEl.dataset.manual='0'; if(montoEl)montoEl.dataset.autofilled='1'; }
   // # Orden: la app lo sugiere con los identificadores marcados (editable; respeta lo escrito a mano)
   if(numEl && numEl.dataset.manual!=='1') numEl.value = idents.join(', ');
   // Aviso si hay monedas distintas entre los marcados
