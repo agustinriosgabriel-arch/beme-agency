@@ -89,9 +89,23 @@ body.dark .logo .logo-dark{display:block}
 .chip{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;font-family:inherit;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:all 0.15s}
 .chip:hover{border-color:var(--border2);color:var(--text)}
 .chip.active{background:var(--gradient);color:#fff;border-color:transparent}
-/* Fila de filtros de estado (talento / campaña / factura) — selects nativos agrupados */
+/* Fila de filtros de estado (talento / campaña / factura) */
 .filters-estado{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
-.filters-estado .filter-select.has-val{border-color:var(--primary);color:var(--text)}
+/* Dropdown multi-selección con checkboxes — permite elegir varios estados a la vez */
+.ms-dd{position:relative;display:inline-block}
+.ms-toggle{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.ms-toggle.has-val{border-color:var(--primary)}
+.ms-caret{font-size:9px;opacity:0.7}
+.ms-panel{position:absolute;top:calc(100% + 4px);left:0;z-index:60;min-width:205px;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:6px;box-shadow:0 10px 28px rgba(0,0,0,0.45);display:none;flex-direction:column;gap:1px}
+.ms-dd.open .ms-panel{display:flex}
+.ms-opt{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;font-size:12.5px;color:var(--text);cursor:pointer;user-select:none}
+.ms-opt:hover{background:var(--surface2)}
+.ms-opt input{accent-color:var(--primary);width:14px;height:14px;margin:0;cursor:pointer}
+/* Fila de factura expansible (CxC) */
+.fac-clickable{cursor:pointer}
+.fac-caret{color:var(--text-dim);font-size:10px;transition:transform 0.15s;display:inline-block;line-height:1}
+.fac-row-open .fac-caret{transform:rotate(180deg)}
+.fac-row-open{background:var(--surface2)}
 /* Casillas QuickBooks (contabilidad) */
 .qb-check{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px;transition:all 0.15s}
 .qb-check:hover{border-color:var(--border2)}
@@ -122,7 +136,7 @@ body.dark .logo .logo-dark{display:block}
    Solo la 1ª columna es flexible (1fr); el resto px fijos → alineación
    consistente entre cada fila-grid independiente. */
 .cxc-row{grid-template-columns:minmax(140px,1fr) 116px 80px 108px 128px 88px 96px 96px 58px 58px 116px}
-.cxc-tal-row{grid-template-columns:30px minmax(150px,1fr) 116px 150px 110px 56px 56px 140px}
+.cxc-tal-row{grid-template-columns:30px minmax(140px,1fr) 104px 152px 104px 56px 56px 178px}
 .cxc-sec{padding:6px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);background:var(--surface)}
 .cxp-row{grid-template-columns:minmax(140px,1fr) 122px 84px 84px 110px 100px 58px 58px 126px}
 .fin-estado-cell{display:flex;flex-wrap:wrap;gap:3px;align-items:center;min-width:0}
@@ -347,32 +361,38 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
     </div>
     <div class="filters-estado">
       <span class="chip-filter-label">Filtrar por estado</span>
-      <select class="filter-select" id="cxc-estado-talento" onchange="renderCxC()">
-        <option value="">Estado talento: todos</option>
-        <option value="sin_iniciar">Talento · Sin iniciar</option>
-        <option value="en_curso">Talento · En curso</option>
-        <option value="etapa_finanzas">Talento · Etapa Finanzas</option>
-        <option value="finalizada">Talento · Finalizada</option>
-        <option value="pausada">Talento · Pausada</option>
-        <option value="cancelada">Talento · Cancelada</option>
-      </select>
-      <select class="filter-select" id="cxc-estado-campana" onchange="renderCxC()">
-        <option value="">Estado campaña: todas</option>
-        <option value="sin_iniciar">Campaña · Sin iniciar</option>
-        <option value="en_curso">Campaña · En curso</option>
-        <option value="finalizada">Campaña · Finalizada</option>
-        <option value="pausada">Campaña · Pausada</option>
-        <option value="cancelada">Campaña · Cancelada</option>
-      </select>
-      <select class="filter-select" id="cxc-estado-factura" onchange="renderCxC()">
-        <option value="">Estado factura: todas</option>
-        <option value="pendiente">Factura · Pendiente</option>
-        <option value="emitida">Factura · Emitida</option>
-        <option value="enviada">Factura · Enviada</option>
-        <option value="pagada_parcial">Factura · Pago Parcial</option>
-        <option value="cobrada">Factura · Cobrada</option>
-        <option value="cancelada">Factura · Cancelada</option>
-      </select>
+      <div class="ms-dd" id="cxc-ms-talento">
+        <button type="button" class="filter-select ms-toggle" data-label="Estado talento" onclick="toggleMsDd(event,this)">Estado talento <span class="ms-caret">▾</span></button>
+        <div class="ms-panel" onclick="event.stopPropagation()">
+          <label class="ms-opt"><input type="checkbox" value="sin_iniciar" onchange="onMsChange('cxc')">Sin iniciar</label>
+          <label class="ms-opt"><input type="checkbox" value="en_curso" onchange="onMsChange('cxc')">En curso</label>
+          <label class="ms-opt"><input type="checkbox" value="etapa_finanzas" onchange="onMsChange('cxc')">Etapa Finanzas</label>
+          <label class="ms-opt"><input type="checkbox" value="finalizada" onchange="onMsChange('cxc')">Finalizada</label>
+          <label class="ms-opt"><input type="checkbox" value="pausada" onchange="onMsChange('cxc')">Pausada</label>
+          <label class="ms-opt"><input type="checkbox" value="cancelada" onchange="onMsChange('cxc')">Cancelada</label>
+        </div>
+      </div>
+      <div class="ms-dd" id="cxc-ms-campana">
+        <button type="button" class="filter-select ms-toggle" data-label="Estado campaña" onclick="toggleMsDd(event,this)">Estado campaña <span class="ms-caret">▾</span></button>
+        <div class="ms-panel" onclick="event.stopPropagation()">
+          <label class="ms-opt"><input type="checkbox" value="sin_iniciar" onchange="onMsChange('cxc')">Sin iniciar</label>
+          <label class="ms-opt"><input type="checkbox" value="en_curso" onchange="onMsChange('cxc')">En curso</label>
+          <label class="ms-opt"><input type="checkbox" value="finalizada" onchange="onMsChange('cxc')">Finalizada</label>
+          <label class="ms-opt"><input type="checkbox" value="pausada" onchange="onMsChange('cxc')">Pausada</label>
+          <label class="ms-opt"><input type="checkbox" value="cancelada" onchange="onMsChange('cxc')">Cancelada</label>
+        </div>
+      </div>
+      <div class="ms-dd" id="cxc-ms-factura">
+        <button type="button" class="filter-select ms-toggle" data-label="Estado factura" onclick="toggleMsDd(event,this)">Estado factura <span class="ms-caret">▾</span></button>
+        <div class="ms-panel" onclick="event.stopPropagation()">
+          <label class="ms-opt"><input type="checkbox" value="pendiente" onchange="onMsChange('cxc')">Pendiente</label>
+          <label class="ms-opt"><input type="checkbox" value="emitida" onchange="onMsChange('cxc')">Emitida</label>
+          <label class="ms-opt"><input type="checkbox" value="enviada" onchange="onMsChange('cxc')">Enviada</label>
+          <label class="ms-opt"><input type="checkbox" value="pagada_parcial" onchange="onMsChange('cxc')">Pago Parcial</label>
+          <label class="ms-opt"><input type="checkbox" value="cobrada" onchange="onMsChange('cxc')">Cobrada</label>
+          <label class="ms-opt"><input type="checkbox" value="cancelada" onchange="onMsChange('cxc')">Cancelada</label>
+        </div>
+      </div>
     </div>
     <div id="cxc-container"></div>
   </div>
@@ -386,23 +406,27 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
     </div>
     <div class="filters-estado">
       <span class="chip-filter-label">Filtrar por estado</span>
-      <select class="filter-select" id="cxp-estado-talento" onchange="renderCxP()">
-        <option value="">Estado talento: todos</option>
-        <option value="sin_iniciar">Talento · Sin iniciar</option>
-        <option value="en_curso">Talento · En curso</option>
-        <option value="etapa_finanzas">Talento · Etapa Finanzas</option>
-        <option value="finalizada">Talento · Finalizada</option>
-        <option value="pausada">Talento · Pausada</option>
-        <option value="cancelada">Talento · Cancelada</option>
-      </select>
-      <select class="filter-select" id="cxp-estado-campana" onchange="renderCxP()">
-        <option value="">Estado campaña: todas</option>
-        <option value="sin_iniciar">Campaña · Sin iniciar</option>
-        <option value="en_curso">Campaña · En curso</option>
-        <option value="finalizada">Campaña · Finalizada</option>
-        <option value="pausada">Campaña · Pausada</option>
-        <option value="cancelada">Campaña · Cancelada</option>
-      </select>
+      <div class="ms-dd" id="cxp-ms-talento">
+        <button type="button" class="filter-select ms-toggle" data-label="Estado talento" onclick="toggleMsDd(event,this)">Estado talento <span class="ms-caret">▾</span></button>
+        <div class="ms-panel" onclick="event.stopPropagation()">
+          <label class="ms-opt"><input type="checkbox" value="sin_iniciar" onchange="onMsChange('cxp')">Sin iniciar</label>
+          <label class="ms-opt"><input type="checkbox" value="en_curso" onchange="onMsChange('cxp')">En curso</label>
+          <label class="ms-opt"><input type="checkbox" value="etapa_finanzas" onchange="onMsChange('cxp')">Etapa Finanzas</label>
+          <label class="ms-opt"><input type="checkbox" value="finalizada" onchange="onMsChange('cxp')">Finalizada</label>
+          <label class="ms-opt"><input type="checkbox" value="pausada" onchange="onMsChange('cxp')">Pausada</label>
+          <label class="ms-opt"><input type="checkbox" value="cancelada" onchange="onMsChange('cxp')">Cancelada</label>
+        </div>
+      </div>
+      <div class="ms-dd" id="cxp-ms-campana">
+        <button type="button" class="filter-select ms-toggle" data-label="Estado campaña" onclick="toggleMsDd(event,this)">Estado campaña <span class="ms-caret">▾</span></button>
+        <div class="ms-panel" onclick="event.stopPropagation()">
+          <label class="ms-opt"><input type="checkbox" value="sin_iniciar" onchange="onMsChange('cxp')">Sin iniciar</label>
+          <label class="ms-opt"><input type="checkbox" value="en_curso" onchange="onMsChange('cxp')">En curso</label>
+          <label class="ms-opt"><input type="checkbox" value="finalizada" onchange="onMsChange('cxp')">Finalizada</label>
+          <label class="ms-opt"><input type="checkbox" value="pausada" onchange="onMsChange('cxp')">Pausada</label>
+          <label class="ms-opt"><input type="checkbox" value="cancelada" onchange="onMsChange('cxp')">Cancelada</label>
+        </div>
+      </div>
     </div>
     <div id="cxp-container"></div>
   </div>
@@ -738,6 +762,28 @@ function fmtMulti(map){
 }
 function addCur(map,cur,v){const c=cur||'USD';map[c]=(map[c]||0)+v;}
 
+// ── Dropdown multi-selección (filtros de estado) — permite marcar varios a la vez ──
+function toggleMsDd(ev,btn){
+  ev.stopPropagation();
+  const dd=btn.closest('.ms-dd');const open=dd.classList.contains('open');
+  document.querySelectorAll('.ms-dd.open').forEach(d=>d.classList.remove('open'));
+  if(!open)dd.classList.add('open');
+}
+function msValues(id){return [...document.querySelectorAll('#'+id+' input:checked')].map(i=>i.value);}
+function onMsChange(section){section==='cxc'?renderCxC():renderCxP();}
+function refreshMsLabels(){
+  document.querySelectorAll('.ms-dd').forEach(dd=>{
+    const btn=dd.querySelector('.ms-toggle');if(!btn)return;
+    const n=dd.querySelectorAll('input:checked').length;
+    btn.innerHTML=`${esc(btn.dataset.label||'')}${n?` <b style="color:var(--primary)">(${n})</b>`:''} <span class="ms-caret">▾</span>`;
+    btn.classList.toggle('has-val',n>0);
+  });
+}
+document.addEventListener('click',()=>document.querySelectorAll('.ms-dd.open').forEach(d=>d.classList.remove('open')));
+// Etiquetas del corredor / canal por donde ingresó (cobro) o salió (pago) el dinero
+const CORREDOR_LABEL={mercury:'Mercury',wise:'Wise',cxc_agustin:'CxC Agustín',cxc_flor:'CxC Flor',flor:'FLOR',cxp_agustin_cash:'CxP Agustín (cash)'};
+const corredorLbl=v=>CORREDOR_LABEL[v]||(v||'—');
+
 // ── Casillas QuickBooks (control de la contadora) ──
 // Celda con la casilla (el título va en el encabezado de columna). QB Factura se puede
 // marcar SIEMPRE (no hace falta tener la factura linkeada/PDF). QB Cobro depende de
@@ -825,9 +871,9 @@ function switchSection(s){
 // Devuelve las campañas de CxC que pasan los filtros actuales (reutilizable por stats)
 function cxcFilteredCampanas(){
   const q=(document.getElementById('cxc-search')?.value||'').toLowerCase().trim();
-  const estTal=document.getElementById('cxc-estado-talento')?.value||'';
-  const estCamp=document.getElementById('cxc-estado-campana')?.value||'';
-  const estFac=document.getElementById('cxc-estado-factura')?.value||'';
+  const estTals=msValues('cxc-ms-talento');
+  const estCampGen=msValues('cxc-ms-campana');
+  const estFacs=msValues('cxc-ms-factura');
   const facFilt=document.getElementById('cxc-factura')?.value||'';
   const qbFac=document.getElementById('cxc-qb-factura')?.value||'';
   const qbCob=document.getElementById('cxc-qb-cobro')?.value||'';
@@ -861,15 +907,15 @@ function cxcFilteredCampanas(){
     if(qbFac==='no'&&!facsActivas.some(f=>!f.qb_factura))return;
     if(qbCob==='si'&&!facsActivas.some(f=>f.qb_cobro))return;
     if(qbCob==='no'&&!facsActivas.some(f=>!f.qb_cobro))return;
-    // Estado GENERAL de la campaña
-    if(estCamp&&(c.estado||'')!==estCamp)return;
+    // Estado GENERAL de la campaña (multi-selección: pasa si coincide con alguno)
+    if(estCampGen.length&&!estCampGen.includes(c.estado||''))return;
     // Estado de TALENTO: muestra la campaña si AL MENOS un talento coincide
-    if(estTal){
+    if(estTals.length){
       const tEstados=cts.map(ct=>ct.estado||'en_curso');
-      if(!tEstados.includes(estTal))return;
+      if(!tEstados.some(s=>estTals.includes(s)))return;
     }
-    // Estado de FACTURA: muestra la campaña si AL MENOS una factura tiene ese estado
-    if(estFac&&!facs.some(f=>f.estado===estFac))return;
+    // Estado de FACTURA: muestra la campaña si AL MENOS una factura coincide
+    if(estFacs.length&&!facs.some(f=>estFacs.includes(f.estado)))return;
     out.push({...c,facs,cliente:cli});
   });
   return out;
@@ -886,7 +932,7 @@ function cxcCampMontos(c){
 }
 
 function renderCxC(){
-  document.querySelectorAll('#section-cxc .filters-estado .filter-select').forEach(el=>el.classList.toggle('has-val',!!el.value));
+  refreshMsLabels();
   const sort=document.getElementById('cxc-sort')?.value||'desc';
   const container=document.getElementById('cxc-container');
   const camps=cxcFilteredCampanas();
@@ -907,7 +953,7 @@ function renderCxC(){
   vencidas.sort((a,b)=>(vencInfo(a)?.dias??0)-(vencInfo(b)?.dias??0)); // las más vencidas primero
   const alertBanner=vencidas.length?`<div style="padding:11px 14px;margin-bottom:12px;background:rgba(229,57,53,0.07);border:1px solid rgba(229,57,53,0.40);border-radius:var(--radius)">
     <div style="color:#e53935;font-weight:700;font-size:13px;margin-bottom:4px">⚠ ${vencidas.length} factura(s) vencida(s) sin cobrar · ${fmtMulti(vencTot)}</div>
-    ${vencidas.map(f=>{const camp=campanas.find(c=>c.id===f.campana_id);const v=vencInfo(f);const tals=facturaTalNombres(f).join(', ');return `<div onclick="jumpToCamp(${f.campana_id})" title="Ir a la campaña" style="cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0;border-top:1px solid rgba(229,57,53,0.18)">
+    ${vencidas.map(f=>{const camp=campanas.find(c=>c.id===f.campana_id);const v=vencInfo(f);const tals=facturaTalNombres(f).join(', ');return `<div onclick="jumpToCamp(${f.campana_id},${f.id})" title="Ir a la factura" style="cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0;border-top:1px solid rgba(229,57,53,0.18)">
       <span class="venc-badge venc-vencida">${v?v.label:'Vencida'}</span>
       <b>${esc(camp?.nombre||'—')}</b>
       <span style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">· ${esc(camp?.marcas?.nombre||'')}${tals?' · '+esc(tals):''}${f.numero_factura?' · #'+esc(f.numero_factura):''}</span>
@@ -939,10 +985,9 @@ function renderCxC(){
         ${(()=>{const orf=facturasHuerfanas(c);return orf.length?`<div style="padding:8px 14px;background:rgba(251,191,36,0.12);border-top:1px solid var(--border);font-size:12px;color:var(--orange);display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b>⚠ ${orf.length} factura(s) sin asignar a un talento</b><span style="color:var(--text-muted)">— asignala en vez de crear una nueva:</span>${orf.map(f=>`<button class="btn btn-xs btn-outline" onclick="editFactura(${f.id})">Asignar ${f.numero_factura?'#'+esc(f.numero_factura):'factura'} · ${fmtMoney(f.monto,f.moneda)}</button>`).join('')}</div>`:'';})()}
         <div style="display:flex;gap:8px;align-items:center;padding:8px 14px">
           <button class="btn btn-primary btn-xs" id="cxc-group-btn-${c.id}" style="display:${selN>=2?'':'none'}" onclick="facturarEnConjunto(${c.id},${cliId})">Facturar en conjunto (${selN})</button>
-          ${c.facs.length?`<button class="btn btn-ghost btn-xs" onclick="toggleDetail('cxc-facs-${c.id}')">Ver facturas (${c.facs.length}) ▾</button>`:''}
+          <span style="font-size:11px;color:var(--text-dim)">${facsActivas.length?'Tocá una factura para ver su detalle ▾':''}</span>
           <button class="btn btn-outline btn-xs" style="margin-left:auto" onclick="openNuevaFactura(${c.id},${cliId})" title="Crear factura eligiendo talentos en el modal">+ Factura</button>
         </div>
-        ${c.facs.length?`<div class="fin-detail${openAccordions.has('cxc-facs-'+c.id)?' open':''}" id="cxc-facs-${c.id}">${c.facs.map(fx=>renderFacturaDetail(fx,c)).join('<div style="height:10px"></div>')}</div>`:''}
         <div class="fin-total-row"><span class="lbl">Total ${esc(c.nombre)}</span><b class="fin-row-amount">${fmtMulti(m)}</b></div>
       </div>
     </div>`;
@@ -1021,25 +1066,57 @@ function facturaAsignada(f){
 // Facturas activas de la campaña que NO están asignadas a ningún talento (huérfanas)
 function facturasHuerfanas(c){return (c.facs||[]).filter(f=>f.estado!=='cancelada'&&!facturaAsignada(f));}
 
-// Fila de FACTURA (sección "Facturas"): cada factura con su QB Fact / QB Cobro / cobro / envío
+// Sub-campañas (cts) que cubre una factura — para mostrar el estado del talento en la fila
+function facturaCts(f){
+  if(!f)return [];
+  const links=facturaTalentos.filter(ft=>ft.factura_id===f.id).map(ft=>ft.campana_talento_id);
+  if(links.length)return links.map(id=>campanasTalentos.find(x=>x.id===id)).filter(Boolean);
+  const cts=campanasTalentos.filter(ct=>ct.campana_id===f.campana_id);
+  let ct=f.orden_compra?cts.find(x=>x.identificador===f.orden_compra):null;
+  if(!ct&&f.numero_factura)ct=cts.find(x=>x.identificador===f.numero_factura);
+  return ct?[ct]:[];
+}
+// Expandir/colapsar el detalle de UNA factura (debajo de su propia línea)
+function toggleFacRow(id){
+  const det=document.getElementById('facdet-'+id);if(!det)return;
+  const open=det.classList.toggle('open');
+  const row=det.previousElementSibling;if(row)row.classList.toggle('fac-row-open',open);
+  if(open)openAccordions.add('facdet-'+id);else openAccordions.delete('facdet-'+id);
+}
+// Fila de FACTURA (sección "Facturas"): estado talento + estado factura + cobro est/real +
+// por dónde ingresó + QB + accesos a PDF/comprobante. Click en la fila = expandir detalle.
 function renderCxCFacturaRow(f,c){
   const estLbl={pendiente:'Pendiente',emitida:'Emitida',enviada:'Enviada',pagada_parcial:'Pago Parcial',cobrada:'Cobrada',cancelada:'Cancelada'}[f.estado]||f.estado;
   const tals=facturaTalNombres(f).join(', ')||'sin asignar';
   const grouped=facturaCubreVarios(f);
   const venc=vencInfo(f);
   const overdue=facVencida(f)&&facSaldo(f)>0;
-  const cobro=f.fecha_vencimiento?`${formatDate(f.fecha_vencimiento)}${venc&&venc.dias<0?`<div><span class="venc-badge ${venc.cls}">⚠ ${venc.label}</span></div>`:''}`:'<span style="color:var(--orange);font-size:11px">falta envío</span>';
   const saldo=facSaldo(f),pagado=facPagado(f);
-  return `<div class="fin-row cxc-tal-row"${overdue?' style="background:rgba(229,57,53,0.07)"':''}>
-      <div class="qb-cell"></div>
-      <div class="fin-row-name">${esc(tals)}${grouped?' <span style="font-size:9px;color:var(--text-dim);background:var(--surface2);padding:1px 5px;border-radius:4px">agrupada</span>':''}${f.numero_factura?`<div style="font-size:10px;color:var(--text-dim);font-family:'SF Mono',monospace;margin-top:1px">#${esc(f.numero_factura)}</div>`:''}</div>
+  // Estado del/los talento(s) de esta factura (sin repetir)
+  const estTalBadges=[...new Set(facturaCts(f).map(ct=>ct.estado||'en_curso'))].map(e=>talEstadoBadge(e)).join(' ');
+  // Cobro real + por dónde ingresó (corredor) + comprobante, desde pagos_marca
+  const pagos=pagosMarca.filter(p=>p.factura_id===f.id);
+  const ultimoPago=pagos[0];
+  const comprobante=(pagos.find(p=>p.comprobante_url)||{}).comprobante_url;
+  const cobroEst=f.fecha_vencimiento?`<div>${formatDate(f.fecha_vencimiento)}${venc&&venc.dias<0?` <span class="venc-badge ${venc.cls}">⚠ ${venc.label}</span>`:''}</div>`:'<span style="color:var(--orange);font-size:11px">falta envío</span>';
+  const cobroReal=ultimoPago&&ultimoPago.fecha_pago?`<div style="color:var(--green);font-weight:600;font-size:10px;margin-top:2px">✓ Cobrado ${formatDate(ultimoPago.fecha_pago)}${ultimoPago.corredor?` · vía ${esc(corredorLbl(ultimoPago.corredor))}`:''}</div>`:'';
+  const open=openAccordions.has('facdet-'+f.id);
+  return `<div class="fin-row cxc-tal-row fac-clickable${open?' fac-row-open':''}"${overdue?' style="background:rgba(229,57,53,0.07)"':''} onclick="if(!event.target.closest('button,a,input,label'))toggleFacRow(${f.id})">
+      <div class="qb-cell"><span class="fac-caret">▾</span></div>
+      <div class="fin-row-name">${esc(tals)}${grouped?' <span style="font-size:9px;color:var(--text-dim);background:var(--surface2);padding:1px 5px;border-radius:4px">agrupada</span>':''}${f.numero_factura?`<div style="font-size:10px;color:var(--text-dim);font-family:'SF Mono',monospace;margin-top:1px">#${esc(f.numero_factura)}</div>`:''}${estTalBadges?`<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px">${estTalBadges}</div>`:''}</div>
       <div><span class="status-pill st-${f.estado}">${estLbl}</span></div>
-      <div class="fin-row-date">${cobro}</div>
+      <div class="fin-row-date">${cobroEst}${cobroReal}</div>
       <div class="fin-row-amount">${fmtMoney(f.monto,f.moneda)}${saldo>0&&pagado>0?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,f.moneda)}</div>`:''}</div>
       ${qbBox(f.qb_factura,`setQbFacFactura(${f.id},this.checked)`)}
       ${qbBox(f.qb_cobro,`setQbFacCobro(${f.id},this.checked)`,{disabled:!f.qb_factura,title:'Primero marcá QB Factura'})}
-      <div class="fin-row-actions">${f.estado!=='cobrada'&&f.estado!=='cancelada'?`<button class="btn btn-green btn-xs" onclick="openComprobante(${f.id},${c.id})">Cobro</button>`:''}<button class="btn btn-outline btn-xs" onclick="editFactura(${f.id})">Editar</button></div>
-    </div>`;
+      <div class="fin-row-actions">
+        ${f.factura_pdf_url?`<a class="btn btn-ghost btn-xs" href="${f.factura_pdf_url}" target="_blank" title="Ver PDF de la factura">Factura</a>`:''}
+        ${comprobante?`<a class="btn btn-ghost btn-xs" href="${comprobante}" target="_blank" title="Ver comprobante de pago">Comp.</a>`:''}
+        ${f.estado!=='cobrada'&&f.estado!=='cancelada'?`<button class="btn btn-green btn-xs" onclick="openComprobante(${f.id},${c.id})">Cobro</button>`:''}
+        <button class="btn btn-outline btn-xs" onclick="editFactura(${f.id})">Editar</button>
+      </div>
+    </div>
+    <div class="fin-detail${open?' open':''}" id="facdet-${f.id}">${renderFacturaDetail(f,c)}</div>`;
 }
 // Fila POR FACTURAR (sección "Por facturar"): talento con saldo sin facturar (total o parcial)
 function renderCxCPorFacturarRow(ct,resta,c){
@@ -1061,16 +1138,15 @@ function renderCxCPorFacturarRow(ct,resta,c){
     </div>`;
 }
 // Salta a la campaña en CxC y la resalta (desde la alerta de vencidas)
-function jumpToCamp(id){
+function jumpToCamp(id,facId){
   const el=document.getElementById('cxc-camp-'+id);
   if(!el)return;
   el.scrollIntoView({behavior:'smooth',block:'center'});
   el.style.transition='box-shadow .25s';
   el.style.boxShadow='0 0 0 3px rgba(229,57,53,0.65)';
   setTimeout(()=>{el.style.boxShadow='';},2000);
-  // Abre el bloque de facturas de la campaña para ver la vencida (y persiste el estado)
-  const facs=document.getElementById('cxc-facs-'+id);
-  if(facs&&!facs.classList.contains('open')){facs.classList.add('open');openAccordions.add('cxc-facs-'+id);}
+  // Expande el detalle de ESA factura vencida (cada factura es su propia línea)
+  if(facId){const det=document.getElementById('facdet-'+facId);if(det&&!det.classList.contains('open')){det.classList.add('open');const row=det.previousElementSibling;if(row)row.classList.add('fac-row-open');openAccordions.add('facdet-'+facId);}}
 }
 // Selección de sub-campañas para facturar en conjunto
 function onCxcSelToggle(ctId,campId,checked){
@@ -1524,8 +1600,8 @@ function cxpFilteredTalentos(){
   const filt=document.getElementById('cxp-filter')?.value||'';
   const qbFac=document.getElementById('cxp-qb-factura')?.value||'';
   const qbPago=document.getElementById('cxp-qb-pago')?.value||'';
-  const estTal=document.getElementById('cxp-estado-talento')?.value||'';
-  const estCamp=document.getElementById('cxp-estado-campana')?.value||'';
+  const estTals=msValues('cxp-ms-talento');
+  const estCampGen=msValues('cxp-ms-campana');
   return campanasTalentos.filter(ct=>{
     if(filt&&ctEstadoPago(ct)!==filt)return false;
     if(qbFac==='si'&&!ct.qb_factura)return false;
@@ -1533,8 +1609,8 @@ function cxpFilteredTalentos(){
     if(qbPago==='si'&&!ct.qb_pago)return false;
     if(qbPago==='no'&&ct.qb_pago)return false;
     const camp=campanas.find(c=>c.id===ct.campana_id);
-    if(estCamp&&(camp?.estado||'')!==estCamp)return false;
-    if(estTal&&(ct.estado||'en_curso')!==estTal)return false;
+    if(estCampGen.length&&!estCampGen.includes(camp?.estado||''))return false;
+    if(estTals.length&&!estTals.includes(ct.estado||'en_curso'))return false;
     const tName=(ct.talentos?.nombre||'').toLowerCase();
     const cName=(camp?.nombre||'').toLowerCase();
     const ident=(ct.identificador||'').toLowerCase();
@@ -1549,12 +1625,12 @@ function cxpFilteredTalentos(){
 function cxpFilteredComisiones(){
   const q=(document.getElementById('cxp-search')?.value||'').toLowerCase().trim();
   const filt=document.getElementById('cxp-filter')?.value||'';
-  const estCamp=document.getElementById('cxp-estado-campana')?.value||'';
+  const estCampGen=msValues('cxp-ms-campana');
   return comisiones.filter(com=>{
     if(filt&&comEstadoPago(com)!==filt)return false;
     const camp=campanas.find(c=>c.id===com.campana_id);
     if(!camp)return false; // campaña en papelera / inexistente
-    if(estCamp&&(camp.estado||'')!==estCamp)return false;
+    if(estCampGen.length&&!estCampGen.includes(camp.estado||''))return false;
     if(q){
       const ter=(com.terceros?.nombre||'').toLowerCase();
       const cName=(camp.nombre||'').toLowerCase();
@@ -1567,7 +1643,7 @@ function cxpFilteredComisiones(){
 }
 
 function renderCxP(){
-  document.querySelectorAll('#section-cxp .filters-estado .filter-select').forEach(el=>el.classList.toggle('has-val',!!el.value));
+  refreshMsLabels();
   const container=document.getElementById('cxp-container');
   const rows=cxpFilteredTalentos();
   const coms=cxpFilteredComisiones();
