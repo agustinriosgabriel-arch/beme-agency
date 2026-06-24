@@ -409,10 +409,10 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   <div class="modal-body">
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Tipo *</label><select id="fac-tipo" class="form-input"><option value="PUE">PUE</option><option value="PPD">PPD</option><option value="invoice">Invoice (Internacional)</option></select></div>
-      <div class="form-group full" id="fac-talento-group" style="display:none"><label class="form-label">Talento de la campaña *</label><select id="fac-talento" class="form-input" onchange="onFacTalentoChange()"></select><div style="font-size:11px;color:var(--text-dim);margin-top:4px">Al elegir el talento, se autoasigna el Folio = identificador de ese talento.</div></div>
+      <div class="form-group full" id="fac-talento-group" style="display:none"><label class="form-label">Talento(s) de la campaña *</label><div id="fac-talento" style="max-height:170px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:6px;background:var(--surface2)"></div><div style="font-size:11px;color:var(--text-dim);margin-top:4px">Marca uno o varios talentos para agruparlos en una sola factura. El monto suma su fee y el Folio/OC se autoasigna.</div><div id="fac-talento-warn" style="display:none;font-size:11px;color:var(--orange);font-weight:600;margin-top:4px"></div></div>
       <div class="form-group"><label class="form-label">Folio (Numero)</label><input type="text" id="fac-numero" class="form-input" placeholder="Se autoasigna con el identificador" readonly style="background:var(--surface2);font-family:'SF Mono',monospace;font-weight:600;color:var(--primary)"></div>
       <div class="form-group full"><label class="form-label">Orden de Compra (identificador campaña)</label><input type="text" id="fac-orden-compra" class="form-input" placeholder="Ej: 001/0042/00125/01" readonly style="background:var(--surface2);font-family:'SF Mono',monospace;color:var(--text-muted)"></div>
-      <div class="form-group"><label class="form-label">Monto *</label><input type="number" id="fac-monto" class="form-input" placeholder="0.00" step="0.01"></div>
+      <div class="form-group"><label class="form-label">Monto *</label><input type="number" id="fac-monto" class="form-input" placeholder="0.00" step="0.01" oninput="this.dataset.autofilled='0'"></div>
       <div class="form-group"><label class="form-label">Moneda</label><select id="fac-moneda" class="form-input"><option value="MXN">MXN</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
       <div class="form-group"><label class="form-label">Fecha Emision</label><input type="date" id="fac-fecha-emision" class="form-input" onchange="updateVencimientoHint()"></div>
       <div class="form-group"><label class="form-label">Días de crédito</label><input type="number" id="fac-dias-credito" class="form-input" value="45" min="0" step="1" onchange="updateVencimientoHint()" oninput="updateVencimientoHint()"><div class="form-hint" id="fac-venc-hint">Contado = 0 días</div></div>
@@ -562,7 +562,7 @@ const sb=supabase.createClient(SB_URL,SB_KEY);
 
 let currentUser=null,currentProfile=null;
 let campanas=[],clientes=[],marcas=[],facturas=[],pagosMarca=[],complementos=[],pagosTalento=[],campanasTalentos=[],auditoria=[];
-let terceros=[],comisiones=[],pagosTercero=[];
+let terceros=[],comisiones=[],pagosTercero=[],facturaTalentos=[];
 let activeSection='cxc',isDark=false;
 let editingFacturaId=null,editingFacturaCampanaId=null,editingFacturaClienteId=null;
 let compFacturaId=null,complFacturaId=null,complPagoId=null;
@@ -616,7 +616,7 @@ async function autoRefreshTick(){
 function startAutoRefresh(){if(_autoRefreshTimer)return;_autoRefreshTimer=setInterval(autoRefreshTick,4000);}
 
 async function loadData(){
-  const[cmpR,cliR,facR,pmR,compR,ptR,ctR,audR,terR,comR,ptcR]=await Promise.all([
+  const[cmpR,cliR,facR,pmR,compR,ptR,ctR,audR,terR,comR,ptcR,ftR]=await Promise.all([
     sb.from('campanas').select('*,marcas(id,nombre,cliente_id,clientes(id,nombre,pais))').is('deleted_at',null).order('created_at',{ascending:false}),
     sb.from('clientes').select('*').order('nombre'),
     sb.from('facturas').select('*').order('created_at',{ascending:false}),
@@ -628,11 +628,13 @@ async function loadData(){
     sb.from('terceros').select('*').order('nombre'),
     sb.from('comisiones_terceros').select('*,terceros(id,nombre,rol)').order('created_at',{ascending:false}),
     sb.from('pagos_tercero').select('*').order('created_at',{ascending:false}),
+    sb.from('factura_talentos').select('*'),
   ]);
   campanas=cmpR.data||[];clientes=cliR.data||[];facturas=facR.data||[];
   pagosMarca=pmR.data||[];complementos=compR.data||[];pagosTalento=ptR.data||[];
   auditoria=audR.data||[]; // si la tabla no existe aún, queda []
   terceros=terR.data||[];comisiones=comR.data||[];pagosTercero=ptcR.data||[]; // [] si la migración aún no corrió
+  facturaTalentos=ftR.data||[]; // [] si la migración factura_talentos aún no corrió
   const campanasIds=new Set(campanas.map(c=>c.id));
   campanasTalentos=(ctR.data||[]).filter(ct=>campanasIds.has(ct.campana_id));
 }
@@ -902,6 +904,26 @@ function cxcTalEstados(campId){
   return Object.entries(counts).map(([e,n])=>
     `<span class="camp-estado ce-${e}" title="${n} talento(s) en ${TAL_EST[e]||e}">${TAL_EST_SHORT[e]||e}${n>1?' ·'+n:''}</span>`).join('');
 }
+// Nombres de talento de una campaña
+function cxcTalNombres(campId){
+  return campanasTalentos.filter(ct=>ct.campana_id===campId).map(ct=>ct.talentos?.nombre||('Talento '+ct.id));
+}
+// Nombres de los talentos que CUBRE una factura: enlace real → match OC (legacy) → talentos de campaña
+function facturaTalNombres(f){
+  if(!f)return [];
+  const links=facturaTalentos.filter(ft=>ft.factura_id===f.id).map(ft=>ft.campana_talento_id);
+  if(links.length)return links.map(id=>{const ct=campanasTalentos.find(x=>x.id===id);return ct?.talentos?.nombre||('Talento '+id);});
+  const cts=campanasTalentos.filter(ct=>ct.campana_id===f.campana_id);
+  let ct=f.orden_compra?cts.find(x=>x.identificador===f.orden_compra):null;
+  if(!ct&&f.numero_factura)ct=cts.find(x=>x.identificador===f.numero_factura);
+  return ct?[ct.talentos?.nombre||('Talento '+ct.id)]:[];
+}
+// Chip compacto: "" | nombre | "Primero +N" (title = lista completa)
+function talNombresChip(nombres){
+  if(!nombres||!nombres.length)return '';
+  const label=nombres.length===1?esc(nombres[0]):`${esc(nombres[0])} +${nombres.length-1}`;
+  return `<span title="${esc(nombres.join(', '))}">${label}</span>`;
+}
 
 // Finaliza la campaña automáticamente cuando se TERMINAN TODOS LOS CONTENIDOS
 // (todos los talentos en etapa_finanzas o finalizada), INDEPENDIENTE del cobro
@@ -933,7 +955,7 @@ function renderCxCRow(c){
   const saldo=fac?facSaldo(fac):0;
 
   return `<div class="fin-row cxc-row" onclick="toggleDetail('detail-${c.id}')" style="cursor:pointer">
-      <div class="fin-row-name">${esc(c.nombre)}</div>
+      <div class="fin-row-name">${esc(c.nombre)}${(()=>{const ch=talNombresChip(cxcTalNombres(c.id));return ch?`<div style="font-size:11px;color:var(--text-dim);font-weight:500;margin-top:1px">${ch}</div>`:'';})()}</div>
       <div class="fin-row-meta">${esc(c.marcas?.nombre||'')}</div>
       <div class="fin-row-date">${c.fecha_inicio?formatDate(c.fecha_inicio):'—'}</div>
       <div>${campEstadoBadge(c.estado)||'<span style="color:var(--text-dim);font-size:11px">—</span>'}</div>
@@ -968,6 +990,7 @@ function renderFacturaDetail(f,c){
   return `<div class="fin-detail-grid">
     <div class="fin-detail-card">
       <div class="fd-title">Factura</div>
+      ${(()=>{const ns=facturaTalNombres(f);return ns.length?`<div style="font-size:11px;color:var(--text-muted);margin:2px 0">${ns.length===1?'Talento':'Talentos'}: <b>${esc(ns.join(', '))}</b></div>`:'';})()}
       <div class="fd-status"><span class="status-pill st-${f.estado}">${f.estado==='pagada_parcial'?'pago parcial':f.estado}</span> ${esquema} <span style="font-size:11px;color:var(--text-dim)">${f.tipo} ${f.numero_factura?'#'+f.numero_factura:''}</span></div>
       ${f.fecha_emision?`<div style="font-size:11px;color:var(--text-muted)">Emitida: ${formatDate(f.fecha_emision)}${f.dias_credito!=null?` · ${f.dias_credito}d crédito`:''}</div>`:''}
       ${venc?`<div style="margin:4px 0"><span class="venc-badge ${venc.cls}">${venc.label}</span></div>`:''}
@@ -1013,33 +1036,57 @@ function renderFacturaDetail(f,c){
 function toggleDetail(id){document.getElementById(id)?.classList.toggle('open');}
 
 // Factura CRUD
-function populateFacTalentos(campanaId, selectedCtId){
+// Checklist multi-talento: una factura puede agrupar varios talentos de la misma campaña
+function populateFacTalentos(campanaId, selectedCtIds){
   const cts = campanasTalentos.filter(ct=>ct.campana_id===campanaId);
-  const sel = document.getElementById('fac-talento');
+  const box = document.getElementById('fac-talento');
   const grp = document.getElementById('fac-talento-group');
-  if(!sel || !grp) return cts;
-  sel.innerHTML = cts.map(ct=>{
-    const nombre = ct.talentos?.nombre || 'Talento '+ct.id;
-    const id = ct.identificador ? ` — ${ct.identificador}` : '';
-    return `<option value="${ct.id}">${nombre}${id}</option>`;
+  if(!box || !grp) return cts;
+  const sel = new Set((selectedCtIds||[]).map(Number));
+  box.innerHTML = cts.map(ct=>{
+    const nombre = esc(ct.talentos?.nombre || ('Talento '+ct.id));
+    const moneda = ct.moneda_marca || ct.moneda || 'USD';
+    const fee = Number(ct.fee_marca)||0;
+    const ident = ct.identificador || '';
+    const meta = `${ident?esc(ident)+' · ':''}${fmtMoney(fee,moneda)}`;
+    return `<label style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;font-size:12px">
+      <input type="checkbox" value="${ct.id}" data-fee="${fee}" data-moneda="${esc(moneda)}" data-ident="${esc(ident)}" ${sel.has(ct.id)?'checked':''} onchange="onFacTalentoChange()" style="width:auto;margin:0;flex:none">
+      <span><b>${nombre}</b> <span style="color:var(--text-dim)">${meta}</span></span>
+    </label>`;
   }).join('');
-  // Mostrar siempre el selector (también con un solo talento, para claridad)
   grp.style.display = cts.length ? '' : 'none';
-  if (selectedCtId) sel.value = selectedCtId;
   return cts;
 }
+function facCheckedTalentos(){
+  return Array.from(document.querySelectorAll('#fac-talento input[type=checkbox]:checked'));
+}
 function onFacTalentoChange(){
-  const ctId = parseInt(document.getElementById('fac-talento').value)||0;
-  const ct = campanasTalentos.find(x=>x.id===ctId);
-  if(!ct) return;
-  const numEl = document.getElementById('fac-numero');
-  const ocEl  = document.getElementById('fac-orden-compra');
+  const checked = facCheckedTalentos();
+  const idents  = checked.map(c=>c.dataset.ident).filter(Boolean);
+  const ocEl    = document.getElementById('fac-orden-compra');
+  const numEl   = document.getElementById('fac-numero');
   const montoEl = document.getElementById('fac-monto');
-  if(numEl && ct.identificador) numEl.value = ct.identificador;
-  if(ocEl  && ct.identificador) ocEl.value  = ct.identificador;
-  if(montoEl && (!montoEl.value || montoEl.dataset.autofilled==='1')) {
-    montoEl.value = Number(ct.fee_marca)||0;
-    montoEl.dataset.autofilled = '1';
+  const monEl   = document.getElementById('fac-moneda');
+  const warn    = document.getElementById('fac-talento-warn');
+  // Orden de compra = identificadores de los talentos marcados
+  if(ocEl) ocEl.value = idents.join(', ');
+  // Folio: 1 talento → su identificador (readonly, como antes); varios → editable
+  if(numEl){
+    if(checked.length<=1){ numEl.readOnly=true; numEl.style.background='var(--surface2)'; numEl.value = idents[0]||''; }
+    else { numEl.readOnly=false; numEl.style.background=''; }
+  }
+  // Aviso si hay monedas distintas entre los marcados
+  const monedas=[...new Set(checked.map(c=>c.dataset.moneda||'USD'))];
+  if(warn){
+    if(monedas.length>1){ warn.style.display=''; warn.textContent='⚠ Monedas distintas ('+monedas.join(', ')+'); el monto suma solo '+monedas[0]+', revísalo.'; }
+    else { warn.style.display='none'; warn.textContent=''; }
+  }
+  // Monto: auto-suma del fee_marca de los marcados (solo en modo auto; editable lo respeta)
+  if(montoEl && montoEl.dataset.autofilled==='1'){
+    const moneda = monedas[0] || (monEl?monEl.value:'USD');
+    if(monEl && monedas.length) monEl.value = moneda;
+    const sum = checked.filter(c=>(c.dataset.moneda||'USD')===moneda).reduce((s,c)=>s+(Number(c.dataset.fee)||0),0);
+    montoEl.value = sum;
   }
 }
 // Esquema de pago: muestra % anticipo cuando aplica
@@ -1079,8 +1126,10 @@ function openNuevaFactura(campanaId,clienteId){
   onEsquemaChange();updateVencimientoHint();
   const montoEl = document.getElementById('fac-monto');
   if (montoEl) { montoEl.value = ''; montoEl.dataset.autofilled = '1'; }
-  // Selector de talento + autoasignación de folio/OC con el identificador
-  const cts = populateFacTalentos(campanaId);
+  // Checklist de talentos: si la campaña tiene 1 solo se premarca; con varios elige el usuario
+  const ctsAll = campanasTalentos.filter(ct=>ct.campana_id===campanaId);
+  const pre = ctsAll.length===1 ? [ctsAll[0].id] : [];
+  const cts = populateFacTalentos(campanaId, pre);
   if (cts.length) onFacTalentoChange();
   // Internacional?
   const cli=clientes.find(c=>c.id===clienteId);
@@ -1106,17 +1155,18 @@ function editFactura(id){
   document.getElementById('fac-forma-pago').value=f.forma_pago||'';
   onEsquemaChange();updateVencimientoHint();
   document.getElementById('fac-notas').value=f.notas||'';
-  // Resolver el campana_talento por identificador (orden_compra) si existe
+  // Talentos enlazados (tabla factura_talentos). Fallback a match por OC/folio para facturas legacy.
   const cts = campanasTalentos.filter(ct=>ct.campana_id===f.campana_id);
-  let matchedCt = null;
-  if (f.orden_compra) {
-    matchedCt = cts.find(ct => ct.identificador === f.orden_compra);
+  let linkedIds = facturaTalentos.filter(ft=>ft.factura_id===f.id).map(ft=>ft.campana_talento_id);
+  if(!linkedIds.length){
+    let matchedCt = f.orden_compra ? cts.find(ct=>ct.identificador===f.orden_compra) : null;
+    if(!matchedCt && f.numero_factura) matchedCt = cts.find(ct=>ct.identificador===f.numero_factura);
+    if(matchedCt) linkedIds=[matchedCt.id];
   }
-  if (!matchedCt && f.numero_factura) {
-    matchedCt = cts.find(ct => ct.identificador === f.numero_factura);
-  }
-  populateFacTalentos(f.campana_id, matchedCt?.id);
-  document.getElementById('fac-orden-compra').value = f.orden_compra || matchedCt?.identificador || '';
+  populateFacTalentos(f.campana_id, linkedIds);
+  onFacTalentoChange();
+  // Preservar la OC guardada (onFacTalentoChange la reconstruye desde los marcados)
+  if(f.orden_compra) document.getElementById('fac-orden-compra').value = f.orden_compra;
   openModal('modal-factura');
 }
 async function saveFactura(){
@@ -1146,11 +1196,21 @@ async function saveFactura(){
   try{
     if(pdfFile)payload.factura_pdf_url=await uploadFile(pdfFile,`campana-${editingFacturaCampanaId}/factura`);
     if(xmlFile)payload.factura_xml_url=await uploadFile(xmlFile,`campana-${editingFacturaCampanaId}/factura`);
+    let facId=editingFacturaId;
     if(editingFacturaId){
       const{error}=await sb.from('facturas').update(payload).eq('id',editingFacturaId);if(error)throw error;
     }else{
       payload.created_by=currentUser.id;
-      const{error}=await sb.from('facturas').insert(payload);if(error)throw error;
+      const{data,error}=await sb.from('facturas').insert(payload).select('id').single();if(error)throw error;
+      facId=data?.id;
+    }
+    // Sincronizar talentos que cubre la factura (tabla de enlace). Degradación elegante si aún no existe.
+    if(facId){
+      try{
+        const ctIds=facCheckedTalentos().map(c=>parseInt(c.value)).filter(Boolean);
+        await sb.from('factura_talentos').delete().eq('factura_id',facId);
+        if(ctIds.length)await sb.from('factura_talentos').insert(ctIds.map(id=>({factura_id:facId,campana_talento_id:id})));
+      }catch(e){console.warn('factura_talentos sync:',e);}
     }
     closeModal('modal-factura');await loadData();renderAll();
     showToast(editingFacturaId?'Factura actualizada':'Factura creada','success');

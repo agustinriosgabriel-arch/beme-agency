@@ -574,3 +574,22 @@ a una persona externa. Se muestran en Finanzas → CxP como entradas a pagar.
   (pendiente/parcial/pagado).
 
 RLS: las 3 tablas son solo para equipo interno vía `is_internal()`.
+
+## Facturas multi-talento (sql/factura_talentos_2026_06_24.sql)
+
+Antes una factura (CxC) se enlazaba a **un** talento vía el string `facturas.orden_compra =
+campana_talentos.identificador`. Ahora una factura puede **agrupar varios talentos de la MISMA
+campaña** (monto = suma de `fee_marca`, editable).
+
+- **`factura_talentos`** — tabla de enlace factura ↔ talentos de campaña que cubre:
+  `id, factura_id (FK facturas ON DELETE CASCADE), campana_talento_id (FK campana_talentos
+  ON DELETE CASCADE), created_at`. `UNIQUE (factura_id, campana_talento_id)`.
+  - Es la **fuente de verdad** de qué talento(s) cubre la factura. Finanzas → CxC muestra el/los
+    talento(s) en la fila (formato "Primero +N") y en el detalle de cada factura.
+  - El modal de factura usa un **checklist** de talentos de la campaña; al marcar varios, el monto
+    auto-suma su `fee_marca` (editable) y el Folio/OC se autoasigna con los identificadores.
+  - `facturas.orden_compra` se mantiene como referencia legible (no se borra).
+  - **Backfill** idempotente: enlaza facturas existentes a su talento por `orden_compra` (o
+    `numero_factura`) que matchee `campana_talentos.identificador` en la misma campaña.
+
+RLS: admin-only vía `is_admin()`, igual que `facturas` / `pagos_marca`.
