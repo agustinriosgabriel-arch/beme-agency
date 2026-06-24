@@ -1100,7 +1100,9 @@ function renderCxCFacturaRow(f,c){
   const ultimoPago=pagos[0];
   const comprobante=(pagos.find(p=>p.comprobante_url)||{}).comprobante_url;
   const dim='<span style="color:var(--text-dim)">—</span>';
-  const cobroEst=f.fecha_vencimiento?`${formatDate(f.fecha_vencimiento)}${venc&&venc.dias<0?`<div><span class="venc-badge ${venc.cls}">⚠ ${venc.label}</span></div>`:''}`:'<span style="color:var(--orange);font-size:11px">falta envío</span>';
+  // Debajo de la fecha estimada: cuántos días faltan (o vencida hace cuánto), color según urgencia
+  const diasBadge=venc?`<div style="margin-top:2px"><span class="venc-badge ${venc.cls}">${venc.dias<0?('⚠ vencida '+(-venc.dias)+'d'):venc.dias===0?'vence hoy':('faltan '+venc.dias+'d')}</span></div>`:'';
+  const cobroEst=f.fecha_vencimiento?`${formatDate(f.fecha_vencimiento)}${diasBadge}`:'<span style="color:var(--orange);font-size:11px">falta envío</span>';
   const cobrado=ultimoPago&&ultimoPago.fecha_pago?`<span style="color:var(--green);font-weight:700">✓ ${formatDate(ultimoPago.fecha_pago)}</span>`:dim;
   const corredor=ultimoPago&&ultimoPago.corredor?`<span style="font-size:10px;text-transform:uppercase;font-weight:700;color:var(--text-muted)">${esc(corredorLbl(ultimoPago.corredor))}</span>`:dim;
   const open=openAccordions.has('facdet-'+f.id);
