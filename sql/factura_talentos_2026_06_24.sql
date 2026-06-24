@@ -64,3 +64,36 @@ WHERE NOT EXISTS (
   SELECT 1 FROM factura_talentos ft WHERE ft.factura_id = f.id
 )
 ON CONFLICT (factura_id, campana_talento_id) DO NOTHING;
+
+-- ┌──────────────────────────────────────────────────────────────┐
+-- │ 4. QB por FACTURA (registro en QuickBooks por cada factura,  │
+-- │    no por campaña). La contadora marca cada factura/cobro.   │
+-- └──────────────────────────────────────────────────────────────┘
+ALTER TABLE facturas ADD COLUMN IF NOT EXISTS qb_factura boolean DEFAULT false;
+ALTER TABLE facturas ADD COLUMN IF NOT EXISTS qb_cobro   boolean DEFAULT false;
+
+-- ┌──────────────────────────────────────────────────────────────┐
+-- │ 5. Cobro estimado cuenta desde el ENVÍO al cliente           │
+-- │    (no desde la emisión/carga): los días de crédito corren   │
+-- │    desde que el cliente recibe la factura. + plataforma envío│
+-- └──────────────────────────────────────────────────────────────┘
+ALTER TABLE facturas ADD COLUMN IF NOT EXISTS plataforma_envio text DEFAULT ''; -- mail | chat | plataforma
+
+-- Vencimiento = (fecha_envio si existe, si no fecha_emision) + dias_credito
+CREATE OR REPLACE FUNCTION trg_factura_vencimiento() RETURNS trigger AS $$
+DECLARE base date;
+BEGIN
+  base := COALESCE(NEW.fecha_envio, NEW.fecha_emision);
+  IF base IS NOT NULL THEN
+    NEW.fecha_vencimiento := base + COALESCE(NEW.dias_credito, 0);
+  ELSE
+    NEW.fecha_vencimiento := NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Recalcular vencimientos existentes priorizando la fecha de envío
+UPDATE facturas
+  SET fecha_vencimiento = COALESCE(fecha_envio, fecha_emision) + COALESCE(dias_credito, 45)
+  WHERE COALESCE(fecha_envio, fecha_emision) IS NOT NULL;

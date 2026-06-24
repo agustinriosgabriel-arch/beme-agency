@@ -593,4 +593,12 @@ campaña** (monto = suma de `fee_marca`, editable).
   - **Backfill** idempotente: enlaza facturas existentes a su talento por `orden_compra` (o
     `numero_factura`) que matchee `campana_talentos.identificador` en la misma campaña.
 
+La misma migración agrega a **`facturas`**:
+- `qb_factura`, `qb_cobro` (boolean) — registro en QuickBooks **por cada factura** (no por campaña).
+  En CxC cada fila de sub-campaña muestra las casillas de su factura.
+- `plataforma_envio` (text: `mail|chat|plataforma`) — cómo se envió la factura al cliente.
+- El trigger `trg_factura_vencimiento` ahora calcula `fecha_vencimiento` desde
+  **`COALESCE(fecha_envio, fecha_emision) + dias_credito`** — los días de crédito cuentan desde que
+  el cliente **recibe** la factura (envío), no desde la emisión/carga.
+
 RLS: admin-only vía `is_admin()`, igual que `facturas` / `pagos_marca`.
