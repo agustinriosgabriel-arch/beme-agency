@@ -862,10 +862,19 @@ function renderCxC(){
     <div></div><div>Sub-campaña (talento)</div><div>Estado</div><div>Factura</div>
     <div>Cobro est.</div><div class="th-r">Monto</div><div class="th-c">QB Fact</div><div class="th-c">QB Cobro</div><div></div></div>`;
 
-  // Notificación: facturas con fecha de cobro pasada y aún sin cobrar
+  // Notificación: facturas con fecha de cobro pasada y aún sin cobrar (lista clickeable)
   const vencidas=[];camps.forEach(c=>(c.facs||[]).forEach(f=>{if(facVencida(f)&&facSaldo(f)>0)vencidas.push(f);}));
   const vencTot={};vencidas.forEach(f=>addCur(vencTot,f.moneda,facSaldo(f)));
-  const alertBanner=vencidas.length?`<div style="display:flex;align-items:center;gap:8px;padding:11px 14px;margin-bottom:12px;background:rgba(229,57,53,0.10);border:1px solid rgba(229,57,53,0.40);border-radius:var(--radius);color:#e53935;font-weight:700;font-size:13px">⚠ ${vencidas.length} factura(s) vencida(s) sin cobrar · ${fmtMulti(vencTot)} <span style="font-weight:500;color:var(--text-muted)">— ya pasó la fecha de cobro estimada</span></div>`:'';
+  vencidas.sort((a,b)=>(vencInfo(a)?.dias??0)-(vencInfo(b)?.dias??0)); // las más vencidas primero
+  const alertBanner=vencidas.length?`<div style="padding:11px 14px;margin-bottom:12px;background:rgba(229,57,53,0.07);border:1px solid rgba(229,57,53,0.40);border-radius:var(--radius)">
+    <div style="color:#e53935;font-weight:700;font-size:13px;margin-bottom:4px">⚠ ${vencidas.length} factura(s) vencida(s) sin cobrar · ${fmtMulti(vencTot)}</div>
+    ${vencidas.map(f=>{const camp=campanas.find(c=>c.id===f.campana_id);const v=vencInfo(f);const tals=facturaTalNombres(f).join(', ');return `<div onclick="jumpToCamp(${f.campana_id})" title="Ir a la campaña" style="cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0;border-top:1px solid rgba(229,57,53,0.18)">
+      <span class="venc-badge venc-vencida">${v?v.label:'Vencida'}</span>
+      <b>${esc(camp?.nombre||'—')}</b>
+      <span style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">· ${esc(camp?.marcas?.nombre||'')}${tals?' · '+esc(tals):''}${f.numero_factura?' · #'+esc(f.numero_factura):''}</span>
+      <b style="margin-left:auto;color:#e53935;white-space:nowrap">${fmtMoney(facSaldo(f),f.moneda)} ↗</b>
+    </div>`;}).join('')}
+  </div>`:'';
 
   const grand={};
   container.innerHTML=alertBanner+camps.map(c=>{
@@ -874,7 +883,7 @@ function renderCxC(){
     const m=cxcCampMontos(c);Object.entries(m).forEach(([cur,v])=>addCur(grand,cur,v));
     const selN=cts.filter(ct=>cxcSel.has(ct.id)).length;
     const cobroEst=campCobroEstimado(c.id);
-    return `<div class="fin-group">
+    return `<div class="fin-group" id="cxc-camp-${c.id}">
       <div class="fin-group-header">
         <div class="fin-group-name">${esc(c.nombre)} <span style="font-weight:500;color:var(--text-muted);font-size:12px">· ${esc(c.marcas?.nombre||'')}</span></div>
         ${campEstadoBadge(c.estado)}
@@ -978,7 +987,8 @@ function renderCxCTalRow(ct,c){
     chk=`<input type="checkbox" ${cxcSel.has(ct.id)?'checked':''} onchange="onCxcSelToggle(${ct.id},${c.id},this.checked)" title="Marcar para facturar en conjunto" style="width:auto;margin:0;cursor:pointer">`;
     qbFactCell='<div class="qb-cell"></div>';qbCobroCell='<div class="qb-cell"></div>';
   }
-  return `<div class="fin-row cxc-tal-row">
+  const overdue=f&&facVencida(f)&&facSaldo(f)>0;
+  return `<div class="fin-row cxc-tal-row"${overdue?' style="background:rgba(229,57,53,0.07)"':''}>
       <div class="qb-cell">${chk}</div>
       <div class="fin-row-name">${nombre}${ident?`<div style="font-size:10px;color:var(--text-dim);font-family:'SF Mono',monospace;margin-top:1px">${esc(ident)}</div>`:''}</div>
       <div class="fin-estado-cell">${talEstadoBadge(ct.estado)}</div>
@@ -989,6 +999,18 @@ function renderCxCTalRow(ct,c){
       ${qbCobroCell}
       <div class="fin-row-actions">${accCell}</div>
     </div>`;
+}
+// Salta a la campaña en CxC y la resalta (desde la alerta de vencidas)
+function jumpToCamp(id){
+  const el=document.getElementById('cxc-camp-'+id);
+  if(!el)return;
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+  el.style.transition='box-shadow .25s';
+  el.style.boxShadow='0 0 0 3px rgba(229,57,53,0.65)';
+  setTimeout(()=>{el.style.boxShadow='';},2000);
+  // Abre el bloque de facturas de la campaña para ver la vencida
+  const facs=document.getElementById('cxc-facs-'+id);
+  if(facs&&!facs.classList.contains('open'))facs.classList.add('open');
 }
 // Selección de sub-campañas para facturar en conjunto
 function onCxcSelToggle(ctId,campId,checked){
