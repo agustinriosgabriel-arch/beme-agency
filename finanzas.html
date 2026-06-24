@@ -563,6 +563,7 @@ let currentUser=null,currentProfile=null;
 let campanas=[],clientes=[],marcas=[],facturas=[],pagosMarca=[],complementos=[],pagosTalento=[],campanasTalentos=[],auditoria=[];
 let terceros=[],comisiones=[],pagosTercero=[],facturaTalentos=[];
 let cxcSel=new Set(); // sub-campañas (campana_talento_id) marcadas para facturar en conjunto
+let openAccordions=new Set(); // ids de acordeones abiertos (persisten entre re-renders / auto-refresh)
 let activeSection='cxc',isDark=false;
 let editingFacturaId=null,editingFacturaCampanaId=null,editingFacturaClienteId=null;
 let compFacturaId=null,complFacturaId=null,complPagoId=null;
@@ -738,13 +739,12 @@ const setQbCtPago     =(id,v)=>setQbFlag('campana_talentos',id,'qb_pago',v);
 function renderStats(){
   const now=new Date(),month=now.getMonth(),year=now.getFullYear();
   const cxcPend={},cxcCobrado={},cxpPend={},cxpPagado={};
-  // CxC pendiente: saldo de facturas activas + fee de talentos AÚN sin factura (sobre campañas filtradas)
+  // CxC pendiente = total contratado por talento − lo ya cobrado (pagos de marca). Sin doble conteo.
   cxcFilteredCampanas().forEach(c=>{
-    const facsActivas=(c.facs||facturas.filter(f=>f.campana_id===c.id)).filter(f=>f.estado!=='cancelada');
-    facsActivas.forEach(f=>addCur(cxcPend,f.moneda,facSaldo(f)));
-    campanasTalentos.filter(ct=>ct.campana_id===c.id).forEach(ct=>{
-      if(!ctFactura(ct))addCur(cxcPend,ct.moneda_marca||ct.moneda,Number(ct.fee_marca)||0);
-    });
+    campanasTalentos.filter(ct=>ct.campana_id===c.id&&ct.estado!=='cancelada')
+      .forEach(ct=>addCur(cxcPend,ct.moneda_marca||ct.moneda,Number(ct.fee_marca)||0));
+    (c.facs||facturas.filter(f=>f.campana_id===c.id)).filter(f=>f.estado!=='cancelada')
+      .forEach(f=>addCur(cxcPend,f.moneda,-facPagado(f)));
   });
   // CxC cobrado este mes: pagos de marca con fecha en el mes actual
   pagosMarca.forEach(p=>{
@@ -835,15 +835,13 @@ function cxcFilteredCampanas(){
   return out;
 }
 
-// Monto de CxC de una campaña por moneda: facturas activas + fee de los talentos AÚN sin factura.
-// (por-talento: una campaña puede tener algunos talentos facturados y otros no)
+// Monto de CxC de una campaña por moneda = suma del fee_marca de sus sub-campañas (talentos no
+// cancelados). Es el total contratado a cobrar a la marca; coincide con las filas y NO se duplica
+// aunque ya exista factura (la factura es el instrumento de cobro, no se suma aparte).
 function cxcCampMontos(c){
   const map={};
-  const facsActivas=(c.facs||facturas.filter(f=>f.campana_id===c.id)).filter(f=>f.estado!=='cancelada');
-  facsActivas.forEach(f=>addCur(map,f.moneda,Number(f.monto)||0));
-  campanasTalentos.filter(ct=>ct.campana_id===c.id).forEach(ct=>{
-    if(!ctFactura(ct))addCur(map,ct.moneda_marca||ct.moneda,Number(ct.fee_marca)||0);
-  });
+  campanasTalentos.filter(ct=>ct.campana_id===c.id&&ct.estado!=='cancelada')
+    .forEach(ct=>addCur(map,ct.moneda_marca||ct.moneda,Number(ct.fee_marca)||0));
   return map;
 }
 
@@ -898,7 +896,7 @@ function renderCxC(){
           ${c.facs.length?`<button class="btn btn-ghost btn-xs" onclick="toggleDetail('cxc-facs-${c.id}')">Ver facturas (${c.facs.length}) ▾</button>`:''}
           <button class="btn btn-outline btn-xs" style="margin-left:auto" onclick="openNuevaFactura(${c.id},${cliId})" title="Crear factura eligiendo talentos en el modal">+ Factura</button>
         </div>
-        ${c.facs.length?`<div class="fin-detail" id="cxc-facs-${c.id}">${c.facs.map(fx=>renderFacturaDetail(fx,c)).join('<div style="height:10px"></div>')}</div>`:''}
+        ${c.facs.length?`<div class="fin-detail${openAccordions.has('cxc-facs-'+c.id)?' open':''}" id="cxc-facs-${c.id}">${c.facs.map(fx=>renderFacturaDetail(fx,c)).join('<div style="height:10px"></div>')}</div>`:''}
         <div class="fin-total-row"><span class="lbl">Total ${esc(c.nombre)}</span><b class="fin-row-amount">${fmtMulti(m)}</b></div>
       </div>
     </div>`;
@@ -950,11 +948,17 @@ async function maybeFinalizarCampana(campId){
   }
 }
 
-// Factura (NO cancelada) que cubre a un talento: enlace real → match OC/folio legacy
+// ¿El # Orden / folio de la factura contiene este identificador? (soporta agrupadas "id1, id2")
+function ocMatchesIdent(f,ident){
+  if(!ident)return false;
+  const parts=`${f.orden_compra||''},${f.numero_factura||''}`.split(',').map(s=>s.trim()).filter(Boolean);
+  return parts.includes(ident);
+}
+// Factura (NO cancelada) que cubre a un talento: enlace real → match por # Orden/folio (legacy)
 function ctFactura(ct){
   const ids=facturaTalentos.filter(ft=>ft.campana_talento_id===ct.id).map(ft=>ft.factura_id);
   let cands=facturas.filter(f=>ids.includes(f.id)&&f.estado!=='cancelada');
-  if(!cands.length&&ct.identificador)cands=facturas.filter(f=>f.campana_id===ct.campana_id&&f.estado!=='cancelada'&&(f.orden_compra===ct.identificador||f.numero_factura===ct.identificador));
+  if(!cands.length&&ct.identificador)cands=facturas.filter(f=>f.campana_id===ct.campana_id&&f.estado!=='cancelada'&&ocMatchesIdent(f,ct.identificador));
   return cands[0]||null;
 }
 // ¿La factura agrupa más de una sub-campaña?
@@ -1008,9 +1012,9 @@ function jumpToCamp(id){
   el.style.transition='box-shadow .25s';
   el.style.boxShadow='0 0 0 3px rgba(229,57,53,0.65)';
   setTimeout(()=>{el.style.boxShadow='';},2000);
-  // Abre el bloque de facturas de la campaña para ver la vencida
+  // Abre el bloque de facturas de la campaña para ver la vencida (y persiste el estado)
   const facs=document.getElementById('cxc-facs-'+id);
-  if(facs&&!facs.classList.contains('open'))facs.classList.add('open');
+  if(facs&&!facs.classList.contains('open')){facs.classList.add('open');openAccordions.add('cxc-facs-'+id);}
 }
 // Selección de sub-campañas para facturar en conjunto
 function onCxcSelToggle(ctId,campId,checked){
@@ -1082,7 +1086,11 @@ function renderFacturaDetail(f,c){
     </div>`:''}</div>`;
 }
 
-function toggleDetail(id){document.getElementById(id)?.classList.toggle('open');}
+function toggleDetail(id){
+  const el=document.getElementById(id);if(!el)return;
+  const open=el.classList.toggle('open');
+  if(open)openAccordions.add(id);else openAccordions.delete(id);
+}
 
 // Factura CRUD
 // Checklist multi-talento: una factura puede agrupar varios talentos de la misma campaña
