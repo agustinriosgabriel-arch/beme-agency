@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS campanas (
   descripcion       text DEFAULT '',
   cliente_id        integer REFERENCES clientes(id),
   marca_id          integer REFERENCES marcas(id),
-  estado            text NOT NULL DEFAULT 'sin_iniciar',  -- sin_iniciar, en_curso, etapa_finanzas, finalizada, cancelada
+  estado            text NOT NULL DEFAULT 'sin_iniciar',  -- sin_iniciar, en_curso, etapa_finanzas, finalizada, pausada, cancelada
   fecha_inicio      date,
   fecha_fin         date,
   brief_texto       text DEFAULT '',

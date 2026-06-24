@@ -3167,7 +3167,16 @@ async function saveProducto() {
 // ════════════════════════════════════════════════
 async function updateEstado(val) {
   // Cambio manual de estado → reinicia el reloj de auto-finalización (completado_en).
-  await sb.from('campanas').update({estado:val, completado_en: null, updated_by: currentUser.id}).eq('id',campanaId);
+  const {error} = await sb.from('campanas')
+    .update({estado:val, completado_en: null, updated_by: currentUser.id})
+    .eq('id',campanaId);
+  if (error) {
+    // Antes esto se tragaba el error y el estado "volvía solo" al refrescar.
+    console.error('updateEstado:', error);
+    toast('No se pudo guardar el estado: ' + (error.message || error.hint || 'error de la base'), 'err');
+    await loadCampana(); renderAll();   // re-pintar con el estado REAL de la base
+    return;
+  }
   campana.estado = val;
   campana.completado_en = null;
   toast('Estado actualizado ✓','ok');
