@@ -89,6 +89,9 @@ body.dark .logo .logo-dark{display:block}
 .chip{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;font-family:inherit;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:all 0.15s}
 .chip:hover{border-color:var(--border2);color:var(--text)}
 .chip.active{background:var(--gradient);color:#fff;border-color:transparent}
+/* Fila de filtros de estado (talento / campaña / factura) — selects nativos agrupados */
+.filters-estado{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.filters-estado .filter-select.has-val{border-color:var(--primary);color:var(--text)}
 /* Casillas QuickBooks (contabilidad) */
 .qb-check{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px;transition:all 0.15s}
 .qb-check:hover{border-color:var(--border2)}
@@ -342,22 +345,34 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       <select class="filter-select" id="cxc-qb-cobro" onchange="renderCxC()"><option value="">QB Cobro: todos</option><option value="si">QB Cobro ✓ registrado</option><option value="no">QB Cobro pendiente</option></select>
       <select class="filter-select" id="cxc-sort" onchange="renderCxC()"><option value="desc">Inicio: reciente → antigua</option><option value="asc">Inicio: antigua → reciente</option></select>
     </div>
-    <div class="chip-filter" id="cxc-campest-chips" style="margin-bottom:8px">
-      <span class="chip-filter-label">Estado campaña:</span>
-      <button class="chip" data-est="sin_iniciar" onclick="toggleEstChip(this)">Sin iniciar</button>
-      <button class="chip" data-est="en_curso" onclick="toggleEstChip(this)">En curso</button>
-      <button class="chip" data-est="finalizada" onclick="toggleEstChip(this)">Finalizada</button>
-      <button class="chip" data-est="pausada" onclick="toggleEstChip(this)">Pausada</button>
-      <button class="chip" data-est="cancelada" onclick="toggleEstChip(this)">Cancelada</button>
-    </div>
-    <div class="chip-filter" id="cxc-estado-chips" style="margin-bottom:16px">
-      <span class="chip-filter-label">Estado talento:</span>
-      <button class="chip" data-est="sin_iniciar" onclick="toggleEstChip(this)">Sin iniciar</button>
-      <button class="chip" data-est="en_curso" onclick="toggleEstChip(this)">En curso</button>
-      <button class="chip" data-est="etapa_finanzas" onclick="toggleEstChip(this)">Etapa Finanzas</button>
-      <button class="chip" data-est="finalizada" onclick="toggleEstChip(this)">Finalizada</button>
-      <button class="chip" data-est="pausada" onclick="toggleEstChip(this)">Pausada</button>
-      <button class="chip" data-est="cancelada" onclick="toggleEstChip(this)">Cancelada</button>
+    <div class="filters-estado">
+      <span class="chip-filter-label">Filtrar por estado</span>
+      <select class="filter-select" id="cxc-estado-talento" onchange="renderCxC()">
+        <option value="">Estado talento: todos</option>
+        <option value="sin_iniciar">Talento · Sin iniciar</option>
+        <option value="en_curso">Talento · En curso</option>
+        <option value="etapa_finanzas">Talento · Etapa Finanzas</option>
+        <option value="finalizada">Talento · Finalizada</option>
+        <option value="pausada">Talento · Pausada</option>
+        <option value="cancelada">Talento · Cancelada</option>
+      </select>
+      <select class="filter-select" id="cxc-estado-campana" onchange="renderCxC()">
+        <option value="">Estado campaña: todas</option>
+        <option value="sin_iniciar">Campaña · Sin iniciar</option>
+        <option value="en_curso">Campaña · En curso</option>
+        <option value="finalizada">Campaña · Finalizada</option>
+        <option value="pausada">Campaña · Pausada</option>
+        <option value="cancelada">Campaña · Cancelada</option>
+      </select>
+      <select class="filter-select" id="cxc-estado-factura" onchange="renderCxC()">
+        <option value="">Estado factura: todas</option>
+        <option value="pendiente">Factura · Pendiente</option>
+        <option value="emitida">Factura · Emitida</option>
+        <option value="enviada">Factura · Enviada</option>
+        <option value="pagada_parcial">Factura · Pago Parcial</option>
+        <option value="cobrada">Factura · Cobrada</option>
+        <option value="cancelada">Factura · Cancelada</option>
+      </select>
     </div>
     <div id="cxc-container"></div>
   </div>
@@ -369,22 +384,25 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       <select class="filter-select" id="cxp-qb-factura" onchange="renderCxP()"><option value="">QB Factura: todas</option><option value="si">QB Factura ✓ registrada</option><option value="no">QB Factura pendiente</option></select>
       <select class="filter-select" id="cxp-qb-pago" onchange="renderCxP()"><option value="">QB Pago: todos</option><option value="si">QB Pago ✓ registrado</option><option value="no">QB Pago pendiente</option></select>
     </div>
-    <div class="chip-filter" id="cxp-campest-chips" style="margin-bottom:8px">
-      <span class="chip-filter-label">Estado campaña:</span>
-      <button class="chip" data-est="sin_iniciar" onclick="toggleEstChip(this)">Sin iniciar</button>
-      <button class="chip" data-est="en_curso" onclick="toggleEstChip(this)">En curso</button>
-      <button class="chip" data-est="finalizada" onclick="toggleEstChip(this)">Finalizada</button>
-      <button class="chip" data-est="pausada" onclick="toggleEstChip(this)">Pausada</button>
-      <button class="chip" data-est="cancelada" onclick="toggleEstChip(this)">Cancelada</button>
-    </div>
-    <div class="chip-filter" id="cxp-estado-chips" style="margin-bottom:16px">
-      <span class="chip-filter-label">Estado talento:</span>
-      <button class="chip" data-est="sin_iniciar" onclick="toggleEstChip(this)">Sin iniciar</button>
-      <button class="chip" data-est="en_curso" onclick="toggleEstChip(this)">En curso</button>
-      <button class="chip" data-est="etapa_finanzas" onclick="toggleEstChip(this)">Etapa Finanzas</button>
-      <button class="chip" data-est="finalizada" onclick="toggleEstChip(this)">Finalizada</button>
-      <button class="chip" data-est="pausada" onclick="toggleEstChip(this)">Pausada</button>
-      <button class="chip" data-est="cancelada" onclick="toggleEstChip(this)">Cancelada</button>
+    <div class="filters-estado">
+      <span class="chip-filter-label">Filtrar por estado</span>
+      <select class="filter-select" id="cxp-estado-talento" onchange="renderCxP()">
+        <option value="">Estado talento: todos</option>
+        <option value="sin_iniciar">Talento · Sin iniciar</option>
+        <option value="en_curso">Talento · En curso</option>
+        <option value="etapa_finanzas">Talento · Etapa Finanzas</option>
+        <option value="finalizada">Talento · Finalizada</option>
+        <option value="pausada">Talento · Pausada</option>
+        <option value="cancelada">Talento · Cancelada</option>
+      </select>
+      <select class="filter-select" id="cxp-estado-campana" onchange="renderCxP()">
+        <option value="">Estado campaña: todas</option>
+        <option value="sin_iniciar">Campaña · Sin iniciar</option>
+        <option value="en_curso">Campaña · En curso</option>
+        <option value="finalizada">Campaña · Finalizada</option>
+        <option value="pausada">Campaña · Pausada</option>
+        <option value="cancelada">Campaña · Cancelada</option>
+      </select>
     </div>
     <div id="cxp-container"></div>
   </div>
@@ -807,8 +825,9 @@ function switchSection(s){
 // Devuelve las campañas de CxC que pasan los filtros actuales (reutilizable por stats)
 function cxcFilteredCampanas(){
   const q=(document.getElementById('cxc-search')?.value||'').toLowerCase().trim();
-  const estTals=[...document.querySelectorAll('#cxc-estado-chips .chip.active')].map(b=>b.dataset.est);
-  const estCampGen=[...document.querySelectorAll('#cxc-campest-chips .chip.active')].map(b=>b.dataset.est);
+  const estTal=document.getElementById('cxc-estado-talento')?.value||'';
+  const estCamp=document.getElementById('cxc-estado-campana')?.value||'';
+  const estFac=document.getElementById('cxc-estado-factura')?.value||'';
   const facFilt=document.getElementById('cxc-factura')?.value||'';
   const qbFac=document.getElementById('cxc-qb-factura')?.value||'';
   const qbCob=document.getElementById('cxc-qb-cobro')?.value||'';
@@ -843,12 +862,14 @@ function cxcFilteredCampanas(){
     if(qbCob==='si'&&!facsActivas.some(f=>f.qb_cobro))return;
     if(qbCob==='no'&&!facsActivas.some(f=>!f.qb_cobro))return;
     // Estado GENERAL de la campaña
-    if(estCampGen.length&&!estCampGen.includes(c.estado||''))return;
+    if(estCamp&&(c.estado||'')!==estCamp)return;
     // Estado de TALENTO: muestra la campaña si AL MENOS un talento coincide
-    if(estTals.length){
+    if(estTal){
       const tEstados=cts.map(ct=>ct.estado||'en_curso');
-      if(!tEstados.some(s=>estTals.includes(s)))return;
+      if(!tEstados.includes(estTal))return;
     }
+    // Estado de FACTURA: muestra la campaña si AL MENOS una factura tiene ese estado
+    if(estFac&&!facs.some(f=>f.estado===estFac))return;
     out.push({...c,facs,cliente:cli});
   });
   return out;
@@ -865,6 +886,7 @@ function cxcCampMontos(c){
 }
 
 function renderCxC(){
+  document.querySelectorAll('#section-cxc .filters-estado .filter-select').forEach(el=>el.classList.toggle('has-val',!!el.value));
   const sort=document.getElementById('cxc-sort')?.value||'desc';
   const container=document.getElementById('cxc-container');
   const camps=cxcFilteredCampanas();
@@ -904,7 +926,7 @@ function renderCxC(){
     const porFacturar=cts.map(ct=>({ct,resta:(Number(ct.fee_marca)||0)-ctInvoiced(ct)})).filter(x=>x.resta>0.01);
     return `<div class="fin-group" id="cxc-camp-${c.id}">
       <div class="fin-group-header">
-        <div class="fin-group-name">${esc(c.nombre)} <span style="font-weight:500;color:var(--text-muted);font-size:12px">· ${esc(c.marcas?.nombre||'')}</span></div>
+        <div class="fin-group-name">${esc(c.nombre)} <span style="font-weight:500;color:var(--text-muted);font-size:12px">· ${esc(c.marcas?.nombre||'')}</span>${c.marcas?.clientes?.nombre?` <span title="Agencia / cliente que lleva la campaña" style="font-weight:600;font-size:10px;color:var(--primary);background:rgba(178,0,93,0.08);padding:2px 8px;border-radius:10px;margin-left:4px">${esc(c.marcas.clientes.nombre)}</span>`:''}</div>
         ${campEstadoBadge(c.estado)}
         ${cobroEst?`<span class="fin-row-date" title="Cobro estimado de la campaña">Cobro est: ${formatDate(cobroEst)}</span>`:''}
         <a class="btn btn-ghost btn-xs" style="margin-left:auto" href="campana-detalle.html?id=${c.id}" target="_blank" title="Ver detalle completo de la campaña">Detalle ↗</a>
@@ -1497,20 +1519,13 @@ function addDaysStr(dateStr,n){
 function defaultPagoEstimado(ct){return addDaysStr(campCobroEstimado(ct.campana_id),15);}
 
 // Talentos de CxP que pasan los filtros actuales (reutilizable por stats)
-function toggleEstChip(btn){
-  btn.classList.toggle('active');
-  const cont=btn.closest('[id$="-chips"]');
-  if(cont&&cont.id.startsWith('cxc'))renderCxC();else renderCxP();
-}
-function cxpEstadosActivos(){return [...document.querySelectorAll('#cxp-estado-chips .chip.active')].map(b=>b.dataset.est);}
-
 function cxpFilteredTalentos(){
   const q=(document.getElementById('cxp-search')?.value||'').toLowerCase().trim();
   const filt=document.getElementById('cxp-filter')?.value||'';
   const qbFac=document.getElementById('cxp-qb-factura')?.value||'';
   const qbPago=document.getElementById('cxp-qb-pago')?.value||'';
-  const estTals=cxpEstadosActivos();
-  const estCampGen=[...document.querySelectorAll('#cxp-campest-chips .chip.active')].map(b=>b.dataset.est);
+  const estTal=document.getElementById('cxp-estado-talento')?.value||'';
+  const estCamp=document.getElementById('cxp-estado-campana')?.value||'';
   return campanasTalentos.filter(ct=>{
     if(filt&&ctEstadoPago(ct)!==filt)return false;
     if(qbFac==='si'&&!ct.qb_factura)return false;
@@ -1518,8 +1533,8 @@ function cxpFilteredTalentos(){
     if(qbPago==='si'&&!ct.qb_pago)return false;
     if(qbPago==='no'&&ct.qb_pago)return false;
     const camp=campanas.find(c=>c.id===ct.campana_id);
-    if(estCampGen.length&&!estCampGen.includes(camp?.estado||''))return false;
-    if(estTals.length&&!estTals.includes(ct.estado||'en_curso'))return false;
+    if(estCamp&&(camp?.estado||'')!==estCamp)return false;
+    if(estTal&&(ct.estado||'en_curso')!==estTal)return false;
     const tName=(ct.talentos?.nombre||'').toLowerCase();
     const cName=(camp?.nombre||'').toLowerCase();
     const ident=(ct.identificador||'').toLowerCase();
@@ -1534,12 +1549,12 @@ function cxpFilteredTalentos(){
 function cxpFilteredComisiones(){
   const q=(document.getElementById('cxp-search')?.value||'').toLowerCase().trim();
   const filt=document.getElementById('cxp-filter')?.value||'';
-  const estCampGen=[...document.querySelectorAll('#cxp-campest-chips .chip.active')].map(b=>b.dataset.est);
+  const estCamp=document.getElementById('cxp-estado-campana')?.value||'';
   return comisiones.filter(com=>{
     if(filt&&comEstadoPago(com)!==filt)return false;
     const camp=campanas.find(c=>c.id===com.campana_id);
     if(!camp)return false; // campaña en papelera / inexistente
-    if(estCampGen.length&&!estCampGen.includes(camp.estado||''))return false;
+    if(estCamp&&(camp.estado||'')!==estCamp)return false;
     if(q){
       const ter=(com.terceros?.nombre||'').toLowerCase();
       const cName=(camp.nombre||'').toLowerCase();
@@ -1552,6 +1567,7 @@ function cxpFilteredComisiones(){
 }
 
 function renderCxP(){
+  document.querySelectorAll('#section-cxp .filters-estado .filter-select').forEach(el=>el.classList.toggle('has-val',!!el.value));
   const container=document.getElementById('cxp-container');
   const rows=cxpFilteredTalentos();
   const coms=cxpFilteredComisiones();
@@ -1578,7 +1594,7 @@ function renderCxP(){
     cms.forEach(com=>{const s=comEstadoPago(com)==='pagado'?0:comSaldo(com);addCur(grand,comMoneda(com),s);});
     return `<div class="fin-group">
       <div class="fin-group-header">
-        <div class="fin-group-name">${esc(camp?.nombre||'—')} <span style="font-weight:500;color:var(--text-muted);font-size:12px">· ${esc(camp?.marcas?.nombre||'')}</span></div>
+        <div class="fin-group-name">${esc(camp?.nombre||'—')} <span style="font-weight:500;color:var(--text-muted);font-size:12px">· ${esc(camp?.marcas?.nombre||'')}</span>${camp?.marcas?.clientes?.nombre?` <span title="Agencia / cliente que lleva la campaña" style="font-weight:600;font-size:10px;color:var(--primary);background:rgba(178,0,93,0.08);padding:2px 8px;border-radius:10px;margin-left:4px">${esc(camp.marcas.clientes.nombre)}</span>`:''}</div>
         ${campEstadoBadge(camp?.estado)}
         ${cobroEst?`<span class="fin-row-date" title="Cobro estimado de la campaña">Cobro est: ${formatDate(cobroEst)}</span>`:''}
         <a class="btn btn-ghost btn-xs" href="campana-detalle.html?id=${campId}" target="_blank" title="Ver detalle completo de la campaña" style="margin-left:auto">Detalle ↗</a>
