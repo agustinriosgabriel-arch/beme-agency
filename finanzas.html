@@ -918,13 +918,6 @@ function facturaTalNombres(f){
   if(!ct&&f.numero_factura)ct=cts.find(x=>x.identificador===f.numero_factura);
   return ct?[ct.talentos?.nombre||('Talento '+ct.id)]:[];
 }
-// Chip compacto: "" | nombre | "Primero +N" (title = lista completa)
-function talNombresChip(nombres){
-  if(!nombres||!nombres.length)return '';
-  const label=nombres.length===1?esc(nombres[0]):`${esc(nombres[0])} +${nombres.length-1}`;
-  return `<span title="${esc(nombres.join(', '))}">${label}</span>`;
-}
-
 // Finaliza la campaña automáticamente cuando se TERMINAN TODOS LOS CONTENIDOS
 // (todos los talentos en etapa_finanzas o finalizada), INDEPENDIENTE del cobro
 // y del pago. Fallback client-side del trigger SQL.
@@ -955,7 +948,7 @@ function renderCxCRow(c){
   const saldo=fac?facSaldo(fac):0;
 
   return `<div class="fin-row cxc-row" onclick="toggleDetail('detail-${c.id}')" style="cursor:pointer">
-      <div class="fin-row-name">${esc(c.nombre)}${(()=>{const ch=talNombresChip(cxcTalNombres(c.id));return ch?`<div style="font-size:11px;color:var(--text-dim);font-weight:500;margin-top:1px">${ch}</div>`:'';})()}</div>
+      <div class="fin-row-name">${esc(c.nombre)}${(()=>{const ns=cxcTalNombres(c.id);return ns.length?`<div style="font-size:11px;color:var(--text-muted);font-weight:500;margin-top:3px;line-height:1.45">${ns.map(n=>'· '+esc(n)).join('<br>')}</div>`:'';})()}</div>
       <div class="fin-row-meta">${esc(c.marcas?.nombre||'')}</div>
       <div class="fin-row-date">${c.fecha_inicio?formatDate(c.fecha_inicio):'—'}</div>
       <div>${campEstadoBadge(c.estado)||'<span style="color:var(--text-dim);font-size:11px">—</span>'}</div>
