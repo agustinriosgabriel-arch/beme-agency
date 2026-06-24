@@ -721,25 +721,36 @@ function fmtMulti(map){
 function addCur(map,cur,v){const c=cur||'USD';map[c]=(map[c]||0)+v;}
 
 // ── Casillas QuickBooks (control de la contadora) ──
-// Celda con solo la casilla (el título va en el encabezado de columna). Columna SIEMPRE
-// visible; si aún no hay factura, la casilla va deshabilitada (placeholder permanente).
-function qbBox(checked,onchangeExpr){
-  return `<div class="qb-cell"><label class="qb-check${checked?' on':''}" onclick="event.stopPropagation()"><input type="checkbox" ${checked?'checked':''} onchange="${onchangeExpr}"></label></div>`;
+// Celda con la casilla (el título va en el encabezado de columna). QB Factura se puede
+// marcar SIEMPRE (no hace falta tener la factura linkeada/PDF). QB Cobro depende de
+// QB Factura: se renderiza deshabilitada hasta que la factura esté marcada en QB.
+// opts.disabled → casilla bloqueada (dashed); opts.title → tooltip explicativo.
+function qbBox(checked,onchangeExpr,opts){
+  const o=opts||{};
+  const tip=o.title?` title="${esc(o.title)}"`:'';
+  if(o.disabled){
+    return `<div class="qb-cell"><label class="qb-check disabled${checked?' on':''}"${tip} onclick="event.stopPropagation()"><input type="checkbox" disabled ${checked?'checked':''}></label></div>`;
+  }
+  return `<div class="qb-cell"><label class="qb-check${checked?' on':''}"${tip} onclick="event.stopPropagation()"><input type="checkbox" ${checked?'checked':''} onchange="${onchangeExpr}"></label></div>`;
 }
-async function setQbFlag(table,id,field,checked){
+// Actualiza uno o varios flags QB a la vez (objeto { campo: valor }).
+async function setQbFields(table,id,updates){
   try{
-    const{error}=await sb.from(table).update({[field]:checked}).eq('id',id);
+    const{error}=await sb.from(table).update(updates).eq('id',id);
     if(error)throw error;
     const arr=table==='campanas'?campanas:(table==='facturas'?facturas:campanasTalentos);
-    const row=arr.find(x=>x.id===id);if(row)row[field]=checked;
+    const row=arr.find(x=>x.id===id);if(row)Object.assign(row,updates);
     if(table==='campana_talentos')renderCxP();else renderCxC();
   }catch(e){showToast('Error: '+e.message,'error');}
 }
+const setQbFlag=(table,id,field,checked)=>setQbFields(table,id,{[field]:checked});
 const setQbCampFactura=(id,v)=>setQbFlag('campanas',id,'qb_factura',v);
 const setQbCampCobro  =(id,v)=>setQbFlag('campanas',id,'qb_cobro',v);
-const setQbFacFactura =(id,v)=>setQbFlag('facturas',id,'qb_factura',v); // QB por FACTURA
+// QB por FACTURA. Al desmarcar QB Factura cae también QB Cobro (no puede haber cobro sin factura).
+const setQbFacFactura =(id,v)=>{const f=facturas.find(x=>x.id===id);const u={qb_factura:v};if(!v&&f&&f.qb_cobro)u.qb_cobro=false;return setQbFields('facturas',id,u);};
 const setQbFacCobro   =(id,v)=>setQbFlag('facturas',id,'qb_cobro',v);   // QB por FACTURA
-const setQbCtFactura  =(id,v)=>setQbFlag('campana_talentos',id,'qb_factura',v);
+// QB por TALENTO (CxP). Mismo principio: sin QB Factura no hay QB Pago.
+const setQbCtFactura  =(id,v)=>{const ct=campanasTalentos.find(x=>x.id===id);const u={qb_factura:v};if(!v&&ct&&ct.qb_pago)u.qb_pago=false;return setQbFields('campana_talentos',id,u);};
 const setQbCtPago     =(id,v)=>setQbFlag('campana_talentos',id,'qb_pago',v);
 
 // STATS — por moneda, basadas en saldos reales (no estados binarios).
@@ -1004,7 +1015,7 @@ function renderCxCFacturaRow(f,c){
       <div class="fin-row-date">${cobro}</div>
       <div class="fin-row-amount">${fmtMoney(f.monto,f.moneda)}${saldo>0&&pagado>0?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,f.moneda)}</div>`:''}</div>
       ${qbBox(f.qb_factura,`setQbFacFactura(${f.id},this.checked)`)}
-      ${qbBox(f.qb_cobro,`setQbFacCobro(${f.id},this.checked)`)}
+      ${qbBox(f.qb_cobro,`setQbFacCobro(${f.id},this.checked)`,{disabled:!f.qb_factura,title:'Primero marcá QB Factura'})}
       <div class="fin-row-actions">${f.estado!=='cobrada'&&f.estado!=='cancelada'?`<button class="btn btn-green btn-xs" onclick="openComprobante(${f.id},${c.id})">Cobro</button>`:''}<button class="btn btn-outline btn-xs" onclick="editFactura(${f.id})">Editar</button></div>
     </div>`;
 }
@@ -1312,10 +1323,29 @@ function editFactura(id){
   onFacTalentoChange();
   openModal('modal-factura');
 }
+// Estados de talento desde los que se puede emitir una factura COMPLETA.
+const FACTURABLE_ESTADOS=['etapa_finanzas','finalizada'];
 async function saveFactura(){
   const monto=parseFloat(document.getElementById('fac-monto').value)||0;
   if(!monto){showToast('Monto es obligatorio','error');return;}
   const esquema=document.getElementById('fac-esquema').value;
+  // Gate de facturación (solo al CREAR): una factura COMPLETA (contado) exige que los
+  // talentos cubiertos hayan llegado al menos a "Etapa Finanzas". Para facturar antes hay
+  // que marcarla como parcial: esquema 50/50, Anticipo, Financiado o estado Pago Parcial.
+  if(!editingFacturaId){
+    const estadoSel=document.getElementById('fac-estado').value;
+    const esParcial = esquema!=='contado' || estadoSel==='pagada_parcial';
+    if(!esParcial){
+      const noListos=facCheckedTalentos()
+        .map(c=>campanasTalentos.find(ct=>ct.id===parseInt(c.value)))
+        .filter(ct=>ct && !FACTURABLE_ESTADOS.includes(ct.estado||'en_curso'));
+      if(noListos.length){
+        const nom=noListos[0].talentos?.nombre||'El talento';
+        showToast('"'+nom+'" aún no llegó a Etapa Finanzas. Para facturar antes, usá esquema 50/50, Anticipo o Financiado (o marca la factura como Pago Parcial).','error');
+        return;
+      }
+    }
+  }
   const payload={
     campana_id:editingFacturaCampanaId,cliente_id:editingFacturaClienteId,
     tipo:document.getElementById('fac-tipo').value,
@@ -1621,7 +1651,7 @@ function renderCxPRow(ct){
     <div><input type="date" value="${fechaEst}" title="Fecha de pago estimada" onchange="setFechaPagoEstimada(${ct.id},this.value)" style="${dInput}">${pagoRealLine(pts)}</div>
     <div class="fin-row-amount">${fmtMoney(ct.fee_talento||0,ct.moneda_talento||ct.moneda)}${estado==='parcial'?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,ct.moneda_talento||ct.moneda)}</div>`:''}</div>
     ${qbBox(ct.qb_factura,`setQbCtFactura(${ct.id},this.checked)`)}
-    ${qbBox(ct.qb_pago,`setQbCtPago(${ct.id},this.checked)`)}
+    ${qbBox(ct.qb_pago,`setQbCtPago(${ct.id},this.checked)`,{disabled:!ct.qb_factura,title:'Primero marcá QB Factura'})}
     <div class="fin-row-actions">
       ${estado!=='pagado'?`<button class="btn btn-green btn-xs" onclick="openPagoTalento(${ct.id},${ct.campana_id},${ct.talent_id})">${estado==='parcial'?'Pagar saldo':'Pagar'}</button>`:''}
       <input type="file" id="inv-${ct.id}" style="display:none" accept=".pdf,.png,.jpg,.jpeg" onchange="subirInvoiceTalento(${ct.id},${ct.campana_id},${ct.talent_id},this)">
