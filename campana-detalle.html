@@ -1012,6 +1012,9 @@ async function init() {
     document.getElementById('load-overlay').style.display = 'none';
     document.getElementById('app').style.display = 'grid';
 
+    // Tipo de cambio del día → refresca ganancias/finanzas convertidas a USD
+    ensureFxRates().then(()=>{ if(fxReady()){ renderTalentos(); if(isAdmin()) renderFinanzas(); } });
+
     // Manager = mismos permisos que Admin EXCEPTO ver precios + Finanzas.
     // Cobro y eliminar campaña ahora son para todo rol interno.
     if (isInternal()) {
@@ -1757,7 +1760,14 @@ function renderTalentoCard(ct) {
         <div class="fee-label">Ganancia Agencia</div>
         ${sameMon
           ? `<div class="fee-value pos">${fmtMoneyCompact(gan,monM)}</div>`
-          : `<div class="fee-value pos" style="font-size:13px" title="Fees en monedas distintas — no se puede restar directo">${fmtMoneyCompact(fm,monM)} − ${fmtMoneyCompact(ft,monT)}</div><div style="font-size:9px;color:var(--text-dim);margin-top:2px">monedas distintas</div>`}
+          : (function(){
+              const breakdown = `<div style="font-size:11px;color:var(--text-dim);margin-top:3px" title="Fees en monedas distintas">${fmtMoneyCompact(fm,monM)} − ${fmtMoneyCompact(ft,monT)}</div>`;
+              if (!fxReady()) return `<div class="fee-value" style="font-size:13px;color:var(--text-muted)">—</div>${breakdown}<div style="font-size:9px;color:var(--text-dim);margin-top:2px">cargando tipo de cambio…</div>`;
+              const ganUsd = toUSD(fm,monM) - toUSD(ft,monT);
+              return `<div class="fee-value ${ganUsd>=0?'pos':''}" title="Convertido al tipo de cambio del día (base USD)">≈ ${fmtMoneyCompact(ganUsd,'USD')}</div>
+                <div style="font-size:9px;color:var(--text-dim);margin-top:1px">Ganancia estimada · TC del día</div>
+                ${breakdown}`;
+            })()}
       </div>
     </div>
     ${renderComisionesTalento(ct)}`:''}
@@ -3221,16 +3231,20 @@ async function deleteCampana() {
 function renderFinanzas() {
   if (!isAdmin()) return;
   const cts = campana.campana_talentos||[];
-  let tm=0, tt=0;
+  let tm=0, tt=0, mixed=false;
   const rows = cts.map(ct=>{
     const fm=ct.fee_marca||0, ft=ct.fee_talento||0;
-    tm+=fm; tt+=ft;
-    return `<div class="fin-row"><span class="lbl">${esc(ct.talentos?.nombre||'—')}</span><span>${fmtMoney(fm,ct.moneda_marca||ct.moneda||'USD')} / ${fmtMoney(ft,ct.moneda_talento||ct.moneda||'USD')}</span></div>`;
+    const cmM=ct.moneda_marca||ct.moneda||'USD', cmT=ct.moneda_talento||ct.moneda||'USD';
+    if (cmM!=='USD' || cmT!=='USD') mixed=true;
+    tm+=toUSD(fm,cmM); tt+=toUSD(ft,cmT);
+    return `<div class="fin-row"><span class="lbl">${esc(ct.talentos?.nombre||'—')}</span><span>${fmtMoney(fm,cmM)} / ${fmtMoney(ft,cmT)}</span></div>`;
   }).join('');
+  const aprox = (mixed && fxReady()) ? '≈ ' : '';
+  const nota = (mixed && fxReady()) ? `<div class="fin-row" style="border:none"><span class="lbl" style="font-size:10px;color:var(--text-dim);font-style:italic">Totales convertidos a USD al TC del día</span><span></span></div>` : '';
   document.getElementById('fin-content').innerHTML = rows +
-    `<div class="fin-row"><span class="lbl">Total Marca</span><span>${fmtMoney(tm,'USD')}</span></div>
-     <div class="fin-row"><span class="lbl">Total Talentos</span><span>${fmtMoney(tt,'USD')}</span></div>
-     <div class="fin-row"><span class="lbl fin-ganancia">Ganancia Agencia</span><span class="fin-ganancia">${fmtMoney(tm-tt,'USD')}</span></div>`;
+    `<div class="fin-row"><span class="lbl">Total Marca</span><span>${aprox}${fmtMoney(tm,'USD')}</span></div>
+     <div class="fin-row"><span class="lbl">Total Talentos</span><span>${aprox}${fmtMoney(tt,'USD')}</span></div>
+     <div class="fin-row"><span class="lbl fin-ganancia">Ganancia Agencia</span><span class="fin-ganancia">${aprox}${fmtMoney(tm-tt,'USD')}</span></div>` + nota;
 }
 
 function renderCobro() {
@@ -3299,6 +3313,37 @@ function fmtDate(d){if(!d)return'';return new Date(d+'T00:00:00').toLocaleDateSt
 function fmtDT(d){if(!d)return'';return new Date(d).toLocaleString('es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}
 function fmtMoney(v,m){const s={USD:'$',ARS:'$',MXN:'$',EUR:'€'}[m]||'$';return`${s}${Number(v||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})} ${m||''}`;}
 function fmtMoneyCompact(v,m){const s={USD:'$',ARS:'$',MXN:'$',EUR:'€'}[m]||'$';const n=Number(v||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});return`${s}${n}<span class="fee-cur">${m||''}</span>`;}
+
+// ── Tipo de cambio del día (base USD) ──
+// Tasas = unidades de la moneda por 1 USD. Se cachea por día en localStorage.
+let FX = { rates: null, date: null, loading: false };
+function fxReady(){ return !!(FX.rates && typeof FX.rates.USD === 'number'); }
+function toUSD(v, cur){
+  v = Number(v||0); cur = cur || 'USD';
+  if (cur === 'USD') return v;
+  if (!fxReady()) return v;            // sin TC aún → fallback sin convertir
+  const r = FX.rates[cur];
+  return (r && r > 0) ? v / r : v;
+}
+async function ensureFxRates(){
+  const today = new Date().toISOString().slice(0,10);
+  try {
+    const cached = JSON.parse(localStorage.getItem('beme_fx_usd')||'null');
+    if (cached && cached.date === today && cached.rates){ FX = {rates:cached.rates, date:today, loading:false}; return FX; }
+  } catch(_){}
+  if (FX.loading) return FX;
+  FX.loading = true;
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/USD');
+    const j = await res.json();
+    if (j && j.result === 'success' && j.rates){
+      FX = { rates:j.rates, date:today, loading:false };
+      try { localStorage.setItem('beme_fx_usd', JSON.stringify({date:today, rates:j.rates})); } catch(_){}
+    }
+  } catch(e){ console.warn('FX fetch failed', e); }
+  FX.loading = false;
+  return FX;
+}
 function fmtSize(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
 
 function openModal(id){document.getElementById(id)?.classList.add('open');}
