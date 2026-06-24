@@ -584,9 +584,10 @@ campaña** (monto = suma de `fee_marca`, editable).
 - **`factura_talentos`** — tabla de enlace factura ↔ talentos de campaña que cubre:
   `id, factura_id (FK facturas ON DELETE CASCADE), campana_talento_id (FK campana_talentos
   ON DELETE CASCADE), created_at`. `UNIQUE (factura_id, campana_talento_id)`.
-  - Es la **fuente de verdad** de qué talento(s) cubre la factura. Finanzas → CxC se renderiza con
-    **una fila por sub-campaña (talento)** agrupadas por campaña: cada talento puede tener su propia
-    factura o agruparse con otros (checkbox → "Facturar en conjunto") en una factura conjunta.
+  - Es la **fuente de verdad** de qué talento(s) cubre la factura. Finanzas → CxC se renderiza por
+    campaña en dos secciones: **Facturas** (una fila por factura, con su QB Fact/QB Cobro/cobro/envío;
+    un talento puede tener VARIAS — facturación parcial) y **Por facturar** (talentos con saldo sin
+    facturar, total o parcial, con "+ Factura"; el checkbox agrupa varios en una factura conjunta).
   - El modal de factura usa un **checklist** de talentos de la campaña; al marcar varios, el monto
     auto-suma su `fee_marca` (editable) y el Folio/OC se autoasigna con los identificadores.
   - `facturas.orden_compra` se mantiene como referencia legible (no se borra).

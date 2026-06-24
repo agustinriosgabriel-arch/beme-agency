@@ -119,7 +119,8 @@ body.dark .logo .logo-dark{display:block}
    Solo la 1ª columna es flexible (1fr); el resto px fijos → alineación
    consistente entre cada fila-grid independiente. */
 .cxc-row{grid-template-columns:minmax(140px,1fr) 116px 80px 108px 128px 88px 96px 96px 58px 58px 116px}
-.cxc-tal-row{grid-template-columns:30px minmax(140px,1fr) 110px 150px 100px 96px 56px 56px 132px}
+.cxc-tal-row{grid-template-columns:30px minmax(150px,1fr) 116px 150px 110px 56px 56px 140px}
+.cxc-sec{padding:6px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);background:var(--surface)}
 .cxp-row{grid-template-columns:minmax(140px,1fr) 122px 84px 84px 110px 100px 58px 58px 126px}
 .fin-estado-cell{display:flex;flex-wrap:wrap;gap:3px;align-items:center;min-width:0}
 #cxc-container,#cxp-container{overflow-x:auto}
@@ -857,8 +858,8 @@ function renderCxC(){
 
   // Una fila por SUB-CAMPAÑA (talento), agrupadas por campaña. QB es por FACTURA (estilo QuickBooks).
   const head=`<div class="fin-row fin-row-head cxc-tal-row">
-    <div></div><div>Sub-campaña (talento)</div><div>Estado</div><div>Factura</div>
-    <div>Cobro est.</div><div class="th-r">Monto</div><div class="th-c">QB Fact</div><div class="th-c">QB Cobro</div><div></div></div>`;
+    <div></div><div>Talento / Factura</div><div>Estado</div><div>Cobro est.</div>
+    <div class="th-r">Monto</div><div class="th-c">QB Fact</div><div class="th-c">QB Cobro</div><div></div></div>`;
 
   // Notificación: facturas con fecha de cobro pasada y aún sin cobrar (lista clickeable)
   const vencidas=[];camps.forEach(c=>(c.facs||[]).forEach(f=>{if(facVencida(f)&&facSaldo(f)>0)vencidas.push(f);}));
@@ -877,10 +878,12 @@ function renderCxC(){
   const grand={};
   container.innerHTML=alertBanner+camps.map(c=>{
     const cliId=c.marcas?.clientes?.id||0;
-    const cts=campanasTalentos.filter(ct=>ct.campana_id===c.id);
+    const cts=campanasTalentos.filter(ct=>ct.campana_id===c.id&&ct.estado!=='cancelada');
     const m=cxcCampMontos(c);Object.entries(m).forEach(([cur,v])=>addCur(grand,cur,v));
     const selN=cts.filter(ct=>cxcSel.has(ct.id)).length;
     const cobroEst=campCobroEstimado(c.id);
+    const facsActivas=(c.facs||[]).filter(f=>f.estado!=='cancelada');
+    const porFacturar=cts.map(ct=>({ct,resta:(Number(ct.fee_marca)||0)-ctInvoiced(ct)})).filter(x=>x.resta>0.01);
     return `<div class="fin-group" id="cxc-camp-${c.id}">
       <div class="fin-group-header">
         <div class="fin-group-name">${esc(c.nombre)} <span style="font-weight:500;color:var(--text-muted);font-size:12px">· ${esc(c.marcas?.nombre||'')}</span></div>
@@ -890,7 +893,9 @@ function renderCxC(){
       </div>
       <div class="fin-group-items">
         ${head}
-        ${cts.length?cts.map(ct=>renderCxCTalRow(ct,c)).join(''):'<div class="fin-row" style="padding:10px 14px;color:var(--text-dim);font-size:12px">Sin talentos en esta campaña</div>'}
+        ${facsActivas.length?`<div class="cxc-sec">Facturas · ${facsActivas.length}</div>${facsActivas.map(f=>renderCxCFacturaRow(f,c)).join('')}`:''}
+        ${porFacturar.length?`<div class="cxc-sec">Por facturar · ${porFacturar.length}</div>${porFacturar.map(x=>renderCxCPorFacturarRow(x.ct,x.resta,c)).join('')}`:''}
+        ${!facsActivas.length&&!cts.length?'<div class="fin-row" style="padding:10px 14px;color:var(--text-dim);font-size:12px">Sin talentos ni facturas</div>':''}
         ${(()=>{const orf=facturasHuerfanas(c);return orf.length?`<div style="padding:8px 14px;background:rgba(251,191,36,0.12);border-top:1px solid var(--border);font-size:12px;color:var(--orange);display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b>⚠ ${orf.length} factura(s) sin asignar a un talento</b><span style="color:var(--text-muted)">— asignala en vez de crear una nueva:</span>${orf.map(f=>`<button class="btn btn-xs btn-outline" onclick="editFactura(${f.id})">Asignar ${f.numero_factura?'#'+esc(f.numero_factura):'factura'} · ${fmtMoney(f.monto,f.moneda)}</button>`).join('')}</div>`:'';})()}
         <div style="display:flex;gap:8px;align-items:center;padding:8px 14px">
           <button class="btn btn-primary btn-xs" id="cxc-group-btn-${c.id}" style="display:${selN>=2?'':'none'}" onclick="facturarEnConjunto(${c.id},${cliId})">Facturar en conjunto (${selN})</button>
@@ -955,12 +960,16 @@ function ocMatchesIdent(f,ident){
   const parts=`${f.orden_compra||''},${f.numero_factura||''}`.split(',').map(s=>s.trim()).filter(Boolean);
   return parts.includes(ident);
 }
-// Factura (NO cancelada) que cubre a un talento: enlace real → match por # Orden/folio (legacy)
-function ctFactura(ct){
+// TODAS las facturas (NO canceladas) que cubren a un talento: enlace real o # Orden/folio.
+// Un talento puede tener varias facturas (facturación parcial / en partes).
+function ctFacturas(ct){
   const ids=facturaTalentos.filter(ft=>ft.campana_talento_id===ct.id).map(ft=>ft.factura_id);
-  let cands=facturas.filter(f=>ids.includes(f.id)&&f.estado!=='cancelada');
-  if(!cands.length&&ct.identificador)cands=facturas.filter(f=>f.campana_id===ct.campana_id&&f.estado!=='cancelada'&&ocMatchesIdent(f,ct.identificador));
-  return cands[0]||null;
+  return facturas.filter(f=>f.campana_id===ct.campana_id&&f.estado!=='cancelada'&&(ids.includes(f.id)||(ct.identificador&&ocMatchesIdent(f,ct.identificador))));
+}
+// Monto ya facturado de un talento (grupal cuenta su fee completo; individual el monto de la factura)
+function ctInvoiced(ct){
+  const fee=Number(ct.fee_marca)||0;
+  return ctFacturas(ct).reduce((s,f)=>s+(facturaCubreVarios(f)?fee:(Number(f.monto)||0)),0);
 }
 // ¿La factura agrupa más de una sub-campaña?
 function facturaCubreVarios(f){return facturaTalentos.filter(ft=>ft.factura_id===f.id).length>1;}
@@ -972,44 +981,43 @@ function facturaAsignada(f){
 // Facturas activas de la campaña que NO están asignadas a ningún talento (huérfanas)
 function facturasHuerfanas(c){return (c.facs||[]).filter(f=>f.estado!=='cancelada'&&!facturaAsignada(f));}
 
-// Fila por SUB-CAMPAÑA (talento) en CxC
-function renderCxCTalRow(ct,c){
+// Fila de FACTURA (sección "Facturas"): cada factura con su QB Fact / QB Cobro / cobro / envío
+function renderCxCFacturaRow(f,c){
+  const estLbl={pendiente:'Pendiente',emitida:'Emitida',enviada:'Enviada',pagada_parcial:'Pago Parcial',cobrada:'Cobrada',cancelada:'Cancelada'}[f.estado]||f.estado;
+  const tals=facturaTalNombres(f).join(', ')||'sin asignar';
+  const grouped=facturaCubreVarios(f);
+  const venc=vencInfo(f);
+  const overdue=facVencida(f)&&facSaldo(f)>0;
+  const cobro=f.fecha_vencimiento?`${formatDate(f.fecha_vencimiento)}${venc&&venc.dias<0?`<div><span class="venc-badge ${venc.cls}">⚠ ${venc.label}</span></div>`:''}`:'<span style="color:var(--orange);font-size:11px">falta envío</span>';
+  const saldo=facSaldo(f),pagado=facPagado(f);
+  return `<div class="fin-row cxc-tal-row"${overdue?' style="background:rgba(229,57,53,0.07)"':''}>
+      <div class="qb-cell"></div>
+      <div class="fin-row-name">${esc(tals)}${grouped?' <span style="font-size:9px;color:var(--text-dim);background:var(--surface2);padding:1px 5px;border-radius:4px">agrupada</span>':''}${f.numero_factura?`<div style="font-size:10px;color:var(--text-dim);font-family:'SF Mono',monospace;margin-top:1px">#${esc(f.numero_factura)}</div>`:''}</div>
+      <div><span class="status-pill st-${f.estado}">${estLbl}</span></div>
+      <div class="fin-row-date">${cobro}</div>
+      <div class="fin-row-amount">${fmtMoney(f.monto,f.moneda)}${saldo>0&&pagado>0?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,f.moneda)}</div>`:''}</div>
+      ${qbBox(f.qb_factura,`setQbFacFactura(${f.id},this.checked)`)}
+      ${qbBox(f.qb_cobro,`setQbFacCobro(${f.id},this.checked)`)}
+      <div class="fin-row-actions">${f.estado!=='cobrada'&&f.estado!=='cancelada'?`<button class="btn btn-green btn-xs" onclick="openComprobante(${f.id},${c.id})">Cobro</button>`:''}<button class="btn btn-outline btn-xs" onclick="editFactura(${f.id})">Editar</button></div>
+    </div>`;
+}
+// Fila POR FACTURAR (sección "Por facturar"): talento con saldo sin facturar (total o parcial)
+function renderCxCPorFacturarRow(ct,resta,c){
   const nombre=esc(ct.talentos?.nombre||('Talento '+ct.id));
   const moneda=ct.moneda_marca||ct.moneda||'USD';
   const fee=Number(ct.fee_marca)||0;
   const ident=ct.identificador||'';
   const cliId=c.marcas?.clientes?.id||0;
-  const f=ctFactura(ct);
-  let facCell,cobroCell,accCell,chk;
-  let qbFactCell,qbCobroCell;
-  if(f){
-    const estLbl={pendiente:'Pendiente',emitida:'Emitida',enviada:'Enviada',pagada_parcial:'Pago Parcial',cobrada:'Cobrada',cancelada:'Cancelada'}[f.estado]||f.estado;
-    const grouped=facturaCubreVarios(f);
-    facCell=`<span class="status-pill st-${f.estado}">${estLbl}</span>${f.numero_factura?` <span style="font-size:10px;color:var(--text-dim)">${esc(f.numero_factura)}</span>`:''}${grouped?` <span style="font-size:9px;color:var(--text-dim);background:var(--surface2);padding:1px 5px;border-radius:4px" title="Factura agrupada con otras sub-campañas">agrupada</span>`:''}`;
-    const venc=vencInfo(f);
-    cobroCell=f.fecha_vencimiento?`${formatDate(f.fecha_vencimiento)}${venc&&venc.dias<0?`<div><span class="venc-badge ${venc.cls}">⚠ ${venc.label}</span></div>`:''}`:'<span style="color:var(--text-dim)">falta envío</span>';
-    accCell=`${f.estado!=='cobrada'&&f.estado!=='cancelada'?`<button class="btn btn-green btn-xs" onclick="openComprobante(${f.id},${c.id})">Cobro</button>`:''}<button class="btn btn-outline btn-xs" onclick="editFactura(${f.id})">Editar</button>`;
-    chk='';
-    qbFactCell=qbBox(f.qb_factura,`setQbFacFactura(${f.id},this.checked)`);
-    qbCobroCell=qbBox(f.qb_cobro,`setQbFacCobro(${f.id},this.checked)`);
-  }else{
-    facCell=`<span class="status-pill st-pendiente">Sin factura</span>`;
-    cobroCell='—';
-    accCell=`<button class="btn btn-primary btn-xs" onclick="openNuevaFactura(${c.id},${cliId},[${ct.id}])">+ Factura</button>`;
-    chk=`<input type="checkbox" ${cxcSel.has(ct.id)?'checked':''} onchange="onCxcSelToggle(${ct.id},${c.id},this.checked)" title="Marcar para facturar en conjunto" style="width:auto;margin:0;cursor:pointer">`;
-    qbFactCell='<div class="qb-cell"></div>';qbCobroCell='<div class="qb-cell"></div>';
-  }
-  const overdue=f&&facVencida(f)&&facSaldo(f)>0;
-  return `<div class="fin-row cxc-tal-row"${overdue?' style="background:rgba(229,57,53,0.07)"':''}>
-      <div class="qb-cell">${chk}</div>
+  const parcial=resta<fee-0.01; // ya tiene algo facturado → es un saldo restante
+  return `<div class="fin-row cxc-tal-row">
+      <div class="qb-cell">${parcial?'':`<input type="checkbox" ${cxcSel.has(ct.id)?'checked':''} onchange="onCxcSelToggle(${ct.id},${c.id},this.checked)" title="Marcar para facturar en conjunto" style="width:auto;margin:0;cursor:pointer">`}</div>
       <div class="fin-row-name">${nombre}${ident?`<div style="font-size:10px;color:var(--text-dim);font-family:'SF Mono',monospace;margin-top:1px">${esc(ident)}</div>`:''}</div>
       <div class="fin-estado-cell">${talEstadoBadge(ct.estado)}</div>
-      <div>${facCell}</div>
-      <div class="fin-row-date">${cobroCell}</div>
-      <div class="fin-row-amount">${fmtMoney(fee,moneda)}</div>
-      ${qbFactCell}
-      ${qbCobroCell}
-      <div class="fin-row-actions">${accCell}</div>
+      <div style="font-size:11px;color:var(--text-muted)">${parcial?`facturado ${fmtMoney(fee-resta,moneda)} de ${fmtMoney(fee,moneda)}`:'sin factura'}</div>
+      <div class="fin-row-amount">${fmtMoney(resta,moneda)}${parcial?'<div style="font-size:10px;color:var(--orange);font-weight:600">resta</div>':''}</div>
+      <div class="qb-cell"></div>
+      <div class="qb-cell"></div>
+      <div class="fin-row-actions"><button class="btn btn-primary btn-xs" onclick="openNuevaFactura(${c.id},${cliId},[${ct.id}],${Math.round(resta*100)/100})">+ Factura</button></div>
     </div>`;
 }
 // Salta a la campaña en CxC y la resalta (desde la alerta de vencidas)
@@ -1176,7 +1184,7 @@ function updateVencimientoHint(){
   if(baseStr){const base=new Date(baseStr+'T00:00:00');const v=habiles?addBusinessDays(base,dias):(()=>{const x=new Date(base.getTime());x.setDate(x.getDate()+dias);return x;})();hint.textContent='Cobro estimado: '+v.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'})+(habiles?' (hábiles)':'')+(env?' · desde envío':' · desde emisión (falta envío)');}
   else hint.textContent='Indica la fecha de envío para estimar el cobro';
 }
-function openNuevaFactura(campanaId,clienteId,preCtIds){
+function openNuevaFactura(campanaId,clienteId,preCtIds,preMonto){
   editingFacturaId=null;editingFacturaCampanaId=campanaId;editingFacturaClienteId=clienteId;
   document.getElementById('modal-factura-title').textContent='Nueva Factura';
   ['fac-numero','fac-notas'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -1197,6 +1205,8 @@ function openNuevaFactura(campanaId,clienteId,preCtIds){
   const pre = (preCtIds&&preCtIds.length) ? preCtIds : (ctsAll.length===1 ? [ctsAll[0].id] : []);
   const cts = populateFacTalentos(campanaId, pre);
   if (cts.length) onFacTalentoChange();
+  // Saldo a facturar (factura parcial): si viene un monto sugerido, lo usamos en vez del fee completo
+  if (montoEl && preMonto!=null && preMonto>0) { montoEl.value = preMonto; montoEl.dataset.autofilled='0'; }
   // Internacional?
   const cli=clientes.find(c=>c.id===clienteId);
   if(cli&&cli.pais&&cli.pais!=='Mexico'&&cli.pais!=='México')document.getElementById('fac-tipo').value='invoice';
