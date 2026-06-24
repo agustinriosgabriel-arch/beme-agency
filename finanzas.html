@@ -410,7 +410,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   <div class="modal"><div class="modal-header"><div class="modal-title" id="modal-factura-title">Factura</div><button class="modal-close" onclick="closeModal('modal-factura')"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
   <div class="modal-body">
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">Tipo *</label><select id="fac-tipo" class="form-input"><option value="PUE">PUE</option><option value="PPD">PPD</option><option value="invoice">Invoice (Internacional)</option><option value="en_app">EN APP</option></select></div>
+      <div class="form-group"><label class="form-label">Tipo *</label><select id="fac-tipo" class="form-input" onchange="onFacTipoChange()"><option value="PUE">PUE</option><option value="PPD">PPD</option><option value="invoice">Invoice (Internacional)</option><option value="en_app">EN APP</option></select></div>
       <div class="form-group full" id="fac-talento-group" style="display:none"><label class="form-label">Talento(s) de la campaña *</label><div id="fac-talento" style="max-height:170px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:6px;background:var(--surface2)"></div><div style="font-size:11px;color:var(--text-dim);margin-top:4px">Marca uno o varios talentos para agruparlos en una sola factura. El monto suma su fee y el # Orden se autoasigna.</div><div id="fac-talento-warn" style="display:none;font-size:11px;color:var(--orange);font-weight:600;margin-top:4px"></div></div>
       <div class="form-group full"><label class="form-label"># Orden</label><input type="text" id="fac-numero" class="form-input" placeholder="La app lo sugiere al elegir talento — podés editarlo" oninput="this.dataset.manual='1'" style="font-family:'SF Mono',monospace;font-weight:600;color:var(--primary)"></div>
       <div class="form-group"><label class="form-label">Monto *</label><input type="number" id="fac-monto" class="form-input" placeholder="0.00" step="0.01" oninput="this.dataset.autofilled='0'"></div>
@@ -424,6 +424,8 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       <div class="form-group" id="fac-anticipo-group" style="display:none"><label class="form-label">% Anticipo</label><input type="number" id="fac-anticipo" class="form-input" placeholder="50" min="1" max="99" step="1"></div>
       <div class="form-group"><label class="form-label">Estado</label><select id="fac-estado" class="form-input"><option value="pendiente">Pendiente</option><option value="emitida">Emitida</option><option value="enviada">Enviada</option><option value="pagada_parcial">Pago Parcial</option><option value="cobrada">Cobrada</option><option value="cancelada">Cancelada</option></select><div class="form-hint">Parcial/Cobrada se actualizan solos al registrar pagos</div></div>
       <div class="form-group"><label class="form-label">Forma de pago (SAT)</label><select id="fac-forma-pago" class="form-input"><option value="">—</option><option value="03">03 - Transferencia</option><option value="02">02 - Cheque</option><option value="01">01 - Efectivo</option><option value="99">99 - Por definir</option></select></div>
+      <div class="form-group" id="fac-pdf-group"><label class="form-label">PDF Factura</label><input type="file" id="fac-pdf" class="form-input" accept=".pdf"><div class="form-hint" id="fac-pdf-current"></div></div>
+      <div class="form-group" id="fac-xml-group"><label class="form-label">XML Factura</label><input type="file" id="fac-xml" class="form-input" accept=".xml"><div class="form-hint" id="fac-xml-current"></div></div>
       <div class="form-group full"><label class="form-label">Notas</label><textarea id="fac-notas" class="form-input" placeholder="Notas..."></textarea></div>
     </div>
   </div>
@@ -1165,6 +1167,14 @@ function onEsquemaChange(){
   grp.style.display=(esq==='50_50'||esq==='anticipo')?'':'none';
   if(esq==='50_50')document.getElementById('fac-anticipo').value=50;
 }
+// Archivos según tipo: PUE/PPD → PDF+XML · Invoice (internacional) → solo PDF · EN APP → sin archivos
+function onFacTipoChange(){
+  const tipo=document.getElementById('fac-tipo').value;
+  const pdfG=document.getElementById('fac-pdf-group');
+  const xmlG=document.getElementById('fac-xml-group');
+  if(pdfG)pdfG.style.display=(tipo==='en_app')?'none':'';
+  if(xmlG)xmlG.style.display=(tipo==='PUE'||tipo==='PPD')?'':'none';
+}
 // Hint de vencimiento calculado: emisión + días de crédito
 // Suma N días hábiles a una fecha JS (salta sábado/domingo). Espeja add_business_days() del SQL.
 function addBusinessDays(date,n){
@@ -1210,6 +1220,10 @@ function openNuevaFactura(campanaId,clienteId,preCtIds,preMonto){
   // Internacional?
   const cli=clientes.find(c=>c.id===clienteId);
   if(cli&&cli.pais&&cli.pais!=='Mexico'&&cli.pais!=='México')document.getElementById('fac-tipo').value='invoice';
+  // Reset de archivos + visibilidad según tipo
+  ['fac-pdf','fac-xml'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['fac-pdf-current','fac-xml-current'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='';});
+  onFacTipoChange();
   openModal('modal-factura');
 }
 function editFactura(id){
@@ -1232,6 +1246,11 @@ function editFactura(id){
   document.getElementById('fac-forma-pago').value=f.forma_pago||'';
   onEsquemaChange();updateVencimientoHint();
   document.getElementById('fac-notas').value=f.notas||'';
+  // Archivos: reset inputs, mostrar los actuales como links y visibilidad según tipo
+  ['fac-pdf','fac-xml'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const pdfCur=document.getElementById('fac-pdf-current');if(pdfCur)pdfCur.innerHTML=f.factura_pdf_url?`Actual: <a href="${f.factura_pdf_url}" target="_blank">ver PDF</a> — subí uno para reemplazar`:'';
+  const xmlCur=document.getElementById('fac-xml-current');if(xmlCur)xmlCur.innerHTML=f.factura_xml_url?`Actual: <a href="${f.factura_xml_url}" target="_blank">ver XML</a> — subí uno para reemplazar`:'';
+  onFacTipoChange();
   // Talentos enlazados (tabla factura_talentos). Fallback a match por OC/folio para facturas legacy.
   const cts = campanasTalentos.filter(ct=>ct.campana_id===f.campana_id);
   let linkedIds = facturaTalentos.filter(ft=>ft.factura_id===f.id).map(ft=>ft.campana_talento_id);
@@ -1267,6 +1286,11 @@ async function saveFactura(){
     updated_at:new Date().toISOString(),
   };
   try{
+    // Archivos: PUE/PPD → PDF+XML · Invoice → PDF · EN APP → ninguno (se ocultan por tipo)
+    const pdfFile=document.getElementById('fac-pdf')?.files[0];
+    const xmlFile=document.getElementById('fac-xml')?.files[0];
+    if(pdfFile)payload.factura_pdf_url=await uploadFile(pdfFile,`campana-${editingFacturaCampanaId}/factura`);
+    if(xmlFile)payload.factura_xml_url=await uploadFile(xmlFile,`campana-${editingFacturaCampanaId}/factura`);
     let facId=editingFacturaId;
     if(editingFacturaId){
       const{error}=await sb.from('facturas').update(payload).eq('id',editingFacturaId);if(error)throw error;
