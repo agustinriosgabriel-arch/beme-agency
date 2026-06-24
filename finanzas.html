@@ -190,6 +190,10 @@ body.dark .logo .logo-dark{display:block}
 .fd-file-link{font-size:12px;color:var(--primary);display:flex;align-items:center;gap:4px}
 .fd-file-link:hover{text-decoration:underline}
 .fin-detail-card .fd-actions{display:flex;gap:4px;flex-wrap:wrap}
+.fch{display:inline-flex;align-items:center;gap:3px;vertical-align:middle}
+.fch-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text-muted);font-size:11px;line-height:1;padding:0;cursor:pointer}
+.fch-btn:hover{background:var(--border);color:var(--text)}
+.fch-btn.fch-del:hover{background:rgba(229,57,53,0.12);color:var(--red);border-color:var(--red)}
 
 /* Client cards */
 .client-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:10px;cursor:pointer;transition:all 0.15s}
@@ -1047,6 +1051,45 @@ function facturarEnConjunto(campId,cliId){
   openNuevaFactura(campId,cliId,ids);
 }
 
+// ── Archivos ya subidos: chip con acciones cambiar / eliminar (CxC + CxP) ──
+const FILE_ICON='<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+// Borra el objeto del bucket finanzas a partir de su URL pública (best-effort, no bloquea).
+function removeStorageByUrl(url){
+  try{const p=String(url||'').split('/finanzas/')[1];
+    if(p)sb.storage.from('finanzas').remove([decodeURIComponent(p.split('?')[0])]).catch(()=>{});
+  }catch(e){}
+}
+// Reemplaza un archivo: sube el nuevo, actualiza la columna, borra el viejo del storage.
+async function cambiarArchivo(input,table,id,col,subfolder,oldUrl){
+  const file=input.files&&input.files[0];if(!file)return;
+  try{
+    showToast('Subiendo...','info');
+    const url=await uploadFile(file,subfolder);
+    const{error}=await sb.from(table).update({[col]:url}).eq('id',id);if(error)throw error;
+    if(oldUrl)removeStorageByUrl(oldUrl);
+    await loadData();renderAll();
+    showToast('Archivo reemplazado','success');
+  }catch(e){showToast('Error: '+e.message,'error');}
+  finally{input.value='';}
+}
+// Elimina un archivo: pone la columna en null y borra el objeto del storage.
+async function eliminarArchivo(table,id,col,url){
+  if(!confirm('¿Eliminar este archivo? Esta acción no se puede deshacer.'))return;
+  try{
+    const{error}=await sb.from(table).update({[col]:null}).eq('id',id);if(error)throw error;
+    if(url)removeStorageByUrl(url);
+    await loadData();renderAll();
+    showToast('Archivo eliminado','success');
+  }catch(e){showToast('Error: '+e.message,'error');}
+}
+// HTML del chip: link al archivo + botón reemplazar (⟳) + botón eliminar (✕).
+function archivoChip(label,url,table,id,col,subfolder,accept,linkClass){
+  const uid=('fch_'+table+'_'+id+'_'+col).replace(/[^a-z0-9_]/gi,'');
+  return `<span class="fch"><a class="${linkClass||'fd-file-link'}" href="${url}" target="_blank">${label}</a>`
+    +`<input type="file" id="${uid}" accept="${accept}" style="display:none" onchange="cambiarArchivo(this,'${table}',${id},'${col}','${subfolder}','${url}')">`
+    +`<button type="button" class="fch-btn" title="Reemplazar archivo" onclick="document.getElementById('${uid}').click()">⟳</button>`
+    +`<button type="button" class="fch-btn fch-del" title="Eliminar archivo" onclick="eliminarArchivo('${table}',${id},'${col}','${url}')">✕</button></span>`;
+}
 function renderFacturaDetail(f,c){
   const pagos=pagosMarca.filter(p=>p.factura_id===f.id);
   const compls=complementos.filter(cp=>cp.factura_id===f.id);
@@ -1068,8 +1111,8 @@ function renderFacturaDetail(f,c){
       ${venc?`<div style="margin:4px 0"><span class="venc-badge ${venc.cls}">${venc.label}</span></div>`:''}
       ${f.uuid_fiscal?`<div style="font-size:9.5px;color:var(--text-dim);font-family:'SF Mono',monospace;word-break:break-all" title="Folio fiscal CFDI">${esc(f.uuid_fiscal)}</div>`:''}
       <div class="fd-files">
-        ${f.factura_pdf_url?`<a class="fd-file-link" href="${f.factura_pdf_url}" target="_blank"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> PDF</a>`:''}
-        ${f.factura_xml_url?`<a class="fd-file-link" href="${f.factura_xml_url}" target="_blank"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> XML</a>`:''}
+        ${f.factura_pdf_url?archivoChip(FILE_ICON+' PDF',f.factura_pdf_url,'facturas',f.id,'factura_pdf_url',`campana-${f.campana_id}/factura`,'.pdf'):''}
+        ${f.factura_xml_url?archivoChip(FILE_ICON+' XML',f.factura_xml_url,'facturas',f.id,'factura_xml_url',`campana-${f.campana_id}/factura`,'.xml'):''}
       </div>
       <div class="fd-actions">
         <button class="btn btn-outline btn-xs" onclick="editFactura(${f.id})">Editar</button>
@@ -1085,7 +1128,7 @@ function renderFacturaDetail(f,c){
       ${hasPago?pagos.map(p=>`<div style="margin-bottom:6px">
         <div style="font-size:12px"><strong>${fmtMoney(p.monto,p.moneda)}</strong> via <span style="text-transform:uppercase;font-weight:700;font-size:10px">${p.corredor}</span></div>
         <div style="font-size:11px;color:var(--text-dim)">${formatDate(p.fecha_pago)}</div>
-        ${p.comprobante_url?`<a class="fd-file-link" href="${p.comprobante_url}" target="_blank">Comprobante</a>`:''}
+        ${p.comprobante_url?archivoChip('Comprobante',p.comprobante_url,'pagos_marca',p.id,'comprobante_url',`campana-${f.campana_id}/comprobante-marca`,'.pdf,.png,.jpg,.jpeg'):''}
       </div>`).join(''):`<p style="font-size:12px;color:var(--text-dim)">Sin pago registrado</p>`}
       </div>
       <div class="fd-actions">
@@ -1096,8 +1139,8 @@ function renderFacturaDetail(f,c){
       <div class="fd-title">Complemento PPD</div>
       ${compls.length?compls.map(cp=>`<div style="margin-bottom:6px">
         <span class="status-pill st-${cp.estado==='enviado'?'enviada':'emitida'}">${cp.estado}</span>
-        ${cp.complemento_pdf_url?`<a class="fd-file-link" href="${cp.complemento_pdf_url}" target="_blank">PDF</a>`:''}
-        ${cp.complemento_xml_url?`<a class="fd-file-link" href="${cp.complemento_xml_url}" target="_blank">XML</a>`:''}
+        ${cp.complemento_pdf_url?archivoChip('PDF',cp.complemento_pdf_url,'complementos_pago',cp.id,'complemento_pdf_url',`campana-${f.campana_id}/complemento`,'.pdf'):''}
+        ${cp.complemento_xml_url?archivoChip('XML',cp.complemento_xml_url,'complementos_pago',cp.id,'complemento_xml_url',`campana-${f.campana_id}/complemento`,'.xml'):''}
       </div>`).join(''):`<p style="font-size:12px;color:var(--text-dim)">${hasPago?'Cobro registrado, falta complemento':'Registrar cobro primero'}</p>`}
       <div class="fd-actions">
         ${hasPago?`<button class="btn btn-outline btn-xs" onclick="openComplemento(${f.id},${pagos[0]?.id||0})">+ Complemento</button>`:''}
@@ -1555,7 +1598,7 @@ function renderCxPComisionRow(com){
     <div></div>
     <div class="fin-row-actions">
       ${estado!=='pagado'?`<button class="btn btn-green btn-xs" onclick="openPagoTercero(${com.id})">${estado==='parcial'?'Pagar saldo':'Pagar'}</button>`:''}
-      ${pcs.filter(p=>p.comprobante_url).map((p,i)=>`<a class="btn btn-ghost btn-xs" href="${p.comprobante_url}" target="_blank">Comp.${pcs.length>1?' '+(i+1):''}</a>`).join('')}
+      ${pcs.filter(p=>p.comprobante_url).map((p,i)=>archivoChip(`Comp.${pcs.length>1?' '+(i+1):''}`,p.comprobante_url,'pagos_tercero',p.id,'comprobante_url',`comision-${com.id}/comprobante`,'.pdf,.png,.jpg,.jpeg','btn btn-ghost btn-xs')).join('')}
     </div>
   </div>`;
 }
@@ -1582,8 +1625,8 @@ function renderCxPRow(ct){
     <div class="fin-row-actions">
       ${estado!=='pagado'?`<button class="btn btn-green btn-xs" onclick="openPagoTalento(${ct.id},${ct.campana_id},${ct.talent_id})">${estado==='parcial'?'Pagar saldo':'Pagar'}</button>`:''}
       <input type="file" id="inv-${ct.id}" style="display:none" accept=".pdf,.png,.jpg,.jpeg" onchange="subirInvoiceTalento(${ct.id},${ct.campana_id},${ct.talent_id},this)">
-      ${ct.invoice_url?`<a class="btn btn-ghost btn-xs" href="${ct.invoice_url}" target="_blank" title="Invoice del talento">Invoice ✓</a>`:`<button class="btn btn-outline btn-xs" onclick="document.getElementById('inv-${ct.id}').click()" title="Cargar invoice del talento">+ Invoice</button>`}
-      ${pts.filter(p=>p.comprobante_url).map((p,i)=>`<a class="btn btn-ghost btn-xs" href="${p.comprobante_url}" target="_blank">Comp.${pts.length>1?' '+(i+1):''}</a>`).join('')}
+      ${ct.invoice_url?archivoChip('Invoice ✓',ct.invoice_url,'campana_talentos',ct.id,'invoice_url',`campana-${ct.campana_id}/invoice-talento-${ct.talent_id}`,'.pdf,.png,.jpg,.jpeg','btn btn-ghost btn-xs'):`<button class="btn btn-outline btn-xs" onclick="document.getElementById('inv-${ct.id}').click()" title="Cargar invoice del talento">+ Invoice</button>`}
+      ${pts.filter(p=>p.comprobante_url).map((p,i)=>archivoChip(`Comp.${pts.length>1?' '+(i+1):''}`,p.comprobante_url,'pagos_talento',p.id,'comprobante_url',`campana-${ct.campana_id}/comprobante-talento-${ct.talent_id}`,'.pdf,.png,.jpg,.jpeg','btn btn-ghost btn-xs')).join('')}
     </div>
   </div>`;
 }
@@ -1999,7 +2042,7 @@ async function uploadFile(file,subfolder){
 // ═══════════════════════════════════════════
 function toggleTheme(){isDark=!isDark;document.body.classList.toggle('light',!isDark);document.getElementById('theme-icon-dark').style.display=isDark?'none':'block';document.getElementById('theme-icon-light').style.display=isDark?'block':'none';try{localStorage.setItem('beme_theme',isDark?'dark':'light');}catch(e){}}
 function loadTheme(){try{const t=localStorage.getItem('beme_theme');if(t==='dark'){isDark=true;document.body.classList.remove('light');document.getElementById('theme-icon-dark').style.display='none';document.getElementById('theme-icon-light').style.display='block';}else{isDark=false;document.body.classList.add('light');document.getElementById('theme-icon-dark').style.display='block';document.getElementById('theme-icon-light').style.display='none';}}catch(e){}}
-function openModal(id){document.getElementById(id)?.classList.add('open');}
+function openModal(id){const m=document.getElementById(id);if(!m)return;m.querySelectorAll('input[type=file]').forEach(el=>{el.value='';});m.classList.add('open');}
 function closeModal(id){document.getElementById(id)?.classList.remove('open');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));});
 function showToast(msg,type='info',dur=3000){const t=document.createElement('div');t.className=`toast ${type}`;t.innerHTML=`<span>${({success:'&#10003;',error:'&#10007;',info:'&#8505;'})[type]||'&bull;'}</span><span>${esc(msg)}</span>`;document.getElementById('toast-container').appendChild(t);setTimeout(()=>t.remove(),dur);}
