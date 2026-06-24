@@ -1329,7 +1329,7 @@ function renderCxP(){
   const campIds=[...new Set([...Object.keys(byCamp),...Object.keys(comByCamp)])];
 
   const head=`<div class="fin-row fin-row-head cxp-row">
-    <div>Talento / Comisión</div><div>Estado</div><div>Pago</div><div>Corredor</div><div>Pago estimado</div>
+    <div>Talento / Comisión</div><div>Estado</div><div>Pago</div><div>Corredor</div><div>Pago est. / real</div>
     <div class="th-r">Fee / saldo</div><div class="th-c">QB Factura</div><div class="th-c">QB Pago</div><div></div></div>`;
 
   const grand={};
@@ -1358,6 +1358,17 @@ function renderCxP(){
   renderStats();
 }
 
+// Línea "pago real": fecha(s) del/los pago(s) ya registrado(s), bajo la columna Pago estimado.
+// pagos = pagosTalento (filtrados por ct) o pagosTercero (filtrados por comisión).
+function pagoRealLine(pagos){
+  const fechas=[...new Set((pagos||[]).map(p=>p.fecha_pago).filter(Boolean))].sort();
+  if(!fechas.length)return '';
+  const ultima=fechas[fechas.length-1];
+  const extra=fechas.length>1?` <span style="color:var(--text-dim);font-weight:600">+${fechas.length-1}</span>`:'';
+  const tip=fechas.map(f=>formatDate(f)).join(' · ');
+  return `<div title="Pago real registrado: ${tip}" style="font-size:10px;color:var(--green);font-weight:700;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">✓ ${formatDate(ultima)}${extra}</div>`;
+}
+
 // Fila de comisión de tercero en CxP (mismas columnas que la fila de talento)
 function renderCxPComisionRow(com){
   const pcs=pagosTercero.filter(p=>p.comision_id===com.id);
@@ -1375,7 +1386,7 @@ function renderCxPComisionRow(com){
     <div class="fin-estado-cell"><span class="status-pill" style="background:rgba(148,20,224,0.12);color:#9414E0">Tercero</span></div>
     <div><span class="status-pill st-${estado}">${estadoLbl}</span></div>
     <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${corredores?esc(corredores):'—'}</div>
-    <div style="color:var(--text-dim)">—</div>
+    <div style="color:var(--text-dim)">${pagoRealLine(pcs)||'—'}</div>
     <div class="fin-row-amount">${fmtMoney(meta,mon)}${estado==='parcial'?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,mon)}</div>`:''}</div>
     <div></div>
     <div></div>
@@ -1401,7 +1412,7 @@ function renderCxPRow(ct){
     <div class="fin-estado-cell">${talEstadoBadge(ct.estado)}</div>
     <div><span class="status-pill st-${estado}">${estadoLbl}</span></div>
     <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${corredores?esc(corredores):'—'}</div>
-    <div><input type="date" value="${fechaEst}" title="Fecha de pago estimada" onchange="setFechaPagoEstimada(${ct.id},this.value)" style="${dInput}"></div>
+    <div><input type="date" value="${fechaEst}" title="Fecha de pago estimada" onchange="setFechaPagoEstimada(${ct.id},this.value)" style="${dInput}">${pagoRealLine(pts)}</div>
     <div class="fin-row-amount">${fmtMoney(ct.fee_talento||0,ct.moneda_talento||ct.moneda)}${estado==='parcial'?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,ct.moneda_talento||ct.moneda)}</div>`:''}</div>
     ${qbBox(ct.qb_factura,`setQbCtFactura(${ct.id},this.checked)`)}
     ${qbBox(ct.qb_pago,`setQbCtPago(${ct.id},this.checked)`)}
