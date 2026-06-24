@@ -97,17 +97,17 @@ CREATE OR REPLACE FUNCTION trg_sync_ct_pago() RETURNS trigger AS $$
 DECLARE
   cid integer;
   total numeric;
-  fee numeric;
+  v_fee numeric;
   ultima date;
 BEGIN
   cid := COALESCE(NEW.campana_talento_id, OLD.campana_talento_id);
   IF cid IS NULL THEN RETURN COALESCE(NEW, OLD); END IF;
   SELECT COALESCE(SUM(monto), 0), MAX(fecha_pago) INTO total, ultima
     FROM pagos_talento WHERE campana_talento_id = cid;
-  SELECT COALESCE(fee_talento, 0) INTO fee FROM campana_talentos WHERE id = cid;
+  SELECT COALESCE(fee_talento, 0) INTO v_fee FROM campana_talentos WHERE id = cid;
   UPDATE campana_talentos SET
     pago_estado = CASE
-      WHEN total >= fee AND fee > 0 THEN 'pagado'
+      WHEN total >= v_fee AND v_fee > 0 THEN 'pagado'
       WHEN total > 0 THEN 'parcial'
       ELSE 'pendiente'
     END,
