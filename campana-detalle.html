@@ -3297,8 +3297,8 @@ function findCont(id) { for(const ct of campana.campana_talentos||[]){const c=(c
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmtDate(d){if(!d)return'';return new Date(d+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'});}
 function fmtDT(d){if(!d)return'';return new Date(d).toLocaleString('es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}
-function fmtMoney(v,m){const s={USD:'$',ARS:'$',MXN:'$',EUR:'€'}[m]||'$';return`${s}${Number(v||0).toLocaleString('es-ES',{minimumFractionDigits:0,maximumFractionDigits:2})} ${m||''}`;}
-function fmtMoneyCompact(v,m){const s={USD:'$',ARS:'$',MXN:'$',EUR:'€'}[m]||'$';const n=Number(v||0).toLocaleString('es-ES',{minimumFractionDigits:0,maximumFractionDigits:2});return`${s}${n}<span class="fee-cur">${m||''}</span>`;}
+function fmtMoney(v,m){const s={USD:'$',ARS:'$',MXN:'$',EUR:'€'}[m]||'$';return`${s}${Number(v||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})} ${m||''}`;}
+function fmtMoneyCompact(v,m){const s={USD:'$',ARS:'$',MXN:'$',EUR:'€'}[m]||'$';const n=Number(v||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});return`${s}${n}<span class="fee-cur">${m||''}</span>`;}
 function fmtSize(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
 
 function openModal(id){document.getElementById(id)?.classList.add('open');}
