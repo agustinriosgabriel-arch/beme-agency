@@ -122,7 +122,7 @@ body.dark .logo .logo-dark{display:block}
 .fin-group-name{font-size:14px;font-weight:700;flex:1}
 .fin-group-amount{font-family:'Plus Jakarta Sans',sans-serif;font-variant-numeric:tabular-nums;font-feature-settings:"tnum";font-size:16px;font-weight:800}
 .fin-group-badge{padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700}
-.fin-group-items{border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);overflow:hidden}
+.fin-group-items{border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);overflow-x:auto;overflow-y:hidden}
 
 .fin-row{display:grid;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;transition:background 0.1s}
 .fin-row:last-child{border-bottom:none}
@@ -136,7 +136,7 @@ body.dark .logo .logo-dark{display:block}
    Solo la 1ª columna es flexible (1fr); el resto px fijos → alineación
    consistente entre cada fila-grid independiente. */
 .cxc-row{grid-template-columns:minmax(140px,1fr) 116px 80px 108px 128px 88px 96px 96px 58px 58px 116px}
-.cxc-tal-row{grid-template-columns:30px minmax(140px,1fr) 104px 152px 104px 56px 56px 178px}
+.cxc-tal-row{grid-template-columns:26px minmax(110px,1.2fr) 104px 100px 88px 96px 88px 92px 52px 52px 58px 72px 96px}
 .cxc-sec{padding:6px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);background:var(--surface)}
 .cxp-row{grid-template-columns:minmax(140px,1fr) 122px 84px 84px 110px 100px 58px 58px 126px}
 .fin-estado-cell{display:flex;flex-wrap:wrap;gap:3px;align-items:center;min-width:0}
@@ -944,8 +944,9 @@ function renderCxC(){
 
   // Una fila por SUB-CAMPAÑA (talento), agrupadas por campaña. QB es por FACTURA (estilo QuickBooks).
   const head=`<div class="fin-row fin-row-head cxc-tal-row">
-    <div></div><div>Talento / Factura</div><div>Estado</div><div>Cobro est.</div>
-    <div class="th-r">Monto</div><div class="th-c">QB Fact</div><div class="th-c">QB Cobro</div><div></div></div>`;
+    <div></div><div>Talento / Factura</div><div>Estado talento</div><div>Estado factura</div>
+    <div>Cobro est.</div><div>Cobrado</div><div>Corredor</div><div class="th-r">Monto</div>
+    <div class="th-c">QB Fact</div><div class="th-c">QB Cobro</div><div class="th-c">Factura</div><div class="th-c">Comprob.</div><div></div></div>`;
 
   // Notificación: facturas con fecha de cobro pasada y aún sin cobrar (lista clickeable)
   const vencidas=[];camps.forEach(c=>(c.facs||[]).forEach(f=>{if(facVencida(f)&&facSaldo(f)>0)vencidas.push(f);}));
@@ -1098,20 +1099,25 @@ function renderCxCFacturaRow(f,c){
   const pagos=pagosMarca.filter(p=>p.factura_id===f.id);
   const ultimoPago=pagos[0];
   const comprobante=(pagos.find(p=>p.comprobante_url)||{}).comprobante_url;
-  const cobroEst=f.fecha_vencimiento?`<div>${formatDate(f.fecha_vencimiento)}${venc&&venc.dias<0?` <span class="venc-badge ${venc.cls}">⚠ ${venc.label}</span>`:''}</div>`:'<span style="color:var(--orange);font-size:11px">falta envío</span>';
-  const cobroReal=ultimoPago&&ultimoPago.fecha_pago?`<div style="color:var(--green);font-weight:600;font-size:10px;margin-top:2px">✓ Cobrado ${formatDate(ultimoPago.fecha_pago)}${ultimoPago.corredor?` · vía ${esc(corredorLbl(ultimoPago.corredor))}`:''}</div>`:'';
+  const dim='<span style="color:var(--text-dim)">—</span>';
+  const cobroEst=f.fecha_vencimiento?`${formatDate(f.fecha_vencimiento)}${venc&&venc.dias<0?`<div><span class="venc-badge ${venc.cls}">⚠ ${venc.label}</span></div>`:''}`:'<span style="color:var(--orange);font-size:11px">falta envío</span>';
+  const cobrado=ultimoPago&&ultimoPago.fecha_pago?`<span style="color:var(--green);font-weight:700">✓ ${formatDate(ultimoPago.fecha_pago)}</span>`:dim;
+  const corredor=ultimoPago&&ultimoPago.corredor?`<span style="font-size:10px;text-transform:uppercase;font-weight:700;color:var(--text-muted)">${esc(corredorLbl(ultimoPago.corredor))}</span>`:dim;
   const open=openAccordions.has('facdet-'+f.id);
   return `<div class="fin-row cxc-tal-row fac-clickable${open?' fac-row-open':''}"${overdue?' style="background:rgba(229,57,53,0.07)"':''} onclick="if(!event.target.closest('button,a,input,label'))toggleFacRow(${f.id})">
       <div class="qb-cell"><span class="fac-caret">▾</span></div>
-      <div class="fin-row-name">${esc(tals)}${grouped?' <span style="font-size:9px;color:var(--text-dim);background:var(--surface2);padding:1px 5px;border-radius:4px">agrupada</span>':''}${f.numero_factura?`<div style="font-size:10px;color:var(--text-dim);font-family:'SF Mono',monospace;margin-top:1px">#${esc(f.numero_factura)}</div>`:''}${estTalBadges?`<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px">${estTalBadges}</div>`:''}</div>
+      <div class="fin-row-name">${esc(tals)}${grouped?' <span style="font-size:9px;color:var(--text-dim);background:var(--surface2);padding:1px 5px;border-radius:4px">agrupada</span>':''}${f.numero_factura?`<div style="font-size:10px;color:var(--text-dim);font-family:'SF Mono',monospace;margin-top:1px">#${esc(f.numero_factura)}</div>`:''}</div>
+      <div class="fin-estado-cell">${estTalBadges||dim}</div>
       <div><span class="status-pill st-${f.estado}">${estLbl}</span></div>
-      <div class="fin-row-date">${cobroEst}${cobroReal}</div>
+      <div class="fin-row-date">${cobroEst}</div>
+      <div class="fin-row-date">${cobrado}</div>
+      <div style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${corredor}</div>
       <div class="fin-row-amount">${fmtMoney(f.monto,f.moneda)}${saldo>0&&pagado>0?`<div style="font-size:10px;font-weight:600;color:var(--orange)">saldo ${fmtMoney(saldo,f.moneda)}</div>`:''}</div>
       ${qbBox(f.qb_factura,`setQbFacFactura(${f.id},this.checked)`)}
       ${qbBox(f.qb_cobro,`setQbFacCobro(${f.id},this.checked)`,{disabled:!f.qb_factura,title:'Primero marcá QB Factura'})}
+      <div class="qb-cell">${f.factura_pdf_url?`<a class="btn btn-ghost btn-xs" href="${f.factura_pdf_url}" target="_blank" title="Ver PDF de la factura">Ver</a>`:dim}</div>
+      <div class="qb-cell">${comprobante?`<a class="btn btn-ghost btn-xs" href="${comprobante}" target="_blank" title="Ver comprobante de pago">Ver</a>`:dim}</div>
       <div class="fin-row-actions">
-        ${f.factura_pdf_url?`<a class="btn btn-ghost btn-xs" href="${f.factura_pdf_url}" target="_blank" title="Ver PDF de la factura">Factura</a>`:''}
-        ${comprobante?`<a class="btn btn-ghost btn-xs" href="${comprobante}" target="_blank" title="Ver comprobante de pago">Comp.</a>`:''}
         ${f.estado!=='cobrada'&&f.estado!=='cancelada'?`<button class="btn btn-green btn-xs" onclick="openComprobante(${f.id},${c.id})">Cobro</button>`:''}
         <button class="btn btn-outline btn-xs" onclick="editFactura(${f.id})">Editar</button>
       </div>
@@ -1126,14 +1132,20 @@ function renderCxCPorFacturarRow(ct,resta,c){
   const ident=ct.identificador||'';
   const cliId=c.marcas?.clientes?.id||0;
   const parcial=resta<fee-0.01; // ya tiene algo facturado → es un saldo restante
+  const dim='<span style="color:var(--text-dim)">—</span>';
   return `<div class="fin-row cxc-tal-row">
       <div class="qb-cell">${parcial?'':`<input type="checkbox" ${cxcSel.has(ct.id)?'checked':''} onchange="onCxcSelToggle(${ct.id},${c.id},this.checked)" title="Marcar para facturar en conjunto" style="width:auto;margin:0;cursor:pointer">`}</div>
       <div class="fin-row-name">${nombre}${ident?`<div style="font-size:10px;color:var(--text-dim);font-family:'SF Mono',monospace;margin-top:1px">${esc(ident)}</div>`:''}</div>
       <div class="fin-estado-cell">${talEstadoBadge(ct.estado)}</div>
-      <div style="font-size:11px;color:var(--text-muted)">${parcial?`facturado ${fmtMoney(fee-resta,moneda)} de ${fmtMoney(fee,moneda)}`:'sin factura'}</div>
+      <div><span style="font-size:11px;color:var(--orange);font-weight:600">${parcial?'Por facturar (parcial)':'Sin factura'}</span>${parcial?`<div style="font-size:10px;color:var(--text-dim)">facturado ${fmtMoney(fee-resta,moneda)} de ${fmtMoney(fee,moneda)}</div>`:''}</div>
+      <div class="fin-row-date">${dim}</div>
+      <div class="fin-row-date">${dim}</div>
+      <div>${dim}</div>
       <div class="fin-row-amount">${fmtMoney(resta,moneda)}${parcial?'<div style="font-size:10px;color:var(--orange);font-weight:600">resta</div>':''}</div>
-      <div class="qb-cell"></div>
-      <div class="qb-cell"></div>
+      <div class="qb-cell">${dim}</div>
+      <div class="qb-cell">${dim}</div>
+      <div class="qb-cell">${dim}</div>
+      <div class="qb-cell">${dim}</div>
       <div class="fin-row-actions"><button class="btn btn-primary btn-xs" onclick="openNuevaFactura(${c.id},${cliId},[${ct.id}],${Math.round(resta*100)/100})">+ Factura</button></div>
     </div>`;
 }
