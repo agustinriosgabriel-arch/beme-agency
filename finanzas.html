@@ -904,10 +904,6 @@ function cxcTalEstados(campId){
   return Object.entries(counts).map(([e,n])=>
     `<span class="camp-estado ce-${e}" title="${n} talento(s) en ${TAL_EST[e]||e}">${TAL_EST_SHORT[e]||e}${n>1?' ·'+n:''}</span>`).join('');
 }
-// Nombres de talento de una campaña
-function cxcTalNombres(campId){
-  return campanasTalentos.filter(ct=>ct.campana_id===campId).map(ct=>ct.talentos?.nombre||('Talento '+ct.id));
-}
 // Nombres de los talentos que CUBRE una factura: enlace real → match OC (legacy) → talentos de campaña
 function facturaTalNombres(f){
   if(!f)return [];
@@ -948,7 +944,7 @@ function renderCxCRow(c){
   const saldo=fac?facSaldo(fac):0;
 
   return `<div class="fin-row cxc-row" onclick="toggleDetail('detail-${c.id}')" style="cursor:pointer">
-      <div class="fin-row-name">${esc(c.nombre)}${(()=>{const ns=cxcTalNombres(c.id);return ns.length?`<div style="font-size:11px;color:var(--text-muted);font-weight:500;margin-top:3px;line-height:1.45">${ns.map(n=>'· '+esc(n)).join('<br>')}</div>`:'';})()}</div>
+      <div class="fin-row-name">${esc(c.nombre)}${(()=>{const cts=campanasTalentos.filter(ct=>ct.campana_id===c.id);return cts.length?`<div style="font-size:11px;color:var(--text-muted);font-weight:500;margin-top:3px;line-height:1.5">${cts.map(ct=>{const nombre=esc(ct.talentos?.nombre||('Talento '+ct.id));const fee=Number(ct.fee_marca)||0;const moneda=ct.moneda_marca||ct.moneda||'USD';return `· ${nombre} <span style="color:var(--text-dim);font-weight:600">${fmtMoney(fee,moneda)}</span>`;}).join('<br>')}</div>`:'';})()}</div>
       <div class="fin-row-meta">${esc(c.marcas?.nombre||'')}</div>
       <div class="fin-row-date">${c.fecha_inicio?formatDate(c.fecha_inicio):'—'}</div>
       <div>${campEstadoBadge(c.estado)||'<span style="color:var(--text-dim);font-size:11px">—</span>'}</div>
