@@ -534,7 +534,15 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       <div class="form-group"><label class="form-label">Notas</label><textarea id="pt-notas" class="form-input"></textarea></div>
     </div>
   </div>
-  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-pago-talento')">Cancelar</button><button class="btn btn-green" onclick="savePagoTalento()">Registrar Pago</button></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-pago-talento')">Cancelar</button><button class="btn btn-green" id="pt-save-btn" onclick="savePagoTalento()">Registrar Pago</button></div>
+  </div>
+</div>
+
+<!-- Modal: Datos de pago del talento (solo lectura) -->
+<div class="modal-overlay" id="modal-datos-pago">
+  <div class="modal" style="max-width:480px"><div class="modal-header"><div class="modal-title" id="modal-dp-title">Datos de pago</div><button class="modal-close" onclick="closeModal('modal-datos-pago')"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  <div class="modal-body" id="modal-dp-body" style="font-size:13px"></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-datos-pago')">Cerrar</button></div>
   </div>
 </div>
 
@@ -572,7 +580,15 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       <div class="form-group"><label class="form-label">Notas</label><textarea id="pc-notas" class="form-input"></textarea></div>
     </div>
   </div>
-  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-pago-tercero')">Cancelar</button><button class="btn btn-green" onclick="savePagoTercero()">Registrar Pago</button></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-pago-tercero')">Cancelar</button><button class="btn btn-green" id="pc-save-btn" onclick="savePagoTercero()">Registrar Pago</button></div>
+  </div>
+</div>
+
+<!-- Modal: Movimientos de pago (editar / eliminar pagos + comprobantes) -->
+<div class="modal-overlay" id="modal-movimientos">
+  <div class="modal" style="max-width:520px"><div class="modal-header"><div class="modal-title" id="modal-mov-title">Movimientos de pago</div><button class="modal-close" onclick="closeModal('modal-movimientos')"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  <div class="modal-body" id="modal-mov-body" style="font-size:13px"></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-movimientos')">Cerrar</button></div>
   </div>
 </div>
 
@@ -617,7 +633,7 @@ let openAccordions=new Set(); // ids de acordeones abiertos (persisten entre re-
 let activeSection='cxc',isDark=false;
 let editingFacturaId=null,editingFacturaCampanaId=null,editingFacturaClienteId=null;
 let compFacturaId=null,complFacturaId=null,complPagoId=null;
-let ptCampanaTalentoId=null,ptCampanaId=null,ptTalentId=null;
+let ptCampanaTalentoId=null,ptCampanaId=null,ptTalentId=null,ptEditId=null;
 let editingClienteId=null;
 
 // Sanitiza un nombre de archivo para usar como key en Supabase Storage
@@ -691,6 +707,7 @@ async function loadData(){
 }
 
 function renderAll(){renderStats();renderCxC();renderCxP();renderResumen();renderClientes();renderTerceros();
+  if(document.getElementById('modal-movimientos')?.classList.contains('open'))renderMovimientos();
   document.getElementById('subtitle').textContent=`${campanas.length} campanas · ${clientes.length} clientes`;}
 
 // ═══════════════════════════════════════════
@@ -710,6 +727,18 @@ function ctEstadoPago(ct){
   if(fee>0&&paid>=fee)return'pagado';
   if(paid>0)return'parcial';
   return ct.pago_estado==='pagado'?'pagado':'pendiente'; // respeta marcas manuales previas
+}
+// Recalcula pago_estado + pago_fecha del talento a partir de los pagos ACTUALES (ya recargados).
+// Usar tras registrar / editar / eliminar un pago. Devuelve el estado calculado.
+async function recalcCtEstado(ctId){
+  const ct=campanasTalentos.find(x=>x.id===ctId);if(!ct)return'pendiente';
+  const fee=Number(ct.fee_talento)||0, paid=ctPagado(ct);
+  const estado=fee>0&&paid>=fee?'pagado':(paid>0?'parcial':'pendiente');
+  const fechas=pagosTalento.filter(p=>p.campana_talento_id===ctId).map(p=>p.fecha_pago).filter(Boolean).sort();
+  const pago_fecha=fechas.length?fechas[fechas.length-1]:null;
+  await sb.from('campana_talentos').update({pago_estado:estado,pago_fecha}).eq('id',ctId);
+  ct.pago_estado=estado;ct.pago_fecha=pago_fecha;
+  return estado;
 }
 
 // ── Comisiones de terceros (CxP) ──
@@ -1734,6 +1763,7 @@ function renderCxPComisionRow(com){
     <div></div>
     <div class="fin-row-actions">
       ${estado!=='pagado'?`<button class="btn btn-green btn-xs" onclick="openPagoTercero(${com.id})">${estado==='parcial'?'Pagar saldo':'Pagar'}</button>`:''}
+      ${pcs.length?`<button class="btn btn-outline btn-xs" onclick="openMovimientos('tercero',${com.id})" title="Ver, editar o eliminar los pagos registrados y sus comprobantes">Mov. (${pcs.length})</button>`:''}
       ${pcs.filter(p=>p.comprobante_url).map((p,i)=>archivoChip(`Comp.${pcs.length>1?' '+(i+1):''}`,p.comprobante_url,'pagos_tercero',p.id,'comprobante_url',`comision-${com.id}/comprobante`,'.pdf,.png,.jpg,.jpeg','btn btn-ghost btn-xs')).join('')}
     </div>
   </div>`;
@@ -1760,6 +1790,8 @@ function renderCxPRow(ct){
     ${qbBox(ct.qb_pago,`setQbCtPago(${ct.id},this.checked)`,{disabled:!ct.qb_factura,title:'Primero marcá QB Factura'})}
     <div class="fin-row-actions">
       ${estado!=='pagado'?`<button class="btn btn-green btn-xs" onclick="openPagoTalento(${ct.id},${ct.campana_id},${ct.talent_id})">${estado==='parcial'?'Pagar saldo':'Pagar'}</button>`:''}
+      ${pts.length?`<button class="btn btn-outline btn-xs" onclick="openMovimientos('talento',${ct.id})" title="Ver, editar o eliminar los pagos registrados y sus comprobantes">Mov. (${pts.length})</button>`:''}
+      <button class="btn btn-ghost btn-xs" onclick="verDatosPago(${ct.talent_id})" title="Datos de pago del talento">💳</button>
       <input type="file" id="inv-${ct.id}" style="display:none" accept=".pdf,.png,.jpg,.jpeg" onchange="subirInvoiceTalento(${ct.id},${ct.campana_id},${ct.talent_id},this)">
       ${ct.invoice_url?archivoChip('Invoice ✓',ct.invoice_url,'campana_talentos',ct.id,'invoice_url',`campana-${ct.campana_id}/invoice-talento-${ct.talent_id}`,'.pdf,.png,.jpg,.jpeg','btn btn-ghost btn-xs'):`<button class="btn btn-outline btn-xs" onclick="document.getElementById('inv-${ct.id}').click()" title="Cargar invoice del talento">+ Invoice</button>`}
       ${pts.filter(p=>p.comprobante_url).map((p,i)=>archivoChip(`Comp.${pts.length>1?' '+(i+1):''}`,p.comprobante_url,'pagos_talento',p.id,'comprobante_url',`campana-${ct.campana_id}/comprobante-talento-${ct.talent_id}`,'.pdf,.png,.jpg,.jpeg','btn btn-ghost btn-xs')).join('')}
@@ -1776,6 +1808,35 @@ async function setFechaPagoEstimada(ctId,value){
   }catch(e){showToast('Error: '+e.message,'error');}
 }
 
+// ── Datos de pago del talento (solo lectura) ──────────────────
+const DP_PAIS={mexico:'México',colombia:'Colombia',argentina:'Argentina',usa:'Estados Unidos',espana:'España',italia:'Italia',holanda:'Países Bajos',alemania:'Alemania'};
+const DP_LBL={clabe:'CLABE',cbu:'CBU/CVU',alias:'Alias',cuit:'CUIT',iban:'IBAN',bic:'BIC/SWIFT',routing:'Routing (ABA)',account:'Nº de cuenta',account_type:'Tipo de cuenta',tipo_cuenta:'Tipo de cuenta',numero_cuenta:'Nº de cuenta',documento:'Documento',calle:'Calle',num_ext:'Núm. ext.',num_int:'Núm. int.',estado:'Estado',ciudad:'Ciudad',cp:'C.P.',direccion:'Dirección',departamento:'Departamento',calle_num:'Calle y número',localidad:'Localidad',provincia:'Provincia',street:'Calle',city:'Ciudad',state:'Estado',zip:'C.P.'};
+const DP_VAL={savings:'Ahorros',checking:'Corriente'};
+function dpRow(k,v){if(!v)return '';const lbl=DP_LBL[k]||k;const val=DP_VAL[v]||v;return `<div style="display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text-dim)">${esc(lbl)}</span><span style="font-weight:600;text-align:right">${esc(val)}</span></div>`;}
+async function verDatosPago(talId){
+  const body=document.getElementById('modal-dp-body');
+  body.innerHTML='<div style="padding:20px;text-align:center;color:var(--text-dim)">Cargando...</div>';
+  openModal('modal-datos-pago');
+  try{
+    const{data,error}=await sb.from('talento_cuentas_pago').select('*').eq('talent_id',talId).order('es_default',{ascending:false}).order('created_at',{ascending:true});
+    if(error)throw error;
+    if(!data||!data.length){body.innerHTML='<div style="padding:20px;text-align:center;color:var(--text-dim)">El talento todavía no cargó datos de pago.</div>';return;}
+    body.innerHTML=data.map(cu=>{
+      const dc=cu.datos_cuenta||{},dir=cu.direccion||{};
+      const bankRows=Object.keys(dc).map(k=>dpRow(k,dc[k])).join('');
+      const addrRows=Object.keys(dir).map(k=>dpRow(k,dir[k])).join('');
+      return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px;${cu.es_default?'box-shadow:0 0 0 1px var(--primary)':''}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <strong>${esc(cu.nombre_completo||'')}</strong>
+          ${cu.es_default?'<span style="font-size:10px;font-weight:700;color:var(--primary);background:rgba(178,0,93,0.08);padding:2px 8px;border-radius:20px">Predeterminada</span>':''}
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${esc(DP_PAIS[cu.pais]||cu.pais||'')}${cu.banco?' · '+esc(cu.banco):''}${cu.moneda?' · '+esc(cu.moneda):''}${cu.alias?' · '+esc(cu.alias):''}</div>
+        ${bankRows}${addrRows}
+      </div>`;
+    }).join('');
+  }catch(e){body.innerHTML=`<div style="padding:20px;text-align:center;color:var(--red,#dc2626)">Error: ${esc(e.message)}</div>`;}
+}
+
 async function subirInvoiceTalento(ctId,campId,talId,input){
   const file=input.files&&input.files[0];if(!file)return;
   try{
@@ -1790,7 +1851,8 @@ async function subirInvoiceTalento(ctId,campId,talId,input){
 }
 
 function openPagoTalento(ctId,campId,talId){
-  ptCampanaTalentoId=ctId;ptCampanaId=campId;ptTalentId=talId;
+  ptCampanaTalentoId=ctId;ptCampanaId=campId;ptTalentId=talId;ptEditId=null;
+  document.getElementById('pt-save-btn').textContent='Registrar Pago';
   const ct=campanasTalentos.find(x=>x.id===ctId);
   const pagado=ct?ctPagado(ct):0,saldo=ct?ctSaldo(ct):0;
   document.getElementById('modal-pt-title').textContent='Pagar: '+(ct?.talentos?.nombre||'');
@@ -1815,30 +1877,35 @@ async function savePagoTalento(){
   if(!fecha){showToast('La fecha de pago es obligatoria','error');return;}
   const monto=parseFloat(document.getElementById('pt-monto').value)||0;
   if(monto<=0){showToast('El monto debe ser mayor a 0','error');return;}
+  const editing=ptEditId!=null;
   const ct=campanasTalentos.find(x=>x.id===ptCampanaTalentoId);
   const saldo=ct?ctSaldo(ct):0;
-  if(ct&&monto>saldo*1.001&&!confirm(`El pago (${fmtMoney(monto,ct.moneda_talento||ct.moneda)}) supera el saldo pendiente (${fmtMoney(saldo,ct.moneda_talento||ct.moneda)}). ¿Registrar igual?`))return;
-  const payload={
-    campana_talento_id:ptCampanaTalentoId,campana_id:ptCampanaId,talent_id:ptTalentId,
-    monto,
-    moneda:document.getElementById('pt-moneda').value,
-    estado:'pagado',fecha_pago:document.getElementById('pt-fecha').value||null,
-    corredor,notas:document.getElementById('pt-notas').value.trim(),created_by:currentUser.id,
-  };
+  // En edición, el saldo disponible incluye el monto actual del pago que se está editando.
+  const curAmt=editing?Number(pagosTalento.find(p=>p.id===ptEditId)?.monto)||0:0;
+  if(ct&&monto>(saldo+curAmt)*1.001&&!confirm(`El pago (${fmtMoney(monto,ct.moneda_talento||ct.moneda)}) supera el saldo pendiente (${fmtMoney(saldo+curAmt,ct.moneda_talento||ct.moneda)}). ¿Registrar igual?`))return;
+  const moneda=document.getElementById('pt-moneda').value;
+  const notas=document.getElementById('pt-notas').value.trim();
   try{
     const file=document.getElementById('pt-file').files[0];
-    if(file)payload.comprobante_url=await uploadFile(file,`campana-${ptCampanaId}/comprobante-talento-${ptTalentId}`);
-    const{error}=await sb.from('pagos_talento').insert(payload);if(error)throw error;
-    // El trigger trg_pagos_talento_sync actualiza pago_estado (pendiente/parcial/pagado).
-    // Fallback client-side por si la migración fase2 aún no corrió:
-    const totalPagado=(ct?ctPagado(ct):0)+monto;
-    const fee=Number(ct?.fee_talento)||0;
-    const nuevoEstado=fee>0&&totalPagado>=fee?'pagado':'parcial';
-    await sb.from('campana_talentos').update({pago_estado:nuevoEstado,pago_fecha:payload.fecha_pago}).eq('id',ptCampanaTalentoId);
+    const comprobante_url=file?await uploadFile(file,`campana-${ptCampanaId}/comprobante-talento-${ptTalentId}`):null;
+    if(editing){
+      const upd={monto,moneda,fecha_pago:fecha,corredor,notas};
+      if(comprobante_url)upd.comprobante_url=comprobante_url;
+      const{error}=await sb.from('pagos_talento').update(upd).eq('id',ptEditId);if(error)throw error;
+    }else{
+      const payload={campana_talento_id:ptCampanaTalentoId,campana_id:ptCampanaId,talent_id:ptTalentId,
+        monto,moneda,estado:'pagado',fecha_pago:fecha,corredor,notas,created_by:currentUser.id};
+      if(comprobante_url)payload.comprobante_url=comprobante_url;
+      const{error}=await sb.from('pagos_talento').insert(payload);if(error)throw error;
+    }
+    // El trigger trg_pagos_talento_sync sincroniza pago_estado; recalcCtEstado es el fallback
+    // client-side (también cubre edición/eliminación) calculado sobre los pagos ya recargados.
     closeModal('modal-pago-talento');await loadData();
+    const nuevoEstado=await recalcCtEstado(ptCampanaTalentoId);
     await maybeFinalizarCampana(ptCampanaId);
     renderAll();
-    showToast(nuevoEstado==='pagado'?'Pago registrado — talento pagado al 100%':'Adelanto registrado — queda saldo pendiente','success');
+    ptEditId=null;
+    showToast(editing?'Pago actualizado':(nuevoEstado==='pagado'?'Pago registrado — talento pagado al 100%':'Adelanto registrado — queda saldo pendiente'),'success');
   }catch(e){showToast('Error: '+e.message,'error');}
 }
 
@@ -1920,10 +1987,11 @@ async function deleteTercero(id){
 }
 
 // ── Pago de comisión de tercero (CxP) ──
-let pcComisionId=null;
+let pcComisionId=null,pcEditId=null;
 function openPagoTercero(comId){
   const com=comisiones.find(c=>c.id===comId);if(!com)return;
-  pcComisionId=comId;
+  pcComisionId=comId;pcEditId=null;
+  document.getElementById('pc-save-btn').textContent='Registrar Pago';
   const pagado=comPagado(com),saldo=comSaldo(com),meta=comMonto(com),mon=comMoneda(com);
   document.getElementById('modal-pc-title').textContent='Pagar: '+(com.terceros?.nombre||'comisión');
   const info=document.getElementById('pc-saldo-info');
@@ -1946,18 +2014,136 @@ async function savePagoTercero(){
   if(!fecha){showToast('La fecha de pago es obligatoria','error');return;}
   const monto=parseFloat(document.getElementById('pc-monto').value)||0;
   if(monto<=0){showToast('El monto debe ser mayor a 0','error');return;}
+  const editing=pcEditId!=null;
   const saldo=comSaldo(com),mon=comMoneda(com);
-  if(monto>saldo*1.001&&!confirm(`El pago (${fmtMoney(monto,mon)}) supera el saldo pendiente (${fmtMoney(saldo,mon)}). ¿Registrar igual?`))return;
-  const payload={comision_id:pcComisionId,monto,
-    moneda:document.getElementById('pc-moneda').value,
-    fecha_pago:fecha,corredor,
-    notas:document.getElementById('pc-notas').value.trim(),created_by:currentUser.id};
+  // En edición, el saldo disponible incluye el monto actual del pago que se está editando.
+  const curAmt=editing?Number(pagosTercero.find(p=>p.id===pcEditId)?.monto)||0:0;
+  if(monto>(saldo+curAmt)*1.001&&!confirm(`El pago (${fmtMoney(monto,mon)}) supera el saldo pendiente (${fmtMoney(saldo+curAmt,mon)}). ¿Registrar igual?`))return;
+  const moneda=document.getElementById('pc-moneda').value;
+  const notas=document.getElementById('pc-notas').value.trim();
   try{
     const file=document.getElementById('pc-file').files[0];
-    if(file)payload.comprobante_url=await uploadFile(file,`comision-${pcComisionId}/comprobante`);
-    const{error}=await sb.from('pagos_tercero').insert(payload);if(error)throw error;
+    const comprobante_url=file?await uploadFile(file,`comision-${pcComisionId}/comprobante`):null;
+    if(editing){
+      const upd={monto,moneda,fecha_pago:fecha,corredor,notas};
+      if(comprobante_url)upd.comprobante_url=comprobante_url;
+      const{error}=await sb.from('pagos_tercero').update(upd).eq('id',pcEditId);if(error)throw error;
+    }else{
+      const payload={comision_id:pcComisionId,monto,moneda,fecha_pago:fecha,corredor,notas,created_by:currentUser.id};
+      if(comprobante_url)payload.comprobante_url=comprobante_url;
+      const{error}=await sb.from('pagos_tercero').insert(payload);if(error)throw error;
+    }
     closeModal('modal-pago-tercero');await loadData();renderAll();
-    showToast('Pago de comisión registrado','success');
+    pcEditId=null;
+    showToast(editing?'Pago actualizado':'Pago de comisión registrado','success');
+  }catch(e){showToast('Error: '+e.message,'error');}
+}
+
+// ═══════════════════════════════════════════
+// MOVIMIENTOS DE PAGO (CxP) — ver / editar / eliminar pagos + comprobante
+// kind: 'talento' (pagos_talento, refId=campana_talento_id) | 'tercero' (pagos_tercero, refId=comision_id)
+// ═══════════════════════════════════════════
+let movCtx=null;
+function movPagos(){
+  if(!movCtx)return[];
+  return movCtx.kind==='talento'
+    ? pagosTalento.filter(p=>p.campana_talento_id===movCtx.refId)
+    : pagosTercero.filter(p=>p.comision_id===movCtx.refId);
+}
+function openMovimientos(kind,refId){
+  let name='';
+  if(kind==='talento'){const ct=campanasTalentos.find(x=>x.id===refId);name=ct?.talentos?.nombre||'talento';}
+  else{const com=comisiones.find(c=>c.id===refId);name=com?.terceros?.nombre||'tercero';}
+  movCtx={kind,refId,name};
+  document.getElementById('modal-mov-title').textContent='Movimientos — '+name;
+  renderMovimientos();
+  openModal('modal-movimientos');
+}
+function renderMovimientos(){
+  if(!movCtx)return;
+  const body=document.getElementById('modal-mov-body');
+  if(!body)return;
+  const table=movCtx.kind==='talento'?'pagos_talento':'pagos_tercero';
+  const pagos=movPagos().slice().sort((a,b)=>(a.fecha_pago||'').localeCompare(b.fecha_pago||''));
+  if(!pagos.length){body.innerHTML='<div style="padding:20px;text-align:center;color:var(--text-dim)">Sin pagos registrados.</div>';return;}
+  body.innerHTML=pagos.map(p=>{
+    const folder=movCtx.kind==='talento'?`campana-${p.campana_id}/comprobante-talento-${p.talent_id}`:`comision-${movCtx.refId}/comprobante`;
+    const comp=p.comprobante_url
+      ? archivoChip('Comprobante',p.comprobante_url,table,p.id,'comprobante_url',folder,'.pdf,.png,.jpg,.jpeg','btn btn-ghost btn-xs')
+      : `<input type="file" id="movf-${p.id}" accept=".pdf,.png,.jpg,.jpeg" style="display:none" onchange="subirComprobanteMov(${p.id},this)"><button class="btn btn-outline btn-xs" onclick="document.getElementById('movf-${p.id}').click()" title="Subir el comprobante de este pago">+ Subir comprobante</button>`;
+    return `<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <strong style="font-size:15px">${fmtMoney(p.monto,p.moneda)}</strong>
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-dim);background:var(--surface2);border:1px solid var(--border);padding:2px 7px;border-radius:6px">${esc(CORREDOR_LABEL[p.corredor]||p.corredor||'—')}</span>
+        <span style="color:var(--text-dim);font-size:12px">${formatDate(p.fecha_pago)}</span>
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <button class="btn btn-outline btn-xs" onclick="editMovimiento(${p.id})" title="Editar monto, fecha, corredor o notas">Editar</button>
+          <button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteMovimiento(${p.id})" title="Eliminar este movimiento de pago">Eliminar</button>
+        </div>
+      </div>
+      ${p.notas?`<div style="font-size:11px;color:var(--text-muted);margin-top:6px;white-space:pre-wrap">${esc(p.notas)}</div>`:''}
+      <div style="margin-top:8px">${comp}</div>
+    </div>`;
+  }).join('');
+}
+async function subirComprobanteMov(pagoId,input){
+  const file=input.files&&input.files[0];if(!file)return;
+  if(!movCtx){input.value='';return;}
+  const table=movCtx.kind==='talento'?'pagos_talento':'pagos_tercero';
+  try{
+    showToast('Subiendo comprobante...','info');
+    let folder;
+    if(movCtx.kind==='talento'){const p=pagosTalento.find(x=>x.id===pagoId);folder=`campana-${p?.campana_id}/comprobante-talento-${p?.talent_id}`;}
+    else folder=`comision-${movCtx.refId}/comprobante`;
+    const url=await uploadFile(file,folder);
+    const{error}=await sb.from(table).update({comprobante_url:url}).eq('id',pagoId);if(error)throw error;
+    await loadData();renderAll();
+    showToast('Comprobante cargado','success');
+  }catch(e){showToast('Error: '+e.message,'error');}
+  finally{input.value='';}
+}
+function editMovimiento(pagoId){
+  if(!movCtx)return;
+  if(movCtx.kind==='talento'){
+    const p=pagosTalento.find(x=>x.id===pagoId);if(!p)return;
+    const ct=campanasTalentos.find(x=>x.id===movCtx.refId);
+    ptEditId=pagoId;ptCampanaTalentoId=movCtx.refId;ptCampanaId=p.campana_id;ptTalentId=p.talent_id;
+    document.getElementById('modal-pt-title').textContent='Editar pago: '+(ct?.talentos?.nombre||'');
+    const info=document.getElementById('pt-saldo-info');if(info)info.style.display='none';
+    document.getElementById('pt-monto').value=p.monto||'';
+    document.getElementById('pt-moneda').value=p.moneda||'USD';
+    document.getElementById('pt-fecha').value=p.fecha_pago||'';
+    document.getElementById('pt-corredor').value=p.corredor||'';
+    document.getElementById('pt-notas').value=p.notas||'';
+    document.getElementById('pt-save-btn').textContent='Guardar cambios';
+    closeModal('modal-movimientos');openModal('modal-pago-talento');
+  }else{
+    const p=pagosTercero.find(x=>x.id===pagoId);if(!p)return;
+    const com=comisiones.find(c=>c.id===movCtx.refId);
+    pcEditId=pagoId;pcComisionId=movCtx.refId;
+    document.getElementById('modal-pc-title').textContent='Editar pago: '+(com?.terceros?.nombre||'');
+    const info=document.getElementById('pc-saldo-info');if(info)info.style.display='none';
+    document.getElementById('pc-monto').value=p.monto||'';
+    document.getElementById('pc-moneda').value=p.moneda||'USD';
+    document.getElementById('pc-fecha').value=p.fecha_pago||'';
+    document.getElementById('pc-corredor').value=p.corredor||'';
+    document.getElementById('pc-notas').value=p.notas||'';
+    document.getElementById('pc-save-btn').textContent='Guardar cambios';
+    closeModal('modal-movimientos');openModal('modal-pago-tercero');
+  }
+}
+async function deleteMovimiento(pagoId){
+  if(!movCtx)return;
+  if(!confirm('¿Eliminar este movimiento de pago? Esta acción no se puede deshacer.'))return;
+  const table=movCtx.kind==='talento'?'pagos_talento':'pagos_tercero';
+  const p=movPagos().find(x=>x.id===pagoId);
+  try{
+    const{error}=await sb.from(table).delete().eq('id',pagoId);if(error)throw error;
+    if(p?.comprobante_url)removeStorageByUrl(p.comprobante_url);
+    await loadData();
+    if(movCtx.kind==='talento'&&p)await recalcCtEstado(p.campana_talento_id);
+    renderAll();
+    showToast('Movimiento eliminado','success');
   }catch(e){showToast('Error: '+e.message,'error');}
 }
 
