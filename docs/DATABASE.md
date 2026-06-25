@@ -421,7 +421,8 @@ Steps back: paso 3→2, paso 5→4. Inserts observation and historial entry.
 | `content-drafts` | true | Video/image drafts |
 | `content-stats` | true | Statistics screenshots |
 | `brand-logos` | true | Brand logo images |
-| `contratos` | true | Contract PDFs (future use) |
+| `contratos` | true | External contract PDFs + talent signature images (`firmas/contrato-<id>/`) |
+| `finanzas` | true | Invoices, payment receipts, CFDI complements + talent-generated invoices (`campana-<id>/invoice-talento-<talId>/`) |
 
 ---
 
@@ -461,6 +462,13 @@ derechos_desde      date
 fecha_contrato      date DEFAULT CURRENT_DATE
 ciudad_contrato     text DEFAULT 'Mexico City'
 contenido_html      text DEFAULT ''                      -- AI-generated contract HTML
+archivo_url         text DEFAULT ''                      -- external PDF attached (es_externo)
+archivo_nombre      text DEFAULT ''
+es_externo          boolean DEFAULT false
+firma_url           text DEFAULT ''                      -- talent signature image (canvas → bucket contratos) [sql/contrato_firma_2026_06_25.sql]
+firmante_nombre     text DEFAULT ''                      -- full name the talent signed with
+firmado_at          timestamptz                          -- when the talent signed
+firma_ip            text DEFAULT ''                      -- signing IP (light audit)
 created_by          uuid
 created_at          timestamp DEFAULT now()
 updated_at          timestamp DEFAULT now()
@@ -469,6 +477,40 @@ updated_at          timestamp DEFAULT now()
 Contract types are "mirror" contracts:
 - **marca**: Party A = Brand, Party B = BEME AGENCY. Amount = fee_marca.
 - **talento**: Party A = BEME AGENCY, Party B = Influencer. Amount = fee_talento.
+
+**Talent signing (no-login):** when a `tipo='talento'` contract is set to `estado='enviado'`, it appears in the talent's magic link (`talento-link.html`). The talent draws their signature on a canvas; `magic-api` action `sign-contract` uploads the PNG to the `contratos` bucket and sets `estado='firmado'` + the `firma_*` fields. The signed signature shows in both `talento-link.html` and the `contratos.html` preview.
+
+---
+
+## Talent Payment & Invoicing (no-login, via magic link)
+
+### `talento_cuentas_pago` — reusable payment accounts per talent
+`[sql/talento_cuentas_pago_2026_06_25.sql]`
+```sql
+id              serial PRIMARY KEY
+talent_id       integer NOT NULL REFERENCES talentos(id) ON DELETE CASCADE
+pais            text DEFAULT ''     -- mexico|colombia|argentina|usa|espana|italia|holanda|alemania
+nombre_completo text DEFAULT ''     -- account holder full name (common to all countries)
+banco           text DEFAULT ''
+datos_cuenta    jsonb DEFAULT '{}'  -- country-specific bank fields (clabe / cbu / iban+bic / routing+account / tipo_cuenta / documento ...)
+direccion       jsonb DEFAULT '{}'  -- country-specific address fields (calle/num_ext/num_int/estado/ciudad/cp ...)
+moneda          text DEFAULT ''
+alias           text DEFAULT ''
+es_default      boolean DEFAULT false
+created_at/updated_at timestamptz
+```
+- The country→fields mapping lives in `talento-link.html` (`COUNTRY_PAY`). The talent edits these via `magic-api` (`save-cuenta`/`delete-cuenta`/`set-default-cuenta`, service_role → no RLS). Internal team reads them (RLS `is_internal()`); `finanzas.html` shows them per CxP row (💳 button → `verDatosPago`).
+
+### `campana_talentos` — talent invoice (CxP) columns
+`invoice_url` (existing, `sql/fase3_finanzas_2026_06_19.sql`) is the talent's invoice for Cuentas por Pagar. Added `[sql/factura_talento_2026_06_25.sql]`:
+```sql
+factura_datos  jsonb DEFAULT '{}'  -- when invoice is generated in-app (name/razón social, dirección, account snapshot, monto, moneda, número, fecha)
+factura_tipo   text  DEFAULT ''    -- 'subida' (talent uploaded a file) | 'generada' (PDF built in-app)
+```
+- The talent can invoice **only when all their contenidos are at `paso_actual >= 7`** (constant `INVOICE_MIN_PASO` in `magic-api.js`, also enforced server-side). Both paths (upload file / generate PDF with jsPDF) write `invoice_url` via `magic-api` (`invoice-signed-upload` + `set-invoice`/`create-invoice`) and surface automatically in `finanzas.html` CxP.
+
+### `talentos.idioma`
+`[sql/talentos_idioma_2026_06_25.sql]` — `text DEFAULT 'es'` (`es|en|it|de|nl`). Set by the team in the talent form (`index.html`/`dashboard.js`); drives the language of `talento-link.html` (the talent can also switch it; persisted in `localStorage`).
 
 ---
 

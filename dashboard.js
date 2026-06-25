@@ -381,7 +381,7 @@ async function loadFromSupabase() {
 
     // Load all data in parallel for speed
     // Load WITHOUT foto first (base64 photos are huge, loaded in background after render)
-    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at,es_exclusivo';
+    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at,es_exclusivo,idioma';
     const [configResult, talentResult, rosterResult, linksResult] = await Promise.all([
       sb.from('app_config').select('key,value'),
       loadTalentosWithRetry(TALENT_COLS),
@@ -596,7 +596,7 @@ function setupRealtimeSubscription() {
         if (!t || !t.id) {
           // payload.new is empty — reload only changed columns (skip foto to save IO)
           // payload.new is empty — merge updated columns into existing talents (preserve foto, etc.)
-          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at,es_exclusivo';
+          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at,es_exclusivo,idioma';
           loadTalentosWithRetry(TALENT_COLS_RT).then(({ data }) => {
             if (data) {
               // Merge into existing talents to preserve fields not in RT select (like foto)
@@ -2128,6 +2128,7 @@ function clearForm() {
   ['f-nombre','f-ciudad','f-telefono','f-email','f-tiktok','f-instagram','f-youtube','f-valores','f-seg-tiktok','f-seg-instagram','f-seg-youtube']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   var _fg = document.getElementById('f-genero'); if(_fg) _fg.value = '';
+  var _fid = document.getElementById('f-idioma'); if(_fid) _fid.value = 'es';
   var _fk = document.getElementById('f-keywords'); if(_fk) _fk.value = '';
   var _ftc = document.getElementById('f-tipo-contenido'); if(_ftc) _ftc.value = '';
   var _fcal = document.getElementById('f-calidad'); if(_fcal) _fcal.value = '';
@@ -2166,6 +2167,7 @@ function fillForm(t) {
   document.getElementById('f-youtube').value = t.youtube||'';
   document.getElementById('f-valores').value = t.valores||'';
   var _fg = document.getElementById('f-genero'); if(_fg) _fg.value = t.genero||'';
+  var _fid = document.getElementById('f-idioma'); if(_fid) _fid.value = t.idioma||'es';
   var _fk = document.getElementById('f-keywords'); if(_fk) _fk.value = t.keywords||'';
   var _fex = document.getElementById('f-es-exclusivo'); if(_fex) _fex.checked = !!t.es_exclusivo;
   var _ftc = document.getElementById('f-tipo-contenido'); if(_ftc) _ftc.value = t.tipo_contenido||'';
@@ -2474,6 +2476,7 @@ async function saveTalent() {
     youtube: youtubeVal,
     valores: document.getElementById('f-valores').value.trim(),
     genero: (document.getElementById('f-genero') ? document.getElementById('f-genero').value : ''),
+    idioma: (document.getElementById('f-idioma') ? document.getElementById('f-idioma').value : 'es'),
     keywords: (document.getElementById('f-keywords') ? document.getElementById('f-keywords').value.trim().toLowerCase() : ''),
     tipo_contenido: (document.getElementById('f-tipo-contenido') ? document.getElementById('f-tipo-contenido').value.trim() : ''),
     calidad: (document.getElementById('f-calidad') ? document.getElementById('f-calidad').value : ''),
@@ -2544,7 +2547,7 @@ async function saveTalent() {
       tiktok: savedTalent.tiktok||'', instagram: savedTalent.instagram||'', youtube: savedTalent.youtube||'',
       valores: savedTalent.valores||'', categorias: savedTalent.categorias||[], foto: savedTalent.foto||'',
       seguidores: savedTalent.seguidores||{tiktok:0,instagram:0,youtube:0}, updated: savedTalent.updated||null,
-      genero: savedTalent.genero||'', keywords: savedTalent.keywords||'',
+      genero: savedTalent.genero||'', idioma: savedTalent.idioma||'es', keywords: savedTalent.keywords||'',
       tipo_contenido: savedTalent.tipo_contenido||'', calidad: savedTalent.calidad||'',
       marcas_previas: savedTalent.marcas_previas||'', notas_internas: savedTalent.notas_internas||'',
       tiene_manager: savedTalent.tiene_manager||false,

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beme — Tu espacio de campañas</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <link rel="icon" href="favicon.ico" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
@@ -155,6 +156,81 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
 .empty p{font-size:13px}
 @media(max-width:768px){.topbar{padding:0 12px;gap:8px}.logo img{height:36px}.main{padding:20px 16px}.page-title{font-size:19px}.camp-head{padding:14px 16px;gap:10px}.camp-body{padding:0 14px 14px}.cont-head{flex-wrap:wrap;padding:10px 12px;gap:6px}.cont-body{padding:12px}.link-group{flex-direction:column}.toast-container{right:12px;left:12px}.toast{max-width:100%}}
 @media(max-width:480px){.topbar{height:48px}.logo img{height:32px}.user-chip span:not(.user-avatar){display:none}.main{padding:12px 10px}.page-title{font-size:17px}.camp-head{padding:12px;gap:8px}.step-actions{flex-direction:column}.step-btn{justify-content:center}.action-btns{flex-direction:column}.action-btns .btn{justify-content:center;width:100%}}
+
+/* ── Selector de idioma ── */
+.lang-wrap{position:relative;display:flex;align-items:center}
+.lang-select{appearance:none;-webkit-appearance:none;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);font:700 12px 'Plus Jakarta Sans',sans-serif;padding:0 24px 0 10px;border-radius:8px;cursor:pointer;height:32px;outline:none}
+.lang-select:hover{background:var(--surface3);color:var(--text)}
+.lang-wrap::after{content:'▾';position:absolute;right:8px;font-size:9px;color:var(--text-dim);pointer-events:none}
+
+/* ── Bloques de sección dentro de la campaña ── */
+.sec-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
+.sec-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.sec-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);flex:1}
+.sec-status{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0}
+.st-pend{background:rgba(217,119,6,0.12);color:var(--yellow)}
+.st-ok{background:rgba(22,163,74,0.12);color:var(--green)}
+.st-lock{background:var(--surface3);color:var(--text-dim)}
+.sec-note{font-size:12px;color:var(--text-muted);margin-bottom:10px}
+
+/* ── Firma (canvas) ── */
+.sign-pad-wrap{position:relative;border:1px dashed var(--border2);border-radius:var(--radius-sm);background:#fff;touch-action:none;margin:6px 0 10px}
+canvas.sign-pad{width:100%;height:150px;display:block;border-radius:var(--radius-sm);cursor:crosshair}
+.sign-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:12px;pointer-events:none}
+.sign-firmado{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.sign-firmado img{height:64px;max-width:220px;object-fit:contain;background:#fff;border:1px solid var(--border);border-radius:8px;padding:6px}
+.sign-meta{font-size:12px;color:var(--text-muted)}
+.sign-meta b{color:var(--text);font-weight:700}
+
+/* ── Cuentas de pago ── */
+.pay-card{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);margin-bottom:8px}
+.pay-card.def{border-color:rgba(178,0,93,0.35);box-shadow:0 0 0 1px rgba(178,0,93,0.12)}
+.pay-flag{width:34px;height:34px;border-radius:8px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.pay-info{flex:1;min-width:0}
+.pay-info .nm{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pay-info .meta{font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pay-badge{font-size:10px;font-weight:800;color:var(--primary);background:rgba(178,0,93,0.08);padding:2px 8px;border-radius:20px;flex-shrink:0}
+.pay-actions{display:flex;gap:6px;flex-shrink:0}
+.icon-act{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.icon-act:hover{background:var(--surface2);color:var(--text)}
+.icon-act.danger:hover{color:var(--red);border-color:rgba(220,38,38,0.3)}
+
+/* ── Formularios (grid) ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid .full{grid-column:1/-1}
+.fld label{display:block;font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:5px}
+.fld label .req{color:var(--primary)}
+.fld input,.fld select,.fld textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;font-family:inherit;color:var(--text);outline:none;min-height:44px}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--primary)}
+.fld select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+.chk-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;user-select:none}
+.chk-row input{width:18px;height:18px;min-height:0;accent-color:var(--primary)}
+
+/* ── Factura: dos opciones ── */
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 12px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface);cursor:pointer;text-align:center;transition:all .15s;font-family:inherit}
+.opt-btn:hover{border-color:var(--primary);background:rgba(178,0,93,0.04)}
+.opt-btn .oi{font-size:22px}
+.opt-btn .ot{font-size:12px;font-weight:700;color:var(--text)}
+
+/* ── Modal / bottom-sheet ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);width:100%;max-width:580px;max-height:92vh;display:flex;flex-direction:column;border-radius:var(--radius-lg) var(--radius-lg) 0 0;box-shadow:0 -8px 40px rgba(0,0,0,0.35);animation:sheetUp .25s ease;overflow:hidden}
+@media(min-width:600px){.modal-overlay{align-items:center;padding:20px}.modal{border-radius:var(--radius-lg);animation:popIn .2s ease}}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
+@keyframes popIn{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
+.modal-head{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--border);flex-shrink:0}
+.modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;flex:1;min-width:0}
+.modal-body{padding:18px;overflow:auto;flex:1}
+.modal-foot{display:flex;gap:8px;justify-content:flex-end;padding:14px 18px;border-top:1px solid var(--border);flex-shrink:0}
+.contract-doc{font-family:'Times New Roman',Georgia,serif;font-size:13.5px;line-height:1.65;color:var(--text)}
+.contract-doc h1{font-size:18px;text-align:center;margin:0 0 16px;font-weight:700}
+.contract-doc h2{font-size:15px;margin:18px 0 8px;font-weight:700}
+.contract-doc p,.contract-doc li{margin-bottom:9px;text-align:justify}
+.contract-doc ol{margin-left:18px}
+@media(max-width:480px){.form-grid,.opt-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.modal{animation:none}.loader-fill{animation:none;width:50%}}
 </style>
 </head>
 <body>
@@ -178,9 +254,18 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
 <div id="app" style="display:none">
   <header class="topbar">
     <a href="#" class="logo"><img src="assets/brand/logos/Beme1Color.png" alt="Beme" class="logo-light"><img src="assets/brand/logos/Beme1blanco.png" alt="Beme" class="logo-dark"></a>
-    <span class="role-tag">Talento</span>
+    <span class="role-tag" id="role-tag">Talento</span>
     <div class="topbar-right">
-      <button class="icon-btn" onclick="toggleTheme()" title="Tema">
+      <div class="lang-wrap">
+        <select class="lang-select" id="lang-select" onchange="setLang(this.value)" title="Idioma / Language" aria-label="Idioma">
+          <option value="es">ES</option>
+          <option value="en">EN</option>
+          <option value="it">IT</option>
+          <option value="de">DE</option>
+          <option value="nl">NL</option>
+        </select>
+      </div>
+      <button class="icon-btn" onclick="toggleTheme()" title="Tema" aria-label="Tema">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
       </button>
       <div class="user-chip">
@@ -190,10 +275,24 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
     </div>
   </header>
   <main class="main">
-    <h1 class="page-title">Tus Campañas</h1>
+    <h1 class="page-title" id="page-title">Tus Campañas</h1>
     <p class="page-sub" id="page-sub">Cargando...</p>
     <div id="campaigns-container"></div>
+    <div id="pay-container"></div>
   </main>
+</div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-title">—</div>
+      <button class="icon-btn" onclick="closeModal()" title="Cerrar" aria-label="Cerrar">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot" id="modal-foot"></div>
+  </div>
 </div>
 
 <script>
@@ -203,10 +302,243 @@ const sbStore = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: 
 const API_URL = '/.netlify/functions/magic-api';
 const TOKEN = new URLSearchParams(location.search).get('t') || '';
 
-let talento = null, campaigns = [];
+let talento = null, campaigns = [], cuentas = [], invoiceMinPaso = 7;
 
-const PASO_LABELS = {1:'Esperando Brief',2:'Esperando Script',3:'Aprobación Script',4:'Producción',5:'Aprobación Contenido',6:'Publicar',7:'Estadísticas',8:'Completado',9:'Pagado'};
-const TIPO_LABELS = {tiktok_video:'TikTok Video',reel:'Reel',reel_tiktok_espejo:'Reel/TikTok',ig_story:'IG Story',youtube_video:'YouTube Video',youtube_short:'YouTube Short'};
+// ── i18n ────────────────────────────────────────────────────────
+const LANGS = ['es','en','it','de','nl'];
+let LANG = 'es';
+const LOCALE = {es:'es-ES',en:'en-US',it:'it-IT',de:'de-DE',nl:'nl-NL'};
+const DICT = {
+  role:{es:'Talento',en:'Talent',it:'Talent',de:'Talent',nl:'Talent'},
+  pageTitle:{es:'Tus Campañas',en:'Your Campaigns',it:'Le tue campagne',de:'Deine Kampagnen',nl:'Jouw campagnes'},
+  loading:{es:'Cargando...',en:'Loading...',it:'Caricamento...',de:'Wird geladen...',nl:'Laden...'},
+  subTail:{es:'Subí tus entregas y seguí el avance acá.',en:'Upload your deliverables and track progress here.',it:'Carica i tuoi contenuti e segui l’avanzamento qui.',de:'Lade deine Inhalte hoch und verfolge den Fortschritt hier.',nl:'Upload je content en volg de voortgang hier.'},
+  campOne:{es:'campaña',en:'campaign',it:'campagna',de:'Kampagne',nl:'campagne'},
+  campMany:{es:'campañas',en:'campaigns',it:'campagne',de:'Kampagnen',nl:'campagnes'},
+  subNone:{es:'No tenés campañas activas en este momento.',en:'You have no active campaigns right now.',it:'Non hai campagne attive al momento.',de:'Du hast derzeit keine aktiven Kampagnen.',nl:'Je hebt momenteel geen actieve campagnes.'},
+  emptyTitle:{es:'Todo al día',en:'All caught up',it:'Tutto in ordine',de:'Alles erledigt',nl:'Helemaal bij'},
+  emptyMsg:{es:'Cuando tengas una campaña activa, va a aparecer acá.',en:'When you have an active campaign, it will show up here.',it:'Quando avrai una campagna attiva, apparirà qui.',de:'Sobald du eine aktive Kampagne hast, erscheint sie hier.',nl:'Zodra je een actieve campagne hebt, verschijnt die hier.'},
+  contWord:{es:'contenidos',en:'contents',it:'contenuti',de:'Inhalte',nl:'content'},
+  doneWord:{es:'completados',en:'completed',it:'completati',de:'abgeschlossen',nl:'voltooid'},
+  feeLabel:{es:'Tu fee',en:'Your fee',it:'Il tuo compenso',de:'Dein Honorar',nl:'Jouw vergoeding'},
+  payStatus:{es:'Estado de pago',en:'Payment status',it:'Stato pagamento',de:'Zahlungsstatus',nl:'Betaalstatus'},
+  paid:{es:'✓ Pagado',en:'✓ Paid',it:'✓ Pagato',de:'✓ Bezahlt',nl:'✓ Betaald'},
+  pending:{es:'Pendiente',en:'Pending',it:'In sospeso',de:'Ausstehend',nl:'In behandeling'},
+  briefTitle:{es:'📄 Brief de la campaña',en:'📄 Campaign brief',it:'📄 Brief della campagna',de:'📄 Kampagnen-Brief',nl:'📄 Campagnebrief'},
+  noContent:{es:'Sin contenidos asignados todavía.',en:'No content assigned yet.',it:'Nessun contenuto assegnato.',de:'Noch keine Inhalte zugewiesen.',nl:'Nog geen content toegewezen.'},
+  est_sin_iniciar:{es:'Sin iniciar',en:'Not started',it:'Non iniziata',de:'Nicht begonnen',nl:'Niet gestart'},
+  est_en_curso:{es:'En curso',en:'In progress',it:'In corso',de:'Laufend',nl:'Bezig'},
+  est_etapa_finanzas:{es:'Finanzas',en:'Finance',it:'Finanze',de:'Finanzen',nl:'Financiën'},
+  est_finalizada:{es:'Finalizada',en:'Completed',it:'Conclusa',de:'Abgeschlossen',nl:'Afgerond'},
+  est_cancelada:{es:'Cancelada',en:'Cancelled',it:'Annullata',de:'Storniert',nl:'Geannuleerd'},
+  // pasos
+  paso1:{es:'Esperando Brief',en:'Waiting for Brief',it:'In attesa del Brief',de:'Warten auf Brief',nl:'Wachten op brief'},
+  paso2:{es:'Esperando Script',en:'Waiting for Script',it:'In attesa dello Script',de:'Warten auf Skript',nl:'Wachten op script'},
+  paso3:{es:'Aprobación Script',en:'Script Approval',it:'Approvazione Script',de:'Skript-Freigabe',nl:'Scriptgoedkeuring'},
+  paso4:{es:'Producción',en:'Production',it:'Produzione',de:'Produktion',nl:'Productie'},
+  paso5:{es:'Aprobación Contenido',en:'Content Approval',it:'Approvazione Contenuto',de:'Inhalts-Freigabe',nl:'Contentgoedkeuring'},
+  paso6:{es:'Publicar',en:'Publish',it:'Pubblicare',de:'Veröffentlichen',nl:'Publiceren'},
+  paso7:{es:'Estadísticas',en:'Statistics',it:'Statistiche',de:'Statistiken',nl:'Statistieken'},
+  paso8:{es:'Completado',en:'Completed',it:'Completato',de:'Abgeschlossen',nl:'Voltooid'},
+  paso9:{es:'Pagado',en:'Paid',it:'Pagato',de:'Bezahlt',nl:'Betaald'},
+  // step labels
+  stepBrief:{es:'Brief',en:'Brief',it:'Brief',de:'Brief',nl:'Brief'},
+  stepScript:{es:'Script',en:'Script',it:'Script',de:'Skript',nl:'Script'},
+  stepApproveScript:{es:'Aprobación Script',en:'Script Approval',it:'Approvazione Script',de:'Skript-Freigabe',nl:'Scriptgoedkeuring'},
+  stepProduction:{es:'Producción (borrador)',en:'Production (draft)',it:'Produzione (bozza)',de:'Produktion (Entwurf)',nl:'Productie (concept)'},
+  stepApproveContent:{es:'Aprobación Contenido',en:'Content Approval',it:'Approvazione Contenuto',de:'Inhalts-Freigabe',nl:'Contentgoedkeuring'},
+  stepPublish:{es:'Publicar',en:'Publish',it:'Pubblicare',de:'Veröffentlichen',nl:'Publiceren'},
+  stepStats:{es:'Estadísticas',en:'Statistics',it:'Statistiche',de:'Statistiken',nl:'Statistieken'},
+  stepCompleted:{es:'Completado',en:'Completed',it:'Completato',de:'Abgeschlossen',nl:'Voltooid'},
+  current:{es:'● ACTUAL',en:'● CURRENT',it:'● ATTUALE',de:'● AKTUELL',nl:'● HUIDIG'},
+  chipComplete:{es:'✓ Completo',en:'✓ Complete',it:'✓ Completo',de:'✓ Fertig',nl:'✓ Klaar'},
+  chipStep:{es:'Paso {n}',en:'Step {n}',it:'Passo {n}',de:'Schritt {n}',nl:'Stap {n}'},
+  // tipos
+  tipo_tiktok_video:{es:'TikTok Video',en:'TikTok Video',it:'TikTok Video',de:'TikTok-Video',nl:'TikTok-video'},
+  tipo_reel:{es:'Reel',en:'Reel',it:'Reel',de:'Reel',nl:'Reel'},
+  tipo_reel_tiktok_espejo:{es:'Reel/TikTok',en:'Reel/TikTok',it:'Reel/TikTok',de:'Reel/TikTok',nl:'Reel/TikTok'},
+  tipo_ig_story:{es:'IG Story',en:'IG Story',it:'IG Story',de:'IG Story',nl:'IG Story'},
+  tipo_youtube_video:{es:'YouTube Video',en:'YouTube Video',it:'YouTube Video',de:'YouTube-Video',nl:'YouTube-video'},
+  tipo_youtube_short:{es:'YouTube Short',en:'YouTube Short',it:'YouTube Short',de:'YouTube Short',nl:'YouTube Short'},
+  // action boxes
+  aScriptTitle:{es:'📝 Subir Script',en:'📝 Upload Script',it:'📝 Carica Script',de:'📝 Skript hochladen',nl:'📝 Script uploaden'},
+  aUploadScriptBtn:{es:'⬆ Subir archivo(s) de script',en:'⬆ Upload script file(s)',it:'⬆ Carica file dello script',de:'⬆ Skriptdatei(en) hochladen',nl:'⬆ Scriptbestand(en) uploaden'},
+  aScriptReady:{es:'Script listo → Enviar a revisión',en:'Script ready → Send for review',it:'Script pronto → Invia per revisione',de:'Skript fertig → Zur Prüfung senden',nl:'Script klaar → Verstuur ter review'},
+  needFile:{es:'Subí al menos un archivo antes de enviar',en:'Upload at least one file before sending',it:'Carica almeno un file prima di inviare',de:'Lade mindestens eine Datei hoch, bevor du sendest',nl:'Upload minstens één bestand voordat je verzendt'},
+  aWaitScriptTitle:{es:'⏳ Esperando aprobación del script',en:'⏳ Waiting for script approval',it:'⏳ In attesa di approvazione dello script',de:'⏳ Warten auf Skript-Freigabe',nl:'⏳ Wachten op scriptgoedkeuring'},
+  aWaitScriptMsg:{es:'La marca está revisando tu script.',en:'The brand is reviewing your script.',it:'Il brand sta esaminando il tuo script.',de:'Die Marke prüft dein Skript.',nl:'Het merk beoordeelt je script.'},
+  aContentTitle:{es:'🎬 Subir Contenido',en:'🎬 Upload Content',it:'🎬 Carica Contenuto',de:'🎬 Inhalt hochladen',nl:'🎬 Content uploaden'},
+  aUploadContentBtn:{es:'⬆ Subir video/imagen',en:'⬆ Upload video/image',it:'⬆ Carica video/immagine',de:'⬆ Video/Bild hochladen',nl:'⬆ Video/afbeelding uploaden'},
+  aCopyLabel:{es:'📋 Copy / Caption para la publicación',en:'📋 Copy / Caption for the post',it:'📋 Copy / Didascalia per il post',de:'📋 Copy / Caption für den Post',nl:'📋 Copy / Caption voor de post'},
+  aCopyPh:{es:'Escribí el copy/caption que se usará...',en:'Write the copy/caption to be used...',it:'Scrivi il copy/didascalia da usare...',de:'Schreibe den zu verwendenden Text/Caption...',nl:'Schrijf de copy/caption die gebruikt wordt...'},
+  aContentReady:{es:'Contenido listo → Enviar a revisión',en:'Content ready → Send for review',it:'Contenuto pronto → Invia per revisione',de:'Inhalt fertig → Zur Prüfung senden',nl:'Content klaar → Verstuur ter review'},
+  aWaitContentTitle:{es:'⏳ Esperando aprobación del contenido',en:'⏳ Waiting for content approval',it:'⏳ In attesa di approvazione del contenuto',de:'⏳ Warten auf Inhalts-Freigabe',nl:'⏳ Wachten op contentgoedkeuring'},
+  aWaitContentMsg:{es:'La marca está revisando tu contenido.',en:'The brand is reviewing your content.',it:'Il brand sta esaminando il tuo contenuto.',de:'Die Marke prüft deinen Inhalt.',nl:'Het merk beoordeelt je content.'},
+  aPublishTitle:{es:'🔗 Cargar Link de Publicación',en:'🔗 Add Post Link',it:'🔗 Inserisci link del post',de:'🔗 Beitrags-Link hinzufügen',nl:'🔗 Postlink toevoegen'},
+  aConfirm:{es:'Confirmar →',en:'Confirm →',it:'Conferma →',de:'Bestätigen →',nl:'Bevestigen →'},
+  aStatsTitle:{es:'📊 Subir Estadísticas',en:'📊 Upload Statistics',it:'📊 Carica Statistiche',de:'📊 Statistiken hochladen',nl:'📊 Statistieken uploaden'},
+  aUploadStatsBtn:{es:'⬆ Subir screenshot(s)',en:'⬆ Upload screenshot(s)',it:'⬆ Carica screenshot',de:'⬆ Screenshot(s) hochladen',nl:'⬆ Screenshot(s) uploaden'},
+  aStatsReady:{es:'Estadísticas listas → Finalizar',en:'Statistics ready → Finish',it:'Statistiche pronte → Concludi',de:'Statistiken fertig → Abschließen',nl:'Statistieken klaar → Afronden'},
+  aDone:{es:'✓ Completado',en:'✓ Completed',it:'✓ Completato',de:'✓ Abgeschlossen',nl:'✓ Voltooid'},
+  aPaid:{es:'✓ Pagado',en:'✓ Paid',it:'✓ Pagato',de:'✓ Bezahlt',nl:'✓ Betaald'},
+  sparkTitle:{es:'Spark Code — {n} días',en:'Spark Code — {n} days',it:'Spark Code — {n} giorni',de:'Spark Code — {n} Tage',nl:'Spark Code — {n} dagen'},
+  sparkPh:{es:'Pegá el código aquí...',en:'Paste the code here...',it:'Incolla il codice qui...',de:'Code hier einfügen...',nl:'Plak de code hier...'},
+  upScriptInline:{es:'⬆ Subir script(s)',en:'⬆ Upload script(s)',it:'⬆ Carica script',de:'⬆ Skript(e) hochladen',nl:'⬆ Script(s) uploaden'},
+  upDraftInline:{es:'⬆ Subir borrador(es)',en:'⬆ Upload draft(s)',it:'⬆ Carica bozza/e',de:'⬆ Entwurf/Entwürfe hochladen',nl:'⬆ Concept(en) uploaden'},
+  viewPost:{es:'🔗 Ver publicación',en:'🔗 View post',it:'🔗 Vedi post',de:'🔗 Beitrag ansehen',nl:'🔗 Bekijk post'},
+  draftWord:{es:'Borrador',en:'Draft',it:'Bozza',de:'Entwurf',nl:'Concept'},
+  history:{es:'Historial',en:'History',it:'Cronologia',de:'Verlauf',nl:'Geschiedenis'},
+  stepArrow:{es:'Paso {a} → {b}',en:'Step {a} → {b}',it:'Passo {a} → {b}',de:'Schritt {a} → {b}',nl:'Stap {a} → {b}'},
+  systemWord:{es:'Sistema',en:'System',it:'Sistema',de:'System',nl:'Systeem'},
+  // contrato
+  contractTitle:{es:'Contrato',en:'Contract',it:'Contratto',de:'Vertrag',nl:'Contract'},
+  contractView:{es:'Ver contrato',en:'View contract',it:'Vedi contratto',de:'Vertrag ansehen',nl:'Contract bekijken'},
+  contractPending:{es:'Pendiente de firma',en:'Awaiting signature',it:'In attesa di firma',de:'Unterschrift ausstehend',nl:'Wacht op handtekening'},
+  contractSigned:{es:'✓ Firmado',en:'✓ Signed',it:'✓ Firmato',de:'✓ Unterschrieben',nl:'✓ Ondertekend'},
+  contractDrawHint:{es:'Dibujá tu firma con el dedo o el mouse',en:'Draw your signature with your finger or mouse',it:'Disegna la tua firma con il dito o il mouse',de:'Zeichne deine Unterschrift mit dem Finger oder der Maus',nl:'Teken je handtekening met je vinger of muis'},
+  signHere:{es:'Firmá acá',en:'Sign here',it:'Firma qui',de:'Hier unterschreiben',nl:'Onderteken hier'},
+  contractClear:{es:'Limpiar',en:'Clear',it:'Cancella',de:'Löschen',nl:'Wissen'},
+  contractSignBtn:{es:'Firmar contrato',en:'Sign contract',it:'Firma il contratto',de:'Vertrag unterschreiben',nl:'Contract ondertekenen'},
+  contractName:{es:'Tu nombre completo',en:'Your full name',it:'Il tuo nome completo',de:'Dein vollständiger Name',nl:'Je volledige naam'},
+  contractNamePh:{es:'Nombre y apellido',en:'First and last name',it:'Nome e cognome',de:'Vor- und Nachname',nl:'Voor- en achternaam'},
+  contractSignedBy:{es:'Firmado por {name}',en:'Signed by {name}',it:'Firmato da {name}',de:'Unterschrieben von {name}',nl:'Ondertekend door {name}'},
+  contractExternal:{es:'Ver documento adjunto',en:'View attached document',it:'Vedi documento allegato',de:'Angehängtes Dokument ansehen',nl:'Bekijk bijgevoegd document'},
+  contractNoBody:{es:'Tu contrato está listo para firmar.',en:'Your contract is ready to sign.',it:'Il tuo contratto è pronto da firmare.',de:'Dein Vertrag ist bereit zur Unterschrift.',nl:'Je contract is klaar om te ondertekenen.'},
+  contractSigning:{es:'Firmando...',en:'Signing...',it:'Firma in corso...',de:'Wird unterschrieben...',nl:'Ondertekenen...'},
+  contractSignedToast:{es:'Contrato firmado ✓',en:'Contract signed ✓',it:'Contratto firmato ✓',de:'Vertrag unterschrieben ✓',nl:'Contract ondertekend ✓'},
+  contractNeedName:{es:'Escribí tu nombre completo',en:'Enter your full name',it:'Inserisci il tuo nome completo',de:'Gib deinen vollständigen Namen ein',nl:'Voer je volledige naam in'},
+  contractNeedSign:{es:'Dibujá tu firma',en:'Draw your signature',it:'Disegna la tua firma',de:'Zeichne deine Unterschrift',nl:'Teken je handtekening'},
+  // datos de pago
+  payTitle:{es:'Mis datos de pago',en:'My payment details',it:'I miei dati di pagamento',de:'Meine Zahlungsdaten',nl:'Mijn betaalgegevens'},
+  paySub:{es:'Guardá tus cuentas para cobrar tus campañas.',en:'Save your accounts to get paid for your campaigns.',it:'Salva i tuoi conti per ricevere i pagamenti.',de:'Speichere deine Konten, um bezahlt zu werden.',nl:'Bewaar je rekeningen om betaald te worden.'},
+  payAdd:{es:'+ Agregar cuenta',en:'+ Add account',it:'+ Aggiungi conto',de:'+ Konto hinzufügen',nl:'+ Rekening toevoegen'},
+  payNone:{es:'Todavía no agregaste ninguna cuenta de pago.',en:'You haven’t added any payment account yet.',it:'Non hai ancora aggiunto un conto.',de:'Du hast noch kein Zahlungskonto hinzugefügt.',nl:'Je hebt nog geen betaalrekening toegevoegd.'},
+  payDefault:{es:'Predeterminada',en:'Default',it:'Predefinito',de:'Standard',nl:'Standaard'},
+  payDeleteConfirm:{es:'¿Eliminar esta cuenta de pago?',en:'Delete this payment account?',it:'Eliminare questo conto?',de:'Dieses Zahlungskonto löschen?',nl:'Deze betaalrekening verwijderen?'},
+  payModalAdd:{es:'Agregar cuenta de pago',en:'Add payment account',it:'Aggiungi conto di pagamento',de:'Zahlungskonto hinzufügen',nl:'Betaalrekening toevoegen'},
+  payModalEdit:{es:'Editar cuenta de pago',en:'Edit payment account',it:'Modifica conto di pagamento',de:'Zahlungskonto bearbeiten',nl:'Betaalrekening bewerken'},
+  payCountry:{es:'País',en:'Country',it:'Paese',de:'Land',nl:'Land'},
+  payCountryPh:{es:'Elegí un país',en:'Choose a country',it:'Scegli un paese',de:'Land auswählen',nl:'Kies een land'},
+  payFullName:{es:'Nombre completo del titular',en:'Account holder full name',it:'Nome completo dell’intestatario',de:'Vollständiger Name des Kontoinhabers',nl:'Volledige naam rekeninghouder'},
+  payBank:{es:'Banco',en:'Bank',it:'Banca',de:'Bank',nl:'Bank'},
+  payAlias:{es:'Alias (opcional)',en:'Label (optional)',it:'Etichetta (facoltativo)',de:'Bezeichnung (optional)',nl:'Label (optioneel)'},
+  payAliasPh:{es:'Ej: Cuenta principal',en:'E.g. Main account',it:'Es: Conto principale',de:'z.B. Hauptkonto',nl:'Bijv. Hoofdrekening'},
+  payCurrency:{es:'Moneda',en:'Currency',it:'Valuta',de:'Währung',nl:'Valuta'},
+  payDefaultChk:{es:'Usar como cuenta predeterminada',en:'Use as default account',it:'Usa come conto predefinito',de:'Als Standardkonto verwenden',nl:'Als standaardrekening gebruiken'},
+  paySave:{es:'Guardar cuenta',en:'Save account',it:'Salva conto',de:'Konto speichern',nl:'Rekening opslaan'},
+  saving:{es:'Guardando...',en:'Saving...',it:'Salvataggio...',de:'Speichern...',nl:'Opslaan...'},
+  paySaved:{es:'Cuenta guardada ✓',en:'Account saved ✓',it:'Conto salvato ✓',de:'Konto gespeichert ✓',nl:'Rekening opgeslagen ✓'},
+  payDeleted:{es:'Cuenta eliminada ✓',en:'Account deleted ✓',it:'Conto eliminato ✓',de:'Konto gelöscht ✓',nl:'Rekening verwijderd ✓'},
+  payNeedCountry:{es:'Elegí el país',en:'Choose the country',it:'Scegli il paese',de:'Land auswählen',nl:'Kies het land'},
+  payNeedName:{es:'Escribí el nombre completo',en:'Enter the full name',it:'Inserisci il nome completo',de:'Vollständigen Namen eingeben',nl:'Voer de volledige naam in'},
+  cancel:{es:'Cancelar',en:'Cancel',it:'Annulla',de:'Abbrechen',nl:'Annuleren'},
+  // países
+  c_mexico:{es:'México',en:'Mexico',it:'Messico',de:'Mexiko',nl:'Mexico'},
+  c_colombia:{es:'Colombia',en:'Colombia',it:'Colombia',de:'Kolumbien',nl:'Colombia'},
+  c_argentina:{es:'Argentina',en:'Argentina',it:'Argentina',de:'Argentinien',nl:'Argentinië'},
+  c_usa:{es:'Estados Unidos',en:'United States',it:'Stati Uniti',de:'USA',nl:'Verenigde Staten'},
+  c_espana:{es:'España',en:'Spain',it:'Spagna',de:'Spanien',nl:'Spanje'},
+  c_italia:{es:'Italia',en:'Italy',it:'Italia',de:'Italien',nl:'Italië'},
+  c_holanda:{es:'Países Bajos',en:'Netherlands',it:'Paesi Bassi',de:'Niederlande',nl:'Nederland'},
+  c_alemania:{es:'Alemania',en:'Germany',it:'Germania',de:'Deutschland',nl:'Duitsland'},
+  // campos bancarios / dirección
+  f_clabe:{es:'CLABE',en:'CLABE',it:'CLABE',de:'CLABE',nl:'CLABE'},
+  f_cbu:{es:'CBU / CVU',en:'CBU / CVU',it:'CBU / CVU',de:'CBU / CVU',nl:'CBU / CVU'},
+  f_aliasbank:{es:'Alias',en:'Alias',it:'Alias',de:'Alias',nl:'Alias'},
+  f_cuit:{es:'CUIT',en:'CUIT',it:'CUIT',de:'CUIT',nl:'CUIT'},
+  f_iban:{es:'IBAN',en:'IBAN',it:'IBAN',de:'IBAN',nl:'IBAN'},
+  f_bic:{es:'BIC / SWIFT',en:'BIC / SWIFT',it:'BIC / SWIFT',de:'BIC / SWIFT',nl:'BIC / SWIFT'},
+  f_routing:{es:'Routing (ABA)',en:'Routing (ABA)',it:'Routing (ABA)',de:'Routing (ABA)',nl:'Routing (ABA)'},
+  f_accountno:{es:'Número de cuenta',en:'Account number',it:'Numero di conto',de:'Kontonummer',nl:'Rekeningnummer'},
+  f_accounttype:{es:'Tipo de cuenta',en:'Account type',it:'Tipo di conto',de:'Kontotyp',nl:'Rekeningtype'},
+  opt_checking:{es:'Corriente',en:'Checking',it:'Corrente',de:'Girokonto',nl:'Betaalrekening'},
+  opt_savings:{es:'Ahorros',en:'Savings',it:'Risparmio',de:'Sparkonto',nl:'Spaarrekening'},
+  f_documento:{es:'Documento (Cédula/NIT)',en:'ID (Cédula/NIT)',it:'Documento (Cédula/NIT)',de:'Ausweis (Cédula/NIT)',nl:'Document (Cédula/NIT)'},
+  f_calle:{es:'Calle',en:'Street',it:'Via',de:'Straße',nl:'Straat'},
+  f_numext:{es:'Núm. exterior',en:'Ext. number',it:'Numero civico',de:'Hausnummer',nl:'Huisnummer'},
+  f_numint:{es:'Núm. interior',en:'Int. number',it:'Interno',de:'Wohnung',nl:'Toevoeging'},
+  f_estado:{es:'Estado',en:'State',it:'Stato',de:'Bundesstaat',nl:'Staat'},
+  f_ciudad:{es:'Ciudad',en:'City',it:'Città',de:'Stadt',nl:'Stad'},
+  f_cp:{es:'Código postal',en:'ZIP / Postal code',it:'CAP',de:'PLZ',nl:'Postcode'},
+  f_direccion:{es:'Dirección',en:'Address',it:'Indirizzo',de:'Adresse',nl:'Adres'},
+  f_departamento:{es:'Departamento',en:'Department',it:'Dipartimento',de:'Departamento',nl:'Departement'},
+  f_callenum:{es:'Calle y número',en:'Street and number',it:'Via e numero',de:'Straße und Nummer',nl:'Straat en nummer'},
+  f_localidad:{es:'Localidad',en:'Locality',it:'Località',de:'Ort',nl:'Plaats'},
+  f_provincia:{es:'Provincia',en:'Province',it:'Provincia',de:'Provinz',nl:'Provincie'},
+  f_region:{es:'Región / Provincia',en:'Region / Province',it:'Regione / Provincia',de:'Region / Provinz',nl:'Regio / Provincie'},
+  // factura
+  invTitle:{es:'Factura',en:'Invoice',it:'Fattura',de:'Rechnung',nl:'Factuur'},
+  invLockedSt:{es:'Bloqueada',en:'Locked',it:'Bloccata',de:'Gesperrt',nl:'Vergrendeld'},
+  invAvailSt:{es:'Disponible',en:'Available',it:'Disponibile',de:'Verfügbar',nl:'Beschikbaar'},
+  invDoneSt:{es:'✓ Enviada',en:'✓ Sent',it:'✓ Inviata',de:'✓ Gesendet',nl:'✓ Verzonden'},
+  invLockedNote:{es:'Vas a poder facturar cuando todos tus contenidos estén listos (paso 7+).',en:'You’ll be able to invoice once all your content is ready (step 7+).',it:'Potrai fatturare quando tutti i contenuti saranno pronti (passo 7+).',de:'Du kannst abrechnen, sobald alle Inhalte fertig sind (Schritt 7+).',nl:'Je kunt factureren zodra al je content klaar is (stap 7+).'},
+  invAvailNote:{es:'Ya podés enviar tu factura para el cobro de esta campaña.',en:'You can now send your invoice to get paid for this campaign.',it:'Ora puoi inviare la fattura per questa campagna.',de:'Du kannst jetzt deine Rechnung für diese Kampagne senden.',nl:'Je kunt nu je factuur insturen voor deze campagne.'},
+  invDoneNote:{es:'Recibimos tu factura. ¡Gracias!',en:'We received your invoice. Thank you!',it:'Abbiamo ricevuto la tua fattura. Grazie!',de:'Wir haben deine Rechnung erhalten. Danke!',nl:'We hebben je factuur ontvangen. Bedankt!'},
+  invUpload:{es:'Subir mi factura',en:'Upload my invoice',it:'Carica la mia fattura',de:'Meine Rechnung hochladen',nl:'Mijn factuur uploaden'},
+  invUploadDesc:{es:'Ya tengo mi PDF',en:'I already have my PDF',it:'Ho già il mio PDF',de:'Ich habe mein PDF',nl:'Ik heb mijn PDF al'},
+  invCreate:{es:'Crear factura',en:'Create invoice',it:'Crea fattura',de:'Rechnung erstellen',nl:'Factuur maken'},
+  invCreateDesc:{es:'Rellenar los datos',en:'Fill in the details',it:'Compila i dati',de:'Daten ausfüllen',nl:'Gegevens invullen'},
+  invView:{es:'Ver factura',en:'View invoice',it:'Vedi fattura',de:'Rechnung ansehen',nl:'Factuur bekijken'},
+  invReplace:{es:'Reemplazar',en:'Replace',it:'Sostituisci',de:'Ersetzen',nl:'Vervangen'},
+  invName:{es:'Nombre / Razón Social',en:'Name / Business name',it:'Nome / Ragione sociale',de:'Name / Firmenname',nl:'Naam / Bedrijfsnaam'},
+  invConcept:{es:'Concepto',en:'Concept',it:'Causale',de:'Beschreibung',nl:'Omschrijving'},
+  invAmount:{es:'Monto',en:'Amount',it:'Importo',de:'Betrag',nl:'Bedrag'},
+  invAccount:{es:'Cuenta de pago',en:'Payment account',it:'Conto di pagamento',de:'Zahlungskonto',nl:'Betaalrekening'},
+  invAccountNone:{es:'Agregá una cuenta de pago primero',en:'Add a payment account first',it:'Aggiungi prima un conto di pagamento',de:'Füge zuerst ein Zahlungskonto hinzu',nl:'Voeg eerst een betaalrekening toe'},
+  invGenerate:{es:'Generar y enviar factura',en:'Generate and send invoice',it:'Genera e invia fattura',de:'Rechnung erstellen und senden',nl:'Factuur genereren en versturen'},
+  invNeedName:{es:'Escribí el nombre o razón social',en:'Enter the name or business name',it:'Inserisci il nome o la ragione sociale',de:'Gib den Namen oder Firmennamen ein',nl:'Voer de naam of bedrijfsnaam in'},
+  invNeedAccount:{es:'Elegí una cuenta de pago',en:'Choose a payment account',it:'Scegli un conto di pagamento',de:'Wähle ein Zahlungskonto',nl:'Kies een betaalrekening'},
+  invUploading:{es:'Subiendo factura...',en:'Uploading invoice...',it:'Caricamento fattura...',de:'Rechnung wird hochgeladen...',nl:'Factuur uploaden...'},
+  invGenerating:{es:'Generando factura...',en:'Generating invoice...',it:'Generazione fattura...',de:'Rechnung wird erstellt...',nl:'Factuur genereren...'},
+  invSent:{es:'Factura enviada ✓',en:'Invoice sent ✓',it:'Fattura inviata ✓',de:'Rechnung gesendet ✓',nl:'Factuur verzonden ✓'},
+  invModalTitle:{es:'Crear factura',en:'Create invoice',it:'Crea fattura',de:'Rechnung erstellen',nl:'Factuur maken'},
+  invAddress:{es:'Dirección',en:'Address',it:'Indirizzo',de:'Adresse',nl:'Adres'},
+  // toasts / misc
+  errPrefix:{es:'Error: ',en:'Error: ',it:'Errore: ',de:'Fehler: ',nl:'Fout: '},
+  sentTo:{es:'Enviado → ',en:'Sent → ',it:'Inviato → ',de:'Gesendet → ',nl:'Verzonden → '},
+  needPublishLink:{es:'Ingresá el link de publicación',en:'Enter the post link',it:'Inserisci il link del post',de:'Gib den Beitrags-Link ein',nl:'Voer de postlink in'},
+  uploadingScript:{es:'Subiendo script(s)...',en:'Uploading script(s)...',it:'Caricamento script...',de:'Skript(e) werden hochgeladen...',nl:'Script(s) uploaden...'},
+  scriptUploaded:{es:'Script subido ✓',en:'Script uploaded ✓',it:'Script caricato ✓',de:'Skript hochgeladen ✓',nl:'Script geüpload ✓'},
+  scriptsUploaded:{es:'{n} scripts subidos ✓',en:'{n} scripts uploaded ✓',it:'{n} script caricati ✓',de:'{n} Skripte hochgeladen ✓',nl:'{n} scripts geüpload ✓'},
+  uploadingContent:{es:'Subiendo contenido...',en:'Uploading content...',it:'Caricamento contenuto...',de:'Inhalt wird hochgeladen...',nl:'Content uploaden...'},
+  contentUploaded:{es:'Contenido subido ✓',en:'Content uploaded ✓',it:'Contenuto caricato ✓',de:'Inhalt hochgeladen ✓',nl:'Content geüpload ✓'},
+  contentsUploaded:{es:'{n} archivos subidos ✓',en:'{n} files uploaded ✓',it:'{n} file caricati ✓',de:'{n} Dateien hochgeladen ✓',nl:'{n} bestanden geüpload ✓'},
+  uploadingStats:{es:'Subiendo estadísticas...',en:'Uploading statistics...',it:'Caricamento statistiche...',de:'Statistiken werden hochgeladen...',nl:'Statistieken uploaden...'},
+  statsUploaded:{es:'Estadísticas subidas ✓',en:'Statistics uploaded ✓',it:'Statistiche caricate ✓',de:'Statistiken hochgeladen ✓',nl:'Statistieken geüpload ✓'},
+  sparkSaved:{es:'Spark Code guardado ✓',en:'Spark Code saved ✓',it:'Spark Code salvato ✓',de:'Spark Code gespeichert ✓',nl:'Spark Code opgeslagen ✓'},
+  // PDF
+  pdfInvoice:{es:'FACTURA',en:'INVOICE',it:'FATTURA',de:'RECHNUNG',nl:'FACTUUR'},
+  pdfFrom:{es:'De',en:'From',it:'Da',de:'Von',nl:'Van'},
+  pdfTo:{es:'Para',en:'To',it:'A',de:'An',nl:'Aan'},
+  pdfConcept:{es:'Concepto',en:'Concept',it:'Causale',de:'Beschreibung',nl:'Omschrijving'},
+  pdfTotal:{es:'TOTAL',en:'TOTAL',it:'TOTALE',de:'GESAMT',nl:'TOTAAL'},
+  pdfDate:{es:'Fecha',en:'Date',it:'Data',de:'Datum',nl:'Datum'},
+  pdfPayTo:{es:'Datos de pago',en:'Payment details',it:'Dati di pagamento',de:'Zahlungsdaten',nl:'Betaalgegevens'},
+  pdfNo:{es:'N°',en:'No.',it:'N.',de:'Nr.',nl:'Nr.'}
+};
+function t(k, vars){
+  let s = (DICT[k] && (DICT[k][LANG] || DICT[k].es)) || k;
+  if (vars) for (const p in vars) s = s.split('{'+p+'}').join(vars[p]);
+  return s;
+}
+function tPaso(n){ return t('paso'+n); }
+function tTipo(x){ return DICT['tipo_'+x] ? t('tipo_'+x) : x; }
+
+// ── Config de datos de pago por país ────────────────────────────
+// bank/addr: lista de campos {k, lk(labelKey), type?, opts?(value→labelKey)}
+const COUNTRY_PAY = {
+  mexico:    {flag:'🇲🇽', cur:'MXN', bank:[{k:'clabe',lk:'f_clabe'}], addr:[{k:'calle',lk:'f_calle'},{k:'num_ext',lk:'f_numext'},{k:'num_int',lk:'f_numint'},{k:'estado',lk:'f_estado'},{k:'ciudad',lk:'f_ciudad'},{k:'cp',lk:'f_cp'}]},
+  colombia:  {flag:'🇨🇴', cur:'COP', bank:[{k:'tipo_cuenta',lk:'f_accounttype',type:'select',opts:{savings:'opt_savings',checking:'opt_checking'}},{k:'numero_cuenta',lk:'f_accountno'},{k:'documento',lk:'f_documento'}], addr:[{k:'direccion',lk:'f_direccion'},{k:'ciudad',lk:'f_ciudad'},{k:'departamento',lk:'f_departamento'}]},
+  argentina: {flag:'🇦🇷', cur:'ARS', bank:[{k:'cbu',lk:'f_cbu'},{k:'alias',lk:'f_aliasbank'},{k:'cuit',lk:'f_cuit'}], addr:[{k:'calle_num',lk:'f_callenum'},{k:'localidad',lk:'f_localidad'},{k:'provincia',lk:'f_provincia'},{k:'cp',lk:'f_cp'}]},
+  usa:       {flag:'🇺🇸', cur:'USD', bank:[{k:'routing',lk:'f_routing'},{k:'account',lk:'f_accountno'},{k:'account_type',lk:'f_accounttype',type:'select',opts:{checking:'opt_checking',savings:'opt_savings'}}], addr:[{k:'street',lk:'f_calle'},{k:'city',lk:'f_ciudad'},{k:'state',lk:'f_estado'},{k:'zip',lk:'f_cp'}]},
+  espana:    {flag:'🇪🇸', cur:'EUR', bank:[{k:'iban',lk:'f_iban'},{k:'bic',lk:'f_bic'}], addr:[{k:'calle_num',lk:'f_callenum'},{k:'ciudad',lk:'f_ciudad'},{k:'provincia',lk:'f_region'},{k:'cp',lk:'f_cp'}]},
+  italia:    {flag:'🇮🇹', cur:'EUR', bank:[{k:'iban',lk:'f_iban'},{k:'bic',lk:'f_bic'}], addr:[{k:'calle_num',lk:'f_callenum'},{k:'ciudad',lk:'f_ciudad'},{k:'provincia',lk:'f_region'},{k:'cp',lk:'f_cp'}]},
+  holanda:   {flag:'🇳🇱', cur:'EUR', bank:[{k:'iban',lk:'f_iban'},{k:'bic',lk:'f_bic'}], addr:[{k:'calle_num',lk:'f_callenum'},{k:'ciudad',lk:'f_ciudad'},{k:'provincia',lk:'f_region'},{k:'cp',lk:'f_cp'}]},
+  alemania:  {flag:'🇩🇪', cur:'EUR', bank:[{k:'iban',lk:'f_iban'},{k:'bic',lk:'f_bic'}], addr:[{k:'calle_num',lk:'f_callenum'},{k:'ciudad',lk:'f_ciudad'},{k:'provincia',lk:'f_region'},{k:'cp',lk:'f_cp'}]},
+};
+const COUNTRY_ORDER = ['mexico','colombia','argentina','usa','espana','italia','holanda','alemania'];
+function countryName(c){ return t('c_'+c); }
+function countryFlag(c){ return (COUNTRY_PAY[c]||{}).flag || '🏳️'; }
 
 async function API(action, params={}) {
   const res = await fetch(API_URL, {
@@ -243,6 +575,15 @@ async function load() {
   const data = await API('load');
   talento = data.talento;
   campaigns = data.campaigns || [];
+  cuentas = data.cuentas || [];
+  invoiceMinPaso = data.invoiceMinPaso || 7;
+
+  // Resolver idioma: preferencia guardada por el talento > idioma asignado por el equipo > es
+  const stored = localStorage.getItem('beme_lang');
+  LANG = (stored && LANGS.includes(stored)) ? stored : (LANGS.includes(talento?.idioma) ? talento.idioma : 'es');
+  const sel = document.getElementById('lang-select'); if (sel) sel.value = LANG;
+  applyStatic();
+
   const nm = talento?.nombre || 'Talento';
   document.getElementById('user-name').textContent = nm;
   const av = document.getElementById('user-avatar');
@@ -250,17 +591,28 @@ async function load() {
   else av.textContent = nm.split(' ').map(n=>n[0]||'').join('').substring(0,2).toUpperCase()||'?';
 }
 
+function applyStatic() {
+  document.documentElement.setAttribute('lang', LANG);
+  const rt = document.getElementById('role-tag'); if (rt) rt.textContent = t('role');
+  const pt = document.getElementById('page-title'); if (pt) pt.textContent = t('pageTitle');
+}
+function setLang(l) {
+  if (!LANGS.includes(l)) return;
+  LANG = l; localStorage.setItem('beme_lang', l);
+  applyStatic(); renderAll();
+}
+
 function renderAll() {
   const c = document.getElementById('campaigns-container');
-  document.getElementById('page-sub').textContent = campaigns.length
-    ? `${campaigns.length} campaña${campaigns.length!==1?'s':''} · Subí tus entregas y seguí el avance acá.`
-    : 'No tenés campañas activas en este momento.';
-  if (!campaigns.length) {
-    c.innerHTML = '<div class="empty"><h3>Todo al día</h3><p>Cuando tengas una campaña activa, va a aparecer acá.</p></div>';
-    return;
-  }
-  const openIds = []; c.querySelectorAll('.open').forEach(el=>{ if(el.id) openIds.push(el.id); });
-  c.innerHTML = campaigns.map(ct => renderCampaignCard(ct)).join('');
+  const n = campaigns.length;
+  document.getElementById('page-sub').textContent = n
+    ? `${n} ${n!==1?t('campMany'):t('campOne')} · ${t('subTail')}`
+    : t('subNone');
+  const openIds = []; document.querySelectorAll('.open').forEach(el=>{ if(el.id) openIds.push(el.id); });
+  c.innerHTML = n
+    ? campaigns.map(ct => renderCampaignCard(ct)).join('')
+    : `<div class="empty"><h3>${esc(t('emptyTitle'))}</h3><p>${esc(t('emptyMsg'))}</p></div>`;
+  renderPay();
   openIds.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('open'); });
 }
 
@@ -269,38 +621,43 @@ function renderCampaignCard(ct) {
   const briefs = camp.campana_briefs || [];
   const contenidos = ct.contenidos || [];
   const done = contenidos.filter(c=>c.paso_actual>=8).length;
-  const estadoLabels = {sin_iniciar:'Sin iniciar',en_curso:'En curso',etapa_finanzas:'Finanzas',finalizada:'Finalizada',cancelada:'Cancelada'};
 
   const mon = ct.moneda||'USD';
   const pagado = ct.pago_estado==='pagado';
   const feeHTML = `<div class="fee-strip">
-    <div class="fee-pill"><div class="lbl">Tu fee</div><div class="val">${fmtMoney(ct.fee_talento||0,mon)}</div></div>
-    <div class="fee-pill"><div class="lbl">Estado de pago</div><div class="val ${pagado?'pay-ok':'pay-pend'}">${pagado?'✓ Pagado':'Pendiente'}</div>${pagado&&ct.pago_fecha?`<div style="font-size:11px;color:var(--text-dim);margin-top:2px">${fmtDate(ct.pago_fecha)}</div>`:''}</div>
+    <div class="fee-pill"><div class="lbl">${esc(t('feeLabel'))}</div><div class="val">${fmtMoney(ct.fee_talento||0,mon)}</div></div>
+    <div class="fee-pill"><div class="lbl">${esc(t('payStatus'))}</div><div class="val ${pagado?'pay-ok':'pay-pend'}">${pagado?t('paid'):t('pending')}</div>${pagado&&ct.pago_fecha?`<div style="font-size:11px;color:var(--text-dim);margin-top:2px">${fmtDate(ct.pago_fecha)}</div>`:''}</div>
   </div>`;
 
+  const contractHTML = renderContract(ct);
+
   const briefsHTML = briefs.length
-    ? `<div class="brief-section"><div class="brief-title">📄 Brief de la campaña</div>${briefs.map(f=>
+    ? `<div class="brief-section"><div class="brief-title">${esc(t('briefTitle'))}</div>${briefs.map(f=>
         `<a href="${esc(f.url)}" target="_blank" class="brief-file">📄 ${esc((f.nombre||'Brief').substring(0,30))}</a>`).join('')}</div>`
     : '';
 
   const contHTML = contenidos.length
     ? contenidos.map(c => renderContenido(c, ct)).join('')
-    : '<div style="font-size:12px;color:var(--text-dim);padding:12px 0">Sin contenidos asignados todavía.</div>';
+    : `<div style="font-size:12px;color:var(--text-dim);padding:12px 0">${esc(t('noContent'))}</div>`;
+
+  const invoiceHTML = renderInvoice(ct);
 
   return `<div class="camp-card" id="camp-${ct.id}">
     <div class="camp-head" onclick="toggle('camp-${ct.id}')">
       <div class="camp-logo">${(camp.marcas?.nombre||'?').substring(0,2).toUpperCase()}</div>
       <div style="flex:1;min-width:0">
         <div class="camp-name">${esc(camp.nombre)}</div>
-        <div class="camp-marca">${esc(camp.marcas?.clientes?.nombre||'')} ${camp.marcas?.nombre?'· '+esc(camp.marcas.nombre):''} · ${contenidos.length} contenido${contenidos.length!==1?'s':''} · ${done} completado${done!==1?'s':''}</div>
+        <div class="camp-marca">${esc(camp.marcas?.clientes?.nombre||'')} ${camp.marcas?.nombre?'· '+esc(camp.marcas.nombre):''} · ${contenidos.length} ${esc(t('contWord'))} · ${done} ${esc(t('doneWord'))}</div>
       </div>
-      <span class="estado-badge estado-${camp.estado}">${estadoLabels[camp.estado]||camp.estado}</span>
+      <span class="estado-badge estado-${camp.estado}">${esc(t('est_'+camp.estado)||camp.estado)}</span>
       <svg class="camp-expand" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     <div class="camp-body">
       ${feeHTML}
+      ${contractHTML}
       ${briefsHTML}
       ${contHTML}
+      ${invoiceHTML}
     </div>
   </div>`;
 }
@@ -316,13 +673,13 @@ function renderContenido(c, ct) {
   const allBriefs = [...briefs, ...contBriefs];
 
   const stepDefs = [
-    {n:1, lbl:'Brief'},
-    ...(c.script_requerido ? [{n:2,lbl:'Script'},{n:3,lbl:'Aprobación Script'}] : []),
-    {n:4, lbl:'Producción (borrador)'},
-    {n:5, lbl:'Aprobación Contenido'},
-    {n:6, lbl:'Publicar'},
-    ...(c.estadisticas_requeridas ? [{n:7,lbl:'Estadísticas'}] : []),
-    {n:8, lbl:'Completado'},
+    {n:1, lbl:t('stepBrief')},
+    ...(c.script_requerido ? [{n:2,lbl:t('stepScript')},{n:3,lbl:t('stepApproveScript')}] : []),
+    {n:4, lbl:t('stepProduction')},
+    {n:5, lbl:t('stepApproveContent')},
+    {n:6, lbl:t('stepPublish')},
+    ...(c.estadisticas_requeridas ? [{n:7,lbl:t('stepStats')}] : []),
+    {n:8, lbl:t('stepCompleted')},
   ];
 
   const stepsHTML = stepDefs.map(s => {
@@ -330,16 +687,16 @@ function renderContenido(c, ct) {
     let right = '';
     if (d || cur) {
       if (s.n === 1 && allBriefs.length) right = allBriefs.map(f => `<a href="${esc(f.url)}" target="_blank" class="step-btn view">${f.contenido_id ? '📋' : '📄'} ${esc((f.nombre||'Brief').substring(0,20))}</a>`).join('');
-      if ((s.n===2||s.n===3) && scripts.length) right = scripts.map(sc => `<a href="${esc(sc.url_archivo)}" target="_blank" class="step-btn view">📝 Script v${sc.version||1}</a>`).join('');
-      if ((s.n===2) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" multiple onchange="uploadScript(this,${c.id})">⬆ Subir script(s)</label>`;
-      if ((s.n===4||s.n===5) && drafts.length) right = drafts.map(dr => `<a href="${esc(dr.url_archivo)}" target="_blank" class="step-btn view">🎬 ${esc((dr.nombre_archivo||'Borrador').substring(0,20))}</a>`).join('');
-      if ((s.n===4) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept="video/*,image/*" multiple onchange="uploadDraft(this,${c.id})">⬆ Subir borrador(es)</label>`;
-      if (s.n===6 && c.url_publicacion) right = `<a href="${esc(c.url_publicacion)}" target="_blank" class="step-btn view">🔗 Ver publicación</a>`;
+      if ((s.n===2||s.n===3) && scripts.length) right = scripts.map(sc => `<a href="${esc(sc.url_archivo)}" target="_blank" class="step-btn view">📝 ${esc(t('stepScript'))} v${sc.version||1}</a>`).join('');
+      if ((s.n===2) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" multiple onchange="uploadScript(this,${c.id})">${esc(t('upScriptInline'))}</label>`;
+      if ((s.n===4||s.n===5) && drafts.length) right = drafts.map(dr => `<a href="${esc(dr.url_archivo)}" target="_blank" class="step-btn view">🎬 ${esc((dr.nombre_archivo||t('draftWord')).substring(0,20))}</a>`).join('');
+      if ((s.n===4) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept="video/*,image/*" multiple onchange="uploadDraft(this,${c.id})">${esc(t('upDraftInline'))}</label>`;
+      if (s.n===6 && c.url_publicacion) right = `<a href="${esc(c.url_publicacion)}" target="_blank" class="step-btn view">${esc(t('viewPost'))}</a>`;
     }
     return `<div class="step-row ${d?'done':cur?'current':'pending'}">
       <div class="step-icon ${d?'done':cur?'current':'pending'}">${d?'✓':s.n}</div>
-      <span class="step-label">${s.lbl}</span>
-      ${cur?'<span class="step-current-tag">● ACTUAL</span>':''}
+      <span class="step-label">${esc(s.lbl)}</span>
+      ${cur?`<span class="step-current-tag">${esc(t('current'))}</span>`:''}
       ${right?`<div class="step-actions">${right}</div>`:''}
     </div>`;
   }).join('');
@@ -348,50 +705,50 @@ function renderContenido(c, ct) {
   if (paso === 2) {
     const hasScripts = scripts.length > 0;
     actionHTML = `<div class="action-box">
-      <div class="action-title">📝 Subir Script</div>
+      <div class="action-title">${esc(t('aScriptTitle'))}</div>
       <div class="action-btns">
-        <label class="btn btn-primary btn-sm" style="cursor:pointer"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" multiple onchange="uploadScript(this,${c.id})">⬆ Subir archivo(s) de script</label>
-        <button class="btn btn-outline btn-sm" onclick="advance(${c.id})" ${hasScripts?'':'disabled style="opacity:0.5;cursor:not-allowed"'} title="${hasScripts?'':'Subí al menos un archivo antes de enviar'}">Script listo → Enviar a revisión</button>
+        <label class="btn btn-primary btn-sm" style="cursor:pointer"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" multiple onchange="uploadScript(this,${c.id})">${esc(t('aUploadScriptBtn'))}</label>
+        <button class="btn btn-outline btn-sm" onclick="advance(${c.id})" ${hasScripts?'':'disabled style="opacity:0.5;cursor:not-allowed"'} title="${hasScripts?'':esc(t('needFile'))}">${esc(t('aScriptReady'))}</button>
       </div>
     </div>`;
   }
-  if (paso === 3) actionHTML = `<div class="action-box"><div class="action-title">⏳ Esperando aprobación del script</div><p style="font-size:12px;color:var(--text-muted)">La marca está revisando tu script.</p></div>`;
+  if (paso === 3) actionHTML = `<div class="action-box"><div class="action-title">${esc(t('aWaitScriptTitle'))}</div><p style="font-size:12px;color:var(--text-muted)">${esc(t('aWaitScriptMsg'))}</p></div>`;
   if (paso === 4) {
     const hasDrafts = drafts.length > 0;
     actionHTML = `<div class="action-box">
-      <div class="action-title">🎬 Subir Contenido</div>
+      <div class="action-title">${esc(t('aContentTitle'))}</div>
       <div class="action-btns">
-        <label class="btn btn-primary btn-sm" style="cursor:pointer"><input type="file" style="display:none" accept="video/*,image/*" multiple onchange="uploadDraft(this,${c.id})">⬆ Subir video/imagen</label>
+        <label class="btn btn-primary btn-sm" style="cursor:pointer"><input type="file" style="display:none" accept="video/*,image/*" multiple onchange="uploadDraft(this,${c.id})">${esc(t('aUploadContentBtn'))}</label>
       </div>
       <div style="margin-top:10px">
-        <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">📋 Copy / Caption para la publicación</label>
-        <textarea class="link-input" id="copy-${c.id}" placeholder="Escribí el copy/caption que se usará..." style="min-height:60px;width:100%;resize:vertical">${esc(c.copy_texto||'')}</textarea>
+        <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">${esc(t('aCopyLabel'))}</label>
+        <textarea class="link-input" id="copy-${c.id}" placeholder="${esc(t('aCopyPh'))}" style="min-height:60px;width:100%;resize:vertical">${esc(c.copy_texto||'')}</textarea>
       </div>
       <div class="action-btns" style="margin-top:8px">
-        <button class="btn btn-outline btn-sm" onclick="saveCopyAndAdvance(${c.id})" ${hasDrafts?'':'disabled style="opacity:0.5;cursor:not-allowed"'} title="${hasDrafts?'':'Subí al menos un archivo antes de enviar'}">Contenido listo → Enviar a revisión</button>
+        <button class="btn btn-outline btn-sm" onclick="saveCopyAndAdvance(${c.id})" ${hasDrafts?'':'disabled style="opacity:0.5;cursor:not-allowed"'} title="${hasDrafts?'':esc(t('needFile'))}">${esc(t('aContentReady'))}</button>
       </div>
     </div>`;
   }
-  if (paso === 5) actionHTML = `<div class="action-box"><div class="action-title">⏳ Esperando aprobación del contenido</div><p style="font-size:12px;color:var(--text-muted)">La marca está revisando tu contenido.</p></div>`;
+  if (paso === 5) actionHTML = `<div class="action-box"><div class="action-title">${esc(t('aWaitContentTitle'))}</div><p style="font-size:12px;color:var(--text-muted)">${esc(t('aWaitContentMsg'))}</p></div>`;
   if (paso === 6) {
     actionHTML = `<div class="action-box">
-      <div class="action-title">🔗 Cargar Link de Publicación</div>
+      <div class="action-title">${esc(t('aPublishTitle'))}</div>
       <div class="link-group">
         <input type="text" class="link-input" id="link-${c.id}" placeholder="https://www.tiktok.com/@..." value="${esc(c.url_publicacion||'')}">
-        <button class="btn btn-primary btn-sm" onclick="saveLink(${c.id})">Confirmar →</button>
+        <button class="btn btn-primary btn-sm" onclick="saveLink(${c.id})">${esc(t('aConfirm'))}</button>
       </div>
     </div>`;
   }
   if (paso === 7) {
     actionHTML = `<div class="action-box">
-      <div class="action-title">📊 Subir Estadísticas</div>
+      <div class="action-title">${esc(t('aStatsTitle'))}</div>
       <div class="action-btns">
-        <label class="btn btn-primary btn-sm" style="cursor:pointer"><input type="file" style="display:none" accept="image/*" multiple onchange="uploadStats(this,${c.id})">⬆ Subir screenshot(s)</label>
-        <button class="btn btn-outline btn-sm" onclick="advance(${c.id})">Estadísticas listas → Finalizar</button>
+        <label class="btn btn-primary btn-sm" style="cursor:pointer"><input type="file" style="display:none" accept="image/*" multiple onchange="uploadStats(this,${c.id})">${esc(t('aUploadStatsBtn'))}</label>
+        <button class="btn btn-outline btn-sm" onclick="advance(${c.id})">${esc(t('aStatsReady'))}</button>
       </div>
     </div>`;
   }
-  if (paso >= 8) actionHTML = `<div class="action-box" style="background:rgba(22,163,74,0.06);border-color:rgba(22,163,74,0.15)"><div class="action-title" style="color:var(--green)">✓ ${paso===9?'Pagado':'Completado'}</div></div>`;
+  if (paso >= 8) actionHTML = `<div class="action-box" style="background:rgba(22,163,74,0.06);border-color:rgba(22,163,74,0.15)"><div class="action-title" style="color:var(--green)">${paso===9?esc(t('aPaid')):esc(t('aDone'))}</div></div>`;
 
   const obsHTML = renderObs(c.contenido_observaciones||[]);
   const tlHTML = renderTimeline(c.contenido_historial||[]);
@@ -399,17 +756,17 @@ function renderContenido(c, ct) {
   let sparkHTML = '';
   if (c.spark_code_dias) {
     sparkHTML = `<div class="action-box">
-      <div class="action-title">Spark Code — ${c.spark_code_dias} días</div>
-      <input type="text" class="link-input" style="font-family:monospace;margin-top:6px" id="spark-${c.id}" value="${esc(c.spark_code_texto||'')}" placeholder="Pegá el código aquí..." onblur="saveSpark(${c.id},this.value)">
+      <div class="action-title">${esc(t('sparkTitle',{n:c.spark_code_dias}))}</div>
+      <input type="text" class="link-input" style="font-family:monospace;margin-top:6px" id="spark-${c.id}" value="${esc(c.spark_code_texto||'')}" placeholder="${esc(t('sparkPh'))}" onblur="saveSpark(${c.id},this.value)">
     </div>`;
   }
 
   return `<div class="cont-card" id="cont-${c.id}">
     <div class="cont-head" onclick="toggle('cont-${c.id}')">
-      <span class="tipo-badge tb-${c.tipo}">${TIPO_LABELS[c.tipo]||c.tipo}</span>
-      <span class="cont-titulo">${esc(c.titulo||TIPO_LABELS[c.tipo]||'Contenido')}</span>
+      <span class="tipo-badge tb-${c.tipo}">${esc(tTipo(c.tipo))}</span>
+      <span class="cont-titulo">${esc(c.titulo||tTipo(c.tipo))}</span>
       ${c.fecha_publicacion?`<span class="cont-fecha">${fmtDate(c.fecha_publicacion)}</span>`:''}
-      <span class="paso-chip ${pasoChipCls}">${isDone?'✓ Completo':'Paso '+paso}</span>
+      <span class="paso-chip ${pasoChipCls}">${isDone?t('chipComplete'):t('chipStep',{n:paso})}</span>
       <svg class="cont-expand" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     <div class="cont-body">
@@ -433,11 +790,11 @@ function renderTimeline(hist) {
   const sorted = [...hist].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   return `<details class="tl-details"><summary class="tl-summary">
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    Historial (${sorted.length})</summary>
+    ${esc(t('history'))} (${sorted.length})</summary>
     <div class="tl-list">${sorted.map((h,i)=>{
       const isLast=i===sorted.length-1;
       const isRej=(h.accion||'').toLowerCase().includes('rechaz');
-      return `<div class="tl-item"><div class="tl-track"><div class="tl-dot ${isRej?'tl-dot-reject':'tl-dot-ok'}"></div>${!isLast?'<div class="tl-line"></div>':''}</div><div class="tl-content"><div class="tl-header"><span class="tl-paso">Paso ${h.paso_anterior||'?'} → ${h.paso_nuevo}</span><span class="tl-date">${fmtDT(h.created_at)}</span></div><div class="tl-action">${esc(h.accion||'Avance')}</div><div class="tl-author">${esc(h.autor_nombre||'Sistema')}</div></div></div>`;
+      return `<div class="tl-item"><div class="tl-track"><div class="tl-dot ${isRej?'tl-dot-reject':'tl-dot-ok'}"></div>${!isLast?'<div class="tl-line"></div>':''}</div><div class="tl-content"><div class="tl-header"><span class="tl-paso">${esc(t('stepArrow',{a:h.paso_anterior||'?',b:h.paso_nuevo}))}</span><span class="tl-date">${fmtDT(h.created_at)}</span></div><div class="tl-action">${esc(h.accion||'')}</div><div class="tl-author">${esc(h.autor_nombre||t('systemWord'))}</div></div></div>`;
     }).join('')}</div></details>`;
 }
 
@@ -446,23 +803,23 @@ async function refresh() { await load(); renderAll(); }
 
 async function advance(contId) {
   try { const r = await API('advance', { contenido_id: contId, accion: 'Enviado por talento' });
-    await refresh(); toast('Enviado → '+(PASO_LABELS[r.paso]||r.paso),'ok');
-  } catch(e){ toast('Error: '+e.message,'err'); }
+    await refresh(); toast(t('sentTo')+(tPaso(r.paso)||r.paso),'ok');
+  } catch(e){ toast(t('errPrefix')+e.message,'err'); }
 }
 async function saveLink(contId) {
   const link = document.getElementById('link-'+contId)?.value.trim();
-  if (!link) { toast('Ingresá el link de publicación','err'); return; }
+  if (!link) { toast(t('needPublishLink'),'err'); return; }
   try { await API('set-publish-link', { contenido_id: contId, url_publicacion: link }); await advance(contId); }
-  catch(e){ toast('Error: '+e.message,'err'); }
+  catch(e){ toast(t('errPrefix')+e.message,'err'); }
 }
 async function saveCopyAndAdvance(contId) {
   const copyText = document.getElementById('copy-'+contId)?.value.trim() || '';
   try { if (copyText) await API('save-copy', { contenido_id: contId, copy_texto: copyText }); await advance(contId); }
-  catch(e){ toast('Error: '+e.message,'err'); }
+  catch(e){ toast(t('errPrefix')+e.message,'err'); }
 }
 async function saveSpark(contId, texto) {
-  try { await API('save-spark', { contenido_id: contId, spark_code_texto: (texto||'').trim() }); toast('Spark Code guardado ✓','ok'); }
-  catch(e){ toast('Error: '+e.message,'err'); }
+  try { await API('save-spark', { contenido_id: contId, spark_code_texto: (texto||'').trim() }); toast(t('sparkSaved'),'ok'); }
+  catch(e){ toast(t('errPrefix')+e.message,'err'); }
 }
 
 async function uploadOne(bucket, contId, file) {
@@ -473,32 +830,367 @@ async function uploadOne(bucket, contId, file) {
 }
 async function uploadScript(input, contId) {
   const files = Array.from(input.files); input.value=''; if (!files.length) return;
-  toast('Subiendo script(s)...','inf');
+  toast(t('uploadingScript'),'inf');
   try { for (const f of files){ const url = await uploadOne('content-scripts', contId, f); await API('record-script',{contenido_id:contId,url_archivo:url}); }
-    await refresh(); toast(files.length>1?`${files.length} scripts subidos ✓`:'Script subido ✓','ok');
-  } catch(e){ toast('Error: '+e.message,'err'); }
+    await refresh(); toast(files.length>1?t('scriptsUploaded',{n:files.length}):t('scriptUploaded'),'ok');
+  } catch(e){ toast(t('errPrefix')+e.message,'err'); }
 }
 async function uploadDraft(input, contId) {
   const files = Array.from(input.files); input.value=''; if (!files.length) return;
-  toast('Subiendo contenido...','inf');
+  toast(t('uploadingContent'),'inf');
   try { for (const f of files){ const url = await uploadOne('content-drafts', contId, f); await API('record-draft',{contenido_id:contId,url_archivo:url,nombre_archivo:f.name,size_bytes:f.size}); }
-    await refresh(); toast(files.length>1?`${files.length} archivos subidos ✓`:'Contenido subido ✓','ok');
-  } catch(e){ toast('Error: '+e.message,'err'); }
+    await refresh(); toast(files.length>1?t('contentsUploaded',{n:files.length}):t('contentUploaded'),'ok');
+  } catch(e){ toast(t('errPrefix')+e.message,'err'); }
 }
 async function uploadStats(input, contId) {
   const files = Array.from(input.files); input.value=''; if (!files.length) return;
-  toast('Subiendo estadísticas...','inf');
+  toast(t('uploadingStats'),'inf');
   try { for (const f of files){ const url = await uploadOne('content-stats', contId, f); await API('record-stats',{contenido_id:contId,periodo:'7d',url_screenshot:url,nombre_archivo:f.name}); }
-    await refresh(); toast('Estadísticas subidas ✓','ok');
-  } catch(e){ toast('Error: '+e.message,'err'); }
+    await refresh(); toast(t('statsUploaded'),'ok');
+  } catch(e){ toast(t('errPrefix')+e.message,'err'); }
+}
+
+// ── CONTRATO / FIRMA ───────────────────────────────────────────
+function getContrato(id){ for(const ct of campaigns){ if(ct.contrato && ct.contrato.id===id) return ct.contrato; } return null; }
+
+function renderContract(ct){
+  const con = ct.contrato; if(!con) return '';
+  const signed = con.estado === 'firmado';
+  const status = signed
+    ? `<span class="sec-status st-ok">${t('contractSigned')}</span>`
+    : `<span class="sec-status st-pend">${t('contractPending')}</span>`;
+  let body;
+  if (signed) {
+    body = `<div class="sign-firmado">
+        ${con.firma_url?`<img src="${esc(con.firma_url)}" alt="firma">`:''}
+        <div class="sign-meta"><b>${esc(con.firmante_nombre||'')}</b>${con.firmado_at?`<br>${esc(t('contractSigned'))} · ${fmtDT(con.firmado_at)}`:''}</div>
+      </div>
+      <div style="margin-top:10px"><button class="btn btn-outline btn-sm" onclick="viewContract(${con.id})">${esc(t('contractView'))}</button></div>`;
+  } else {
+    body = `<p class="sec-note">${esc(t('contractNoBody'))}</p>
+      <div class="action-btns">
+        <button class="btn btn-outline btn-sm" onclick="viewContract(${con.id})">${esc(t('contractView'))}</button>
+        <button class="btn btn-primary btn-sm" onclick="openSign(${con.id})">✍ ${esc(t('contractSignBtn'))}</button>
+      </div>`;
+  }
+  return `<div class="sec-box"><div class="sec-head"><span class="sec-title">📄 ${esc(t('contractTitle'))}</span>${status}</div>${body}</div>`;
+}
+
+function viewContract(id){
+  const con = getContrato(id); if(!con) return;
+  let bodyHTML;
+  if (con.es_externo && con.archivo_url) {
+    bodyHTML = `<p class="sec-note">${esc(t('contractExternal'))}</p><a class="btn btn-primary" href="${esc(con.archivo_url)}" target="_blank">${esc(t('contractExternal'))}</a>`;
+  } else if (con.contenido_html) {
+    bodyHTML = `<div class="contract-doc">${con.contenido_html}</div>`;
+  } else {
+    bodyHTML = `<p class="sec-note">${esc(t('contractNoBody'))}</p>`;
+  }
+  openModal(t('contractTitle'), bodyHTML, `<button class="btn btn-outline" onclick="closeModal()">${esc(t('cancel'))}</button>`);
+}
+
+let _sigPad = null;
+function openSign(id){
+  const con = getContrato(id); if(!con || con.estado!=='enviado'){ if(con&&con.estado==='firmado'){viewContract(id);} return; }
+  const bodyHTML = `
+    <p class="sec-note">${esc(t('contractDrawHint'))}</p>
+    <div class="sign-pad-wrap"><canvas class="sign-pad" id="sign-canvas"></canvas><div class="sign-ph" id="sign-ph">${esc(t('signHere'))}</div></div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px"><button class="btn btn-ghost btn-sm" onclick="clearSign()">${esc(t('contractClear'))}</button></div>
+    <div class="fld"><label>${esc(t('contractName'))} <span class="req">*</span></label><input type="text" id="sign-name" placeholder="${esc(t('contractNamePh'))}" value="${esc(talento?.nombre||'')}"></div>`;
+  const footHTML = `<button class="btn btn-outline" onclick="closeModal()">${esc(t('cancel'))}</button>
+    <button class="btn btn-primary" id="sign-submit" onclick="submitSign(${id})">✍ ${esc(t('contractSignBtn'))}</button>`;
+  openModal(t('contractSignBtn'), bodyHTML, footHTML);
+  setTimeout(initSignPad, 60);
+}
+function initSignPad(){
+  const canvas = document.getElementById('sign-canvas'); if(!canvas) return;
+  const wrap = canvas.parentElement;
+  const ratio = window.devicePixelRatio||1;
+  const w = wrap.clientWidth, h = 150;
+  canvas.width = w*ratio; canvas.height = h*ratio;
+  const ctx = canvas.getContext('2d'); ctx.scale(ratio,ratio);
+  ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#111';
+  let drawing=false, last=null, dirty=false;
+  const ph = document.getElementById('sign-ph');
+  function pos(e){ const r=canvas.getBoundingClientRect(); const p=e.touches?e.touches[0]:e; return {x:p.clientX-r.left, y:p.clientY-r.top}; }
+  function start(e){ e.preventDefault(); drawing=true; last=pos(e); if(ph)ph.style.display='none'; }
+  function move(e){ if(!drawing)return; e.preventDefault(); const p=pos(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; dirty=true; }
+  function end(){ drawing=false; }
+  canvas.addEventListener('mousedown',start); canvas.addEventListener('mousemove',move); window.addEventListener('mouseup',end);
+  canvas.addEventListener('touchstart',start,{passive:false}); canvas.addEventListener('touchmove',move,{passive:false}); canvas.addEventListener('touchend',end);
+  _sigPad = { canvas, isDirty:()=>dirty, clear:()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); dirty=false; if(ph)ph.style.display='flex'; } };
+}
+function clearSign(){ if(_sigPad)_sigPad.clear(); }
+async function submitSign(id){
+  const name = (document.getElementById('sign-name')?.value||'').trim();
+  if(!name){ toast(t('contractNeedName'),'err'); return; }
+  if(!_sigPad || !_sigPad.isDirty()){ toast(t('contractNeedSign'),'err'); return; }
+  const btn = document.getElementById('sign-submit'); if(btn){btn.disabled=true; btn.textContent=t('contractSigning');}
+  try {
+    const dataurl = _sigPad.canvas.toDataURL('image/png');
+    await API('sign-contract', { contrato_id:id, firma_dataurl:dataurl, firmante_nombre:name });
+    closeModal(); await refresh(); toast(t('contractSignedToast'),'ok');
+  } catch(e){ toast(t('errPrefix')+e.message,'err'); if(btn){btn.disabled=false; btn.textContent='✍ '+t('contractSignBtn');} }
+}
+
+// ── DATOS DE PAGO (cuentas) ────────────────────────────────────
+function renderPay(){
+  const el = document.getElementById('pay-container'); if(!el) return;
+  const list = cuentas.length ? cuentas.map(cuCard).join('') : `<p class="sec-note">${esc(t('payNone'))}</p>`;
+  el.innerHTML = `<div class="camp-card open" id="pay-section" style="margin-top:8px">
+    <div class="camp-head" onclick="toggle('pay-section')">
+      <div class="camp-logo">💳</div>
+      <div style="flex:1;min-width:0"><div class="camp-name">${esc(t('payTitle'))}</div><div class="camp-marca">${esc(t('paySub'))}</div></div>
+      <svg class="camp-expand" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="camp-body">
+      ${list}
+      <button class="btn btn-outline btn-sm" style="margin-top:6px" onclick="openCuenta()">${esc(t('payAdd'))}</button>
+    </div>
+  </div>`;
+}
+function cuCard(cu){
+  const meta = [countryName(cu.pais), cu.banco].filter(Boolean).join(' · ');
+  return `<div class="pay-card ${cu.es_default?'def':''}">
+    <div class="pay-flag">${countryFlag(cu.pais)}</div>
+    <div class="pay-info"><div class="nm">${esc(cu.nombre_completo||cu.alias||'')}</div><div class="meta">${esc(meta)}${cu.alias?' · '+esc(cu.alias):''}</div></div>
+    ${cu.es_default?`<span class="pay-badge">${esc(t('payDefault'))}</span>`:`<button class="icon-act" title="${esc(t('payDefault'))}" onclick="setDefaultCuenta(${cu.id})">★</button>`}
+    <div class="pay-actions">
+      <button class="icon-act" title="${esc(t('paySave'))}" onclick="openCuenta(${cu.id})">✎</button>
+      <button class="icon-act danger" title="✕" onclick="deleteCuenta(${cu.id})">🗑</button>
+    </div>
+  </div>`;
+}
+let _editCuenta = null;
+function openCuenta(id){
+  _editCuenta = id ? (cuentas.find(x=>x.id===id)||null) : null;
+  const cu = _editCuenta, pais = cu?.pais || '';
+  const bodyHTML = `
+    <div class="fld" style="margin-bottom:12px"><label>${esc(t('payCountry'))} <span class="req">*</span></label>
+      <select id="cu-pais" onchange="renderCuentaFields(this.value)">
+        <option value="">${esc(t('payCountryPh'))}</option>
+        ${COUNTRY_ORDER.map(c=>`<option value="${c}" ${c===pais?'selected':''}>${countryFlag(c)} ${esc(countryName(c))}</option>`).join('')}
+      </select>
+    </div>
+    <div class="fld" style="margin-bottom:4px"><label>${esc(t('payFullName'))} <span class="req">*</span></label><input type="text" id="cu-nombre" value="${esc(cu?.nombre_completo||talento?.nombre||'')}"></div>
+    <div id="cu-fields"></div>
+    <label class="chk-row" style="margin-top:14px"><input type="checkbox" id="cu-default" ${cu?.es_default?'checked':''}> ${esc(t('payDefaultChk'))}</label>`;
+  const footHTML = `<button class="btn btn-outline" onclick="closeModal()">${esc(t('cancel'))}</button>
+    <button class="btn btn-primary" id="cu-save" onclick="saveCuenta(${id||0})">${esc(t('paySave'))}</button>`;
+  openModal(id?t('payModalEdit'):t('payModalAdd'), bodyHTML, footHTML);
+  if (pais) renderCuentaFields(pais);
+}
+function fieldHTML(group, f, val){
+  const id = `f-${group}-${f.k}`;
+  if (f.type==='select'){
+    const opts = Object.keys(f.opts).map(v=>`<option value="${v}" ${v===val?'selected':''}>${esc(t(f.opts[v]))}</option>`).join('');
+    return `<div class="fld"><label>${esc(t(f.lk))}</label><select id="${id}" data-k="${f.k}" data-g="${group}"><option value="">—</option>${opts}</select></div>`;
+  }
+  return `<div class="fld"><label>${esc(t(f.lk))}</label><input type="text" id="${id}" data-k="${f.k}" data-g="${group}" value="${esc(val||'')}"></div>`;
+}
+function renderCuentaFields(pais){
+  const host = document.getElementById('cu-fields'); if(!host) return;
+  const cfg = COUNTRY_PAY[pais]; if(!cfg){ host.innerHTML=''; return; }
+  const cu = _editCuenta || {}, dc = cu.datos_cuenta||{}, dir = cu.direccion||{};
+  const bankFields = cfg.bank.map(f=>fieldHTML('dc', f, dc[f.k])).join('');
+  const addrFields = cfg.addr.map(f=>fieldHTML('dir', f, dir[f.k])).join('');
+  host.innerHTML = `
+    <div class="fld" style="margin:12px 0"><label>${esc(t('payBank'))}</label><input type="text" id="cu-banco" value="${esc(cu.banco||'')}"></div>
+    <div class="form-grid">${bankFields}</div>
+    <div class="sec-title" style="margin:16px 0 8px">${esc(t('f_direccion'))}</div>
+    <div class="form-grid">${addrFields}</div>
+    <div class="form-grid" style="margin-top:14px">
+      <div class="fld"><label>${esc(t('payCurrency'))}</label><input type="text" id="cu-moneda" value="${esc(cu.moneda||cfg.cur||'')}"></div>
+      <div class="fld"><label>${esc(t('payAlias'))}</label><input type="text" id="cu-alias" placeholder="${esc(t('payAliasPh'))}" value="${esc(cu.alias||'')}"></div>
+    </div>`;
+}
+async function saveCuenta(id){
+  const pais = document.getElementById('cu-pais')?.value;
+  const nombre = (document.getElementById('cu-nombre')?.value||'').trim();
+  if(!pais){ toast(t('payNeedCountry'),'err'); return; }
+  if(!nombre){ toast(t('payNeedName'),'err'); return; }
+  const dc={}, dir={};
+  document.querySelectorAll('#cu-fields [data-k]').forEach(el=>{
+    const g=el.getAttribute('data-g'), k=el.getAttribute('data-k'), v=el.value.trim();
+    if(v){ (g==='dc'?dc:dir)[k]=v; }
+  });
+  const cuenta = {
+    id: id||undefined, pais, nombre_completo:nombre,
+    banco: (document.getElementById('cu-banco')?.value||'').trim(),
+    datos_cuenta: dc, direccion: dir,
+    moneda: (document.getElementById('cu-moneda')?.value||'').trim(),
+    alias: (document.getElementById('cu-alias')?.value||'').trim(),
+    es_default: document.getElementById('cu-default')?.checked || false,
+  };
+  const btn = document.getElementById('cu-save'); if(btn){btn.disabled=true; btn.textContent=t('saving');}
+  try { await API('save-cuenta', { cuenta }); closeModal(); await refresh(); toast(t('paySaved'),'ok'); }
+  catch(e){ toast(t('errPrefix')+e.message,'err'); if(btn){btn.disabled=false; btn.textContent=t('paySave');} }
+}
+async function deleteCuenta(id){
+  if(!confirm(t('payDeleteConfirm'))) return;
+  try { await API('delete-cuenta',{cuenta_id:id}); await refresh(); toast(t('payDeleted'),'ok'); }
+  catch(e){ toast(t('errPrefix')+e.message,'err'); }
+}
+async function setDefaultCuenta(id){
+  try { await API('set-default-cuenta',{cuenta_id:id}); await refresh(); toast(t('paySaved'),'ok'); }
+  catch(e){ toast(t('errPrefix')+e.message,'err'); }
+}
+
+// ── FACTURA (Invoice de CxP) ───────────────────────────────────
+function renderInvoice(ct){
+  const conts = ct.contenidos||[];
+  const unlocked = conts.length>0 && conts.every(c=>(c.paso_actual||0)>=invoiceMinPaso);
+  const hasInvoice = !!ct.invoice_url;
+  let status, note, body;
+  if (hasInvoice) {
+    status = `<span class="sec-status st-ok">${t('invDoneSt')}</span>`;
+    note = `<p class="sec-note">${esc(t('invDoneNote'))}</p>`;
+    body = `<div class="action-btns">
+      <a class="btn btn-outline btn-sm" href="${esc(ct.invoice_url)}" target="_blank">${esc(t('invView'))}</a>
+      ${unlocked?`<button class="btn btn-ghost btn-sm" onclick="invoiceUploadInput(${ct.id})">${esc(t('invReplace'))}</button>`:''}
+    </div>`;
+  } else if (unlocked) {
+    status = `<span class="sec-status st-pend">${t('invAvailSt')}</span>`;
+    note = `<p class="sec-note">${esc(t('invAvailNote'))}</p>`;
+    body = `<div class="opt-grid">
+      <button class="opt-btn" onclick="invoiceUploadInput(${ct.id})"><span class="oi">⬆️</span><span class="ot">${esc(t('invUpload'))}</span><span style="font-size:11px;color:var(--text-muted)">${esc(t('invUploadDesc'))}</span></button>
+      <button class="opt-btn" onclick="openCreateInvoice(${ct.id})"><span class="oi">🧾</span><span class="ot">${esc(t('invCreate'))}</span><span style="font-size:11px;color:var(--text-muted)">${esc(t('invCreateDesc'))}</span></button>
+    </div>`;
+  } else {
+    status = `<span class="sec-status st-lock">🔒 ${t('invLockedSt')}</span>`;
+    note = `<p class="sec-note">${esc(t('invLockedNote'))}</p>`;
+    body = '';
+  }
+  const fileInput = (unlocked||hasInvoice) ? `<input type="file" id="inv-file-${ct.id}" style="display:none" accept=".pdf,.png,.jpg,.jpeg" onchange="uploadInvoice(this,${ct.id})">` : '';
+  return `<div class="sec-box"><div class="sec-head"><span class="sec-title">🧾 ${esc(t('invTitle'))}</span>${status}</div>${note}${body}${fileInput}</div>`;
+}
+function invoiceUploadInput(ctId){ document.getElementById('inv-file-'+ctId)?.click(); }
+async function uploadInvoice(input, ctId){
+  const file = input.files[0]; input.value=''; if(!file) return;
+  toast(t('invUploading'),'inf');
+  try {
+    const su = await API('invoice-signed-upload', { campana_talento_id:ctId, filename:file.name });
+    const { error } = await sbStore.storage.from('finanzas').uploadToSignedUrl(su.path, su.token, file);
+    if(error) throw error;
+    await API('set-invoice', { campana_talento_id:ctId, invoice_url: su.publicUrl });
+    await refresh(); toast(t('invSent'),'ok');
+  } catch(e){ toast(t('errPrefix')+e.message,'err'); }
+}
+function openCreateInvoice(ctId){
+  const ct = campaigns.find(x=>x.id===ctId); if(!ct) return;
+  const camp = ct.campanas;
+  const accOpts = cuentas.map(cu=>`<option value="${cu.id}" ${cu.es_default?'selected':''}>${countryFlag(cu.pais)} ${esc(cu.alias||cu.nombre_completo||countryName(cu.pais))}</option>`).join('');
+  const bodyHTML = `
+    <div class="fld" style="margin-bottom:12px"><label>${esc(t('invName'))} <span class="req">*</span></label><input type="text" id="inv-name" value="${esc(talento?.nombre||'')}"></div>
+    <div class="fld" style="margin-bottom:12px"><label>${esc(t('invConcept'))}</label><input type="text" id="inv-concept" value="${esc(camp?.nombre||'')}"></div>
+    <div class="fld" style="margin-bottom:12px"><label>${esc(t('invAddress'))}</label><textarea id="inv-address" style="min-height:54px"></textarea></div>
+    <div class="form-grid" style="margin-bottom:12px">
+      <div class="fld"><label>${esc(t('invAmount'))}</label><input type="number" id="inv-amount" value="${ct.fee_talento||0}"></div>
+      <div class="fld"><label>${esc(t('payCurrency'))}</label><input type="text" id="inv-currency" value="${esc(ct.moneda||'USD')}"></div>
+    </div>
+    <div class="fld"><label>${esc(t('invAccount'))} <span class="req">*</span></label>
+      ${cuentas.length?`<select id="inv-account">${accOpts}</select>`:`<p class="sec-note">${esc(t('invAccountNone'))}</p>`}
+    </div>`;
+  const footHTML = cuentas.length
+    ? `<button class="btn btn-outline" onclick="closeModal()">${esc(t('cancel'))}</button><button class="btn btn-primary" id="inv-gen" onclick="generateInvoice(${ctId})">${esc(t('invGenerate'))}</button>`
+    : `<button class="btn btn-outline" onclick="closeModal()">${esc(t('cancel'))}</button><button class="btn btn-primary" onclick="closeModal();openCuenta()">${esc(t('payAdd'))}</button>`;
+  openModal(t('invModalTitle'), bodyHTML, footHTML);
+}
+function invoiceNumber(ct){ const d=new Date(); return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}-${ct.id}`; }
+function fmtMoneyPlain(n,cur){ try{ return new Intl.NumberFormat(LOCALE[LANG]||'es-ES',{style:'currency',currency:cur||'USD',maximumFractionDigits:2}).format(n||0); }catch{ return (cur||'')+' '+(n||0); } }
+function payLines(cu){
+  const cfg = COUNTRY_PAY[cu.pais]||{bank:[],addr:[]};
+  const lines = [`${t('payCountry')}: ${countryName(cu.pais)}`, `${t('payFullName')}: ${cu.nombre_completo||''}`];
+  if(cu.banco) lines.push(`${t('payBank')}: ${cu.banco}`);
+  cfg.bank.forEach(f=>{ const v=(cu.datos_cuenta||{})[f.k]; if(v){ const val=f.type==='select'?(DICT[f.opts[v]]?t(f.opts[v]):v):v; lines.push(`${t(f.lk)}: ${val}`); } });
+  const addrParts = cfg.addr.map(f=>(cu.direccion||{})[f.k]).filter(Boolean);
+  if(addrParts.length) lines.push(`${t('f_direccion')}: ${addrParts.join(', ')}`);
+  if(cu.moneda) lines.push(`${t('payCurrency')}: ${cu.moneda}`);
+  return lines;
+}
+function buildInvoicePDF(d){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  const W = doc.internal.pageSize.getWidth(); const M = 48; let y = 64;
+  doc.setFont('helvetica','bold'); doc.setFontSize(24); doc.setTextColor(178,0,93); doc.text('BEME', M, y);
+  doc.setTextColor(30); doc.setFontSize(18); doc.text(t('pdfInvoice'), W-M, y, {align:'right'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(120);
+  doc.text(`${t('pdfNo')} ${d.number}`, W-M, y+18, {align:'right'});
+  doc.text(`${t('pdfDate')}: ${d.dateStr}`, W-M, y+32, {align:'right'});
+  y += 66;
+  doc.setTextColor(30); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text(t('pdfFrom'), M, y); doc.text(t('pdfTo'), W/2, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(70);
+  const fromLines = doc.splitTextToSize(d.name + (d.address?('\n'+d.address):''), W/2-M-12);
+  const toLines = ['BEME Agency', d.camp?.marcas?.nombre||'', d.camp?.marcas?.clientes?.nombre||''].filter(Boolean);
+  doc.text(fromLines, M, y+16); doc.text(toLines, W/2, y+16);
+  y += 16 + Math.max(fromLines.length, toLines.length)*13 + 26;
+  doc.setDrawColor(220); doc.line(M, y, W-M, y); y+=18;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(30);
+  doc.text(t('pdfConcept'), M, y); doc.text(t('pdfTotal'), W-M, y, {align:'right'}); y+=10;
+  doc.setDrawColor(220); doc.line(M, y, W-M, y); y+=18;
+  doc.setFont('helvetica','normal'); doc.setTextColor(70);
+  const conceptLines = doc.splitTextToSize(d.concept||'-', W-2*M-130);
+  doc.text(conceptLines, M, y); doc.text(fmtMoneyPlain(d.amount,d.currency), W-M, y, {align:'right'});
+  y += conceptLines.length*13 + 14; doc.setDrawColor(220); doc.line(M, y, W-M, y); y+=22;
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(30);
+  doc.text(t('pdfTotal'), W-M-160, y); doc.text(fmtMoneyPlain(d.amount,d.currency), W-M, y, {align:'right'});
+  y += 40;
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(t('pdfPayTo'), M, y); y+=16;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(70);
+  payLines(d.cu).forEach(ln=>{ const wr=doc.splitTextToSize(ln, W-2*M); doc.text(wr, M, y); y+=wr.length*13; });
+  return doc.output('blob');
+}
+async function generateInvoice(ctId){
+  const ct = campaigns.find(x=>x.id===ctId); if(!ct) return;
+  const name = (document.getElementById('inv-name')?.value||'').trim();
+  if(!name){ toast(t('invNeedName'),'err'); return; }
+  const accId = parseInt(document.getElementById('inv-account')?.value||'0',10);
+  const cu = cuentas.find(x=>x.id===accId);
+  if(!cu){ toast(t('invNeedAccount'),'err'); return; }
+  const concept = (document.getElementById('inv-concept')?.value||'').trim();
+  const address = (document.getElementById('inv-address')?.value||'').trim();
+  const amount = parseFloat(document.getElementById('inv-amount')?.value||'0')||0;
+  const currency = (document.getElementById('inv-currency')?.value||'USD').trim();
+  const number = invoiceNumber(ct);
+  const today = new Date().toISOString().slice(0,10);
+  const btn = document.getElementById('inv-gen'); if(btn){btn.disabled=true; btn.textContent=t('invGenerating');}
+  toast(t('invGenerating'),'inf');
+  try {
+    const blob = buildInvoicePDF({ name, address, concept, amount, currency, number, dateStr:fmtDate(today), cu, camp:ct.campanas });
+    const filename = `factura-${number}.pdf`;
+    const su = await API('invoice-signed-upload', { campana_talento_id:ctId, filename });
+    const { error } = await sbStore.storage.from('finanzas').uploadToSignedUrl(su.path, su.token, blob);
+    if(error) throw error;
+    const factura_datos = { nombre:name, direccion:address, concepto:concept, monto:amount, moneda:currency, numero:number, fecha:today,
+      cuenta:{ pais:cu.pais, banco:cu.banco, nombre_completo:cu.nombre_completo, datos_cuenta:cu.datos_cuenta, direccion:cu.direccion, moneda:cu.moneda } };
+    await API('create-invoice', { campana_talento_id:ctId, invoice_url: su.publicUrl, factura_datos });
+    closeModal(); await refresh(); toast(t('invSent'),'ok');
+  } catch(e){ toast(t('errPrefix')+e.message,'err'); if(btn){btn.disabled=false; btn.textContent=t('invGenerate');} }
+}
+
+// ── MODAL ──────────────────────────────────────────────────────
+function openModal(title, bodyHTML, footHTML){
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHTML;
+  document.getElementById('modal-foot').innerHTML = footHTML || '';
+  document.getElementById('modal-foot').style.display = footHTML ? 'flex' : 'none';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('modal-body').innerHTML = '';
+  document.getElementById('modal-foot').innerHTML = '';
+  _sigPad = null; _editCuenta = null;
 }
 
 // ── UTILS ──────────────────────────────────────────────────────
 function toggle(id){ document.getElementById(id)?.classList.toggle('open'); }
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function fmtDate(d){ if(!d) return ''; return new Date(d+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}); }
-function fmtDT(d){ if(!d) return ''; return new Date(d).toLocaleString('es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
-function fmtMoney(n,cur='USD'){ try { return new Intl.NumberFormat('es-MX',{style:'currency',currency:cur,maximumFractionDigits:2}).format(n||0); } catch { return (cur+' '+(n||0)); } }
+function fmtDate(d){ if(!d) return ''; return new Date(d+'T00:00:00').toLocaleDateString(LOCALE[LANG]||'es-ES',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtDT(d){ if(!d) return ''; return new Date(d).toLocaleString(LOCALE[LANG]||'es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
+function fmtMoney(n,cur='USD'){ try { return new Intl.NumberFormat(LOCALE[LANG]||'es-ES',{style:'currency',currency:cur,maximumFractionDigits:2}).format(n||0); } catch { return (cur+' '+(n||0)); } }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
 function toast(msg,type='inf',dur=3500){ const icons={ok:'✓',err:'✕',inf:'ℹ'}; const t=document.createElement('div'); t.className='toast '+type; t.innerHTML=`<span>${icons[type]||'•'}</span><span>${esc(msg)}</span>`; document.getElementById('toasts').appendChild(t); setTimeout(()=>t.remove(),dur); }
 function toggleTheme(){ document.body.classList.toggle('dark'); localStorage.setItem('beme_theme', document.body.classList.contains('dark')?'dark':'light'); }
 if (localStorage.getItem('beme_theme')==='dark') document.body.classList.add('dark');

@@ -758,6 +758,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       </button>
     </div>
     <div class="modal-body" style="padding:16px 26px">
+      <div id="preview-sign-banner"></div>
       <div id="preview-content" class="contract-preview"></div>
     </div>
     <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
@@ -1497,6 +1498,18 @@ function openPreview(id) {
   previewContractId = id;
   document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato} — ${c.influencer_nombre||c.parte_b_nombre}`;
   document.getElementById('preview-estado').value = c.estado;
+
+  const banner = document.getElementById('preview-sign-banner');
+  if (banner) {
+    if (c.estado === 'firmado' && (c.firma_url || c.firmado_at || c.firmante_nombre)) {
+      const fecha = c.firmado_at ? new Date(c.firmado_at).toLocaleString('es-ES',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+      banner.innerHTML = `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 14px;margin-bottom:14px;border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.08);border-radius:10px">
+        ${c.firma_url?`<img src="${escHtml(c.firma_url)}" alt="firma" style="height:60px;max-width:200px;object-fit:contain;background:#fff;border:1px solid var(--border);border-radius:8px;padding:5px">`:''}
+        <div style="font-size:13px;color:var(--text)"><strong style="color:#16a34a">✓ Firmado por el talento</strong><br>
+          <span style="color:var(--text-muted)">${escHtml(c.firmante_nombre||'')}${fecha?` · ${fecha}`:''}</span></div>
+      </div>`;
+    } else { banner.innerHTML = ''; }
+  }
 
   if (c.archivo_url) {
     const isPdf = /\.pdf(\?|$)/i.test(c.archivo_url) || (c.archivo_nombre||'').toLowerCase().endsWith('.pdf');

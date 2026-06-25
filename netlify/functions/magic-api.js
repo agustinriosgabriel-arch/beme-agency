@@ -24,10 +24,11 @@ const SB_SERVICE = process.env.SUPABASE_SERVICE_KEY;
 
 const ALLOWED_BUCKETS = ['content-scripts', 'content-drafts', 'content-stats', 'campaign-briefs'];
 const EXPIRY_DAYS = 10; // días tras campaña finalizada + pago completado
+const INVOICE_MIN_PASO = 7; // el talento factura recién cuando TODOS sus contenidos están en paso ≥ 7
 
 // Selects reutilizados (mismos joins que el portal del talento)
 const CONT_SELECT = 'contenidos(*,contenido_observaciones(*),contenido_scripts(*),contenido_borradores(*),contenido_historial(*),contenido_briefs(*),contenido_estadisticas(*))';
-const CT_SELECT_TALENT = `*,talentos(id,nombre,foto),${CONT_SELECT},campanas(*,marcas(id,nombre,clientes(nombre)),campana_briefs(*))`;
+const CT_SELECT_TALENT = `*,talentos(id,nombre,foto,idioma),${CONT_SELECT},campanas(*,marcas(id,nombre,clientes(nombre)),campana_briefs(*))`;
 const CAMPANA_SELECT_BRAND = `*,marcas(id,nombre,clientes(nombre)),campana_briefs(*),campana_talentos(*,talentos(id,nombre,foto),${CONT_SELECT})`;
 
 function json(statusCode, body, origin) {
@@ -105,6 +106,33 @@ exports.handler = async (event) => {
     return { ok: false };
   }
 
+  // Helper: verificar que un campana_talento pertenece al talento del token
+  async function assertTalentCt(ctId) {
+    const { data, error } = await sb
+      .from('campana_talentos')
+      .select('id,talent_id,campana_id,contenidos(paso_actual)')
+      .eq('id', ctId)
+      .maybeSingle();
+    if (error || !data) return { ok: false };
+    if (link.tipo !== 'talent' || data.talent_id !== link.talent_id) return { ok: false };
+    return { ok: true, ct: data };
+  }
+  // Factura habilitada sólo cuando TODOS los contenidos están en paso ≥ INVOICE_MIN_PASO
+  function invoiceUnlocked(ct) {
+    const conts = ct.contenidos || [];
+    if (!conts.length) return false;
+    return conts.every(c => (c.paso_actual || 0) >= INVOICE_MIN_PASO);
+  }
+  // IP del cliente (auditoría liviana de la firma)
+  function clientIp() {
+    const h = event.headers || {};
+    return (h['x-nf-client-connection-ip'] || (h['x-forwarded-for'] || '').split(',')[0] || '').trim();
+  }
+  // Nombre de archivo seguro para storage
+  function safeFile(name) {
+    return String(name || 'file').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9._-]/g, '_');
+  }
+
   try {
     switch (action) {
 
@@ -131,11 +159,37 @@ exports.handler = async (event) => {
             return rest; // conserva fee_talento, moneda, pago_estado, pago_fecha
           });
 
+          // Contratos del talento (tipo='talento') para firmar/ver en la campaña
+          const visibleCtIds = safe.map(ct => ct.id);
+          let contratos = [];
+          if (visibleCtIds.length) {
+            const { data: cons } = await sb
+              .from('contratos')
+              .select('id,campana_id,campana_talento_id,tipo,idioma,estado,numero_contrato,contenido_html,archivo_url,archivo_nombre,es_externo,firma_url,firmante_nombre,firmado_at')
+              .in('campana_talento_id', visibleCtIds)
+              .eq('tipo', 'talento')
+              .in('estado', ['enviado', 'firmado']);
+            contratos = cons || [];
+          }
+          const conByCt = {};
+          contratos.forEach(c => { if (!conByCt[c.campana_talento_id]) conByCt[c.campana_talento_id] = c; });
+          safe.forEach(ct => { ct.contrato = conByCt[ct.id] || null; });
+
+          // Datos de pago reutilizables del talento (cuentas por país)
+          const { data: cuentas } = await sb
+            .from('talento_cuentas_pago')
+            .select('*')
+            .eq('talent_id', link.talent_id)
+            .order('es_default', { ascending: false })
+            .order('created_at', { ascending: true });
+
           const talento = (cts && cts[0] && cts[0].talentos) || null;
           return json(200, {
             tipo: 'talent',
-            talento: talento ? { id: talento.id, nombre: talento.nombre, foto: talento.foto } : null,
+            talento: talento ? { id: talento.id, nombre: talento.nombre, foto: talento.foto, idioma: talento.idioma || 'es' } : null,
             campaigns: safe,
+            cuentas: cuentas || [],
+            invoiceMinPaso: INVOICE_MIN_PASO,
             anyClosed: (cts || []).length > visible.length,
           }, origin);
         }
@@ -406,6 +460,151 @@ exports.handler = async (event) => {
         });
         if (error) throw error;
         await regCambio(link.campana_id, null, 'Envió un mensaje');
+        return json(200, { ok: true }, origin);
+      }
+
+      // ── TALENTO: firmar contrato (dibujo en canvas) ─────────
+      case 'sign-contract': {
+        if (link.tipo !== 'talent') return json(403, { error: 'Solo el talento firma' }, origin);
+        const { contrato_id, firma_dataurl, firmante_nombre } = body;
+        if (!contrato_id) return json(400, { error: 'Falta contrato_id' }, origin);
+        if (!firmante_nombre || !firmante_nombre.trim()) return json(400, { error: 'Escribí tu nombre completo' }, origin);
+        const m = /^data:(image\/(?:png|jpeg|jpg|webp));base64,(.+)$/.exec(firma_dataurl || '');
+        if (!m) return json(400, { error: 'Firma inválida' }, origin);
+
+        const { data: con, error: cErr } = await sb
+          .from('contratos')
+          .select('id,tipo,estado,campana_id,campana_talento_id')
+          .eq('id', contrato_id)
+          .maybeSingle();
+        if (cErr) throw cErr;
+        if (!con) return json(404, { error: 'Contrato no encontrado' }, origin);
+        if (con.tipo !== 'talento') return json(403, { error: 'Este contrato no es del talento' }, origin);
+        if (con.estado === 'firmado') return json(400, { error: 'Este contrato ya está firmado' }, origin);
+        if (con.estado !== 'enviado') return json(400, { error: 'Este contrato todavía no está disponible para firmar' }, origin);
+        const scope = await assertTalentCt(con.campana_talento_id);
+        if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
+
+        const buf = Buffer.from(m[2], 'base64');
+        const ext = m[1].split('/')[1] === 'jpeg' ? 'jpg' : m[1].split('/')[1];
+        const path = `firmas/contrato-${contrato_id}/${Date.now()}.${ext}`;
+        const { error: upErr } = await sb.storage.from('contratos').upload(path, buf, { contentType: m[1], upsert: true });
+        if (upErr) throw upErr;
+        const { data: pub } = sb.storage.from('contratos').getPublicUrl(path);
+
+        const { error: uErr } = await sb.from('contratos').update({
+          estado: 'firmado',
+          firma_url: pub.publicUrl,
+          firmante_nombre: firmante_nombre.trim(),
+          firmado_at: new Date().toISOString(),
+          firma_ip: clientIp(),
+          updated_at: new Date().toISOString(),
+        }).eq('id', contrato_id);
+        if (uErr) throw uErr;
+        await regCambio(con.campana_id, null, 'Firmó el contrato');
+        return json(200, { ok: true, firma_url: pub.publicUrl }, origin);
+      }
+
+      // ── TALENTO: guardar/actualizar una cuenta de pago ──────
+      case 'save-cuenta': {
+        if (link.tipo !== 'talent') return json(403, { error: 'No permitido' }, origin);
+        const { cuenta } = body;
+        if (!cuenta || !cuenta.pais) return json(400, { error: 'Elegí el país' }, origin);
+        if (!cuenta.nombre_completo || !cuenta.nombre_completo.trim()) return json(400, { error: 'Falta el nombre completo del titular' }, origin);
+        const row = {
+          talent_id: link.talent_id,
+          pais: String(cuenta.pais),
+          nombre_completo: String(cuenta.nombre_completo).trim(),
+          banco: String(cuenta.banco || ''),
+          datos_cuenta: cuenta.datos_cuenta && typeof cuenta.datos_cuenta === 'object' ? cuenta.datos_cuenta : {},
+          direccion: cuenta.direccion && typeof cuenta.direccion === 'object' ? cuenta.direccion : {},
+          moneda: String(cuenta.moneda || ''),
+          alias: String(cuenta.alias || ''),
+          es_default: !!cuenta.es_default,
+        };
+        // Si se marca como default, desmarcar las demás del talento
+        if (row.es_default) {
+          await sb.from('talento_cuentas_pago').update({ es_default: false }).eq('talent_id', link.talent_id);
+        }
+        let saved;
+        if (cuenta.id) {
+          const { data, error } = await sb.from('talento_cuentas_pago')
+            .update(row).eq('id', cuenta.id).eq('talent_id', link.talent_id).select().maybeSingle();
+          if (error) throw error;
+          saved = data;
+        } else {
+          // primera cuenta del talento → default automático
+          const { count } = await sb.from('talento_cuentas_pago').select('id', { count: 'exact', head: true }).eq('talent_id', link.talent_id);
+          if (!count) row.es_default = true;
+          const { data, error } = await sb.from('talento_cuentas_pago').insert(row).select().maybeSingle();
+          if (error) throw error;
+          saved = data;
+        }
+        return json(200, { ok: true, cuenta: saved }, origin);
+      }
+
+      case 'delete-cuenta': {
+        if (link.tipo !== 'talent') return json(403, { error: 'No permitido' }, origin);
+        const { cuenta_id } = body;
+        if (!cuenta_id) return json(400, { error: 'Falta cuenta_id' }, origin);
+        const { error } = await sb.from('talento_cuentas_pago').delete().eq('id', cuenta_id).eq('talent_id', link.talent_id);
+        if (error) throw error;
+        return json(200, { ok: true }, origin);
+      }
+
+      case 'set-default-cuenta': {
+        if (link.tipo !== 'talent') return json(403, { error: 'No permitido' }, origin);
+        const { cuenta_id } = body;
+        if (!cuenta_id) return json(400, { error: 'Falta cuenta_id' }, origin);
+        await sb.from('talento_cuentas_pago').update({ es_default: false }).eq('talent_id', link.talent_id);
+        const { error } = await sb.from('talento_cuentas_pago').update({ es_default: true }).eq('id', cuenta_id).eq('talent_id', link.talent_id);
+        if (error) throw error;
+        return json(200, { ok: true }, origin);
+      }
+
+      // ── TALENTO: URL firmada para subir la factura (CxP) ────
+      case 'invoice-signed-upload': {
+        if (link.tipo !== 'talent') return json(403, { error: 'No permitido' }, origin);
+        const { campana_talento_id, filename } = body;
+        const scope = await assertTalentCt(campana_talento_id);
+        if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
+        if (!invoiceUnlocked(scope.ct)) return json(400, { error: 'Podés facturar recién cuando todos los contenidos estén listos' }, origin);
+        const path = `campana-${scope.ct.campana_id}/invoice-talento-${scope.ct.talent_id}/${Date.now()}-${safeFile(filename)}`;
+        const { data, error } = await sb.storage.from('finanzas').createSignedUploadUrl(path);
+        if (error) throw error;
+        const { data: pub } = sb.storage.from('finanzas').getPublicUrl(path);
+        return json(200, { path, token: data.token, signedUrl: data.signedUrl, publicUrl: pub.publicUrl }, origin);
+      }
+
+      // ── TALENTO: registrar factura SUBIDA (archivo propio) ──
+      case 'set-invoice': {
+        if (link.tipo !== 'talent') return json(403, { error: 'No permitido' }, origin);
+        const { campana_talento_id, invoice_url } = body;
+        if (!invoice_url) return json(400, { error: 'Falta el archivo' }, origin);
+        const scope = await assertTalentCt(campana_talento_id);
+        if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
+        if (!invoiceUnlocked(scope.ct)) return json(400, { error: 'Podés facturar recién cuando todos los contenidos estén listos' }, origin);
+        const { error } = await sb.from('campana_talentos').update({ invoice_url, factura_tipo: 'subida' }).eq('id', campana_talento_id);
+        if (error) throw error;
+        await regCambio(scope.ct.campana_id, null, 'Subió su factura (invoice)');
+        return json(200, { ok: true }, origin);
+      }
+
+      // ── TALENTO: registrar factura GENERADA (PDF + datos) ───
+      case 'create-invoice': {
+        if (link.tipo !== 'talent') return json(403, { error: 'No permitido' }, origin);
+        const { campana_talento_id, invoice_url, factura_datos } = body;
+        if (!invoice_url) return json(400, { error: 'Falta el PDF generado' }, origin);
+        const scope = await assertTalentCt(campana_talento_id);
+        if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
+        if (!invoiceUnlocked(scope.ct)) return json(400, { error: 'Podés facturar recién cuando todos los contenidos estén listos' }, origin);
+        const { error } = await sb.from('campana_talentos').update({
+          invoice_url,
+          factura_tipo: 'generada',
+          factura_datos: factura_datos && typeof factura_datos === 'object' ? factura_datos : {},
+        }).eq('id', campana_talento_id);
+        if (error) throw error;
+        await regCambio(scope.ct.campana_id, null, 'Generó su factura (invoice)');
         return json(200, { ok: true }, origin);
       }
 
