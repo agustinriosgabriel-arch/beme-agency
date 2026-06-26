@@ -1854,8 +1854,13 @@ function refreshPreviewButtons(c) {
   // Edición/IA bloqueadas si el contrato ya está firmado/bloqueado o es externo
   const editable = !c.bloqueado && !esExterno;
   ['btn-manual-edit'].forEach(id => { const el=document.getElementById(id); if (el) { el.disabled = !editable; el.style.opacity = editable?'':'0.5'; } });
+  // Nosotros firmamos RECIÉN cuando la contraparte ya firmó (orden del flujo).
   const fa = document.getElementById('btn-firmar-agencia');
-  if (fa) { const done = !!(c.firma_agencia_url || c.firmado_agencia_at); fa.style.display = done ? 'none' : ''; }
+  if (fa) {
+    const agencyDone = !!(c.firma_agencia_url || c.firmado_agencia_at);
+    const counterpartySigned = !!c.firma_url;
+    fa.style.display = (!agencyDone && counterpartySigned && !esExterno) ? '' : 'none';
+  }
   // reset modo edición
   const el = document.getElementById('preview-content');
   if (el) { el.contentEditable = 'false'; el.style.outline=''; el.style.padding=''; }
@@ -1978,6 +1983,7 @@ function openFirmarAgencia() {
   const c = contratos.find(x => x.id === previewContractId);
   if (!c) return;
   if (c.firma_agencia_url || c.firmado_agencia_at) { showToast('La agencia ya firmó este contrato', 'info'); return; }
+  if (!c.firma_url) { showToast('Esperá a que la contraparte (talento/marca) firme primero', 'info'); return; }
   renderSavedFirmas();
   document.getElementById('fa-nombre').value = '';
   document.getElementById('fa-cargo').value = '';

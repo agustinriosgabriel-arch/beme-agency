@@ -19,6 +19,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { corsOrigin } = require('./lib/cors');
 const { registrarCambio } = require('./lib/registrar-cambio');
 const { sendInvoiceToFinanzas } = require('./lib/mailer');
+const { renderContract } = require('./contract-agent');
 
 const SB_URL = process.env.SUPABASE_URL || 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SB_SERVICE = process.env.SUPABASE_SERVICE_KEY;
@@ -139,7 +140,7 @@ exports.handler = async (event) => {
   async function assertContratoScope(contratoId) {
     const { data, error } = await sb
       .from('contratos')
-      .select('id,tipo,estado,campana_id,campana_talento_id,bloqueado,contenido_html')
+      .select('id,tipo,estado,campana_id,campana_talento_id,bloqueado,contenido_html,datos_contraparte_ok,empresa_id')
       .eq('id', contratoId)
       .maybeSingle();
     if (error || !data) return { ok: false };
@@ -155,6 +156,24 @@ exports.handler = async (event) => {
       return { ok: true, con: data };
     }
     return { ok: false };
+  }
+  // Re-arma el contenido_html con los datos actuales (tras completar datos la
+  // contraparte). No toca externos, mirrors (IA) ni contratos sin html.
+  async function regenerarContenido(contratoId) {
+    const { data: con } = await sb.from('contratos').select('*').eq('id', contratoId).maybeSingle();
+    if (!con || con.es_externo || !con.contenido_html || con.mirror_origen_id) return null;
+    let emp = null;
+    if (con.empresa_id) { const { data } = await sb.from('empresas_facturacion').select('*').eq('id', con.empresa_id).maybeSingle(); emp = data; }
+    const data = {
+      ...con,
+      agencia_nombre: emp ? emp.nombre : (con.tipo === 'marca' ? con.parte_b_nombre : con.parte_a_nombre),
+      signatory_nombre: emp ? (emp.signatory_nombre || '') : '',
+      signatory_cargo: emp ? (emp.signatory_cargo || '') : '',
+    };
+    let html = renderContract(data, con.idioma || 'es');
+    html = html.replace(/<script\b[\s\S]*?<\/script\s*>/gi, '').replace(/\son\w+\s*=\s*(['"])[\s\S]*?\1/gi, '');
+    await sb.from('contratos').update({ contenido_html: html, updated_at: new Date().toISOString() }).eq('id', contratoId);
+    return html;
   }
   // Factura habilitada sólo cuando TODOS los contenidos están en paso ≥ INVOICE_MIN_PASO
   function invoiceUnlocked(ct) {
@@ -204,7 +223,7 @@ exports.handler = async (event) => {
           if (visibleCtIds.length) {
             const { data: cons } = await sb
               .from('contratos')
-              .select('id,campana_id,campana_talento_id,tipo,idioma,estado,numero_contrato,contenido_html,archivo_url,archivo_nombre,es_externo,firma_url,firmante_nombre,firmado_at,firma_agencia_url,firma_agencia_nombre,firmado_agencia_at,pdf_firmado_url,bloqueado')
+              .select('id,campana_id,campana_talento_id,tipo,idioma,estado,numero_contrato,contenido_html,archivo_url,archivo_nombre,es_externo,firma_url,firmante_nombre,firmado_at,firma_agencia_url,firma_agencia_nombre,firmado_agencia_at,pdf_firmado_url,bloqueado,parte_b_nombre,parte_b_rfc,parte_b_domicilio,datos_contraparte_ok')
               .in('campana_talento_id', visibleCtIds)
               .eq('tipo', 'talento')
               .in('estado', ['enviado', 'firmado']);
@@ -272,7 +291,7 @@ exports.handler = async (event) => {
         // Contrato de marca (tipo='marca') de esta campaña, para ver/firmar
         const { data: bcons } = await sb
           .from('contratos')
-          .select('id,campana_id,tipo,idioma,estado,numero_contrato,contenido_html,archivo_url,archivo_nombre,es_externo,firma_url,firmante_nombre,firmado_at,firma_agencia_url,firma_agencia_nombre,firmado_agencia_at,pdf_firmado_url,bloqueado')
+          .select('id,campana_id,tipo,idioma,estado,numero_contrato,contenido_html,archivo_url,archivo_nombre,es_externo,firma_url,firmante_nombre,firmado_at,firma_agencia_url,firma_agencia_nombre,firmado_agencia_at,pdf_firmado_url,bloqueado,parte_a_nombre,parte_a_rfc,parte_a_domicilio,datos_contraparte_ok')
           .eq('campana_id', link.campana_id).eq('tipo', 'marca')
           .in('estado', ['enviado', 'firmado'])
           .order('created_at', { ascending: false });
@@ -527,6 +546,27 @@ exports.handler = async (event) => {
         return json(200, { ok: true }, origin);
       }
 
+      // ── COMPLETAR DATOS PROPIOS (paso previo a la firma) ────
+      case 'save-party-info': {
+        const { contrato_id, nombre, rfc, domicilio } = body;
+        if (!contrato_id) return json(400, { error: 'Falta contrato_id' }, origin);
+        if (!nombre || !nombre.trim()) return json(400, { error: 'Falta tu nombre / razón social' }, origin);
+        const scope = await assertContratoScope(contrato_id);
+        if (!scope.ok) return json(403, { error: 'Contrato fuera de alcance' }, origin);
+        if (scope.con.bloqueado || scope.con.estado === 'firmado') return json(400, { error: 'El contrato ya está firmado' }, origin);
+        // talento = parte_b ; marca = parte_a
+        const fields = actorTipo === 'marca'
+          ? { parte_a_nombre: nombre.trim(), parte_a_rfc: (rfc || '').trim(), parte_a_domicilio: (domicilio || '').trim() }
+          : { parte_b_nombre: nombre.trim(), parte_b_rfc: (rfc || '').trim(), parte_b_domicilio: (domicilio || '').trim() };
+        fields.datos_contraparte_ok = true;
+        fields.updated_at = new Date().toISOString();
+        const { error } = await sb.from('contratos').update(fields).eq('id', contrato_id);
+        if (error) throw error;
+        const html = await regenerarContenido(contrato_id);
+        await regCambio(scope.con.campana_id, null, 'Completó sus datos del contrato');
+        return json(200, { ok: true, contenido_html: html }, origin);
+      }
+
       // ── ID + SELFIE: subir documento de validación (bucket privado) ──
       case 'doc-upload': {
         const { contrato_id, tipo_doc, file_dataurl, nombre_archivo } = body;
@@ -567,7 +607,10 @@ exports.handler = async (event) => {
         if (con.estado === 'firmado') return json(400, { error: 'Este contrato ya está firmado' }, origin);
         if (con.estado !== 'enviado') return json(400, { error: 'Este contrato todavía no está disponible para firmar' }, origin);
 
-        // Gate: requiere identificación + selfie de esta parte antes de firmar.
+        // Gate 1: la contraparte tiene que haber completado sus datos primero.
+        if (!con.datos_contraparte_ok) return json(400, { error: 'Primero completá tus datos del contrato.', needsData: true }, origin);
+
+        // Gate 2: requiere identificación + selfie de esta parte antes de firmar.
         const parte = actorTipo;
         const { data: docs } = await sb.from('contrato_documentos').select('tipo_doc').eq('contrato_id', contrato_id).eq('parte', parte);
         const have = new Set((docs || []).map(d => d.tipo_doc));

@@ -374,22 +374,35 @@ function renderContractCard(){
       </div></div>`;
   }
   const ds = brandDocState();
+  const datosOk = !!con.datos_contraparte_ok;
+  const esExterno = con.es_externo;
   const docRow = (tipo,label,done)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--border2);border-radius:10px;padding:8px 10px;margin-bottom:6px">
       <span style="font-size:13px">${esc(label)}</span>
       <span id="bdoc-${tipo}">${done?'<span style="color:#16a34a;font-weight:700;font-size:12px">✓ Cargado</span>':`<label class="btn btn-outline btn-sm" style="cursor:pointer;margin:0"><input type="file" accept="image/*,.pdf" style="display:none" onchange="brandUploadDoc('${tipo}',this)">Subir</label>`}</span></div>`;
+  const inp = (id,label,val)=>`<div style="margin-bottom:8px"><label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:3px">${esc(label)}</label><input type="text" id="${id}" value="${esc(val||'')}" style="width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;color:var(--text);outline:none"></div>`;
+  const partyBlock = esExterno ? '' : `
+    <div style="border:1px solid var(--border2);border-radius:12px;padding:10px;margin-bottom:10px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:4px">1. ${datosOk?'✓ ':''}Completá tus datos</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Para que el contrato quede armado correctamente antes de firmar.</p>
+      ${inp('bp-name','Nombre / Razón social', con.parte_a_nombre)}
+      ${inp('bp-rfc','RFC / Identificación fiscal', con.parte_a_rfc)}
+      ${inp('bp-addr','Domicilio', con.parte_a_domicilio)}
+      <button class="btn btn-outline btn-sm" onclick="saveBrandParty()">Guardar mis datos</button>
+    </div>`;
   return `<div class="brief-section">
     <div class="brief-title">📄 Contrato — pendiente de firma</div>
     <div class="action-btns" style="margin-bottom:10px">
       <button class="btn btn-outline btn-sm" onclick="viewBrandContract()">Ver contrato</button>
       <button class="btn btn-outline btn-sm" onclick="brandContractComment()">💬 Pedir cambios</button>
     </div>
-    <div style="border:1px solid var(--border2);border-radius:12px;padding:10px;margin-bottom:10px">
-      <div style="font-weight:700;font-size:13px;margin-bottom:4px">🪪 Validación de identidad</div>
+    ${partyBlock}
+    <div style="border:1px solid var(--border2);border-radius:12px;padding:10px;margin-bottom:10px${(datosOk||esExterno)?'':';opacity:.5;pointer-events:none'}">
+      <div style="font-weight:700;font-size:13px;margin-bottom:4px">${esExterno?'':'2. '}🪪 Validación de identidad</div>
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Para validez legal subí una foto de tu identificación y una selfie.</p>
       ${docRow('identificacion','Identificación',ds.id)}
       ${docRow('selfie','Selfie',ds.selfie)}
     </div>
-    <p style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Dibujá tu firma:</p>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${esExterno?'':'3. '}Dibujá tu firma:</p>
     <div style="border:1px dashed var(--border2);border-radius:12px;background:#fff;position:relative;margin-bottom:6px">
       <canvas id="brand-sign" style="width:100%;height:140px;display:block;cursor:crosshair;touch-action:none"></canvas>
       <div id="brand-sign-ph" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#bbb;pointer-events:none;font-size:13px">Firmá acá</div>
@@ -411,6 +424,15 @@ async function brandContractComment(){
   if (!msg || !msg.trim()) return;
   try { await API('contrato-comment', { contrato_id: contrato.id, mensaje: msg.trim(), autor_nombre: campana?.marcas?.nombre||'' }); toast('Comentario enviado ✓','ok'); }
   catch(e){ toast('Error: '+e.message,'err'); }
+}
+async function saveBrandParty(){
+  if (!contrato) return;
+  const nombre = (document.getElementById('bp-name')?.value||'').trim();
+  if (!nombre) { toast('Escribí tu nombre o razón social','err'); return; }
+  try {
+    await API('save-party-info', { contrato_id: contrato.id, nombre, rfc:(document.getElementById('bp-rfc')?.value||'').trim(), domicilio:(document.getElementById('bp-addr')?.value||'').trim() });
+    await refresh(); toast('Datos guardados ✓ Revisá el contrato y firmá','ok');
+  } catch(e){ toast('Error: '+e.message,'err'); }
 }
 function _fileToDataURL(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
 async function brandUploadDoc(tipo, input){
@@ -445,6 +467,7 @@ function initBrandSignPad(){
 function clearBrandSign(){ if(_brandPad)_brandPad.clear(); }
 async function submitBrandSign(){
   if (!contrato) return;
+  if (!contrato.es_externo && !contrato.datos_contraparte_ok) { toast('Primero completá tus datos del contrato','err'); return; }
   const name = (document.getElementById('brand-sign-name')?.value||'').trim();
   if (!name) { toast('Escribí el nombre del firmante','err'); return; }
   if (!_brandPad || !_brandPad.isDirty()) { toast('Dibujá tu firma','err'); return; }

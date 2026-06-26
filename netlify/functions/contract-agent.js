@@ -174,6 +174,14 @@ ${clausulaSpark}
 ${firmasBlockEN(d, agencia)}`;
 }
 
+// Render reutilizable (lo usa el handler y también magic-api para re-armar
+// el contrato cuando la contraparte completa sus datos).
+function renderContract(data, idioma) {
+  const lang = idioma === 'en' ? 'en' : 'es';
+  return lang === 'en' ? generateContractEN(data) : generateContractES(data);
+}
+exports.renderContract = renderContract;
+
 // ══════════════════════════════════════════════════════════
 // HANDLER
 // ══════════════════════════════════════════════════════════
