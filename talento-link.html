@@ -422,6 +422,8 @@ const DICT = {
   contractCommentPh:{es:'Escribí qué querés cambiar o agregar...',en:'Write what you want to change or add...',it:'Scrivi cosa vuoi cambiare o aggiungere...',de:'Schreibe, was du ändern oder hinzufügen möchtest...',nl:'Schrijf wat je wilt wijzigen of toevoegen...'},
   contractCommentSent:{es:'Comentario enviado ✓',en:'Comment sent ✓',it:'Commento inviato ✓',de:'Kommentar gesendet ✓',nl:'Opmerking verzonden ✓'},
   contractDownload:{es:'Descargar contrato firmado',en:'Download signed contract',it:'Scarica contratto firmato',de:'Unterschriebenen Vertrag herunterladen',nl:'Ondertekend contract downloaden'},
+  contractPdfSoon:{es:'Firmado por ambas partes ✓ El PDF estará disponible para descargar en breve.',en:'Signed by both parties ✓ The PDF will be available to download shortly.',it:'Firmato da entrambe le parti ✓ Il PDF sarà presto disponibile.',de:'Von beiden Parteien unterschrieben ✓ Das PDF ist in Kürze verfügbar.',nl:'Door beide partijen ondertekend ✓ De pdf is binnenkort beschikbaar.'},
+  contractWaitAgency:{es:'Tu firma quedó registrada ✓ Falta la firma de la agencia para finalizar.',en:'Your signature is recorded ✓ Awaiting the agency signature to finalize.',it:'La tua firma è registrata ✓ Manca la firma dell’agenzia.',de:'Deine Unterschrift ist erfasst ✓ Es fehlt noch die Unterschrift der Agentur.',nl:'Je handtekening is vastgelegd ✓ Wacht op de handtekening van het bureau.'},
   send:{es:'Enviar',en:'Send',it:'Invia',de:'Senden',nl:'Verzenden'},
   partyStep:{es:'Completá tus datos',en:'Complete your details',it:'Completa i tuoi dati',de:'Deine Daten ausfüllen',nl:'Vul je gegevens in'},
   partySaved:{es:'Datos completos',en:'Details complete',it:'Dati completi',de:'Daten vollständig',nl:'Gegevens compleet'},
@@ -889,13 +891,18 @@ function renderContract(ct){
     : `<span class="sec-status st-pend">${t('contractPending')}</span>`;
   let body;
   if (signed) {
+    const bothSigned = !!(con.firma_url && con.firma_agencia_url);
+    let dl;
+    if (con.pdf_firmado_url) dl = `<a class="btn btn-primary btn-sm" href="${esc(con.pdf_firmado_url)}" target="_blank">⬇ ${esc(t('contractDownload'))}</a>`;
+    else if (bothSigned) dl = `<span class="sec-note" style="align-self:center">${esc(t('contractPdfSoon'))}</span>`;
+    else dl = `<span class="sec-note" style="align-self:center">${esc(t('contractWaitAgency'))}</span>`;
     body = `<div class="sign-firmado">
         ${con.firma_url?`<img src="${esc(con.firma_url)}" alt="firma">`:''}
         <div class="sign-meta"><b>${esc(con.firmante_nombre||'')}</b>${con.firmado_at?`<br>${esc(t('contractSigned'))} · ${fmtDT(con.firmado_at)}`:''}</div>
       </div>
       <div class="action-btns" style="margin-top:10px">
         <button class="btn btn-outline btn-sm" onclick="viewContract(${con.id})">${esc(t('contractView'))}</button>
-        ${con.pdf_firmado_url?`<a class="btn btn-primary btn-sm" href="${esc(con.pdf_firmado_url)}" target="_blank">⬇ ${esc(t('contractDownload'))}</a>`:''}
+        ${dl}
       </div>`;
   } else {
     const datosOk = !!con.datos_contraparte_ok;

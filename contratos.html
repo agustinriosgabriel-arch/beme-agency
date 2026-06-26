@@ -1717,6 +1717,20 @@ async function insertContrato(payload) {
   return data;
 }
 
+// Al traducir o crear un espejo, el contrato nuevo NO debe heredar las firmas ni
+// el estado del original: cada contrato se firma de forma independiente.
+function clearSignatureState(obj) {
+  Object.assign(obj, {
+    estado: 'borrador',
+    firma_url: '', firmante_nombre: '', firmado_at: null, firma_ip: '',
+    firma_user_agent: '', firma_consentimiento_texto: '',
+    firma_agencia_url: '', firma_agencia_nombre: '', firmado_agencia_at: null,
+    pdf_firmado_url: '', contenido_hash: '', bloqueado: false,
+    datos_contraparte_ok: false,
+  });
+  return obj;
+}
+
 async function saveContractDraft() {
   const payload = collectFormData();
   const err = validateContractPayload(payload);
@@ -2327,9 +2341,10 @@ async function translateContract() {
   try {
     const html = await callAI('translate', c, c.idioma);
 
-    // Save as new contract
+    // Save as new contract — sin heredar firmas/estado del original
     const newContract = { ...c };
     delete newContract.id;
+    clearSignatureState(newContract);
     // Preserva el identificador y le sufija el idioma
     newContract.numero_contrato = c.numero_contrato ? `${c.numero_contrato}-${newLang.toUpperCase()}` : '';
     newContract.idioma = newLang;
@@ -2337,8 +2352,7 @@ async function translateContract() {
     newContract.created_at = new Date().toISOString();
     newContract.updated_at = new Date().toISOString();
 
-    const {data, error} = await sb.from('contratos').insert(newContract).select().single();
-    if (error) throw error;
+    const data = await insertContrato(newContract);
 
     contratos.unshift(data);
     previewContractId = data.id;
@@ -2362,10 +2376,11 @@ async function generateMirrorContract() {
   const mirrorTipo = c.tipo === 'marca' ? 'talento' : 'marca';
   const ct = selectedTalentCT || (c.campana_talento_id ? Object.values(campanasTalentos).flat().find(x => x.id === c.campana_talento_id) : null);
 
-  // Build mirror data
+  // Build mirror data — sin heredar firmas/estado del original
   const mirrorData = { ...c };
   delete mirrorData.id;
   delete mirrorData.contenido_html;
+  clearSignatureState(mirrorData);
   // Preserva el identificador del contrato origen y le sufija el tipo del espejo
   // (M = Marca↔Agencia, T = Agencia↔Talento). Si el origen ya tenia sufijo,
   // se reemplaza para evitar -M-T encadenados.
@@ -2398,8 +2413,7 @@ async function generateMirrorContract() {
   }
 
   try {
-    const {data, error} = await sb.from('contratos').insert(mirrorData).select().single();
-    if (error) throw error;
+    const data = await insertContrato(mirrorData);
     contratos.unshift(data);
 
     previewContractId = data.id;
