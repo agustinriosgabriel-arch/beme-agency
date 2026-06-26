@@ -2144,17 +2144,13 @@ async function exportSignedPDF(contractId) {
   const c = contratos.find(x => x.id === contractId);
   if (!c || !c.contenido_html) return null;
   if (typeof html2pdf === 'undefined') { showToast('Librería PDF no disponible', 'error'); return null; }
-  let root;
+  let overlay;
   try {
     const agenciaData = c.firma_agencia_url ? await imgToDataUrl(c.firma_agencia_url) : '';
     const contraData = c.firma_url ? await imgToDataUrl(c.firma_url) : '';
-    root = document.createElement('div');
-    // 718px ≈ ancho útil de A4 con márgenes de 10mm → render 1:1 sin achicar.
-    // Posicionado en (0,0) DETRÁS del modal (z-index -1): coordenadas positivas
-    // → html2canvas lo mide y captura bien. (Fuera de pantalla con left negativo
-    // + windowWidth/scrollX hacía que saliera en blanco.)
-    root.style.cssText = "position:absolute;left:0;top:0;z-index:-1;width:718px;box-sizing:border-box;background:#fff;color:#111;font-family:'Times New Roman',Georgia,serif;font-size:13px;line-height:1.6";
     const doc = document.createElement('div');
+    // 718px ≈ ancho útil de A4 con márgenes de 10mm → render 1:1 sin achicar.
+    doc.style.cssText = "width:718px;box-sizing:border-box;background:#fff;color:#111;font-family:'Times New Roman',Georgia,serif;font-size:13px;line-height:1.6";
     doc.innerHTML = sanitizeContractHtml(c.contenido_html);
     injectSignatures(doc, c, agenciaData, contraData);
     const hash = c.contenido_hash || await sha256Hex(c.contenido_html || '');
@@ -2162,13 +2158,19 @@ async function exportSignedPDF(contractId) {
     foot.style.cssText = 'margin-top:24px;border-top:1px solid #ddd;padding-top:8px;font-size:9px;color:#888';
     foot.textContent = `Documento firmado electrónicamente · Contrato ${c.numero_contrato||''} · Hash SHA-256: ${hash}`;
     doc.appendChild(foot);
-    root.appendChild(doc);
     // Que ninguna imagen/firma/lista/párrafo se parta entre dos páginas.
     doc.querySelectorAll('img,li,tr,h1,h2,.firma-slot,.firmas-block').forEach(el => { el.style.pageBreakInside = 'avoid'; el.style.breakInside = 'avoid'; });
     doc.querySelectorAll('img').forEach(img => { img.style.maxWidth = '100%'; });
-    document.body.appendChild(root);
+    // VISIBLE durante la captura: overlay blanco a pantalla completa. Es la forma
+    // más confiable de que html2canvas no salga en blanco (render fuera de pantalla
+    // fallaba). Se quita apenas termina (el usuario ve un destello de ~2s).
+    overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:#fff;overflow:auto;display:flex;justify-content:center;padding:20px';
+    overlay.appendChild(doc);
+    document.body.appendChild(overlay);
+    window.scrollTo(0, 0);
     // Esperar a que las firmas (data-URI) decodifiquen antes de rasterizar.
-    await Promise.all([...root.querySelectorAll('img')].map(img => (img.complete && img.naturalWidth) ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; setTimeout(r, 1500); })));
+    await Promise.all([...doc.querySelectorAll('img')].map(img => (img.complete && img.naturalWidth) ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; setTimeout(r, 1500); })));
     const opt = {
       margin: [10, 10, 12, 10],
       filename: `contrato-${c.numero_contrato || c.id}.pdf`,
@@ -2177,27 +2179,30 @@ async function exportSignedPDF(contractId) {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
       pagebreak: { mode: ['css', 'legacy'] },
     };
-    const blob = await html2pdf().set(opt).from(root).outputPdf('blob');
+    const blob = await html2pdf().set(opt).from(doc).outputPdf('blob');
     const path = `pdf-firmado/contrato-${c.id}.pdf`;
     const { error } = await sb.storage.from('contratos').upload(path, blob, { contentType:'application/pdf', upsert:true });
     if (error) throw error;
     const { data:{ publicUrl } } = sb.storage.from('contratos').getPublicUrl(path);
-    await sb.from('contratos').update({ pdf_firmado_url: publicUrl }).eq('id', c.id);
-    c.pdf_firmado_url = publicUrl;
+    // Anti-caché: el archivo se sobrescribe (upsert) en la misma ruta; sin el ?t
+    // el navegador/CDN podría servir el PDF viejo (en blanco) al talento.
+    const bustedUrl = publicUrl + '?t=' + Date.now();
+    await sb.from('contratos').update({ pdf_firmado_url: bustedUrl }).eq('id', c.id);
+    c.pdf_firmado_url = bustedUrl;
     refreshPreviewButtons(c);
-    return publicUrl;
+    return bustedUrl;
   } catch(e) { console.warn('exportSignedPDF:', e.message); showToast('No se pudo generar el PDF: '+e.message, 'error'); return null; }
   finally { if (root && root.parentNode) root.parentNode.removeChild(root); }
 }
 async function downloadSignedPdf() {
   const c = contratos.find(x => x.id === previewContractId); if (!c) return;
-  let url = c.pdf_firmado_url;
-  if (!url) {
-    if (!(c.firma_agencia_url && c.firma_url)) { showToast('Faltan firmas para generar el PDF', 'error'); return; }
-    showToast('Generando PDF firmado...', 'info');
-    url = await exportSignedPDF(c.id);
-  }
+  if (!(c.firma_agencia_url && c.firma_url)) { showToast('Faltan firmas para generar el PDF', 'error'); return; }
+  showToast('Generando PDF firmado...', 'info');
+  // Siempre regenera y sobrescribe el archivo guardado: así el talento (que abre
+  // la misma URL) también ve el PDF bueno.
+  const url = await exportSignedPDF(c.id);
   if (url) window.open(url, '_blank');
+  else if (c.pdf_firmado_url) window.open(c.pdf_firmado_url, '_blank'); // fallback al guardado
 }
 
 // ══════════════════════════════════════════════════════════
