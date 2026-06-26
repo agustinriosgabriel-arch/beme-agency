@@ -1020,6 +1020,7 @@ let terceros = [];
 let usuarios = [];
 let talentosList = [];
 let alertas = [];
+let secondaryLoadPromise = null; // carga en 2º plano (clientes, terceros, +1000 talentos)
 let currentView = 'grid';
 let editingCampanaId = null;
 let editingClienteId = null;
@@ -1089,14 +1090,14 @@ async function initApp() {
     // Mostrar UI de usuario
     setupUserUI();
 
-    // Cargar todo en paralelo (antes era 3 en paralelo + 2 secuenciales)
+    // ── Carga CRÍTICA: solo lo necesario para pintar la lista de campañas ──
+    // Antes esperábamos las 6 cargas (incluido el listado completo de +1000
+    // talentos, que pagina en varias vueltas). Eso bloqueaba la pantalla.
+    // Ahora pintamos apenas tenemos campañas + usuarios + alertas.
     await Promise.all([
-      loadClientes(),
-      loadUsuarios(),
-      loadTalentosBD(),
       loadCampanas(),
+      loadUsuarios(),
       loadAlertas(),
-      loadTerceros(),
     ]);
 
     // Mostrar app
@@ -1128,13 +1129,21 @@ async function initApp() {
 
     renderCampanas();
     renderStats();
-    populateFiltroMarcas();
-    
-    // Handle ?edit=ID param from campana-detalle.html
+
+    // ── Carga SECUNDARIA en 2º plano: no bloquea el render ──
+    // marcas → filtro; terceros → modal; talentos → selector al crear/editar.
+    // Cuando termina cada una, refresca solo lo que corresponde.
+    secondaryLoadPromise = Promise.all([
+      loadClientes().then(() => populateFiltroMarcas()),
+      loadTalentosBD(),
+      loadTerceros(),
+    ]).catch(e => console.warn('Carga secundaria:', e));
+
+    // Handle ?edit=ID param from campana-detalle.html — esperamos a que carguen
+    // los datos secundarios (clientes/marcas/talentos) para abrir el modal completo.
     const editId = parseInt(new URLSearchParams(location.search).get('edit'))||0;
-    if (editId) {
-      const c = campanas.find(x=>x.id===editId);
-      if (c) { setTimeout(()=>editCampana(editId), 300); }
+    if (editId && campanas.find(x=>x.id===editId)) {
+      secondaryLoadPromise.then(() => editCampana(editId));
     }
 
     startAutoRefresh();
@@ -1774,7 +1783,10 @@ function openCampana(id) {
 // ══════════════════════════════════════════════════════════
 // MODAL: NUEVA / EDITAR CAMPAÑA
 // ══════════════════════════════════════════════════════════
-function openNuevaCampana() {
+async function openNuevaCampana() {
+  // Si el usuario abre el modal antes de que termine la carga secundaria,
+  // esperamos para que el selector de clientes/talentos llegue completo.
+  if (secondaryLoadPromise) { try { await secondaryLoadPromise; } catch(e){} }
   editingCampanaId = null;
   document.getElementById('modal-campana-title').textContent = 'Nueva Campaña';
   clearCampanaForm();
