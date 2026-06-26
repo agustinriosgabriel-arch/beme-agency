@@ -1224,7 +1224,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
       <div class="net-update-divider"></div>
       <button class="net-update-item net-update-yt-config" data-fn="openApiKeyModal">
         <div class="api-status-dot" id="api-status-dot2" style="flex-shrink:0"></div>
-        <div><div class="net-update-item-name">Configurar APIs</div><div class="net-update-item-sub" id="yt-api-btn-label">YouTube + EnsembleData + Apify</div></div>
+        <div><div class="net-update-item-name">Configurar APIs</div><div class="net-update-item-sub" id="yt-api-btn-label">ScrapeCreators + YouTube + Apify</div></div>
       </button>
     </div>
   </div>
@@ -2387,11 +2387,38 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
       <button class="btn btn-primary" data-fn="saveApiKey">Guardar y probar</button>
     </div>
 
-    <!-- EnsembleData Section (PRIMARY) -->
+    <!-- ScrapeCreators Section (PRIMARY) -->
+    <div style="border-top:1px solid var(--border);margin:0 -24px;padding:20px 24px 0;">
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9414E0" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>
+        ScrapeCreators <span style="font-size:10px;font-weight:600;background:rgba(148,20,224,0.15);color:#9414E0;padding:2px 8px;border-radius:10px;">PRINCIPAL</span>
+      </h3>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.5;">
+        Seguidores de TikTok + Instagram. Obtené tu API key en <a href="https://scrapecreators.com" target="_blank" style="color:#9414E0">scrapecreators.com</a>
+      </p>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label">API Key de ScrapeCreators</label>
+        <div style="display:flex;gap:8px;">
+          <input type="password" id="scrapecreators-token-input" class="form-input" placeholder="API key de ScrapeCreators..." autocomplete="off">
+          <button class="btn btn-outline btn-sm" data-fn="toggleScrapeCreatorsTokenVisibility" style="flex-shrink:0;padding:0 10px;">👁</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <div class="api-status-dot" id="scrapecreators-status-dot"></div>
+        <div style="display:flex;gap:8px;flex:1;">
+          <button class="btn btn-outline btn-sm" data-fn="saveScrapeCreatorsToken">Guardar</button>
+          <button class="btn btn-outline btn-sm" data-fn="testScrapeCreatorsToken" style="color:#9414E0;border-color:rgba(148,20,224,0.3);">Probar</button>
+          <button class="btn btn-ghost btn-sm" data-fn="clearScrapeCreatorsToken" style="color:#ff6b6b;font-size:11px;margin-left:auto;">Eliminar</button>
+        </div>
+      </div>
+      <div id="scrapecreators-status-text" style="font-size:12px;color:var(--text-muted);min-height:18px;"></div>
+    </div>
+
+    <!-- EnsembleData Section (FALLBACK) -->
     <div style="border-top:1px solid var(--border);margin:0 -24px;padding:20px 24px 0;">
       <h3 style="font-size:14px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6c5ce7" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>
-        EnsembleData <span style="font-size:10px;font-weight:600;background:rgba(108,92,231,0.15);color:#6c5ce7;padding:2px 8px;border-radius:10px;">PRINCIPAL</span>
+        EnsembleData <span style="font-size:10px;font-weight:600;background:rgba(108,92,231,0.15);color:#6c5ce7;padding:2px 8px;border-radius:10px;">FALLBACK</span>
       </h3>
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.5;">
         TikTok (1 unit) + Instagram (3 units) + Engagement. Obtené tu token en <a href="https://dashboard.ensembledata.com" target="_blank" style="color:#6c5ce7">dashboard.ensembledata.com</a>

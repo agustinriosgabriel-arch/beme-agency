@@ -5,11 +5,69 @@ const { corsOrigin } = require('./lib/cors');
 // action: "followers" (default) | "engagement"
 
 const ENSEMBLE_BASE = 'https://ensembledata.com/apis';
+const SCRAPECREATORS_BASE = 'https://api.scrapecreators.com';
 
 const APIFY_ACTORS = {
   tiktok:    'clockworks~tiktok-scraper',
   instagram: 'apify~instagram-followers-count-scraper',
 };
+
+// ─── ScrapeCreators: user info (primary follower source) ────
+async function scrapeCreatorsUserInfo(platform, username, apiKey) {
+  const clean = username.replace(/^@/, '');
+  let endpoint;
+  if (platform === 'tiktok')         endpoint = `/v1/tiktok/profile?handle=${encodeURIComponent(clean)}`;
+  else if (platform === 'instagram') endpoint = `/v1/instagram/profile?handle=${encodeURIComponent(clean)}`;
+  else return null;
+
+  const resp = await fetch(SCRAPECREATORS_BASE + endpoint, { headers: { 'x-api-key': apiKey } });
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => '');
+    console.log(`[sc] ${platform} HTTP ${resp.status}: ${errText.substring(0, 300)}`);
+    throw new Error(`ScrapeCreators HTTP ${resp.status}`);
+  }
+  const json = await resp.json();
+  console.log(`[sc] ${platform} raw keys: ${Object.keys(json).join(',')}`);
+
+  if (platform === 'tiktok') {
+    const user = json.user || json.userInfo?.user || {};
+    const stats = json.stats || json.statsV2 || json.userInfo?.stats || {};
+    const followers = stats.followerCount ?? stats.follower_count ?? null;
+    return {
+      followers: followers != null ? Number(followers) : null,
+      bio: user.signature || '',
+      nickname: user.nickname || '',
+      verified: !!user.verified,
+      region: user.region || '',
+      instagram_id: user.ins_id || '',
+      youtube_id: user.youtube_channel_id || '',
+      videoCount: Number(stats.videoCount ?? stats.aweme_count ?? 0),
+      heartCount: Number(stats.heartCount ?? stats.heart ?? 0),
+    };
+  }
+
+  if (platform === 'instagram') {
+    const d = json.data || json;
+    const user = d.user || d;
+    const followers = user.edge_followed_by?.count
+      ?? user.follower_count
+      ?? user.followers_count
+      ?? null;
+    return {
+      followers: followers != null ? Number(followers) : null,
+      bio: user.biography || '',
+      nickname: user.full_name || '',
+      verified: !!user.is_verified,
+      category: user.category_name || user.category || '',
+      external_url: user.external_url || '',
+      is_business: !!user.is_business_account,
+      mediaCount: user.edge_owner_to_timeline_media?.count ?? user.media_count ?? 0,
+      user_id: user.id || user.pk || null,
+    };
+  }
+
+  return null;
+}
 
 // ─── EnsembleData: user info ────────────────────────────────
 async function ensembleUserInfo(platform, username, token) {
@@ -270,15 +328,16 @@ exports.handler = async (event) => {
   try { body = JSON.parse(event.body); }
   catch (e) { return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) }; }
 
-  const { platform, username, action = 'followers', ensembleToken: bodyEnsemble, apifyToken: bodyApify } = body || {};
+  const { platform, username, action = 'followers', ensembleToken: bodyEnsemble, apifyToken: bodyApify, scrapeCreatorsToken: bodySC } = body || {};
   // Env var as default, body param as override
+  const scToken = bodySC || process.env.SCRAPECREATORS_API_KEY || '';
   const ensembleToken = bodyEnsemble || process.env.ENSEMBLE_TOKEN || '';
   const apifyToken = bodyApify || process.env.APIFY_TOKEN || '';
 
   if (!platform || !username)
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Faltan: platform, username' }) };
-  if (!ensembleToken && !apifyToken)
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Se necesita ensembleToken o apifyToken' }) };
+  if (!scToken && !ensembleToken && !apifyToken)
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Se necesita scrapeCreatorsToken, ensembleToken o apifyToken' }) };
 
   const clean = username.replace(/^@/, '');
   console.log(`[scraper] ${action} ${platform} @${clean}`);
@@ -361,9 +420,36 @@ exports.handler = async (event) => {
   // ── ACTION: followers (default) ────────────────────────────
   let source = null;
   let result = null;
+  let lastError = null;
 
-  // Try EnsembleData first
-  if (ensembleToken) {
+  // Try ScrapeCreators first (primary source)
+  if (scToken) {
+    try {
+      const info = await scrapeCreatorsUserInfo(platform, clean, scToken);
+      if (info && info.followers !== null && info.followers !== undefined) {
+        result = {
+          followers: info.followers,
+          bio: info.bio || '',
+          nickname: info.nickname || '',
+          category: info.category || '',
+          verified: info.verified || false,
+          region: info.region || '',
+          instagram_id: info.instagram_id || '',
+          youtube_id: info.youtube_id || '',
+          external_url: info.external_url || '',
+          is_business: info.is_business || false,
+        };
+        source = 'scrapecreators';
+        console.log(`[scraper] ${platform} @${clean} → ${info.followers} (scrapecreators)`);
+      }
+    } catch (e) {
+      lastError = e.message;
+      console.log(`[scraper] ScrapeCreators failed for ${platform} @${clean}:`, e.message);
+    }
+  }
+
+  // Fallback to EnsembleData
+  if (!result && ensembleToken) {
     try {
       const info = await ensembleUserInfo(platform, clean, ensembleToken);
       if (info && info.followers !== null && info.followers !== undefined) {
@@ -383,6 +469,7 @@ exports.handler = async (event) => {
         console.log(`[scraper] ${platform} @${clean} → ${info.followers} (ensemble)`);
       }
     } catch (e) {
+      lastError = lastError || e.message;
       console.log(`[scraper] Ensemble failed for ${platform} @${clean}:`, e.message);
     }
   }
@@ -397,12 +484,13 @@ exports.handler = async (event) => {
         console.log(`[scraper] ${platform} @${clean} → ${followers} (apify fallback)`);
       }
     } catch (e) {
+      lastError = lastError || e.message;
       console.log(`[scraper] Apify fallback failed:`, e.message);
     }
   }
 
   if (!result)
-    return { statusCode: 200, headers, body: JSON.stringify({ error: 'No se pudo obtener datos del perfil', followers: null }) };
+    return { statusCode: 200, headers, body: JSON.stringify({ error: 'No se pudo obtener datos del perfil', detail: lastError || null, followers: null }) };
 
   return { statusCode: 200, headers, body: JSON.stringify({
     ...result, platform, username: clean, source,

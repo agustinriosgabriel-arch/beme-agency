@@ -889,6 +889,10 @@ let FN_MAP = {
   toggleApiKeyVisibility,
   clearApiKey,
   saveApiKey,
+  saveScrapeCreatorsToken,
+  testScrapeCreatorsToken,
+  clearScrapeCreatorsToken,
+  toggleScrapeCreatorsTokenVisibility: function(){var i=document.getElementById("scrapecreators-token-input");if(i)i.type=i.type==="password"?"text":"password";},
   saveApifyToken,
   testApifyToken,
   clearApifyToken,
@@ -2659,6 +2663,7 @@ function deleteSelectedTalents() {
 let ytApiKey = '';
 let apifyToken = '';
 let ensembleToken = '';
+let scrapeCreatorsToken = '';
 
 // La clave de YouTube ya NO viene hardcodeada (se filtraba en el código fuente).
 // Cada usuario la configura una vez desde el modal de APIs y queda en localStorage.
@@ -2669,6 +2674,7 @@ function loadApiKey() {
     ytApiKey       = localStorage.getItem('beme_yt_api_key')       || YT_API_KEY_DEFAULT;
     apifyToken     = localStorage.getItem('beme_apify_token')     || '';
     ensembleToken  = localStorage.getItem('beme_ensemble_token')  || '';
+    scrapeCreatorsToken = localStorage.getItem('beme_scrapecreators_token') || '';
   } catch(e) {}
   updateApiKeyUI();
 }
@@ -2690,6 +2696,10 @@ function updateApiKeyUI() {
   if(ensDot){if(ensembleToken)ensDot.classList.add('active');else ensDot.classList.remove('active');}
   var ensLbl=document.getElementById('ensemble-status-text');
   if(ensLbl) ensLbl.textContent=ensembleToken?'Token configurado ✓':'';
+  var scDot=document.getElementById('scrapecreators-status-dot');
+  if(scDot){if(scrapeCreatorsToken)scDot.classList.add('active');else scDot.classList.remove('active');}
+  var scLbl=document.getElementById('scrapecreators-status-text');
+  if(scLbl && scrapeCreatorsToken && !scLbl.textContent) scLbl.textContent='API key configurada ✓';
 }
 
 function openApiKeyModal() {
@@ -2705,6 +2715,10 @@ function openApiKeyModal() {
   if(ensInp) ensInp.value=ensembleToken;
   var ensStatus=document.getElementById('ensemble-status-text');
   if(ensStatus) ensStatus.textContent=ensembleToken?'Token configurado ✓':'';
+  var scInp=document.getElementById('scrapecreators-token-input');
+  if(scInp) scInp.value=scrapeCreatorsToken;
+  var scStatus=document.getElementById('scrapecreators-status-text');
+  if(scStatus) scStatus.textContent=scrapeCreatorsToken?'API key configurada ✓':'';
   openModal('yt-api-modal');
 }
 
@@ -2746,6 +2760,47 @@ function clearApiKey() {
   updateApiKeyUI();
   closeModal('yt-api-modal');
   showToast('Clave eliminada', 'info');
+}
+
+// ── ScrapeCreators token management (PRIMARY) ────────────────
+function saveScrapeCreatorsToken() {
+  var inp = document.getElementById('scrapecreators-token-input');
+  var key = inp ? inp.value.trim() : '';
+  if (!key) { showToast('Ingresá la API key de ScrapeCreators','error'); return; }
+  scrapeCreatorsToken = key;
+  try { localStorage.setItem('beme_scrapecreators_token', key); } catch(e) {}
+  updateApiKeyUI();
+  showToast('API key de ScrapeCreators guardada ✓','success');
+}
+function clearScrapeCreatorsToken() {
+  scrapeCreatorsToken = '';
+  try { localStorage.removeItem('beme_scrapecreators_token'); } catch(e) {}
+  var inp = document.getElementById('scrapecreators-token-input');
+  if (inp) inp.value = '';
+  var s = document.getElementById('scrapecreators-status-text');
+  if (s) s.textContent = '';
+  updateApiKeyUI();
+  showToast('API key eliminada','info');
+}
+async function testScrapeCreatorsToken() {
+  var inp = document.getElementById('scrapecreators-token-input');
+  var key = inp ? inp.value.trim() : '';
+  if (key) { scrapeCreatorsToken=key; try{localStorage.setItem('beme_scrapecreators_token',key);}catch(e){} }
+  if (!scrapeCreatorsToken) { showToast('Ingresá la API key primero','error'); return; }
+  showToast('Probando ScrapeCreators...','info');
+  try {
+    var resp = await fetch('/.netlify/functions/ensemble-scraper',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({platform:'tiktok',username:'tiktok',action:'followers',scrapeCreatorsToken})
+    });
+    var data = await resp.json();
+    if (data.source === 'scrapecreators' && data.followers != null) {
+      updateApiKeyUI();
+      var s=document.getElementById('scrapecreators-status-text');
+      if(s) s.textContent='OK — @tiktok: '+data.followers.toLocaleString('es-ES')+' seguidores';
+      showToast('ScrapeCreators conectado ✓','success');
+    } else { showToast('Sin respuesta: '+(data.detail||data.error||'verificá la API key'),'error'); }
+  } catch(e) { showToast('Error: '+e.message,'error'); }
 }
 
 // ── Apify token management ───────────────────────────────────
@@ -4670,13 +4725,13 @@ async function fetchFollowersViaApify(platform, profileUrl) {
     var resp = await fetch('/.netlify/functions/ensemble-scraper', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({platform, username, action:'followers', ensembleToken, apifyToken}),
+      body: JSON.stringify({platform, username, action:'followers', scrapeCreatorsToken, ensembleToken, apifyToken}),
       signal: controller.signal
     });
     clearTimeout(timer);
     if (!resp.ok) return null;
     var data = await resp.json();
-    if (data.error) { console.log('[scraper]', data.error, '(source:', data.source||'none', ')'); return null; }
+    if (data.error) { lastScrapeError = data.detail || data.error; console.log('[scraper]', data.error, data.detail?('— '+data.detail):'', '(source:', data.source||'none', ')'); return null; }
     if (data.source) console.log('[scraper]', platform, '@'+username, data.followers, 'via', data.source);
     if (data.followers === null || data.followers === undefined) return null;
     return data; // return full object with followers + metadata
@@ -4684,6 +4739,17 @@ async function fetchFollowersViaApify(platform, profileUrl) {
     console.warn('[scraper]', username, platform, e.message);
     return null;
   }
+}
+// Last scraper error reason (surfaced in toasts so failures aren't silent)
+var lastScrapeError = null;
+function scrapeErrorHint(raw) {
+  if (!raw) return '';
+  var s = String(raw);
+  if (/scrapecreators/i.test(s) && /401|403/.test(s)) return ' — API key de ScrapeCreators inválida';
+  if (/scrapecreators/i.test(s) && /402|429/.test(s)) return ' — ScrapeCreators sin créditos o rate limit';
+  if (/493/.test(s)) return ' — suscripción de EnsembleData vencida';
+  if (/scrapecreators/i.test(s)) return ' — ScrapeCreators: ' + s;
+  return ' — ' + s;
 }
 
 // ── Engagement rate fetching ─────────────────────────────────
@@ -5070,8 +5136,8 @@ async function scrapeAndSave(t, platform, force) {
       if (followers === null || followers === undefined) return false;
       try { await Promise.race([saveFollowers(t, platform, followers), new Promise(function(r){ setTimeout(r,5000); })]); } catch(e) {}
       setFreshTimestamp(t, platform, 'followers');
-      // Save metadata from EnsembleData (bio, category, verified, etc.)
-      if (typeof data === 'object' && data.source === 'ensemble') {
+      // Save metadata from ScrapeCreators / EnsembleData (bio, category, verified, etc.)
+      if (typeof data === 'object' && (data.source === 'ensemble' || data.source === 'scrapecreators')) {
         if (!t.social_meta) t.social_meta = {};
         if (!t.social_meta[platform]) t.social_meta[platform] = {};
         var meta = t.social_meta[platform];
@@ -5115,6 +5181,7 @@ async function scrapeAllProfiles() {
   var toScrape = talents.filter(function(t){ return t.instagram || t.tiktok; });
   if (!toScrape.length) { showToast('Ningún talento tiene IG o TikTok','info'); return; }
   showProgressBar('ext', toScrape.length);
+  lastScrapeError = null;
   var ok=0, errors=0, skipped=0, done=0;
   for (var i=0; i<toScrape.length; i++) {
     var t = toScrape[i];
@@ -5131,7 +5198,8 @@ async function scrapeAllProfiles() {
   if (skipped > 0) msg += ', '+skipped+' sin cambios';
   if (errors > 0) msg += ', '+errors+' errores';
   if (skipped > 0) msg += ' (ahorraste ~'+skipped+' units)';
-  showToast(msg, ok>0?'success':'info');
+  if (ok === 0 && lastScrapeError) msg += scrapeErrorHint(lastScrapeError);
+  showToast(msg, ok>0?'success':(lastScrapeError?'error':'info'));
 }
 
 async function scrapeSingle(talentId, platform) {
@@ -5142,6 +5210,7 @@ async function scrapeSingle(talentId, platform) {
   if (!url) return;
   const btn = document.getElementById('scr-'+(platform==='instagram'?'ig':'tt')+'-'+talentId);
   if (btn) btn.classList.add('spinning');
+  lastScrapeError = null;
   const ok = await scrapeAndSave(t, platform);
   if (btn) btn.classList.remove('spinning');
   // Close card menu
@@ -5149,7 +5218,7 @@ async function scrapeSingle(talentId, platform) {
   if (menu) menu.style.display = 'none';
   if (ok === 'skipped') { var savedU = platform==='instagram'?3:1; showToast(t.nombre+': '+platform+' ya actualizado — ahorraste '+savedU+' unit(s)','info'); }
   else if (ok) { renderTalents(); updateStats(); showToast(t.nombre+': '+formatFollowers(t.seguidores[platform])+' ✓','success'); }
-  else { showToast(t.nombre+': no se pudo obtener '+platform,'error'); }
+  else { showToast(t.nombre+': no se pudo obtener '+platform+scrapeErrorHint(lastScrapeError),'error'); }
 }
 
 function extractUsername(url, platform) {
@@ -5354,6 +5423,7 @@ async function scrapeAllTikTok() {
   showProgressBar('ext', list.length);
   var btn = document.getElementById('scrape-tt-all-btn');
   if (btn) btn.disabled = true;
+  lastScrapeError = null;
   var ok = 0, skipped = 0;
   for (var i = 0; i < list.length; i++) {
     updateProgressBar('ext', i + 1, list.length, list[i].nombre);
@@ -5368,7 +5438,8 @@ async function scrapeAllTikTok() {
   var msg = 'TikTok: ' + ok + ' actualizado(s)';
   if (skipped > 0) msg += ', ' + skipped + ' sin cambios';
   if (skipped > 0) msg += ' (ahorraste ' + skipped + ' units)';
-  showToast(msg, ok > 0 ? 'success' : 'info');
+  if (ok === 0 && skipped === 0 && lastScrapeError) msg += scrapeErrorHint(lastScrapeError);
+  showToast(msg, ok > 0 ? 'success' : (lastScrapeError ? 'error' : 'info'));
 }
 
 async function scrapeAllInstagram() {
@@ -5380,6 +5451,7 @@ async function scrapeAllInstagram() {
   showProgressBar('ig', list.length);
   var btn = document.getElementById('scrape-ig-all-btn');
   if (btn) btn.disabled = true;
+  lastScrapeError = null;
   var ok = 0, skipped = 0;
   for (var i = 0; i < list.length; i++) {
     updateProgressBar('ig', i + 1, list.length, list[i].nombre);
@@ -5394,7 +5466,8 @@ async function scrapeAllInstagram() {
   var msg = 'Instagram: ' + ok + ' actualizado(s)';
   if (skipped > 0) msg += ', ' + skipped + ' sin cambios';
   if (skipped > 0) msg += ' (ahorraste ' + (skipped * 3) + ' units)';
-  showToast(msg, ok > 0 ? 'success' : 'info');
+  if (ok === 0 && skipped === 0 && lastScrapeError) msg += scrapeErrorHint(lastScrapeError);
+  showToast(msg, ok > 0 ? 'success' : (lastScrapeError ? 'error' : 'info'));
 }
 
 // ── UPDATE ALL 3 NETWORKS ────────────────────────────────────
