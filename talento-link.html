@@ -428,10 +428,12 @@ const DICT = {
   partyTitle:{es:'Tus datos para el contrato',en:'Your details for the contract',it:'I tuoi dati per il contratto',de:'Deine Vertragsdaten',nl:'Je gegevens voor het contract'},
   partyHint:{es:'Completá tus datos para que el contrato quede armado correctamente antes de firmar.',en:'Complete your details so the contract is correctly assembled before signing.',it:'Completa i tuoi dati affinché il contratto sia corretto prima di firmare.',de:'Vervollständige deine Daten, damit der Vertrag vor der Unterschrift korrekt ist.',nl:'Vul je gegevens in zodat het contract correct is vóór ondertekening.'},
   partyName:{es:'Nombre completo / Razón social',en:'Full name / Legal entity',it:'Nome completo / Ragione sociale',de:'Vollständiger Name / Firma',nl:'Volledige naam / Bedrijf'},
-  partyRfc:{es:'RFC / Identificación fiscal',en:'Tax ID',it:'Codice fiscale / P.IVA',de:'Steuer-ID',nl:'Fiscaal nummer'},
+  partyRfc:{es:'Número de Identificación',en:'ID Number',it:'Numero di identificazione',de:'Identifikationsnummer',nl:'Identificatienummer'},
   partyAddr:{es:'Domicilio',en:'Address',it:'Indirizzo',de:'Adresse',nl:'Adres'},
   partySave:{es:'Guardar mis datos',en:'Save my details',it:'Salva i miei dati',de:'Daten speichern',nl:'Gegevens opslaan'},
   partyNeedName:{es:'Escribí tu nombre o razón social',en:'Enter your name or legal entity',it:'Inserisci il tuo nome o ragione sociale',de:'Gib deinen Namen oder deine Firma ein',nl:'Voer je naam of bedrijf in'},
+  partyNeedRfc:{es:'Completá tu número de identificación',en:'Enter your ID number',it:'Inserisci il tuo numero di identificazione',de:'Gib deine Identifikationsnummer ein',nl:'Voer je identificatienummer in'},
+  partyNeedAddr:{es:'Completá tu domicilio',en:'Enter your address',it:'Inserisci il tuo indirizzo',de:'Gib deine Adresse ein',nl:'Voer je adres in'},
   partySavedToast:{es:'Datos guardados ✓ Revisá el contrato y firmá',en:'Details saved ✓ Review the contract and sign',it:'Dati salvati ✓ Rivedi il contratto e firma',de:'Daten gespeichert ✓ Vertrag prüfen und unterschreiben',nl:'Gegevens opgeslagen ✓ Bekijk het contract en onderteken'},
   partyNeedFirst:{es:'Primero completá tus datos del contrato',en:'First complete your contract details',it:'Prima completa i tuoi dati del contratto',de:'Fülle zuerst deine Vertragsdaten aus',nl:'Vul eerst je contractgegevens in'},
   // datos de pago
@@ -928,18 +930,22 @@ function openPartyData(id){
   const bodyHTML = `
     <p class="sec-note">${esc(t('partyHint'))}</p>
     <div class="fld"><label>${esc(t('partyName'))} <span class="req">*</span></label><input type="text" id="party-name" placeholder="${esc(t('contractNamePh'))}" value="${esc(con.parte_b_nombre||talento?.nombre||'')}"></div>
-    <div class="fld"><label>${esc(t('partyRfc'))}</label><input type="text" id="party-rfc" value="${esc(con.parte_b_rfc||'')}"></div>
-    <div class="fld"><label>${esc(t('partyAddr'))}</label><input type="text" id="party-addr" value="${esc(con.parte_b_domicilio||'')}"></div>`;
+    <div class="fld"><label>${esc(t('partyRfc'))} <span class="req">*</span></label><input type="text" id="party-rfc" value="${esc(con.parte_b_rfc||'')}"></div>
+    <div class="fld"><label>${esc(t('partyAddr'))} <span class="req">*</span></label><input type="text" id="party-addr" value="${esc(con.parte_b_domicilio||'')}"></div>`;
   const footHTML = `<button class="btn btn-outline" onclick="closeModal()">${esc(t('cancel'))}</button>
     <button class="btn btn-primary" id="party-save" onclick="savePartyData(${id})">${esc(t('partySave'))}</button>`;
   openModal(t('partyTitle'), bodyHTML, footHTML);
 }
 async function savePartyData(id){
   const nombre = (document.getElementById('party-name')?.value||'').trim();
+  const rfc = (document.getElementById('party-rfc')?.value||'').trim();
+  const domicilio = (document.getElementById('party-addr')?.value||'').trim();
   if(!nombre){ toast(t('partyNeedName'),'err'); return; }
+  if(!rfc){ toast(t('partyNeedRfc'),'err'); return; }
+  if(!domicilio){ toast(t('partyNeedAddr'),'err'); return; }
   const btn = document.getElementById('party-save'); if(btn){btn.disabled=true; btn.textContent=t('docUploading');}
   try {
-    await API('save-party-info', { contrato_id:id, nombre, rfc:(document.getElementById('party-rfc')?.value||'').trim(), domicilio:(document.getElementById('party-addr')?.value||'').trim() });
+    await API('save-party-info', { contrato_id:id, nombre, rfc, domicilio });
     closeModal(); await refresh(); toast(t('partySavedToast'),'ok');
   } catch(e){ toast(t('errPrefix')+e.message,'err'); if(btn){btn.disabled=false; btn.textContent=t('partySave');} }
 }

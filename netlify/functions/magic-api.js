@@ -552,6 +552,8 @@ exports.handler = async (event) => {
         const { contrato_id, nombre, rfc, domicilio } = body;
         if (!contrato_id) return json(400, { error: 'Falta contrato_id' }, origin);
         if (!nombre || !nombre.trim()) return json(400, { error: 'Falta tu nombre / razón social' }, origin);
+        if (!rfc || !rfc.trim()) return json(400, { error: 'Falta tu número de identificación' }, origin);
+        if (!domicilio || !domicilio.trim()) return json(400, { error: 'Falta tu domicilio' }, origin);
         const scope = await assertContratoScope(contrato_id);
         if (!scope.ok) return json(403, { error: 'Contrato fuera de alcance' }, origin);
         if (scope.con.bloqueado || scope.con.estado === 'firmado') return json(400, { error: 'El contrato ya está firmado' }, origin);

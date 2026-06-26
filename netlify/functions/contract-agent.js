@@ -56,7 +56,7 @@ function generateContractES(d) {
 
   return `<h1>HOJA DE CONFIRMACIÓN</h1>
 <p><em>${d.ciudad_contrato || 'Mexico City'}, ${fecha}</em></p>
-<p>De una parte, <strong>${d.parte_a_nombre}</strong>${d.parte_a_rfc ? ' con RFC ' + d.parte_a_rfc : ''}${d.parte_a_domicilio ? ' y domiciliado en ' + d.parte_a_domicilio : ''}. Y, de otra, <strong>${d.parte_b_nombre}</strong>${d.parte_b_rfc ? ' con RFC ' + d.parte_b_rfc : ''}${d.parte_b_domicilio ? ', domiciliado en ' + d.parte_b_domicilio : ''}. <strong>NÚMERO DE CONTRATO: ${d.numero_contrato || 'Pendiente'}</strong></p>
+<p>De una parte, <strong>${d.parte_a_nombre}</strong>${d.parte_a_rfc ? ' con Número de Identificación ' + d.parte_a_rfc : ''}${d.parte_a_domicilio ? ' y domiciliado en ' + d.parte_a_domicilio : ''}. Y, de otra, <strong>${d.parte_b_nombre}</strong>${d.parte_b_rfc ? ' con Número de Identificación ' + d.parte_b_rfc : ''}${d.parte_b_domicilio ? ', domiciliado en ' + d.parte_b_domicilio : ''}. <strong>NÚMERO DE CONTRATO: ${d.numero_contrato || 'Pendiente'}</strong></p>
 <p><strong>INFLUENCER/S:</strong> ${d.influencer_nombre}</p>
 <p><strong>SERVICIOS:</strong> ${d.servicios}</p>
 <p><strong>CANALES:</strong> ${d.canales}</p>
@@ -131,7 +131,7 @@ function generateContractEN(d) {
 
   return `<h1>CONFIRMATION SHEET</h1>
 <p><em>${d.ciudad_contrato || 'Mexico City'}, ${fecha}</em></p>
-<p>On one part, <strong>${d.parte_a_nombre}</strong>${d.parte_a_rfc ? ' with Tax ID ' + d.parte_a_rfc : ''}${d.parte_a_domicilio ? ', domiciled at ' + d.parte_a_domicilio : ''}. And, on the other, <strong>${d.parte_b_nombre}</strong>${d.parte_b_rfc ? ' with Tax ID ' + d.parte_b_rfc : ''}${d.parte_b_domicilio ? ', domiciled at ' + d.parte_b_domicilio : ''}. <strong>CONTRACT NUMBER: ${d.numero_contrato || 'Pending'}</strong></p>
+<p>On one part, <strong>${d.parte_a_nombre}</strong>${d.parte_a_rfc ? ' with ID Number ' + d.parte_a_rfc : ''}${d.parte_a_domicilio ? ', domiciled at ' + d.parte_a_domicilio : ''}. And, on the other, <strong>${d.parte_b_nombre}</strong>${d.parte_b_rfc ? ' with ID Number ' + d.parte_b_rfc : ''}${d.parte_b_domicilio ? ', domiciled at ' + d.parte_b_domicilio : ''}. <strong>CONTRACT NUMBER: ${d.numero_contrato || 'Pending'}</strong></p>
 <p><strong>INFLUENCER(S):</strong> ${d.influencer_nombre}</p>
 <p><strong>SERVICES:</strong> ${d.servicios}</p>
 <p><strong>CHANNELS:</strong> ${d.canales}</p>
