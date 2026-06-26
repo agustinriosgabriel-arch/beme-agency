@@ -2144,19 +2144,38 @@ async function exportSignedPDF(contractId) {
   const c = contratos.find(x => x.id === contractId);
   if (!c || !c.contenido_html) return null;
   if (typeof html2pdf === 'undefined') { showToast('Librería PDF no disponible', 'error'); return null; }
+  let root;
   try {
     const agenciaData = c.firma_agencia_url ? await imgToDataUrl(c.firma_agencia_url) : '';
     const contraData = c.firma_url ? await imgToDataUrl(c.firma_url) : '';
-    const root = document.createElement('div');
-    root.style.cssText = "font-family:'Times New Roman',serif;color:#111;background:#fff;padding:36px;width:794px;font-size:13px;line-height:1.55";
-    root.innerHTML = sanitizeContractHtml(c.contenido_html);
-    injectSignatures(root, c, agenciaData, contraData);
+    root = document.createElement('div');
+    // 718px ≈ ancho útil de A4 con márgenes de 10mm → render 1:1 sin achicar.
+    // Adjuntado al DOM (fuera de pantalla) para que html2canvas lo mida bien;
+    // si está "suelto" sale cortado/incompleto.
+    root.style.cssText = "position:fixed;left:-10000px;top:0;width:718px;box-sizing:border-box;background:#fff;color:#111;font-family:'Times New Roman',Georgia,serif;font-size:13px;line-height:1.6";
+    const doc = document.createElement('div');
+    doc.innerHTML = sanitizeContractHtml(c.contenido_html);
+    injectSignatures(doc, c, agenciaData, contraData);
     const hash = c.contenido_hash || await sha256Hex(c.contenido_html || '');
     const foot = document.createElement('div');
     foot.style.cssText = 'margin-top:24px;border-top:1px solid #ddd;padding-top:8px;font-size:9px;color:#888';
     foot.textContent = `Documento firmado electrónicamente · Contrato ${c.numero_contrato||''} · Hash SHA-256: ${hash}`;
-    root.appendChild(foot);
-    const opt = { margin:[10,10,12,10], filename:`contrato-${c.numero_contrato||c.id}.pdf`, image:{type:'jpeg',quality:0.96}, html2canvas:{scale:2,useCORS:true,backgroundColor:'#fff'}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}, pagebreak:{mode:['css','legacy']} };
+    doc.appendChild(foot);
+    root.appendChild(doc);
+    // Que ninguna imagen/firma/lista/párrafo se parta entre dos páginas.
+    doc.querySelectorAll('img,li,tr,h1,h2,.firma-slot,.firmas-block').forEach(el => { el.style.pageBreakInside = 'avoid'; el.style.breakInside = 'avoid'; });
+    doc.querySelectorAll('img').forEach(img => { img.style.maxWidth = '100%'; });
+    document.body.appendChild(root);
+    // Esperar a que las firmas (data-URI) decodifiquen antes de rasterizar.
+    await Promise.all([...root.querySelectorAll('img')].map(img => (img.complete && img.naturalWidth) ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; setTimeout(r, 1500); })));
+    const opt = {
+      margin: [10, 10, 12, 10],
+      filename: `contrato-${c.numero_contrato || c.id}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#fff', windowWidth: 718, scrollX: 0, scrollY: 0 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+      pagebreak: { mode: ['css', 'legacy'] },
+    };
     const blob = await html2pdf().set(opt).from(root).outputPdf('blob');
     const path = `pdf-firmado/contrato-${c.id}.pdf`;
     const { error } = await sb.storage.from('contratos').upload(path, blob, { contentType:'application/pdf', upsert:true });
@@ -2167,6 +2186,7 @@ async function exportSignedPDF(contractId) {
     refreshPreviewButtons(c);
     return publicUrl;
   } catch(e) { console.warn('exportSignedPDF:', e.message); showToast('No se pudo generar el PDF: '+e.message, 'error'); return null; }
+  finally { if (root && root.parentNode) root.parentNode.removeChild(root); }
 }
 async function downloadSignedPdf() {
   const c = contratos.find(x => x.id === previewContractId); if (!c) return;
@@ -2446,13 +2466,16 @@ function printContract() {
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html><head><title>Contrato BEME</title>
     <style>
-      body{font-family:'Times New Roman',serif;font-size:14px;line-height:1.6;color:#111;max-width:800px;margin:0 auto;padding:40px}
+      *{box-sizing:border-box}
+      body{font-family:'Times New Roman',serif;font-size:14px;line-height:1.6;color:#111;max-width:720px;margin:0 auto;padding:24px;word-wrap:break-word;overflow-wrap:break-word}
       h1{font-size:20px;text-align:center;margin-bottom:20px}
       h2{font-size:16px;margin:24px 0 12px}
       p{margin-bottom:10px;text-align:justify}
       ol{margin-left:20px;margin-bottom:12px}
-      li{margin-bottom:8px;text-align:justify}
-      @media print{body{padding:20px}@page{margin:2cm}}
+      li{margin-bottom:8px;text-align:justify;page-break-inside:avoid;break-inside:avoid}
+      img{max-width:100%}
+      .firmas-block,.firma-slot,h1,h2{page-break-inside:avoid;break-inside:avoid}
+      @media print{body{padding:0;max-width:none}@page{margin:1.6cm}}
     </style></head><body>${content}</body></html>`);
   win.document.close();
   win.focus();
