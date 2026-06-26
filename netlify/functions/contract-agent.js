@@ -18,8 +18,31 @@ function formatDate(dateStr, lang) {
   return `${d.getDate().toString().padStart(2,'0')} de ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+// Bloque de firmas al pie del contrato. Las imágenes se inyectan luego en el
+// PDF firmado (contratos.html → exportSignedPDF) buscando [data-firma-img="..."].
+function firmasBlockES(d, agencia) {
+  const sigNombre = d.signatory_nombre || '';
+  const sigCargo = d.signatory_cargo || '';
+  // Contraparte: en contrato de marca firma la marca (parte_a); en contrato de talento, el influencer.
+  const contraNombre = d.tipo === 'marca' ? (d.parte_a_nombre || '') : (d.influencer_nombre || d.parte_b_nombre || '');
+  const contraLabel = d.tipo === 'marca' ? 'POR LA MARCA' : 'EL INFLUENCER';
+  return `<div class="firmas-block" data-firmas style="margin-top:56px;display:flex;justify-content:space-between;gap:48px;flex-wrap:wrap">
+  <div class="firma-slot" data-firma="agencia" style="flex:1;min-width:240px;text-align:center">
+    <div class="firma-img" data-firma-img="agencia" style="min-height:70px"></div>
+    <div style="border-top:1px solid #000;padding-top:6px">${sigNombre ? '<strong>' + sigNombre + '</strong>' : '_______________________'}${sigCargo ? '<br>' + sigCargo : ''}<br><span style="font-size:0.85em">${agencia}</span></div>
+  </div>
+  <div class="firma-slot" data-firma="contraparte" style="flex:1;min-width:240px;text-align:center">
+    <div class="firma-img" data-firma-img="contraparte" style="min-height:70px"></div>
+    <div style="border-top:1px solid #000;padding-top:6px">${contraNombre ? '<strong>' + contraNombre + '</strong>' : '_______________________'}<br><span style="font-size:0.85em">${contraLabel}</span></div>
+  </div>
+</div>`;
+}
+
 function generateContractES(d) {
   const fecha = formatDate(d.fecha_contrato, 'es');
+  // Nombre de NUESTRA empresa emisora (elegida en el panel). Para contratos de
+  // marca somos la parte B; para los de talento, la parte A.
+  const agencia = d.agencia_nombre || (d.tipo === 'marca' ? d.parte_b_nombre : d.parte_a_nombre) || 'BEME AGENCY';
   const derechos = d.derechos_imagen
     ? `<p><strong>DERECHOS DE IMAGEN:</strong> ${d.derechos_dias || 0} días por $${d.derechos_valor || 0} ${d.moneda} desde ${d.derechos_desde || 'la publicación'}.</p>` : '';
   const sparkCode = d.spark_code
@@ -27,7 +50,7 @@ function generateContractES(d) {
 
   // Cláusulas dinámicas
   const clausulaDerechos = d.derechos_imagen
-    ? `<li>El INFLUENCER cede los derechos de uso de imagen por un periodo de ${d.derechos_dias || 0} días a partir de ${d.derechos_desde || 'la fecha de publicación'}, por un valor adicional de $${d.derechos_valor || 0} ${d.moneda}. Durante dicho periodo, la Marca y/o BEME AGENCY podrán utilizar la imagen del INFLUENCER en materiales promocionales relacionados con la CAMPAÑA. Una vez finalizado el periodo, todo uso de la imagen del INFLUENCER deberá cesar de inmediato, salvo que se acuerde una extensión por escrito entre las partes.</li>` : '';
+    ? `<li>El INFLUENCER cede los derechos de uso de imagen por un periodo de ${d.derechos_dias || 0} días a partir de ${d.derechos_desde || 'la fecha de publicación'}, por un valor adicional de $${d.derechos_valor || 0} ${d.moneda}. Durante dicho periodo, la Marca y/o ${agencia} podrán utilizar la imagen del INFLUENCER en materiales promocionales relacionados con la CAMPAÑA. Una vez finalizado el periodo, todo uso de la imagen del INFLUENCER deberá cesar de inmediato, salvo que se acuerde una extensión por escrito entre las partes.</li>` : '';
   const clausulaSpark = d.spark_code
     ? `<li>El INFLUENCER se compromete a proporcionar el spark code del contenido publicado para que la Marca pueda utilizarlo en campañas de promoción pagada (paid media). El spark code deberá ser entregado dentro de las 24 horas siguientes a la publicación del contenido. El uso del spark code queda limitado exclusivamente a la promoción del contenido creado en el marco de esta CAMPAÑA.</li>` : '';
 
@@ -40,50 +63,69 @@ function generateContractES(d) {
 <p><strong>HASHTAGS:</strong> ${d.hashtags || 'A Definir en Brief'}</p>
 <p><strong>MARCA/PRODUCTO:</strong> ${d.marca_producto}</p>
 <p><strong>TARIFA:</strong> ${d.tarifa_tipo === 'canje' ? 'Canje' : d.tarifa_tipo === 'mixto' ? 'Mixto' : 'Pago'}</p>
-<p><strong>MÉTODO DE PAGO:</strong> Como contraprestación por la totalidad de los servicios prestados por el INFLUENCER, ${d.tipo === 'marca' ? d.parte_a_nombre : 'BEME AGENCY'} pagará la cantidad de <strong>$${Number(d.monto||0).toLocaleString()} ${d.moneda}</strong>${d.monto_texto ? ' (' + d.monto_texto + ')' : ''}, que se efectuará mediante ${d.metodo_pago || 'transferencia bancaria'}, dentro del plazo de ${d.plazo_pago_dias || 45} días una vez publicada la campaña.</p>
+<p><strong>MÉTODO DE PAGO:</strong> Como contraprestación por la totalidad de los servicios prestados por el INFLUENCER, ${d.tipo === 'marca' ? d.parte_a_nombre : agencia} pagará la cantidad de <strong>$${Number(d.monto||0).toLocaleString()} ${d.moneda}</strong>${d.monto_texto ? ' (' + d.monto_texto + ')' : ''}, que se efectuará mediante ${d.metodo_pago || 'transferencia bancaria'}, dentro del plazo de ${d.plazo_pago_dias || 45} días una vez publicada la campaña.</p>
 ${derechos}
 ${sparkCode}
 <p><strong>COMENTARIOS ADICIONALES:</strong> ${d.comentarios || 'En todas las publicaciones se deberá colocar los hashtags y mención a marca. Todo el contenido generado deberá enviarse para aprobación con 48 hrs de antelación para que la marca pueda validar y realizar los ajustes pertinentes. No se podrá publicar contenido sin validar por la marca. Deberás enviar las métricas completas correspondientes de cada contenido, así como los testigos de lo contrario no se podrá hacer el pago de la publicación. No mostrar otros productos o marcas dentro de las Publicaciones.'}</p>
 <h2>ANEXO I — Declaraciones y Cláusulas</h2>
 <p>La aceptación de esta Hoja de Confirmación queda sujeta a los siguientes términos y condiciones:</p>
 <ol>
-<li>${d.tipo === 'marca' ? d.parte_b_nombre : 'La Agencia'} es conocedora de que ${d.tipo === 'marca' ? d.parte_a_nombre : 'BEME AGENCY'} ha recibido el encargo de la <strong>${d.marca_producto}</strong> (en adelante, la "Marca") de identificar uno o varios INFLUENCERS, para que estos lleven a cabo, bajo su única y exclusiva responsabilidad y con sus propios medios y recursos, las acciones integrantes de la CAMPAÑA (en adelante, las Publicaciones).</li>
-<li>Las Publicaciones deberán cumplir los requisitos exigidos en esta Hoja de Confirmación, así como permanecer visibles en los perfiles sociales del INFLUENCER por un plazo de veinticuatro (24) horas para los Stories, cuatro (4) meses para los posts y cuatro (4) meses para reels, tiktoks y formatos de video, no pudiendo utilizar la opción de "remove from profile grid". El incumplimiento de lo anterior será responsabilidad del INFLUENCER, quedando BEME AGENCY indemne frente a cualesquiera acciones legales que se pudieran derivar de las Publicaciones.</li>
+<li>${d.tipo === 'marca' ? d.parte_b_nombre : 'La Agencia'} es conocedora de que ${d.tipo === 'marca' ? d.parte_a_nombre : agencia} ha recibido el encargo de la <strong>${d.marca_producto}</strong> (en adelante, la "Marca") de identificar uno o varios INFLUENCERS, para que estos lleven a cabo, bajo su única y exclusiva responsabilidad y con sus propios medios y recursos, las acciones integrantes de la CAMPAÑA (en adelante, las Publicaciones).</li>
+<li>Las Publicaciones deberán cumplir los requisitos exigidos en esta Hoja de Confirmación, así como permanecer visibles en los perfiles sociales del INFLUENCER por un plazo de veinticuatro (24) horas para los Stories, cuatro (4) meses para los posts y cuatro (4) meses para reels, tiktoks y formatos de video, no pudiendo utilizar la opción de "remove from profile grid". El incumplimiento de lo anterior será responsabilidad del INFLUENCER, quedando ${agencia} indemne frente a cualesquiera acciones legales que se pudieran derivar de las Publicaciones.</li>
 <li>El Influencer deberá mantener activos los comentarios en las publicaciones, no pudiendo desactivarlos en ningún caso mediante la opción "turn off commenting". El incumplimiento de lo anterior pudiendo ocasionar la baja del Influencer de la CAMPAÑA.</li>
 <li>La Agencia es responsable de trasladar al INFLUENCER el brief y cualesquiera indicaciones o directrices adicionales recibidas de la Marca, siendo obligados solidarios con el INFLUENCER al cumplimiento de esta obligación.</li>
-<li>BEME AGENCY se reserva el derecho de terminar anticipadamente el acuerdo si el Influencer incumple cualquiera de las declaraciones y cláusulas establecidas, directrices integrantes del Brief o ha dañado la imagen y/o reputación de la Marca, la Campaña y/o los productos objeto de la presente prestación de servicios. Se pagarán las acciones realizadas hasta dicho momento.</li>
-<li>La Agencia manifiesta y garantiza que el INFLUENCER no pondrá a la venta los productos proporcionados por la Marca y/o BEME AGENCY para su promoción, en plataformas de productos de segunda mano (como GO TRENDIER, MERCADO LIBRE, entre otras) durante la vigencia de la campaña y por un periodo de doce meses adicionales tras la finalización de la misma.</li>
-<li>Durante la vigencia del presente acuerdo, el INFLUENCER deberá abstenerse de cualquier acto y/o manifestación sobre la marca o producto que pueda dañar la imagen y/o reputación de la misma, los productos de esta o de la Campaña objeto del presente acuerdo. En caso de incumplimiento, el INFLUENCER hará frente a cualquier penalización por daños y perjuicios que se produzcan, dejando a BEME AGENCY indemne.</li>
-<li>BEME AGENCY no será responsable de las opiniones o comportamiento propios del INFLUENCER que realicen de forma ajena de la prestación de los servicios.</li>
-<li>En todo caso, BEME AGENCY y/o la Marca, se reservan el derecho a rechazar las Publicaciones que, razonablemente, considere que infringen la normativa aplicable o puedan ser consideradas hostiles, groseras o inapropiadas o que puedan vulnerar derechos fundamentales. BEME AGENCY deberá comunicar al INFLUENCER dicha eventualidad, a ser posible con antelación suficiente, para que este pueda entregar materiales alternativos.</li>
-<li>El INFLUENCER deberá enviar a BEME AGENCY, con un mínimo de 48 (cuarenta y ocho) horas de anticipación, las Publicaciones realizadas, antes de ser publicadas y para su aprobación junto a la Marca.</li>
-<li>El INFLUENCER deberá tener acceso a las estadísticas de la red social utilizada para ejecutar la Campaña y deberá enviar a BEME AGENCY, todos los datos reflejados en las mismas antes de que la red las borre.</li>
+<li>${agencia} se reserva el derecho de terminar anticipadamente el acuerdo si el Influencer incumple cualquiera de las declaraciones y cláusulas establecidas, directrices integrantes del Brief o ha dañado la imagen y/o reputación de la Marca, la Campaña y/o los productos objeto de la presente prestación de servicios. Se pagarán las acciones realizadas hasta dicho momento.</li>
+<li>La Agencia manifiesta y garantiza que el INFLUENCER no pondrá a la venta los productos proporcionados por la Marca y/o ${agencia} para su promoción, en plataformas de productos de segunda mano (como GO TRENDIER, MERCADO LIBRE, entre otras) durante la vigencia de la campaña y por un periodo de doce meses adicionales tras la finalización de la misma.</li>
+<li>Durante la vigencia del presente acuerdo, el INFLUENCER deberá abstenerse de cualquier acto y/o manifestación sobre la marca o producto que pueda dañar la imagen y/o reputación de la misma, los productos de esta o de la Campaña objeto del presente acuerdo. En caso de incumplimiento, el INFLUENCER hará frente a cualquier penalización por daños y perjuicios que se produzcan, dejando a ${agencia} indemne.</li>
+<li>${agencia} no será responsable de las opiniones o comportamiento propios del INFLUENCER que realicen de forma ajena de la prestación de los servicios.</li>
+<li>En todo caso, ${agencia} y/o la Marca, se reservan el derecho a rechazar las Publicaciones que, razonablemente, considere que infringen la normativa aplicable o puedan ser consideradas hostiles, groseras o inapropiadas o que puedan vulnerar derechos fundamentales. ${agencia} deberá comunicar al INFLUENCER dicha eventualidad, a ser posible con antelación suficiente, para que este pueda entregar materiales alternativos.</li>
+<li>El INFLUENCER deberá enviar a ${agencia}, con un mínimo de 48 (cuarenta y ocho) horas de anticipación, las Publicaciones realizadas, antes de ser publicadas y para su aprobación junto a la Marca.</li>
+<li>El INFLUENCER deberá tener acceso a las estadísticas de la red social utilizada para ejecutar la Campaña y deberá enviar a ${agencia}, todos los datos reflejados en las mismas antes de que la red las borre.</li>
 <li>La modalidad de "paid media" o cualquier tipo de promoción pagada, quedan excluidas. En el caso de que la MARCA quisiera hacer paid media y/o utilizar los contenidos creados por el INFLUENCER en otros medios online y offline que no sean expresamente pactados en el presente contrato, un nuevo acuerdo tendrá que suscribirse entre las partes.</li>
-<li>En caso de imposibilidad de cumplir por parte del INFLUENCER con la fecha prevista para la Publicación en sus redes sociales, la Agencia comunicará a BEME AGENCY, a no más tardar cinco (5) días previos a la fecha de Publicación, la causa de dicha imposibilidad y propondrá una fecha alternativa. La Marca, a través de BEME AGENCY, será la única y exclusivamente facultada de aceptar o rechazar la nueva fecha de publicación.</li>
-<li>El incumplimiento de cualquier obligación aquí prevista podrá dar lugar a la terminación anticipada del presente acuerdo a la absoluta discreción de BEME AGENCY. En este caso, el INFLUENCER solo recibirá la tarifa proporcional al contenido que ha publicado, perdiendo el derecho a recibir el pago de la tarifa restante.</li>
+<li>En caso de imposibilidad de cumplir por parte del INFLUENCER con la fecha prevista para la Publicación en sus redes sociales, la Agencia comunicará a ${agencia}, a no más tardar cinco (5) días previos a la fecha de Publicación, la causa de dicha imposibilidad y propondrá una fecha alternativa. La Marca, a través de ${agencia}, será la única y exclusivamente facultada de aceptar o rechazar la nueva fecha de publicación.</li>
+<li>El incumplimiento de cualquier obligación aquí prevista podrá dar lugar a la terminación anticipada del presente acuerdo a la absoluta discreción de ${agencia}. En este caso, el INFLUENCER solo recibirá la tarifa proporcional al contenido que ha publicado, perdiendo el derecho a recibir el pago de la tarifa restante.</li>
 <li>Para todos los contenidos que se realicen con la marca, no pueden existir otras marcas visibles en fotos, videos o audios, ya sean marcas de otras categorías, de la competencia o de la misma compañía contratante. Durante la creación del contenido, se deben utilizar accesorios, vestuario y/o utilería, "neutra", respetando que el contenido realizado sea exclusivo para la marca que lo patrocina. Por tanto, queda prohibido el placement de otras marcas en la producción de contenido durante el periodo de campaña.</li>
 <li>En caso de que la información compartida por las Partes, incluya Datos Personales y/o Datos Personales Sensibles en los términos del artículo 3 Fracción V y VI de la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (en lo sucesivo "LFPDPPP"), las Partes se comprometen a cumplir con las obligaciones que les correspondan y que se desprendan de dicha legislación. Cada parte se obliga a adoptar las medidas, mecanismos y procedimientos necesarios para la protección de los Datos Personales.</li>
 <li>El INFLUENCER se obliga a crear contenido en estricto apego a la guía de estilo y se obliga a utilizar la guía de estilo únicamente para la CAMPAÑA, tratando la guía de estilo como Información Confidencial.</li>
 <li>Las Partes asumen esta obligación de confidencialidad durante la vigencia de este acuerdo y en un plazo adicional de 2 años contados a partir de la terminación del mismo. Las Partes reconocen y convienen que por ningún motivo divulgarán o revelarán, cualquier información financiera, contable, legal, corporativa, comercial, industrial, de negocios, planes, programas, secretos industriales, ideas creativas, conversaciones, negociaciones o contenido en general relacionado con la CAMPAÑA que les sea revelada durante la vigencia de este acuerdo.</li>
 <li>El INFLUENCER reconoce y acepta que no iniciará relaciones comerciales directamente con los contactos comerciales, proveedores, Marcas de la otra Parte que hubiere conocido en virtud de la celebración del presente acuerdo. En el supuesto de que alguna de las Partes desee iniciar relaciones comerciales con dichos contactos, podrá hacerlo previa notificación y autorización de la otra Parte. El presente deber de no elusión continuará vigente 1 (un) año posterior a la terminación de la vigencia.</li>
-<li>El INFLUENCER garantiza que está al corriente en el cumplimiento de sus obligaciones laborales y sociales, manifestando y garantizando asimismo que el INFLUENCER es un profesional independiente que interviene por cuenta propia, sin que exista por tanto, ni se cree ningún tipo de vínculo laboral con BEME AGENCY, quien queda exonerada de cualquier tipo de obligación de carácter laboral o social respecto del INFLUENCER.</li>
+<li>El INFLUENCER garantiza que está al corriente en el cumplimiento de sus obligaciones laborales y sociales, manifestando y garantizando asimismo que el INFLUENCER es un profesional independiente que interviene por cuenta propia, sin que exista por tanto, ni se cree ningún tipo de vínculo laboral con ${agencia}, quien queda exonerada de cualquier tipo de obligación de carácter laboral o social respecto del INFLUENCER.</li>
 ${clausulaDerechos}
 ${clausulaSpark}
 <li>Las partes aceptan que todo lo no previsto en este acuerdo se regirá por las disposiciones en la materia, ya de índole local de la Ciudad de México o federal según corresponda. En caso de que las Partes no puedan resolver alguna Controversia, se resolverá por la jurisdicción de los Tribunales Federales con sede en la Ciudad de México. Renunciando las partes a cualquier otra jurisdicción que les corresponda por su domicilio o nacionalidad.</li>
 <li>Las Partes de ninguna manera serán responsables por el rechazo o falta de cumplimiento a las obligaciones que asume en el presente Contrato, cuando estos deriven de caso fortuito o causas de fuerza mayor dentro de su empresa o imputable a sus proveedores.</li>
 </ol>
-<p>Todos los avisos y notificaciones entre las Partes deberán realizarse por escrito y ser entregados ya sea personalmente, por mensajería especializada o por correo electrónico y confirmado por el mismo medio, a los domicilios o dirección de correo electrónico, señalados en la carátula de este acuerdo a no ser que las Partes notifiquen su cambio de domicilio o correo electrónico en los términos anteriores.</p>`;
+<p>Todos los avisos y notificaciones entre las Partes deberán realizarse por escrito y ser entregados ya sea personalmente, por mensajería especializada o por correo electrónico y confirmado por el mismo medio, a los domicilios o dirección de correo electrónico, señalados en la carátula de este acuerdo a no ser que las Partes notifiquen su cambio de domicilio o correo electrónico en los términos anteriores.</p>
+${firmasBlockES(d, agencia)}`;
+}
+
+function firmasBlockEN(d, agencia) {
+  const sigNombre = d.signatory_nombre || '';
+  const sigCargo = d.signatory_cargo || '';
+  const contraNombre = d.tipo === 'marca' ? (d.parte_a_nombre || '') : (d.influencer_nombre || d.parte_b_nombre || '');
+  const contraLabel = d.tipo === 'marca' ? 'FOR THE BRAND' : 'THE INFLUENCER';
+  return `<div class="firmas-block" data-firmas style="margin-top:56px;display:flex;justify-content:space-between;gap:48px;flex-wrap:wrap">
+  <div class="firma-slot" data-firma="agencia" style="flex:1;min-width:240px;text-align:center">
+    <div class="firma-img" data-firma-img="agencia" style="min-height:70px"></div>
+    <div style="border-top:1px solid #000;padding-top:6px">${sigNombre ? '<strong>' + sigNombre + '</strong>' : '_______________________'}${sigCargo ? '<br>' + sigCargo : ''}<br><span style="font-size:0.85em">${agencia}</span></div>
+  </div>
+  <div class="firma-slot" data-firma="contraparte" style="flex:1;min-width:240px;text-align:center">
+    <div class="firma-img" data-firma-img="contraparte" style="min-height:70px"></div>
+    <div style="border-top:1px solid #000;padding-top:6px">${contraNombre ? '<strong>' + contraNombre + '</strong>' : '_______________________'}<br><span style="font-size:0.85em">${contraLabel}</span></div>
+  </div>
+</div>`;
 }
 
 function generateContractEN(d) {
   const fecha = formatDate(d.fecha_contrato, 'en');
+  const agencia = d.agencia_nombre || (d.tipo === 'marca' ? d.parte_b_nombre : d.parte_a_nombre) || 'BEME AGENCY';
   const derechos = d.derechos_imagen
     ? `<p><strong>IMAGE RIGHTS:</strong> ${d.derechos_dias || 0} days for $${d.derechos_valor || 0} ${d.moneda} from ${d.derechos_desde || 'publication date'}.</p>` : '';
   const sparkCode = d.spark_code
     ? `<p><strong>SPARK CODE:</strong> Yes, spark code is granted for paid promotion of the content.</p>` : '';
 
   const clausulaDerechos = d.derechos_imagen
-    ? `<li>The INFLUENCER grants image usage rights for a period of ${d.derechos_dias || 0} days from ${d.derechos_desde || 'the publication date'}, for an additional value of $${d.derechos_valor || 0} ${d.moneda}. During this period, the Brand and/or BEME AGENCY may use the INFLUENCER's image in promotional materials related to the CAMPAIGN. Once the period ends, all use of the INFLUENCER's image must cease immediately, unless an extension is agreed in writing between the parties.</li>` : '';
+    ? `<li>The INFLUENCER grants image usage rights for a period of ${d.derechos_dias || 0} days from ${d.derechos_desde || 'the publication date'}, for an additional value of $${d.derechos_valor || 0} ${d.moneda}. During this period, the Brand and/or ${agencia} may use the INFLUENCER's image in promotional materials related to the CAMPAIGN. Once the period ends, all use of the INFLUENCER's image must cease immediately, unless an extension is agreed in writing between the parties.</li>` : '';
   const clausulaSpark = d.spark_code
     ? `<li>The INFLUENCER agrees to provide the spark code for published content so the Brand may use it in paid promotion campaigns (paid media). The spark code must be delivered within 24 hours of content publication. The use of the spark code is limited exclusively to promoting content created under this CAMPAIGN.</li>` : '';
 
@@ -96,39 +138,40 @@ function generateContractEN(d) {
 <p><strong>HASHTAGS:</strong> ${d.hashtags || 'To be defined in Brief'}</p>
 <p><strong>BRAND/PRODUCT:</strong> ${d.marca_producto}</p>
 <p><strong>RATE:</strong> ${d.tarifa_tipo === 'canje' ? 'Trade/Barter' : d.tarifa_tipo === 'mixto' ? 'Mixed' : 'Payment'}</p>
-<p><strong>PAYMENT METHOD:</strong> As compensation for all services rendered by the INFLUENCER, ${d.tipo === 'marca' ? d.parte_a_nombre : 'BEME AGENCY'} shall pay the amount of <strong>$${Number(d.monto||0).toLocaleString()} ${d.moneda}</strong>${d.monto_texto ? ' (' + d.monto_texto + ')' : ''}, to be made via ${d.metodo_pago || 'bank transfer'}, within ${d.plazo_pago_dias || 45} days after the campaign is published.</p>
+<p><strong>PAYMENT METHOD:</strong> As compensation for all services rendered by the INFLUENCER, ${d.tipo === 'marca' ? d.parte_a_nombre : agencia} shall pay the amount of <strong>$${Number(d.monto||0).toLocaleString()} ${d.moneda}</strong>${d.monto_texto ? ' (' + d.monto_texto + ')' : ''}, to be made via ${d.metodo_pago || 'bank transfer'}, within ${d.plazo_pago_dias || 45} days after the campaign is published.</p>
 ${derechos}
 ${sparkCode}
 <p><strong>ADDITIONAL COMMENTS:</strong> ${d.comentarios || 'All publications must include the designated hashtags and brand mention; failure to do so will result in non-payment. All content must be submitted for approval at least 48 hours in advance. Content may not be published without brand validation. Complete metrics must be submitted. No other products or brands may be shown within the Publications.'}</p>
 <h2>ANNEX I — Declarations and Clauses</h2>
 <p>Acceptance of this Confirmation Sheet is subject to the following terms and conditions:</p>
 <ol>
-<li>The Agency acknowledges that ${d.tipo === 'marca' ? d.parte_a_nombre : 'BEME AGENCY'} has been commissioned by <strong>${d.marca_producto}</strong> (hereinafter, the "Brand") to identify one or more INFLUENCERS to carry out, under their sole and exclusive responsibility and with their own means and resources, the actions comprising the CAMPAIGN (hereinafter, the Publications).</li>
-<li>Said Publications must comply with the requirements set forth in this Confirmation Sheet and remain visible on the INFLUENCER's social media profiles for twenty-four (24) hours for Stories, four (4) months for posts, and four (4) months for reels, TikToks, and video formats. The "remove from profile grid" option may not be used. Non-compliance shall be the INFLUENCER's responsibility, and BEME AGENCY shall be held harmless.</li>
+<li>The Agency acknowledges that ${d.tipo === 'marca' ? d.parte_a_nombre : agencia} has been commissioned by <strong>${d.marca_producto}</strong> (hereinafter, the "Brand") to identify one or more INFLUENCERS to carry out, under their sole and exclusive responsibility and with their own means and resources, the actions comprising the CAMPAIGN (hereinafter, the Publications).</li>
+<li>Said Publications must comply with the requirements set forth in this Confirmation Sheet and remain visible on the INFLUENCER's social media profiles for twenty-four (24) hours for Stories, four (4) months for posts, and four (4) months for reels, TikToks, and video formats. The "remove from profile grid" option may not be used. Non-compliance shall be the INFLUENCER's responsibility, and ${agencia} shall be held harmless.</li>
 <li>The Influencer must keep comments active on all publications and may not disable them using "turn off commenting". Non-compliance may result in removal from the CAMPAIGN.</li>
 <li>The Agency is responsible for conveying the brief and any additional instructions from the Brand to the INFLUENCER, being jointly liable for compliance.</li>
-<li>BEME AGENCY reserves the right to terminate the agreement early if the Influencer breaches any established clauses, Brief guidelines, or has damaged the Brand's image and/or reputation. Actions completed up to that point shall be paid.</li>
+<li>${agencia} reserves the right to terminate the agreement early if the Influencer breaches any established clauses, Brief guidelines, or has damaged the Brand's image and/or reputation. Actions completed up to that point shall be paid.</li>
 <li>The INFLUENCER will not sell products provided by the Brand on second-hand platforms (GO TRENDIER, MERCADO LIBRE, etc.) during the campaign and for twelve additional months after its conclusion.</li>
-<li>During the term of this agreement, the INFLUENCER shall refrain from any act that may damage the brand's image or reputation. In case of non-compliance, the INFLUENCER shall bear any penalties, holding BEME AGENCY harmless.</li>
-<li>BEME AGENCY shall not be responsible for the INFLUENCER's own opinions or behavior outside the scope of service provision.</li>
-<li>BEME AGENCY and/or the Brand reserve the right to reject Publications that infringe applicable regulations or may be considered hostile, inappropriate, or that violate fundamental rights.</li>
-<li>The INFLUENCER must submit Publications to BEME AGENCY at least 48 hours in advance for approval together with the Brand.</li>
-<li>The INFLUENCER must have access to social media statistics and send all data to BEME AGENCY before the platform deletes them.</li>
+<li>During the term of this agreement, the INFLUENCER shall refrain from any act that may damage the brand's image or reputation. In case of non-compliance, the INFLUENCER shall bear any penalties, holding ${agencia} harmless.</li>
+<li>${agencia} shall not be responsible for the INFLUENCER's own opinions or behavior outside the scope of service provision.</li>
+<li>${agencia} and/or the Brand reserve the right to reject Publications that infringe applicable regulations or may be considered hostile, inappropriate, or that violate fundamental rights.</li>
+<li>The INFLUENCER must submit Publications to ${agencia} at least 48 hours in advance for approval together with the Brand.</li>
+<li>The INFLUENCER must have access to social media statistics and send all data to ${agencia} before the platform deletes them.</li>
 <li>"Paid media" or any paid promotion is excluded. A new agreement is required for paid media or use of content in other media.</li>
-<li>If the INFLUENCER cannot meet the scheduled Publication date, notice must be given at least five (5) days prior, proposing an alternative date. The Brand, through BEME AGENCY, shall accept or reject the new date.</li>
-<li>Non-compliance with any obligation may result in early termination at BEME AGENCY's discretion. The INFLUENCER shall only receive proportional payment for published content.</li>
+<li>If the INFLUENCER cannot meet the scheduled Publication date, notice must be given at least five (5) days prior, proposing an alternative date. The Brand, through ${agencia}, shall accept or reject the new date.</li>
+<li>Non-compliance with any obligation may result in early termination at ${agencia}'s discretion. The INFLUENCER shall only receive proportional payment for published content.</li>
 <li>No other brands may be visible in content. "Neutral" accessories, wardrobe, and props must be used. Placement of other brands during the campaign period is prohibited.</li>
 <li>The Parties commit to complying with the Federal Law on Protection of Personal Data (LFPDPPP) and adopting necessary measures for data protection.</li>
 <li>The INFLUENCER agrees to create content in strict adherence to the style guide, treating it as Confidential Information.</li>
 <li>The Parties assume confidentiality obligations during the agreement term and for 2 additional years. No financial, legal, commercial, or campaign-related information shall be disclosed.</li>
 <li>The INFLUENCER shall not initiate commercial relationships with contacts known through this agreement without prior authorization. This non-circumvention duty remains in force for 1 year after termination.</li>
-<li>The INFLUENCER warrants they are an independent professional with no employment relationship with BEME AGENCY.</li>
+<li>The INFLUENCER warrants they are an independent professional with no employment relationship with ${agencia}.</li>
 ${clausulaDerechos}
 ${clausulaSpark}
 <li>Disputes shall be resolved under the jurisdiction of Federal Courts in Mexico City. The parties waive any other jurisdiction.</li>
 <li>Neither Party shall be liable for non-compliance resulting from force majeure.</li>
 </ol>
-<p>All notices must be in writing, delivered personally, by courier, or by email to the addresses indicated in this agreement.</p>`;
+<p>All notices must be in writing, delivered personally, by courier, or by email to the addresses indicated in this agreement.</p>
+${firmasBlockEN(d, agencia)}`;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -238,6 +281,66 @@ IMPORTANT: Return ONLY a valid JSON array. No markdown, no explanation. Example:
         return { statusCode: 500, headers, body: JSON.stringify({ error: 'La IA devolvió una respuesta inválida. Intenta de nuevo.' }) };
       }
 
+      return { statusCode: 200, headers, body: JSON.stringify({ html }) };
+    }
+
+    // ── MIRROR-FROM-FILE: reconstruye un contrato externo (PDF/imagen) como
+    //    HTML editable, sustituyendo las partes. Usa un modelo con visión.
+    //    Modelo configurable por env (MIRROR_MODEL) por si el plan de Netlify
+    //    tiene un timeout corto y conviene un modelo más rápido.
+    if (action === 'mirror-from-file') {
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) return { statusCode: 500, headers, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }) };
+      const model = process.env.MIRROR_MODEL || 'claude-opus-4-8';
+      const { file_base64, media_type } = data || {};
+      if (!file_base64 || !media_type) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Falta el archivo a espejar' }) };
+
+      // Bloque de documento (PDF) o imagen según el media_type del adjunto.
+      const isPdf = /pdf/i.test(media_type);
+      const fileBlock = isPdf
+        ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: file_base64 } }
+        : { type: 'image', source: { type: 'base64', media_type, data: file_base64 } };
+
+      const parteA = data.parte_a_nombre || 'Parte A';
+      const parteB = data.parte_b_nombre || 'Parte B';
+      const lang = (idioma === 'en') ? 'English' : 'Spanish';
+      const prompt = `You are given a brand-supplied influencer-marketing contract as a file. Reconstruct it as clean, semantic HTML that preserves its EXACT economic and legal conditions (fees, payment terms, deliverables, deadlines, clauses, obligations, penalties) word-for-word in meaning.
+
+Substitute the contracting parties with these EXACT names where the original names the agency/company and the counterparty:
+- Our company (agency side): "${parteA}"
+- Counterparty: "${parteB}"
+
+Rules:
+- Output ONLY the HTML body (use <h1>, <h2>, <p>, <ol>, <li>, <strong>). No <html>/<head>/<body>, no markdown fences, no commentary.
+- Keep the contract in ${lang}.
+- Do NOT invent clauses that aren't in the source; keep all original conditions.
+- End with a signatures block exactly like this so signatures can be embedded later:
+<div class="firmas-block" data-firmas style="margin-top:56px;display:flex;justify-content:space-between;gap:48px;flex-wrap:wrap"><div class="firma-slot" data-firma="agencia" style="flex:1;min-width:240px;text-align:center"><div class="firma-img" data-firma-img="agencia" style="min-height:70px"></div><div style="border-top:1px solid #000;padding-top:6px">_______________________<br><span style="font-size:0.85em">${parteA}</span></div></div><div class="firma-slot" data-firma="contraparte" style="flex:1;min-width:240px;text-align:center"><div class="firma-img" data-firma-img="contraparte" style="min-height:70px"></div><div style="border-top:1px solid #000;padding-top:6px">_______________________<br><span style="font-size:0.85em">${parteB}</span></div></div></div>`;
+
+      const response = await fetch(ANTHROPIC_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model,
+          max_tokens: 8000,
+          messages: [{ role: 'user', content: [ fileBlock, { type: 'text', text: prompt } ] }],
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.text();
+        console.error('[contract-agent] mirror-from-file error', response.status, err.substring(0, 500));
+        return { statusCode: 500, headers, body: JSON.stringify({ error: 'Error del servicio de IA al espejar el contrato. Probá de nuevo o con un PDF más liviano.' }) };
+      }
+      const result = await response.json();
+      let html = (result.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+      // Quitar fences de markdown si aparecen y sanear scripts/handlers.
+      const fence = html.match(/```(?:html)?\n?([\s\S]*?)```/);
+      if (fence) html = fence[1].trim();
+      html = html.replace(/<script\b[\s\S]*?<\/script\s*>/gi, '').replace(/\son\w+\s*=\s*(['"])[\s\S]*?\1/gi, '');
+      if (result.stop_reason === 'max_tokens') {
+        return { statusCode: 200, headers, body: JSON.stringify({ html, warning: 'El contrato es muy largo y puede haber quedado incompleto. Revisalo y completá lo que falte manualmente.' }) };
+      }
+      if (!html) return { statusCode: 500, headers, body: JSON.stringify({ error: 'La IA no devolvió contenido. Probá de nuevo.' }) };
       return { statusCode: 200, headers, body: JSON.stringify({ html }) };
     }
 

@@ -408,6 +408,21 @@ const DICT = {
   contractSignedToast:{es:'Contrato firmado ✓',en:'Contract signed ✓',it:'Contratto firmato ✓',de:'Vertrag unterschrieben ✓',nl:'Contract ondertekend ✓'},
   contractNeedName:{es:'Escribí tu nombre completo',en:'Enter your full name',it:'Inserisci il tuo nome completo',de:'Gib deinen vollständigen Namen ein',nl:'Voer je volledige naam in'},
   contractNeedSign:{es:'Dibujá tu firma',en:'Draw your signature',it:'Disegna la tua firma',de:'Zeichne deine Unterschrift',nl:'Teken je handtekening'},
+  docTitle:{es:'Validación de identidad',en:'Identity verification',it:'Verifica identità',de:'Identitätsprüfung',nl:'Identiteitsverificatie'},
+  docHint:{es:'Para validez legal subí una foto de tu identificación y una selfie.',en:'For legal validity, upload a photo of your ID and a selfie.',it:'Per validità legale carica una foto del documento e un selfie.',de:'Lade für die Rechtsgültigkeit ein Foto deines Ausweises und ein Selfie hoch.',nl:'Upload voor rechtsgeldigheid een foto van je ID en een selfie.'},
+  docId:{es:'Identificación',en:'ID document',it:'Documento',de:'Ausweis',nl:'ID-document'},
+  docSelfie:{es:'Selfie',en:'Selfie',it:'Selfie',de:'Selfie',nl:'Selfie'},
+  docUpload:{es:'Subir',en:'Upload',it:'Carica',de:'Hochladen',nl:'Uploaden'},
+  docUploaded:{es:'✓ Cargado',en:'✓ Uploaded',it:'✓ Caricato',de:'✓ Hochgeladen',nl:'✓ Geüpload'},
+  docUploading:{es:'Subiendo...',en:'Uploading...',it:'Caricamento...',de:'Wird hochgeladen...',nl:'Uploaden...'},
+  consentText:{es:'Acepto los términos de este contrato y confirmo que mi firma e identidad son auténticas.',en:'I accept the terms of this contract and confirm that my signature and identity are authentic.',it:'Accetto i termini di questo contratto e confermo che la mia firma e identità sono autentiche.',de:'Ich akzeptiere die Bedingungen dieses Vertrags und bestätige, dass meine Unterschrift und Identität echt sind.',nl:'Ik accepteer de voorwaarden van dit contract en bevestig dat mijn handtekening en identiteit authentiek zijn.'},
+  consentNeed:{es:'Tenés que aceptar la declaración para firmar',en:'You must accept the statement to sign',it:'Devi accettare la dichiarazione per firmare',de:'Du musst die Erklärung akzeptieren, um zu unterschreiben',nl:'Je moet de verklaring accepteren om te ondertekenen'},
+  docNeed:{es:'Subí tu identificación y selfie antes de firmar',en:'Upload your ID and selfie before signing',it:'Carica documento e selfie prima di firmare',de:'Lade Ausweis und Selfie vor dem Unterschreiben hoch',nl:'Upload je ID en selfie voordat je ondertekent'},
+  contractComment:{es:'Pedir cambios / comentar',en:'Request changes / comment',it:'Richiedi modifiche / commenta',de:'Änderungen anfragen / kommentieren',nl:'Wijzigingen vragen / reageren'},
+  contractCommentPh:{es:'Escribí qué querés cambiar o agregar...',en:'Write what you want to change or add...',it:'Scrivi cosa vuoi cambiare o aggiungere...',de:'Schreibe, was du ändern oder hinzufügen möchtest...',nl:'Schrijf wat je wilt wijzigen of toevoegen...'},
+  contractCommentSent:{es:'Comentario enviado ✓',en:'Comment sent ✓',it:'Commento inviato ✓',de:'Kommentar gesendet ✓',nl:'Opmerking verzonden ✓'},
+  contractDownload:{es:'Descargar contrato firmado',en:'Download signed contract',it:'Scarica contratto firmato',de:'Unterschriebenen Vertrag herunterladen',nl:'Ondertekend contract downloaden'},
+  send:{es:'Enviar',en:'Send',it:'Invia',de:'Senden',nl:'Verzenden'},
   // datos de pago
   payTitle:{es:'Mis datos de pago',en:'My payment details',it:'I miei dati di pagamento',de:'Meine Zahlungsdaten',nl:'Mijn betaalgegevens'},
   paySub:{es:'Guardá tus cuentas para cobrar tus campañas.',en:'Save your accounts to get paid for your campaigns.',it:'Salva i tuoi conti per ricevere i pagamenti.',de:'Speichere deine Konten, um bezahlt zu werden.',nl:'Bewaar je rekeningen om betaald te worden.'},
@@ -865,11 +880,15 @@ function renderContract(ct){
         ${con.firma_url?`<img src="${esc(con.firma_url)}" alt="firma">`:''}
         <div class="sign-meta"><b>${esc(con.firmante_nombre||'')}</b>${con.firmado_at?`<br>${esc(t('contractSigned'))} · ${fmtDT(con.firmado_at)}`:''}</div>
       </div>
-      <div style="margin-top:10px"><button class="btn btn-outline btn-sm" onclick="viewContract(${con.id})">${esc(t('contractView'))}</button></div>`;
+      <div class="action-btns" style="margin-top:10px">
+        <button class="btn btn-outline btn-sm" onclick="viewContract(${con.id})">${esc(t('contractView'))}</button>
+        ${con.pdf_firmado_url?`<a class="btn btn-primary btn-sm" href="${esc(con.pdf_firmado_url)}" target="_blank">⬇ ${esc(t('contractDownload'))}</a>`:''}
+      </div>`;
   } else {
     body = `<p class="sec-note">${esc(t('contractNoBody'))}</p>
       <div class="action-btns">
         <button class="btn btn-outline btn-sm" onclick="viewContract(${con.id})">${esc(t('contractView'))}</button>
+        <button class="btn btn-outline btn-sm" onclick="openContractComment(${con.id})">💬 ${esc(t('contractComment'))}</button>
         <button class="btn btn-primary btn-sm" onclick="openSign(${con.id})">✍ ${esc(t('contractSignBtn'))}</button>
       </div>`;
   }
@@ -890,17 +909,61 @@ function viewContract(id){
 }
 
 let _sigPad = null;
+function docState(con){
+  const have = new Set((con.docs||[]).map(d=>d.tipo_doc));
+  return { id: have.has('identificacion'), selfie: have.has('selfie') };
+}
 function openSign(id){
   const con = getContrato(id); if(!con || con.estado!=='enviado'){ if(con&&con.estado==='firmado'){viewContract(id);} return; }
+  const ds = docState(con);
+  const docRow = (tipo, label, done) => `
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:6px">
+      <span style="font-size:13px">${esc(label)}</span>
+      <span id="doc-state-${tipo}">${done?`<span style="color:#16a34a;font-weight:700;font-size:12px">${esc(t('docUploaded'))}</span>`:`<label class="btn btn-outline btn-sm" style="cursor:pointer;margin:0"><input type="file" accept="image/*,.pdf" style="display:none" onchange="uploadDoc(${id},'${tipo}',this)">${esc(t('docUpload'))}</label>`}</span>
+    </div>`;
   const bodyHTML = `
+    <div class="sec-box" style="margin-bottom:14px">
+      <div style="font-weight:700;margin-bottom:4px">🪪 ${esc(t('docTitle'))}</div>
+      <p class="sec-note" style="margin-bottom:8px">${esc(t('docHint'))}</p>
+      ${docRow('identificacion', t('docId'), ds.id)}
+      ${docRow('selfie', t('docSelfie'), ds.selfie)}
+    </div>
     <p class="sec-note">${esc(t('contractDrawHint'))}</p>
     <div class="sign-pad-wrap"><canvas class="sign-pad" id="sign-canvas"></canvas><div class="sign-ph" id="sign-ph">${esc(t('signHere'))}</div></div>
     <div style="display:flex;justify-content:flex-end;margin-bottom:14px"><button class="btn btn-ghost btn-sm" onclick="clearSign()">${esc(t('contractClear'))}</button></div>
-    <div class="fld"><label>${esc(t('contractName'))} <span class="req">*</span></label><input type="text" id="sign-name" placeholder="${esc(t('contractNamePh'))}" value="${esc(talento?.nombre||'')}"></div>`;
+    <div class="fld"><label>${esc(t('contractName'))} <span class="req">*</span></label><input type="text" id="sign-name" placeholder="${esc(t('contractNamePh'))}" value="${esc(talento?.nombre||'')}"></div>
+    <div class="fld"><label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;font-weight:400"><input type="checkbox" id="sign-consent" style="margin-top:3px"><span>${esc(t('consentText'))}</span></label></div>`;
   const footHTML = `<button class="btn btn-outline" onclick="closeModal()">${esc(t('cancel'))}</button>
     <button class="btn btn-primary" id="sign-submit" onclick="submitSign(${id})">✍ ${esc(t('contractSignBtn'))}</button>`;
   openModal(t('contractSignBtn'), bodyHTML, footHTML);
   setTimeout(initSignPad, 60);
+}
+function fileToDataURL(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
+async function uploadDoc(id, tipo, input){
+  const file = input.files && input.files[0]; if(!file) return;
+  const cell = document.getElementById('doc-state-'+tipo);
+  if(cell) cell.innerHTML = `<span style="font-size:12px;color:var(--muted)">${esc(t('docUploading'))}</span>`;
+  try {
+    const dataurl = await fileToDataURL(file);
+    await API('doc-upload', { contrato_id:id, tipo_doc:tipo, file_dataurl:dataurl, nombre_archivo:file.name });
+    const con = getContrato(id); if(con){ con.docs = con.docs||[]; if(!con.docs.some(d=>d.tipo_doc===tipo)) con.docs.push({tipo_doc:tipo}); }
+    if(cell) cell.innerHTML = `<span style="color:#16a34a;font-weight:700;font-size:12px">${esc(t('docUploaded'))}</span>`;
+  } catch(e){
+    if(cell) cell.innerHTML = `<label class="btn btn-outline btn-sm" style="cursor:pointer;margin:0"><input type="file" accept="image/*,.pdf" style="display:none" onchange="uploadDoc(${id},'${tipo}',this)">${esc(t('docUpload'))}</label>`;
+    toast(t('errPrefix')+e.message,'err');
+  }
+}
+function openContractComment(id){
+  const bodyHTML = `<div class="fld"><label>${esc(t('contractComment'))}</label><textarea id="contract-comment" rows="4" placeholder="${esc(t('contractCommentPh'))}"></textarea></div>`;
+  const footHTML = `<button class="btn btn-outline" onclick="closeModal()">${esc(t('cancel'))}</button>
+    <button class="btn btn-primary" onclick="submitContractComment(${id})">${esc(t('send'))}</button>`;
+  openModal(t('contractComment'), bodyHTML, footHTML);
+}
+async function submitContractComment(id){
+  const msg = (document.getElementById('contract-comment')?.value||'').trim();
+  if(!msg){ toast(t('contractCommentPh'),'err'); return; }
+  try { await API('contrato-comment', { contrato_id:id, mensaje:msg, autor_nombre: talento?.nombre||'' }); closeModal(); toast(t('contractCommentSent'),'ok'); }
+  catch(e){ toast(t('errPrefix')+e.message,'err'); }
 }
 function initSignPad(){
   const canvas = document.getElementById('sign-canvas'); if(!canvas) return;
@@ -925,10 +988,13 @@ async function submitSign(id){
   const name = (document.getElementById('sign-name')?.value||'').trim();
   if(!name){ toast(t('contractNeedName'),'err'); return; }
   if(!_sigPad || !_sigPad.isDirty()){ toast(t('contractNeedSign'),'err'); return; }
+  if(!document.getElementById('sign-consent')?.checked){ toast(t('consentNeed'),'err'); return; }
+  const con = getContrato(id); const ds = con ? docState(con) : {id:false,selfie:false};
+  if(!ds.id || !ds.selfie){ toast(t('docNeed'),'err'); return; }
   const btn = document.getElementById('sign-submit'); if(btn){btn.disabled=true; btn.textContent=t('contractSigning');}
   try {
     const dataurl = _sigPad.canvas.toDataURL('image/png');
-    await API('sign-contract', { contrato_id:id, firma_dataurl:dataurl, firmante_nombre:name });
+    await API('sign-contract', { contrato_id:id, firma_dataurl:dataurl, firmante_nombre:name, consentimiento:t('consentText') });
     closeModal(); await refresh(); toast(t('contractSignedToast'),'ok');
   } catch(e){ toast(t('errPrefix')+e.message,'err'); if(btn){btn.disabled=false; btn.textContent='✍ '+t('contractSignBtn');} }
 }

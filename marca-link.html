@@ -143,7 +143,7 @@ const SB_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
 const sbStore = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false } }); // solo para uploadToSignedUrl
 const API_URL = '/.netlify/functions/magic-api';
 const TOKEN = new URLSearchParams(location.search).get('t') || '';
-let campana = null, notifyEmails = [];
+let campana = null, notifyEmails = [], contrato = null;
 
 const PASO_LABELS = {1:'Esperando Brief',2:'Esperando Script',3:'Aprobación Script',4:'Producción',5:'Aprobación Contenido',6:'Publicar',7:'Estadísticas',8:'Completado',9:'Pagado'};
 const TIPO_LABELS = {tiktok_video:'TikTok Video',reel:'Reel',reel_tiktok_espejo:'Reel/TikTok',ig_story:'IG Story',youtube_video:'YouTube Video',youtube_short:'YouTube Short'};
@@ -179,6 +179,7 @@ async function load() {
   if (data.expired) return data;
   campana = data.campana;
   notifyEmails = data.notifyEmails || [];
+  contrato = data.contrato || null;
   return data;
 }
 async function refresh() { await load(); renderAll(); }
@@ -219,6 +220,8 @@ function renderAll() {
     </div>
   </div>`;
   renderEmails();
+  document.getElementById('briefs').insertAdjacentHTML('beforeend', renderContractCard());
+  if (contrato && contrato.estado === 'enviado' && !contrato.es_externo) setTimeout(initBrandSignPad, 80);
 
   const cts = campana.campana_talentos||[];
   const cont = document.getElementById('talentos-container');
@@ -349,6 +352,111 @@ async function sendCampaignComment() {
   if (!msg) { toast('Escribí un comentario','err'); return; }
   try { await API('campaign-comment', { mensaje: msg }); document.getElementById('camp-comment').value=''; toast('Comentario enviado al equipo ✓','ok'); }
   catch(e){ toast('Error: '+e.message,'err'); }
+}
+
+// ── CONTRATO DE MARCA (ver / validar identidad / firmar) ───────
+const BRAND_CONSENT = 'Acepto los términos de este contrato y confirmo que mi firma e identidad son auténticas.';
+function brandDocState(){ const have=new Set((contrato&&contrato.docs||[]).map(d=>d.tipo_doc)); return {id:have.has('identificacion'), selfie:have.has('selfie')}; }
+function renderContractCard(){
+  if (!contrato) return '';
+  const con = contrato;
+  const signed = con.estado === 'firmado';
+  if (signed) {
+    return `<div class="brief-section">
+      <div class="brief-title">📄 Contrato</div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 0">
+        ${con.firma_url?`<img src="${esc(con.firma_url)}" style="height:46px;max-width:150px;object-fit:contain;background:#fff;border:1px solid var(--border2);border-radius:8px;padding:4px">`:''}
+        <div style="font-size:13px"><b style="color:#16a34a">✓ Firmado</b>${con.firmante_nombre?`<br>${esc(con.firmante_nombre)}`:''}${con.firmado_at?` · ${fmtDT(con.firmado_at)}`:''}</div>
+      </div>
+      <div class="action-btns">
+        <button class="btn btn-outline btn-sm" onclick="viewBrandContract()">Ver contrato</button>
+        ${con.pdf_firmado_url?`<a class="btn btn-primary btn-sm" href="${esc(con.pdf_firmado_url)}" target="_blank">⬇ Descargar firmado</a>`:''}
+      </div></div>`;
+  }
+  const ds = brandDocState();
+  const docRow = (tipo,label,done)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--border2);border-radius:10px;padding:8px 10px;margin-bottom:6px">
+      <span style="font-size:13px">${esc(label)}</span>
+      <span id="bdoc-${tipo}">${done?'<span style="color:#16a34a;font-weight:700;font-size:12px">✓ Cargado</span>':`<label class="btn btn-outline btn-sm" style="cursor:pointer;margin:0"><input type="file" accept="image/*,.pdf" style="display:none" onchange="brandUploadDoc('${tipo}',this)">Subir</label>`}</span></div>`;
+  return `<div class="brief-section">
+    <div class="brief-title">📄 Contrato — pendiente de firma</div>
+    <div class="action-btns" style="margin-bottom:10px">
+      <button class="btn btn-outline btn-sm" onclick="viewBrandContract()">Ver contrato</button>
+      <button class="btn btn-outline btn-sm" onclick="brandContractComment()">💬 Pedir cambios</button>
+    </div>
+    <div style="border:1px solid var(--border2);border-radius:12px;padding:10px;margin-bottom:10px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:4px">🪪 Validación de identidad</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Para validez legal subí una foto de tu identificación y una selfie.</p>
+      ${docRow('identificacion','Identificación',ds.id)}
+      ${docRow('selfie','Selfie',ds.selfie)}
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Dibujá tu firma:</p>
+    <div style="border:1px dashed var(--border2);border-radius:12px;background:#fff;position:relative;margin-bottom:6px">
+      <canvas id="brand-sign" style="width:100%;height:140px;display:block;cursor:crosshair;touch-action:none"></canvas>
+      <div id="brand-sign-ph" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#bbb;pointer-events:none;font-size:13px">Firmá acá</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-outline btn-sm" onclick="clearBrandSign()">Limpiar</button></div>
+    <div style="margin-bottom:8px"><input type="text" id="brand-sign-name" placeholder="Nombre y apellido del firmante" style="width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;color:var(--text);outline:none"></div>
+    <label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;cursor:pointer;margin-bottom:10px"><input type="checkbox" id="brand-consent" style="margin-top:3px"><span>${esc(BRAND_CONSENT)}</span></label>
+    <div class="action-btns"><button class="btn btn-primary btn-sm" id="brand-sign-btn" onclick="submitBrandSign()">✍ Firmar contrato</button></div>
+  </div>`;
+}
+function viewBrandContract(){
+  if (!contrato) return;
+  if (contrato.es_externo && contrato.archivo_url) { window.open(contrato.archivo_url, '_blank'); return; }
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(`<title>Contrato</title><div style="font-family:'Times New Roman',serif;max-width:800px;margin:30px auto;padding:0 20px;line-height:1.55">${contrato.contenido_html||'<p>Sin contenido.</p>'}</div>`); w.document.close(); }
+}
+async function brandContractComment(){
+  const msg = prompt('¿Qué cambios o agregados necesitás en el contrato?');
+  if (!msg || !msg.trim()) return;
+  try { await API('contrato-comment', { contrato_id: contrato.id, mensaje: msg.trim(), autor_nombre: campana?.marcas?.nombre||'' }); toast('Comentario enviado ✓','ok'); }
+  catch(e){ toast('Error: '+e.message,'err'); }
+}
+function _fileToDataURL(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
+async function brandUploadDoc(tipo, input){
+  const file = input.files && input.files[0]; if(!file) return;
+  const cell = document.getElementById('bdoc-'+tipo); if(cell) cell.innerHTML='<span style="font-size:12px;color:var(--text-dim)">Subiendo...</span>';
+  try {
+    const dataurl = await _fileToDataURL(file);
+    await API('doc-upload', { contrato_id: contrato.id, tipo_doc: tipo, file_dataurl: dataurl, nombre_archivo: file.name });
+    contrato.docs = contrato.docs||[]; if(!contrato.docs.some(d=>d.tipo_doc===tipo)) contrato.docs.push({tipo_doc:tipo});
+    if(cell) cell.innerHTML='<span style="color:#16a34a;font-weight:700;font-size:12px">✓ Cargado</span>';
+  } catch(e){
+    if(cell) cell.innerHTML=`<label class="btn btn-outline btn-sm" style="cursor:pointer;margin:0"><input type="file" accept="image/*,.pdf" style="display:none" onchange="brandUploadDoc('${tipo}',this)">Subir</label>`;
+    toast('Error: '+e.message,'err');
+  }
+}
+let _brandPad = null;
+function initBrandSignPad(){
+  const canvas = document.getElementById('brand-sign'); if(!canvas) return;
+  const wrap = canvas.parentElement; const ratio = window.devicePixelRatio||1;
+  const w = wrap.clientWidth, h = 140; canvas.width=w*ratio; canvas.height=h*ratio;
+  const ctx = canvas.getContext('2d'); ctx.scale(ratio,ratio);
+  ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#111';
+  let drawing=false,last=null,dirty=false; const ph=document.getElementById('brand-sign-ph');
+  function pos(e){ const r=canvas.getBoundingClientRect(); const p=e.touches?e.touches[0]:e; return {x:p.clientX-r.left,y:p.clientY-r.top}; }
+  function start(e){ e.preventDefault(); drawing=true; last=pos(e); if(ph)ph.style.display='none'; }
+  function move(e){ if(!drawing)return; e.preventDefault(); const p=pos(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; dirty=true; }
+  function end(){ drawing=false; }
+  canvas.addEventListener('mousedown',start); canvas.addEventListener('mousemove',move); window.addEventListener('mouseup',end);
+  canvas.addEventListener('touchstart',start,{passive:false}); canvas.addEventListener('touchmove',move,{passive:false}); canvas.addEventListener('touchend',end);
+  _brandPad = { canvas, isDirty:()=>dirty, clear:()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); dirty=false; if(ph)ph.style.display='flex'; } };
+}
+function clearBrandSign(){ if(_brandPad)_brandPad.clear(); }
+async function submitBrandSign(){
+  if (!contrato) return;
+  const name = (document.getElementById('brand-sign-name')?.value||'').trim();
+  if (!name) { toast('Escribí el nombre del firmante','err'); return; }
+  if (!_brandPad || !_brandPad.isDirty()) { toast('Dibujá tu firma','err'); return; }
+  if (!document.getElementById('brand-consent')?.checked) { toast('Tenés que aceptar la declaración para firmar','err'); return; }
+  const ds = brandDocState();
+  if (!ds.id || !ds.selfie) { toast('Subí tu identificación y selfie antes de firmar','err'); return; }
+  const btn = document.getElementById('brand-sign-btn'); if(btn){btn.disabled=true; btn.textContent='Firmando...';}
+  try {
+    const dataurl = _brandPad.canvas.toDataURL('image/png');
+    await API('sign-contract', { contrato_id: contrato.id, firma_dataurl: dataurl, firmante_nombre: name, consentimiento: BRAND_CONSENT });
+    await refresh(); toast('Contrato firmado ✓','ok');
+  } catch(e){ toast('Error: '+e.message,'err'); if(btn){btn.disabled=false; btn.textContent='✍ Firmar contrato';} }
 }
 
 // ── NOTIFICACIONES POR EMAIL (marca) ───────────────────────────

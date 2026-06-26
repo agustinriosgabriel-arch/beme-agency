@@ -18,6 +18,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { corsOrigin } = require('./lib/cors');
 const { registrarCambio } = require('./lib/registrar-cambio');
+const { sendInvoiceToFinanzas } = require('./lib/mailer');
 
 const SB_URL = process.env.SUPABASE_URL || 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SB_SERVICE = process.env.SUPABASE_SERVICE_KEY;
@@ -92,6 +93,23 @@ exports.handler = async (event) => {
     } catch (e) { console.warn('regCambio:', e.message); }
   }
 
+  // Aviso best-effort a Finanzas cuando se carga una factura (no rompe la acción).
+  async function notifyFinanzasInvoice(ct, invoice_url, tipo, factura_datos) {
+    try {
+      const { data } = await sb.from('campana_talentos')
+        .select('fee_talento,moneda,talentos(nombre),campanas(nombre)')
+        .eq('id', ct.id).maybeSingle();
+      await sendInvoiceToFinanzas({
+        talentoNombre: data?.talentos?.nombre || 'Talento',
+        campanaNombre: data?.campanas?.nombre || '',
+        invoiceUrl: invoice_url,
+        tipo,
+        monto: (factura_datos && factura_datos.monto) || data?.fee_talento,
+        moneda: (factura_datos && factura_datos.moneda) || data?.moneda,
+      });
+    } catch (e) { console.warn('notifyFinanzasInvoice:', e.message); }
+  }
+
   // Helper: verificar que un contenido pertenece al alcance del token
   async function assertContenidoScope(contId) {
     const { data, error } = await sb
@@ -116,6 +134,27 @@ exports.handler = async (event) => {
     if (error || !data) return { ok: false };
     if (link.tipo !== 'talent' || data.talent_id !== link.talent_id) return { ok: false };
     return { ok: true, ct: data };
+  }
+  // Verifica que un contrato pertenezca al alcance del token (talento o marca)
+  async function assertContratoScope(contratoId) {
+    const { data, error } = await sb
+      .from('contratos')
+      .select('id,tipo,estado,campana_id,campana_talento_id,bloqueado,contenido_html')
+      .eq('id', contratoId)
+      .maybeSingle();
+    if (error || !data) return { ok: false };
+    if (link.tipo === 'talent') {
+      if (data.tipo !== 'talento') return { ok: false };
+      const s = await assertTalentCt(data.campana_talento_id);
+      if (!s.ok) return { ok: false };
+      return { ok: true, con: data, ct: s.ct };
+    }
+    if (link.tipo === 'brand') {
+      if (data.tipo !== 'marca') return { ok: false };
+      if (data.campana_id !== link.campana_id) return { ok: false };
+      return { ok: true, con: data };
+    }
+    return { ok: false };
   }
   // Factura habilitada sólo cuando TODOS los contenidos están en paso ≥ INVOICE_MIN_PASO
   function invoiceUnlocked(ct) {
@@ -165,11 +204,21 @@ exports.handler = async (event) => {
           if (visibleCtIds.length) {
             const { data: cons } = await sb
               .from('contratos')
-              .select('id,campana_id,campana_talento_id,tipo,idioma,estado,numero_contrato,contenido_html,archivo_url,archivo_nombre,es_externo,firma_url,firmante_nombre,firmado_at')
+              .select('id,campana_id,campana_talento_id,tipo,idioma,estado,numero_contrato,contenido_html,archivo_url,archivo_nombre,es_externo,firma_url,firmante_nombre,firmado_at,firma_agencia_url,firma_agencia_nombre,firmado_agencia_at,pdf_firmado_url,bloqueado')
               .in('campana_talento_id', visibleCtIds)
               .eq('tipo', 'talento')
               .in('estado', ['enviado', 'firmado']);
             contratos = cons || [];
+          }
+          // Comentarios + documentos requeridos por contrato (para el portal)
+          if (contratos.length) {
+            const conIds = contratos.map(c => c.id);
+            const { data: coms } = await sb.from('contrato_comentarios').select('*').in('contrato_id', conIds).order('created_at');
+            const { data: docs } = await sb.from('contrato_documentos').select('id,contrato_id,parte,tipo_doc').in('contrato_id', conIds);
+            contratos.forEach(c => {
+              c.comentarios = (coms || []).filter(x => x.contrato_id === c.id);
+              c.docs = (docs || []).filter(x => x.contrato_id === c.id && x.parte === 'talento');
+            });
           }
           const conByCt = {};
           contratos.forEach(c => { if (!conByCt[c.campana_talento_id]) conByCt[c.campana_talento_id] = c; });
@@ -219,7 +268,22 @@ exports.handler = async (event) => {
           const { fee, fee_talento, ...rest } = ct;
           return rest; // conserva fee_marca, moneda, pago_estado
         });
-        return json(200, { tipo: 'brand', campana: camp, notifyEmails: link.notify_emails || [] }, origin);
+
+        // Contrato de marca (tipo='marca') de esta campaña, para ver/firmar
+        const { data: bcons } = await sb
+          .from('contratos')
+          .select('id,campana_id,tipo,idioma,estado,numero_contrato,contenido_html,archivo_url,archivo_nombre,es_externo,firma_url,firmante_nombre,firmado_at,firma_agencia_url,firma_agencia_nombre,firmado_agencia_at,pdf_firmado_url,bloqueado')
+          .eq('campana_id', link.campana_id).eq('tipo', 'marca')
+          .in('estado', ['enviado', 'firmado'])
+          .order('created_at', { ascending: false });
+        let contrato = (bcons && bcons[0]) || null;
+        if (contrato) {
+          const { data: coms } = await sb.from('contrato_comentarios').select('*').eq('contrato_id', contrato.id).order('created_at');
+          const { data: docs } = await sb.from('contrato_documentos').select('id,parte,tipo_doc').eq('contrato_id', contrato.id).eq('parte', 'marca');
+          contrato.comentarios = coms || [];
+          contrato.docs = docs || [];
+        }
+        return json(200, { tipo: 'brand', campana: camp, contrato, notifyEmails: link.notify_emails || [] }, origin);
       }
 
       // ── SIGNED UPLOAD URL ───────────────────────────────────
@@ -463,46 +527,112 @@ exports.handler = async (event) => {
         return json(200, { ok: true }, origin);
       }
 
-      // ── TALENTO: firmar contrato (dibujo en canvas) ─────────
+      // ── ID + SELFIE: subir documento de validación (bucket privado) ──
+      case 'doc-upload': {
+        const { contrato_id, tipo_doc, file_dataurl, nombre_archivo } = body;
+        if (!contrato_id) return json(400, { error: 'Falta contrato_id' }, origin);
+        if (!['identificacion', 'selfie'].includes(tipo_doc)) return json(400, { error: 'Tipo de documento inválido' }, origin);
+        const m = /^data:(image\/(?:png|jpeg|jpg|webp)|application\/pdf);base64,(.+)$/.exec(file_dataurl || '');
+        if (!m) return json(400, { error: 'Archivo inválido (imagen o PDF)' }, origin);
+        const scope = await assertContratoScope(contrato_id);
+        if (!scope.ok) return json(403, { error: 'Contrato fuera de alcance' }, origin);
+        const buf = Buffer.from(m[2], 'base64');
+        const ext = m[1] === 'application/pdf' ? 'pdf' : (m[1].split('/')[1] === 'jpeg' ? 'jpg' : m[1].split('/')[1]);
+        const parte = actorTipo; // 'talento' | 'marca'
+        const path = `contrato-${contrato_id}/${parte}-${tipo_doc}-${Date.now()}.${ext}`;
+        const { error: upErr } = await sb.storage.from('contrato-docs').upload(path, buf, { contentType: m[1], upsert: true });
+        if (upErr) throw upErr;
+        // Reemplazar doc previo del mismo tipo/parte (mantener uno vigente)
+        await sb.from('contrato_documentos').delete().eq('contrato_id', contrato_id).eq('parte', parte).eq('tipo_doc', tipo_doc);
+        const { error } = await sb.from('contrato_documentos').insert({
+          contrato_id, parte, tipo_doc, archivo_path: path, nombre_archivo: (nombre_archivo || '').toString().slice(0, 160),
+        });
+        if (error) throw error;
+        await regCambio(scope.con.campana_id, null, `Cargó ${tipo_doc === 'selfie' ? 'su selfie' : 'su identificación'}`);
+        return json(200, { ok: true }, origin);
+      }
+
+      // ── FIRMAR CONTRATO (talento o marca; gate ID+selfie; auditoría) ──
       case 'sign-contract': {
-        if (link.tipo !== 'talent') return json(403, { error: 'Solo el talento firma' }, origin);
-        const { contrato_id, firma_dataurl, firmante_nombre } = body;
+        const { contrato_id, firma_dataurl, firmante_nombre, consentimiento } = body;
         if (!contrato_id) return json(400, { error: 'Falta contrato_id' }, origin);
         if (!firmante_nombre || !firmante_nombre.trim()) return json(400, { error: 'Escribí tu nombre completo' }, origin);
+        if (!consentimiento || !String(consentimiento).trim()) return json(400, { error: 'Tenés que aceptar la declaración para firmar' }, origin);
         const m = /^data:(image\/(?:png|jpeg|jpg|webp));base64,(.+)$/.exec(firma_dataurl || '');
         if (!m) return json(400, { error: 'Firma inválida' }, origin);
 
-        const { data: con, error: cErr } = await sb
-          .from('contratos')
-          .select('id,tipo,estado,campana_id,campana_talento_id')
-          .eq('id', contrato_id)
-          .maybeSingle();
-        if (cErr) throw cErr;
-        if (!con) return json(404, { error: 'Contrato no encontrado' }, origin);
-        if (con.tipo !== 'talento') return json(403, { error: 'Este contrato no es del talento' }, origin);
+        const scope = await assertContratoScope(contrato_id);
+        if (!scope.ok) return json(403, { error: 'Contrato fuera de alcance' }, origin);
+        const con = scope.con;
         if (con.estado === 'firmado') return json(400, { error: 'Este contrato ya está firmado' }, origin);
         if (con.estado !== 'enviado') return json(400, { error: 'Este contrato todavía no está disponible para firmar' }, origin);
-        const scope = await assertTalentCt(con.campana_talento_id);
-        if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
+
+        // Gate: requiere identificación + selfie de esta parte antes de firmar.
+        const parte = actorTipo;
+        const { data: docs } = await sb.from('contrato_documentos').select('tipo_doc').eq('contrato_id', contrato_id).eq('parte', parte);
+        const have = new Set((docs || []).map(d => d.tipo_doc));
+        if (!have.has('identificacion') || !have.has('selfie')) {
+          return json(400, { error: 'Antes de firmar tenés que subir tu identificación y una selfie.', needsDocs: true }, origin);
+        }
 
         const buf = Buffer.from(m[2], 'base64');
         const ext = m[1].split('/')[1] === 'jpeg' ? 'jpg' : m[1].split('/')[1];
-        const path = `firmas/contrato-${contrato_id}/${Date.now()}.${ext}`;
+        const path = `firmas/contrato-${contrato_id}/${parte}-${Date.now()}.${ext}`;
         const { error: upErr } = await sb.storage.from('contratos').upload(path, buf, { contentType: m[1], upsert: true });
         if (upErr) throw upErr;
         const { data: pub } = sb.storage.from('contratos').getPublicUrl(path);
+
+        // Hash del documento firmado (congela el contenido para auditoría).
+        const crypto = require('crypto');
+        const contenidoHash = crypto.createHash('sha256').update(String(con.contenido_html || '')).digest('hex');
+        const ua = (event.headers || {})['user-agent'] || '';
+        const nowIso = new Date().toISOString();
+
+        // ¿Ya firmó la agencia? Si sí, este es el segundo lado → bloquear.
+        const { data: full } = await sb.from('contratos').select('firma_agencia_url').eq('id', contrato_id).maybeSingle();
+        const ambasFirmas = !!(full && full.firma_agencia_url);
 
         const { error: uErr } = await sb.from('contratos').update({
           estado: 'firmado',
           firma_url: pub.publicUrl,
           firmante_nombre: firmante_nombre.trim(),
-          firmado_at: new Date().toISOString(),
+          firmado_at: nowIso,
           firma_ip: clientIp(),
-          updated_at: new Date().toISOString(),
+          firma_user_agent: ua,
+          firma_consentimiento_texto: String(consentimiento).slice(0, 500),
+          contenido_hash: contenidoHash,
+          bloqueado: ambasFirmas ? true : con.bloqueado || false,
+          updated_at: nowIso,
         }).eq('id', contrato_id);
         if (uErr) throw uErr;
+
+        // Bitácora inmutable de auditoría
+        await sb.from('contrato_firma_eventos').insert({
+          contrato_id, lado: parte, evento: 'firmado',
+          firmante_nombre: firmante_nombre.trim(), ip: clientIp(), user_agent: ua,
+          hash: contenidoHash, consentimiento: String(consentimiento).slice(0, 500),
+        }).then(() => {}, () => {});
+
         await regCambio(con.campana_id, null, 'Firmó el contrato');
         return json(200, { ok: true, firma_url: pub.publicUrl }, origin);
+      }
+
+      // ── COMENTAR UN CONTRATO (talento o marca pide cambios) ──
+      case 'contrato-comment': {
+        const { contrato_id, mensaje, autor_nombre } = body;
+        if (!contrato_id) return json(400, { error: 'Falta contrato_id' }, origin);
+        if (!mensaje || !mensaje.trim()) return json(400, { error: 'Escribí tu comentario' }, origin);
+        const scope = await assertContratoScope(contrato_id);
+        if (!scope.ok) return json(403, { error: 'Contrato fuera de alcance' }, origin);
+        const { data, error } = await sb.from('contrato_comentarios').insert({
+          contrato_id,
+          autor_tipo: actorTipo,            // 'talento' | 'marca'
+          autor_nombre: (autor_nombre || autorNombre || '').toString().slice(0, 120),
+          mensaje: mensaje.trim(),
+        }).select().maybeSingle();
+        if (error) throw error;
+        await regCambio(scope.con.campana_id, null, 'Comentó el contrato');
+        return json(200, { ok: true, comentario: data }, origin);
       }
 
       // ── TALENTO: guardar/actualizar una cuenta de pago ──────
@@ -587,6 +717,7 @@ exports.handler = async (event) => {
         const { error } = await sb.from('campana_talentos').update({ invoice_url, factura_tipo: 'subida' }).eq('id', campana_talento_id);
         if (error) throw error;
         await regCambio(scope.ct.campana_id, null, 'Subió su factura (invoice)');
+        await notifyFinanzasInvoice(scope.ct, invoice_url, 'subida', null);
         return json(200, { ok: true }, origin);
       }
 
@@ -605,6 +736,7 @@ exports.handler = async (event) => {
         }).eq('id', campana_talento_id);
         if (error) throw error;
         await regCambio(scope.ct.campana_id, null, 'Generó su factura (invoice)');
+        await notifyFinanzasInvoice(scope.ct, invoice_url, 'generada', factura_datos);
         return json(200, { ok: true }, origin);
       }
 

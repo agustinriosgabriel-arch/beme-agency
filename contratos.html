@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beme — Contratos</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
 <link rel="icon" href="favicon.ico" sizes="32x32">
 <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -405,6 +406,10 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       <p id="subtitle-count">Cargando...</p>
     </div>
     <div class="page-header-actions">
+      <button class="btn btn-ghost" onclick="openEmpresasModal()" title="Empresas con las que facturamos/firmamos (datos fiscales + firmante)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>
+        Empresas
+      </button>
       <button class="btn btn-ghost" onclick="openAdjuntarContrato()" title="Subir un contrato externo (PDF) y vincularlo a una campaña">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
         Adjuntar contrato
@@ -610,6 +615,10 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
           <label class="form-label">Fecha del Contrato</label>
           <input type="date" id="c-fecha" class="form-input">
         </div>
+        <div class="form-group full">
+          <label class="form-label">Empresa que emite/firma (nuestra)</label>
+          <select id="c-empresa" class="form-input" onchange="applyEmpresaToForm()"></select>
+        </div>
 
         <div class="form-section-title">Parte A</div>
         <div class="form-group">
@@ -759,10 +768,24 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
     </div>
     <div class="modal-body" style="padding:16px 26px">
       <div id="preview-sign-banner"></div>
+      <div id="edit-hint" style="display:none;font-size:12px;color:var(--primary);background:rgba(178,0,93,0.08);border:1px solid rgba(178,0,93,0.2);border-radius:8px;padding:8px 12px;margin-bottom:10px">✏️ Modo edición: escribí o borrá directamente sobre el contrato. Tocá "Guardar cambios" cuando termines.</div>
       <div id="preview-content" class="contract-preview"></div>
+      <div id="preview-comments" style="display:none;margin-top:18px;border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-weight:700;margin-bottom:10px">Comentarios del contrato</div>
+        <div id="comments-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <textarea id="comment-input" class="form-input" style="min-height:60px;flex:1" placeholder="Responder o agregar una nota interna..."></textarea>
+          <button class="btn btn-primary" onclick="postInternalComment()">Enviar</button>
+        </div>
+      </div>
     </div>
     <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
       <button class="btn btn-ghost" onclick="closeModal('modal-preview')">Cerrar</button>
+      <button class="btn btn-outline" id="btn-manual-edit" onclick="toggleManualEdit()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Editar manualmente
+      </button>
+      <button class="btn btn-success" id="btn-save-edit" style="display:none" onclick="saveManualEdit()">Guardar cambios</button>
       <button class="btn btn-outline" onclick="openCustomizeModal()">
         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
         Personalizar con IA
@@ -775,6 +798,19 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
         Generar Espejo
       </button>
+      <button class="btn btn-outline" id="btn-mirror-file" style="display:none" onclick="mirrorFromFile()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Crear espejo editable
+      </button>
+      <button class="btn btn-outline" id="btn-firmar-agencia" onclick="openFirmarAgencia()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M3 21h18"/></svg>
+        Firmar como agencia
+      </button>
+      <button class="btn btn-outline" onclick="toggleComments()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Comentarios <span id="comments-badge"></span>
+      </button>
+      <button class="btn btn-outline" id="btn-download-signed" style="display:none" onclick="downloadSignedPdf()">⬇ Descargar firmado</button>
       <button class="btn btn-success" onclick="printContract()">
         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         Imprimir / PDF
@@ -814,6 +850,103 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
 </div>
 
 <!-- ═══════════════════════════════════════════════════
+     MODAL: Empresas de facturación (emisores nuestros)
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-empresas">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <div class="modal-title">Empresas de facturación</div>
+      <button class="modal-close" onclick="closeModal('modal-empresas')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-dim);font-size:13px;margin-bottom:12px">Empresas con las que facturamos y firmamos. La marcada como predeterminada se usa al crear un contrato nuevo.</p>
+      <div id="empresas-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px"></div>
+      <div class="form-section-title" id="empresa-form-title">Nueva empresa</div>
+      <input type="hidden" id="emp-id">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Nombre / Razón Social</label>
+          <input type="text" id="emp-nombre" class="form-input" placeholder="NITZIO MICH SA DE CV">
+        </div>
+        <div class="form-group">
+          <label class="form-label">RFC / Tax ID</label>
+          <input type="text" id="emp-rfc" class="form-input" placeholder="NMI220405CQ6">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="text" id="emp-email" class="form-input" placeholder="facturacion@empresa.com">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Domicilio</label>
+          <input type="text" id="emp-domicilio" class="form-input" placeholder="Hacienda de Carlome 134, Naucalpan, México C.P. 53300">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Firmante (representante legal)</label>
+          <input type="text" id="emp-signatory-nombre" class="form-input" placeholder="Luis Marcelo Vázquez Hurtado">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cargo del firmante</label>
+          <input type="text" id="emp-signatory-cargo" class="form-input" placeholder="Representante Legal">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Predeterminada</label>
+          <select id="emp-default" class="form-input">
+            <option value="no">No</option>
+            <option value="si">Sí</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="resetEmpresaForm()">Limpiar</button>
+      <button class="btn btn-primary" id="emp-save-btn" onclick="saveEmpresa()">Guardar empresa</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL: Firmar como agencia
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-firma-agencia">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Firmar como agencia</div>
+      <button class="modal-close" onclick="closeModal('modal-firma-agencia')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="firmas-guardadas" style="margin-bottom:14px"></div>
+      <div class="form-section-title">O dibujá una firma nueva</div>
+      <div style="border:1px dashed var(--border);border-radius:12px;background:#fff;position:relative;margin-bottom:8px">
+        <canvas id="fa-canvas" style="width:100%;height:150px;display:block;cursor:crosshair;touch-action:none"></canvas>
+        <div id="fa-ph" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#bbb;pointer-events:none;font-size:13px">Firmá acá</div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-ghost" style="padding:5px 10px;font-size:12px" onclick="clearAgencyPad()">Limpiar</button></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Nombre del firmante</label>
+          <input type="text" id="fa-nombre" class="form-input" placeholder="Agustín Ríos">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cargo</label>
+          <input type="text" id="fa-cargo" class="form-input" placeholder="Representante Legal">
+        </div>
+        <div class="form-group full">
+          <label style="font-size:13px;cursor:pointer"><input type="checkbox" id="fa-save"> Guardar esta firma en la biblioteca</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-firma-agencia')">Cancelar</button>
+      <button class="btn btn-primary" id="fa-confirm-btn" onclick="confirmFirmaAgencia()">Firmar contrato</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
      MODAL: Confirm Delete
 ════════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-confirm-delete">
@@ -842,12 +975,15 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
 const SUPABASE_URL = 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const BEME_DATA = {
-  nombre: 'BEME AGENCY',
-  rfc: '',
-  domicilio: '',
-  email: 'contacto@bemeagency.com'
-};
+// Empresas de facturación (emisores nuestros). Reemplaza el viejo BEME_DATA
+// hardcodeado: ahora se cargan de la tabla empresas_facturacion y se elige
+// cuál emite/firma por contrato. BEME_FALLBACK es el respaldo si no hay ninguna.
+let empresas = [];
+let firmasAgencia = [];   // firmas guardadas del equipo (tabla firmas_agencia)
+const BEME_FALLBACK = { id: null, nombre: 'BEME AGENCY', rfc: '', domicilio: '', email: 'contacto@bemeagency.com', signatory_nombre: '', signatory_cargo: '' };
+function empresaById(id){ return empresas.find(e => e.id === id) || null; }
+function defaultEmpresa(){ return empresas.find(e => e.es_default && e.activo !== false) || empresas.find(e => e.activo !== false) || empresas[0] || null; }
+function empresaData(id){ return (id ? empresaById(id) : null) || defaultEmpresa() || BEME_FALLBACK; }
 
 // ── State ──────────────────────────────────────────────
 let currentUser = null;
@@ -962,6 +1098,14 @@ async function loadData() {
   const {data: cData, error: cErr} = await sb.from('contratos').select('*').order('created_at', {ascending:false}).limit(100);
   if (cErr) throw cErr;
   contratos = cData || [];
+
+  // Load empresas de facturación (emisores nuestros)
+  const {data: empData} = await sb.from('empresas_facturacion').select('*').order('es_default', {ascending:false}).order('nombre');
+  empresas = empData || [];
+
+  // Load firmas guardadas del equipo (para firmar como agencia)
+  const {data: faData} = await sb.from('firmas_agencia').select('*').order('es_default', {ascending:false}).order('created_at');
+  firmasAgencia = faData || [];
 
   // Load campanas with marca (excluye papelera)
   const {data: campData} = await sb.from('campanas').select('*,marcas(id,nombre,logo_url)').is('deleted_at', null).order('created_at', {ascending:false}).limit(100);
@@ -1160,13 +1304,15 @@ async function saveAdjunto() {
     const { data:{ publicUrl } } = sb.storage.from('contratos').getPublicUrl(path);
 
     const nombreCard = (tipo === 'talento' ? (talentName || parte) : (parte || marcaNombre)) || 'Contrato externo';
+    const emp = empresaData(null);
     const payload = {
       campana_id: campId,
       campana_talento_id: ctId,
       numero_contrato: ct?.identificador || '',
       tipo, idioma: 'es', estado,
-      parte_a_nombre: tipo === 'marca' ? (parte || marcaNombre) : (BEME_DATA.nombre || 'BEME AGENCY'),
-      parte_b_nombre: tipo === 'talento' ? (talentName || parte) : (BEME_DATA.nombre || 'BEME AGENCY'),
+      empresa_id: emp.id,
+      parte_a_nombre: tipo === 'marca' ? (parte || marcaNombre) : emp.nombre,
+      parte_b_nombre: tipo === 'talento' ? (talentName || parte) : emp.nombre,
       influencer_nombre: nombreCard,
       marca_producto: marcaNombre,
       archivo_url: publicUrl || path,
@@ -1302,19 +1448,24 @@ function goToContractDetails() {
   // Set date
   document.getElementById('c-fecha').value = new Date().toISOString().split('T')[0];
 
-  // Fill parties based on type
+  // Empresa emisora (nuestra): poblar selector y elegir la default
+  renderEmpresaSelect();
+  const emp = empresaData(null);
+
+  // Fill parties based on type. Nuestro lado (la empresa elegida) es Parte B en
+  // contratos de marca y Parte A en contratos de talento.
   if (tipo === 'marca') {
     document.getElementById('c-pa-nombre').value = marca?.nombre || '';
     document.getElementById('c-pa-rfc').value = '';
     document.getElementById('c-pa-domicilio').value = '';
-    document.getElementById('c-pb-nombre').value = BEME_DATA.nombre;
-    document.getElementById('c-pb-rfc').value = BEME_DATA.rfc;
-    document.getElementById('c-pb-domicilio').value = BEME_DATA.domicilio;
+    document.getElementById('c-pb-nombre').value = emp.nombre;
+    document.getElementById('c-pb-rfc').value = emp.rfc || '';
+    document.getElementById('c-pb-domicilio').value = emp.domicilio || '';
     document.getElementById('c-monto').value = ct?.fee_marca || 0;
   } else {
-    document.getElementById('c-pa-nombre').value = BEME_DATA.nombre;
-    document.getElementById('c-pa-rfc').value = BEME_DATA.rfc;
-    document.getElementById('c-pa-domicilio').value = BEME_DATA.domicilio;
+    document.getElementById('c-pa-nombre').value = emp.nombre;
+    document.getElementById('c-pa-rfc').value = emp.rfc || '';
+    document.getElementById('c-pa-domicilio').value = emp.domicilio || '';
     document.getElementById('c-pb-nombre').value = talento.nombre || '';
     document.getElementById('c-pb-rfc').value = '';
     document.getElementById('c-pb-domicilio').value = '';
@@ -1349,6 +1500,140 @@ function goToContractDetails() {
   openModal('modal-contract-details');
 }
 
+// Pobla el <select> de empresas emisoras y selecciona la default.
+function renderEmpresaSelect() {
+  const sel = document.getElementById('c-empresa');
+  if (!sel) return;
+  const def = defaultEmpresa();
+  if (!empresas.length) {
+    sel.innerHTML = `<option value="">BEME AGENCY (configurá empresas en "Empresas")</option>`;
+    return;
+  }
+  sel.innerHTML = empresas.filter(e => e.activo !== false).map(e =>
+    `<option value="${e.id}"${def && e.id===def.id?' selected':''}>${escHtml(e.nombre)}${e.rfc?` — ${escHtml(e.rfc)}`:''}</option>`
+  ).join('');
+}
+
+// Al cambiar la empresa, rellena los campos de NUESTRO lado (parte A para
+// contratos de talento, parte B para los de marca).
+function applyEmpresaToForm() {
+  const id = parseInt(document.getElementById('c-empresa')?.value) || null;
+  const emp = empresaData(id);
+  const tipo = document.getElementById('c-tipo').value;
+  if (tipo === 'marca') {
+    document.getElementById('c-pb-nombre').value = emp.nombre;
+    document.getElementById('c-pb-rfc').value = emp.rfc || '';
+    document.getElementById('c-pb-domicilio').value = emp.domicilio || '';
+  } else {
+    document.getElementById('c-pa-nombre').value = emp.nombre;
+    document.getElementById('c-pa-rfc').value = emp.rfc || '';
+    document.getElementById('c-pa-domicilio').value = emp.domicilio || '';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// EMPRESAS DE FACTURACIÓN (CRUD)
+// ══════════════════════════════════════════════════════════
+function openEmpresasModal() {
+  resetEmpresaForm();
+  renderEmpresasList();
+  openModal('modal-empresas');
+}
+function renderEmpresasList() {
+  const cont = document.getElementById('empresas-list');
+  if (!empresas.length) {
+    cont.innerHTML = `<div style="color:var(--text-dim);font-size:13px;padding:10px;border:1px dashed var(--border);border-radius:10px">Todavía no hay empresas. Agregá la primera abajo.</div>`;
+    return;
+  }
+  cont.innerHTML = empresas.map(e => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface2)">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700">${escHtml(e.nombre)} ${e.es_default?'<span style="font-size:10px;color:var(--primary);font-weight:800">★ default</span>':''}${e.activo===false?' <span style="font-size:10px;color:var(--text-dim)">(inactiva)</span>':''}</div>
+        <div style="font-size:12px;color:var(--text-dim)">${escHtml(e.rfc||'sin RFC')}${e.signatory_nombre?` · firma: ${escHtml(e.signatory_nombre)}`:''}</div>
+      </div>
+      ${e.es_default?'':`<button class="btn btn-ghost" style="padding:5px 9px;font-size:11px" onclick="setEmpresaDefault(${e.id})">Hacer default</button>`}
+      <button class="btn btn-ghost" style="padding:5px 9px;font-size:11px" onclick="editEmpresa(${e.id})">Editar</button>
+      <button class="btn btn-danger" style="padding:5px 9px;font-size:11px" onclick="deleteEmpresa(${e.id})">Eliminar</button>
+    </div>`).join('');
+}
+function resetEmpresaForm() {
+  document.getElementById('empresa-form-title').textContent = 'Nueva empresa';
+  ['emp-id','emp-nombre','emp-rfc','emp-email','emp-domicilio','emp-signatory-nombre','emp-signatory-cargo'].forEach(id => { const el = document.getElementById(id); if (el) el.value=''; });
+  document.getElementById('emp-default').value = empresas.length ? 'no' : 'si';
+}
+function editEmpresa(id) {
+  const e = empresaById(id); if (!e) return;
+  document.getElementById('empresa-form-title').textContent = 'Editar empresa';
+  document.getElementById('emp-id').value = e.id;
+  document.getElementById('emp-nombre').value = e.nombre || '';
+  document.getElementById('emp-rfc').value = e.rfc || '';
+  document.getElementById('emp-email').value = e.email || '';
+  document.getElementById('emp-domicilio').value = e.domicilio || '';
+  document.getElementById('emp-signatory-nombre').value = e.signatory_nombre || '';
+  document.getElementById('emp-signatory-cargo').value = e.signatory_cargo || '';
+  document.getElementById('emp-default').value = e.es_default ? 'si' : 'no';
+}
+async function saveEmpresa() {
+  const id = parseInt(document.getElementById('emp-id').value) || null;
+  const nombre = document.getElementById('emp-nombre').value.trim();
+  if (!nombre) { showToast('Falta el nombre de la empresa', 'error'); return; }
+  const esDefault = document.getElementById('emp-default').value === 'si';
+  const row = {
+    nombre,
+    rfc: document.getElementById('emp-rfc').value.trim(),
+    email: document.getElementById('emp-email').value.trim(),
+    domicilio: document.getElementById('emp-domicilio').value.trim(),
+    signatory_nombre: document.getElementById('emp-signatory-nombre').value.trim(),
+    signatory_cargo: document.getElementById('emp-signatory-cargo').value.trim(),
+    es_default: esDefault,
+  };
+  const btn = document.getElementById('emp-save-btn');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    // Si se marca como default, desmarcar las demás
+    if (esDefault) await sb.from('empresas_facturacion').update({es_default:false}).neq('id', id || -1);
+    if (id) {
+      const {error} = await sb.from('empresas_facturacion').update(row).eq('id', id);
+      if (error) throw error;
+    } else {
+      // Primera empresa → default automático
+      if (!empresas.length) row.es_default = true;
+      const {error} = await sb.from('empresas_facturacion').insert(row);
+      if (error) throw error;
+    }
+    await loadData();
+    renderEmpresasList();
+    resetEmpresaForm();
+    renderEmpresaSelect();
+    showToast('Empresa guardada', 'success');
+  } catch(e) {
+    showToast('Error: ' + (e.message || e), 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar empresa';
+  }
+}
+async function setEmpresaDefault(id) {
+  try {
+    await sb.from('empresas_facturacion').update({es_default:false}).neq('id', -1);
+    await sb.from('empresas_facturacion').update({es_default:true}).eq('id', id);
+    await loadData();
+    renderEmpresasList();
+    renderEmpresaSelect();
+    showToast('Empresa predeterminada actualizada', 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+async function deleteEmpresa(id) {
+  if (!confirm('¿Eliminar esta empresa? Los contratos ya creados conservan sus datos.')) return;
+  try {
+    const {error} = await sb.from('empresas_facturacion').delete().eq('id', id);
+    if (error) throw error;
+    await loadData();
+    renderEmpresasList();
+    resetEmpresaForm();
+    showToast('Empresa eliminada', 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
 function toggleDerechos() {
   const show = document.getElementById('c-derechos').value === 'si';
   document.getElementById('derechos-dias-group').style.display = show ? '' : 'none';
@@ -1360,6 +1645,7 @@ function toggleDerechos() {
 // SAVE DRAFT
 // ══════════════════════════════════════════════════════════
 function collectFormData() {
+  const empId = parseInt(document.getElementById('c-empresa')?.value) || null;
   return {
     campana_id: selectedCampaignId,
     campana_talento_id: selectedTalentCT?.id || null,
@@ -1367,6 +1653,7 @@ function collectFormData() {
     tipo: document.getElementById('c-tipo').value,
     idioma: document.getElementById('c-idioma').value,
     estado: 'borrador',
+    empresa_id: empId,
     ciudad_contrato: document.getElementById('c-ciudad').value.trim(),
     fecha_contrato: document.getElementById('c-fecha').value || null,
     parte_a_nombre: document.getElementById('c-pa-nombre').value.trim(),
@@ -1428,10 +1715,19 @@ async function saveContractDraft() {
 // GENERATE CONTRACT WITH AI
 // ══════════════════════════════════════════════════════════
 async function callAI(action, data, idioma) {
+  // Inyecta el nombre/firmante de la empresa emisora (no son columnas del
+  // contrato) para que la plantilla los renderice. Deriva de data.empresa_id.
+  const emp = empresaData(data.empresa_id);
+  const dataWithEmpresa = {
+    ...data,
+    agencia_nombre: emp.nombre,
+    signatory_nombre: emp.signatory_nombre || '',
+    signatory_cargo: emp.signatory_cargo || '',
+  };
   const res = await fetch('/.netlify/functions/contract-agent', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ action, data, idioma }),
+    body: JSON.stringify({ action, data: dataWithEmpresa, idioma }),
   });
   const result = await res.json();
   if (!res.ok) throw new Error(result.error || 'Error del servidor');
@@ -1496,20 +1792,11 @@ function openPreview(id) {
   const c = contratos.find(x => x.id === id);
   if (!c) return;
   previewContractId = id;
+  _manualEditing = false;
   document.getElementById('preview-title').textContent = `Contrato #${c.numero_contrato} — ${c.influencer_nombre||c.parte_b_nombre}`;
   document.getElementById('preview-estado').value = c.estado;
 
-  const banner = document.getElementById('preview-sign-banner');
-  if (banner) {
-    if (c.estado === 'firmado' && (c.firma_url || c.firmado_at || c.firmante_nombre)) {
-      const fecha = c.firmado_at ? new Date(c.firmado_at).toLocaleString('es-ES',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-      banner.innerHTML = `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 14px;margin-bottom:14px;border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.08);border-radius:10px">
-        ${c.firma_url?`<img src="${escHtml(c.firma_url)}" alt="firma" style="height:60px;max-width:200px;object-fit:contain;background:#fff;border:1px solid var(--border);border-radius:8px;padding:5px">`:''}
-        <div style="font-size:13px;color:var(--text)"><strong style="color:#16a34a">✓ Firmado por el talento</strong><br>
-          <span style="color:var(--text-muted)">${escHtml(c.firmante_nombre||'')}${fecha?` · ${fecha}`:''}</span></div>
-      </div>`;
-    } else { banner.innerHTML = ''; }
-  }
+  renderSignBanner(c);
 
   if (c.archivo_url) {
     const isPdf = /\.pdf(\?|$)/i.test(c.archivo_url) || (c.archivo_nombre||'').toLowerCase().endsWith('.pdf');
@@ -1530,7 +1817,380 @@ function openPreview(id) {
       <button class="btn btn-primary" onclick="regenerateContract(${id})" style="margin-top:12px">Generar con IA</button>
     </div>`;
   }
+  refreshPreviewButtons(c);
+  loadComments(id);
   openModal('modal-preview');
+}
+
+// ── Banner de firmas (agencia + contraparte) ──────────────
+function renderSignBanner(c) {
+  const banner = document.getElementById('preview-sign-banner');
+  if (!banner) return;
+  const cards = [];
+  if (c.firma_agencia_url || c.firmado_agencia_at) {
+    const f = c.firmado_agencia_at ? new Date(c.firmado_agencia_at).toLocaleString('es-ES',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+    cards.push(`<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:220px">
+      ${c.firma_agencia_url?`<img src="${escHtml(c.firma_agencia_url)}" alt="firma agencia" style="height:50px;max-width:160px;object-fit:contain;background:#fff;border:1px solid var(--border);border-radius:8px;padding:4px">`:''}
+      <div style="font-size:12px"><strong style="color:#16a34a">✓ Firmado por la agencia</strong><br><span style="color:var(--text-muted)">${escHtml(c.firma_agencia_nombre||'')}${f?` · ${f}`:''}</span></div></div>`);
+  }
+  if (c.firma_url || c.firmado_at || c.firmante_nombre) {
+    const f = c.firmado_at ? new Date(c.firmado_at).toLocaleString('es-ES',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+    const lado = c.tipo === 'marca' ? 'la marca' : 'el talento';
+    cards.push(`<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:220px">
+      ${c.firma_url?`<img src="${escHtml(c.firma_url)}" alt="firma" style="height:50px;max-width:160px;object-fit:contain;background:#fff;border:1px solid var(--border);border-radius:8px;padding:4px">`:''}
+      <div style="font-size:12px"><strong style="color:#16a34a">✓ Firmado por ${lado}</strong><br><span style="color:var(--text-muted)">${escHtml(c.firmante_nombre||'')}${f?` · ${f}`:''}</span></div></div>`);
+  }
+  banner.innerHTML = cards.length
+    ? `<div style="display:flex;gap:14px;flex-wrap:wrap;padding:12px 14px;margin-bottom:14px;border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.08);border-radius:10px">${cards.join('')}</div>`
+    : '';
+}
+
+// ── Visibilidad de botones del preview según estado ───────
+function refreshPreviewButtons(c) {
+  const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+  const esExterno = !!(c.archivo_url && !c.contenido_html);
+  show('btn-mirror-file', esExterno);                              // espejo IA sólo para externos
+  show('btn-download-signed', !!c.pdf_firmado_url || !!(c.firma_agencia_url && c.firma_url)); // PDF firmado disponible/generable
+  // Edición/IA bloqueadas si el contrato ya está firmado/bloqueado o es externo
+  const editable = !c.bloqueado && !esExterno;
+  ['btn-manual-edit'].forEach(id => { const el=document.getElementById(id); if (el) { el.disabled = !editable; el.style.opacity = editable?'':'0.5'; } });
+  const fa = document.getElementById('btn-firmar-agencia');
+  if (fa) { const done = !!(c.firma_agencia_url || c.firmado_agencia_at); fa.style.display = done ? 'none' : ''; }
+  // reset modo edición
+  const el = document.getElementById('preview-content');
+  if (el) { el.contentEditable = 'false'; el.style.outline=''; el.style.padding=''; }
+  document.getElementById('edit-hint').style.display='none';
+  document.getElementById('btn-save-edit').style.display='none';
+  const meb = document.getElementById('btn-manual-edit'); if (meb && meb._orig) meb.innerHTML = meb._orig;
+}
+
+// ══════════════════════════════════════════════════════════
+// EDICIÓN MANUAL (contenteditable)
+// ══════════════════════════════════════════════════════════
+let _manualEditing = false;
+function sanitizeContractHtml(html) {
+  return String(html||'').replace(/<script\b[\s\S]*?<\/script\s*>/gi,'').replace(/\son\w+\s*=\s*(['"])[\s\S]*?\1/gi,'');
+}
+function toggleManualEdit() {
+  const c = contratos.find(x => x.id === previewContractId);
+  if (!c) return;
+  if (c.bloqueado) { showToast('El contrato está firmado y bloqueado: no se puede editar.', 'error'); return; }
+  if (c.archivo_url && !c.contenido_html) { showToast('Es un contrato externo (PDF). Creá un espejo editable para editarlo.', 'info'); return; }
+  const el = document.getElementById('preview-content');
+  const btn = document.getElementById('btn-manual-edit');
+  if (!btn._orig) btn._orig = btn.innerHTML;
+  _manualEditing = !_manualEditing;
+  el.contentEditable = _manualEditing ? 'true' : 'false';
+  el.style.outline = _manualEditing ? '2px dashed var(--primary)' : '';
+  el.style.padding = _manualEditing ? '10px' : '';
+  document.getElementById('edit-hint').style.display = _manualEditing ? '' : 'none';
+  document.getElementById('btn-save-edit').style.display = _manualEditing ? '' : 'none';
+  btn.innerHTML = _manualEditing ? 'Cancelar edición' : btn._orig;
+  if (_manualEditing) { el.focus(); }
+  else { el.innerHTML = c.contenido_html || el.innerHTML; }  // cancelar → restaurar
+}
+async function saveManualEdit() {
+  const c = contratos.find(x => x.id === previewContractId);
+  if (!c) return;
+  const el = document.getElementById('preview-content');
+  const html = sanitizeContractHtml(el.innerHTML);
+  try {
+    await sb.from('contratos').update({ contenido_html: html, updated_at: new Date().toISOString() }).eq('id', c.id);
+    c.contenido_html = html;
+    _manualEditing = false;
+    el.contentEditable = 'false'; el.style.outline=''; el.style.padding='';
+    document.getElementById('edit-hint').style.display='none';
+    document.getElementById('btn-save-edit').style.display='none';
+    const btn = document.getElementById('btn-manual-edit'); btn.innerHTML = btn._orig || 'Editar manualmente';
+    showToast('Cambios guardados', 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════
+// COMENTARIOS DEL CONTRATO
+// ══════════════════════════════════════════════════════════
+let _comments = [];
+function toggleComments() {
+  const p = document.getElementById('preview-comments');
+  p.style.display = p.style.display === 'none' ? '' : 'none';
+}
+async function loadComments(contratoId) {
+  _comments = [];
+  try {
+    const { data } = await sb.from('contrato_comentarios').select('*').eq('contrato_id', contratoId).order('created_at');
+    _comments = data || [];
+  } catch(e) { /* tabla puede no existir aún */ }
+  renderComments();
+}
+function renderComments() {
+  const list = document.getElementById('comments-list');
+  const badge = document.getElementById('comments-badge');
+  const pend = _comments.filter(c => c.autor_tipo !== 'interno' && !c.resuelto).length;
+  if (badge) badge.textContent = pend ? `(${pend})` : '';
+  if (!list) return;
+  if (!_comments.length) { list.innerHTML = `<div style="color:var(--text-dim);font-size:12px">Sin comentarios todavía.</div>`; return; }
+  const label = { talento:'Talento', marca:'Marca', interno:'Equipo' };
+  list.innerHTML = _comments.map(c => {
+    const mine = c.autor_tipo === 'interno';
+    const fecha = c.created_at ? new Date(c.created_at).toLocaleString('es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+    return `<div style="border:1px solid var(--border);border-radius:10px;padding:8px 12px;background:${mine?'rgba(178,0,93,0.06)':'var(--surface2)'}">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);margin-bottom:3px">
+        <span style="font-weight:700;color:${mine?'var(--primary)':'var(--text)'}">${escHtml(label[c.autor_tipo]||c.autor_tipo)}${c.autor_nombre?` · ${escHtml(c.autor_nombre)}`:''}</span><span>${fecha}</span></div>
+      <div style="font-size:13px;white-space:pre-wrap">${escHtml(c.mensaje)}</div>
+      ${c.autor_tipo!=='interno' ? `<div style="margin-top:4px"><label style="font-size:11px;color:var(--text-dim);cursor:pointer"><input type="checkbox" ${c.resuelto?'checked':''} onchange="toggleCommentResuelto(${c.id}, this.checked)"> resuelto</label></div>` : ''}
+    </div>`;
+  }).join('');
+}
+async function postInternalComment() {
+  const ta = document.getElementById('comment-input');
+  const msg = (ta.value || '').trim();
+  if (!msg) { showToast('Escribí un comentario', 'error'); return; }
+  try {
+    const { data, error } = await sb.from('contrato_comentarios').insert({
+      contrato_id: previewContractId, autor_tipo: 'interno',
+      autor_nombre: currentProfile?.full_name || currentProfile?.email || 'Equipo', mensaje: msg,
+    }).select().single();
+    if (error) throw error;
+    _comments.push(data);
+    ta.value = '';
+    renderComments();
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+async function toggleCommentResuelto(id, val) {
+  try {
+    await sb.from('contrato_comentarios').update({ resuelto: val }).eq('id', id);
+    const c = _comments.find(x => x.id === id); if (c) c.resuelto = val;
+    renderComments();
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════
+// FIRMA COMO AGENCIA (nuestro lado) + auditoría
+// ══════════════════════════════════════════════════════════
+let _faPad = null;
+async function sha256Hex(str) {
+  try {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str||''));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  } catch(e) { return ''; }
+}
+function openFirmarAgencia() {
+  const c = contratos.find(x => x.id === previewContractId);
+  if (!c) return;
+  if (c.firma_agencia_url || c.firmado_agencia_at) { showToast('La agencia ya firmó este contrato', 'info'); return; }
+  renderSavedFirmas();
+  document.getElementById('fa-nombre').value = '';
+  document.getElementById('fa-cargo').value = '';
+  document.getElementById('fa-save').checked = false;
+  openModal('modal-firma-agencia');
+  setTimeout(initAgencyPad, 80);
+}
+function renderSavedFirmas() {
+  const cont = document.getElementById('firmas-guardadas');
+  if (!firmasAgencia.length) { cont.innerHTML = `<div style="color:var(--text-dim);font-size:12px">No hay firmas guardadas. Dibujá una abajo.</div>`; return; }
+  cont.innerHTML = `<div class="form-section-title" style="margin-top:0">Usar una firma guardada</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">${firmasAgencia.map(f => `
+      <button onclick="pickSavedFirma(${f.id})" style="border:1px solid var(--border);border-radius:10px;background:#fff;padding:6px 8px;cursor:pointer;text-align:center">
+        <img src="${escHtml(f.firma_url)}" style="height:40px;max-width:130px;object-fit:contain;display:block;margin:0 auto 4px">
+        <span style="font-size:11px;color:#333">${escHtml(f.nombre)}${f.es_default?' ★':''}</span>
+      </button>`).join('')}</div>`;
+}
+async function pickSavedFirma(id) {
+  const f = firmasAgencia.find(x => x.id === id); if (!f) return;
+  await applyAgencySignature(f.firma_url, f.nombre);
+}
+function initAgencyPad() {
+  const canvas = document.getElementById('fa-canvas'); if (!canvas) return;
+  const wrap = canvas.parentElement;
+  const ratio = window.devicePixelRatio || 1;
+  const w = wrap.clientWidth, h = 150;
+  canvas.width = w*ratio; canvas.height = h*ratio;
+  const ctx = canvas.getContext('2d'); ctx.scale(ratio,ratio);
+  ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#111';
+  let drawing=false, last=null, dirty=false;
+  const ph = document.getElementById('fa-ph');
+  function pos(e){ const r=canvas.getBoundingClientRect(); const p=e.touches?e.touches[0]:e; return {x:p.clientX-r.left, y:p.clientY-r.top}; }
+  function start(e){ e.preventDefault(); drawing=true; last=pos(e); if(ph)ph.style.display='none'; }
+  function move(e){ if(!drawing)return; e.preventDefault(); const p=pos(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; dirty=true; }
+  function end(){ drawing=false; }
+  canvas.addEventListener('mousedown',start); canvas.addEventListener('mousemove',move); window.addEventListener('mouseup',end);
+  canvas.addEventListener('touchstart',start,{passive:false}); canvas.addEventListener('touchmove',move,{passive:false}); canvas.addEventListener('touchend',end);
+  _faPad = { canvas, isDirty:()=>dirty, clear:()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); dirty=false; if(ph)ph.style.display='flex'; } };
+}
+function clearAgencyPad(){ if(_faPad)_faPad.clear(); }
+async function uploadDataUrl(dataUrl, path) {
+  const blob = await (await fetch(dataUrl)).blob();
+  const { error } = await sb.storage.from('contratos').upload(path, blob, { contentType: 'image/png', upsert: true });
+  if (error) throw error;
+  const { data:{ publicUrl } } = sb.storage.from('contratos').getPublicUrl(path);
+  return publicUrl || path;
+}
+async function confirmFirmaAgencia() {
+  const c = contratos.find(x => x.id === previewContractId);
+  if (!c) return;
+  const nombre = document.getElementById('fa-nombre').value.trim();
+  if (!nombre) { showToast('Escribí el nombre del firmante', 'error'); return; }
+  if (!_faPad || !_faPad.isDirty()) { showToast('Dibujá la firma o elegí una guardada', 'error'); return; }
+  const cargo = document.getElementById('fa-cargo').value.trim();
+  const btn = document.getElementById('fa-confirm-btn'); btn.disabled = true; btn.textContent = 'Firmando...';
+  try {
+    const dataUrl = _faPad.canvas.toDataURL('image/png');
+    const url = await uploadDataUrl(dataUrl, `firmas-agencia/contrato-${c.id}/${Date.now()}.png`);
+    // Guardar en la biblioteca si se pidió
+    if (document.getElementById('fa-save').checked) {
+      const { data } = await sb.from('firmas_agencia').insert({ nombre, cargo, firma_url: url, empresa_id: c.empresa_id || null }).select().single();
+      if (data) firmasAgencia.push(data);
+    }
+    await applyAgencySignature(url, nombre);
+  } catch(e) {
+    showToast('Error: '+e.message, 'error');
+    btn.disabled = false; btn.textContent = 'Firmar contrato';
+  }
+}
+async function applyAgencySignature(url, nombre) {
+  const c = contratos.find(x => x.id === previewContractId);
+  if (!c) return;
+  try {
+    const upd = { firma_agencia_url: url, firma_agencia_nombre: nombre, firmado_agencia_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    await sb.from('contratos').update(upd).eq('id', c.id);
+    Object.assign(c, upd);
+    // Auditoría: registrar evento de firma de la agencia
+    const hash = await sha256Hex(c.contenido_html || '');
+    await sb.from('contrato_firma_eventos').insert({
+      contrato_id: c.id, lado: 'agencia', evento: 'firmado',
+      firmante_nombre: nombre, user_agent: navigator.userAgent, hash,
+    }).then(()=>{}, ()=>{});
+    closeModal('modal-firma-agencia');
+    renderSignBanner(c);
+    refreshPreviewButtons(c);
+    await maybeFinalizeSigned(c);
+    renderContratos(); renderStats();
+    showToast('Firmado como agencia ✓', 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+// Cuando ambas partes firmaron → bloquear edición y generar el PDF firmado.
+async function maybeFinalizeSigned(c) {
+  const bothSigned = !!(c.firma_agencia_url) && !!(c.firma_url);
+  if (!bothSigned || c.bloqueado) return;
+  try {
+    const hash = await sha256Hex(c.contenido_html || '');
+    await sb.from('contratos').update({ bloqueado: true, contenido_hash: hash, estado: 'firmado' }).eq('id', c.id);
+    c.bloqueado = true; c.contenido_hash = hash; c.estado = 'firmado';
+    document.getElementById('preview-estado').value = 'firmado';
+    await exportSignedPDF(c.id);
+  } catch(e) { console.warn('finalize signed:', e.message); }
+}
+
+// ══════════════════════════════════════════════════════════
+// PDF FIRMADO (incrusta ambas firmas en el contenido_html)
+// ══════════════════════════════════════════════════════════
+async function imgToDataUrl(url) {
+  try {
+    const blob = await (await fetch(url, { mode: 'cors' })).blob();
+    return await new Promise(res => { const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsDataURL(blob); });
+  } catch(e) { return url; }
+}
+function injectSignatures(rootEl, c, agenciaData, contraData) {
+  const aImg = rootEl.querySelector('[data-firma-img="agencia"]');
+  const cImg = rootEl.querySelector('[data-firma-img="contraparte"]');
+  if (aImg && agenciaData) aImg.innerHTML = `<img src="${agenciaData}" style="height:60px;max-width:200px;object-fit:contain">`;
+  if (cImg && contraData) cImg.innerHTML = `<img src="${contraData}" style="height:60px;max-width:200px;object-fit:contain">`;
+  if (!aImg && !cImg) {  // plantilla vieja/externa sin anclas → bloque al final
+    const block = document.createElement('div');
+    block.style.cssText = 'margin-top:48px;display:flex;justify-content:space-between;gap:40px';
+    block.innerHTML = `<div style="text-align:center;flex:1">${agenciaData?`<img src="${agenciaData}" style="height:60px">`:''}<div style="border-top:1px solid #000;margin-top:8px;padding-top:4px">${escHtml(c.firma_agencia_nombre||'')}<br><span style="font-size:0.85em">${escHtml(c.parte_a_nombre||'Agencia')}</span></div></div>
+      <div style="text-align:center;flex:1">${contraData?`<img src="${contraData}" style="height:60px">`:''}<div style="border-top:1px solid #000;margin-top:8px;padding-top:4px">${escHtml(c.firmante_nombre||'')}<br><span style="font-size:0.85em">${c.tipo==='marca'?'Marca':'Talento'}</span></div></div>`;
+    rootEl.appendChild(block);
+  }
+}
+async function exportSignedPDF(contractId) {
+  const c = contratos.find(x => x.id === contractId);
+  if (!c || !c.contenido_html) return null;
+  if (typeof html2pdf === 'undefined') { showToast('Librería PDF no disponible', 'error'); return null; }
+  try {
+    const agenciaData = c.firma_agencia_url ? await imgToDataUrl(c.firma_agencia_url) : '';
+    const contraData = c.firma_url ? await imgToDataUrl(c.firma_url) : '';
+    const root = document.createElement('div');
+    root.style.cssText = "font-family:'Times New Roman',serif;color:#111;background:#fff;padding:36px;width:794px;font-size:13px;line-height:1.55";
+    root.innerHTML = sanitizeContractHtml(c.contenido_html);
+    injectSignatures(root, c, agenciaData, contraData);
+    const hash = c.contenido_hash || await sha256Hex(c.contenido_html || '');
+    const foot = document.createElement('div');
+    foot.style.cssText = 'margin-top:24px;border-top:1px solid #ddd;padding-top:8px;font-size:9px;color:#888';
+    foot.textContent = `Documento firmado electrónicamente · Contrato ${c.numero_contrato||''} · Hash SHA-256: ${hash}`;
+    root.appendChild(foot);
+    const opt = { margin:[10,10,12,10], filename:`contrato-${c.numero_contrato||c.id}.pdf`, image:{type:'jpeg',quality:0.96}, html2canvas:{scale:2,useCORS:true,backgroundColor:'#fff'}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}, pagebreak:{mode:['css','legacy']} };
+    const blob = await html2pdf().set(opt).from(root).outputPdf('blob');
+    const path = `pdf-firmado/contrato-${c.id}.pdf`;
+    const { error } = await sb.storage.from('contratos').upload(path, blob, { contentType:'application/pdf', upsert:true });
+    if (error) throw error;
+    const { data:{ publicUrl } } = sb.storage.from('contratos').getPublicUrl(path);
+    await sb.from('contratos').update({ pdf_firmado_url: publicUrl }).eq('id', c.id);
+    c.pdf_firmado_url = publicUrl;
+    refreshPreviewButtons(c);
+    return publicUrl;
+  } catch(e) { console.warn('exportSignedPDF:', e.message); showToast('No se pudo generar el PDF: '+e.message, 'error'); return null; }
+}
+async function downloadSignedPdf() {
+  const c = contratos.find(x => x.id === previewContractId); if (!c) return;
+  let url = c.pdf_firmado_url;
+  if (!url) {
+    if (!(c.firma_agencia_url && c.firma_url)) { showToast('Faltan firmas para generar el PDF', 'error'); return; }
+    showToast('Generando PDF firmado...', 'info');
+    url = await exportSignedPDF(c.id);
+  }
+  if (url) window.open(url, '_blank');
+}
+
+// ══════════════════════════════════════════════════════════
+// ESPEJO DESDE ARCHIVO EXTERNO (IA visión sobre el PDF adjunto)
+// ══════════════════════════════════════════════════════════
+async function fileToBase64(url) {
+  const blob = await (await fetch(url)).blob();
+  const dataUrl = await new Promise(res => { const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsDataURL(blob); });
+  return { base64: String(dataUrl).split(',')[1] || '', media_type: blob.type || 'application/pdf' };
+}
+async function mirrorFromFile() {
+  const c = contratos.find(x => x.id === previewContractId); if (!c) return;
+  if (!c.archivo_url) { showToast('Este contrato no tiene archivo adjunto', 'error'); return; }
+  const prevTitle = document.getElementById('preview-title').textContent;
+  document.getElementById('preview-title').textContent = 'Espejando el contrato adjunto con IA...';
+  document.getElementById('preview-content').innerHTML = '<div class="ai-loader"><div class="spinner"></div><span>Leyendo y reconstruyendo el contrato adjunto con las condiciones exactas… esto puede tardar unos segundos.</span></div>';
+  try {
+    const { base64, media_type } = await fileToBase64(c.archivo_url);
+    const emp = empresaData(c.empresa_id);
+    const campana = campanas.find(x => x.id === c.campana_id);
+    const marca = marcas[campana?.marca_id];
+    const counterparty = c.tipo === 'marca' ? (marca?.nombre || c.parte_a_nombre || 'Marca') : (c.influencer_nombre || c.parte_b_nombre || 'Talento');
+    const data = { empresa_id: c.empresa_id, file_base64: base64, media_type, parte_a_nombre: emp.nombre, parte_b_nombre: counterparty };
+    const html = await callAI('mirror-from-file', data, c.idioma || 'es');
+    const baseId = (c.numero_contrato || '').replace(/-(M|T|ESP)$/, '');
+    const mirror = {
+      campana_id: c.campana_id, campana_talento_id: c.campana_talento_id,
+      tipo: c.tipo, idioma: c.idioma || 'es', estado: 'borrador', empresa_id: c.empresa_id,
+      numero_contrato: baseId ? `${baseId}-ESP` : '',
+      parte_a_nombre: c.tipo === 'marca' ? counterparty : emp.nombre,
+      parte_a_rfc: c.tipo === 'marca' ? '' : (emp.rfc || ''),
+      parte_a_domicilio: c.tipo === 'marca' ? '' : (emp.domicilio || ''),
+      parte_b_nombre: c.tipo === 'marca' ? emp.nombre : counterparty,
+      parte_b_rfc: c.tipo === 'marca' ? (emp.rfc || '') : '',
+      parte_b_domicilio: c.tipo === 'marca' ? (emp.domicilio || '') : '',
+      influencer_nombre: c.influencer_nombre || (c.tipo !== 'marca' ? counterparty : ''),
+      marca_producto: c.marca_producto || (c.tipo === 'marca' ? counterparty : ''),
+      contenido_html: html, es_externo: false, mirror_origen_id: c.id,
+      fecha_contrato: new Date().toISOString().slice(0, 10), created_by: currentUser.id,
+    };
+    const { data: row, error } = await sb.from('contratos').insert(mirror).select().single();
+    if (error) throw error;
+    contratos.unshift(row);
+    renderContratos(); renderStats();
+    openPreview(row.id);
+    showToast('Espejo editable creado a partir del adjunto ✓', 'success');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+    document.getElementById('preview-title').textContent = prevTitle;
+    openPreview(c.id);
+  }
 }
 
 async function regenerateContract(id) {
@@ -1653,10 +2313,11 @@ async function generateMirrorContract() {
   mirrorData.created_at = new Date().toISOString();
   mirrorData.updated_at = new Date().toISOString();
 
+  const emp = empresaData(c.empresa_id);
   if (mirrorTipo === 'talento') {
-    mirrorData.parte_a_nombre = BEME_DATA.nombre;
-    mirrorData.parte_a_rfc = BEME_DATA.rfc;
-    mirrorData.parte_a_domicilio = BEME_DATA.domicilio;
+    mirrorData.parte_a_nombre = emp.nombre;
+    mirrorData.parte_a_rfc = emp.rfc || '';
+    mirrorData.parte_a_domicilio = emp.domicilio || '';
     mirrorData.parte_b_nombre = c.influencer_nombre || '';
     mirrorData.parte_b_rfc = '';
     mirrorData.parte_b_domicilio = '';
@@ -1667,9 +2328,9 @@ async function generateMirrorContract() {
     mirrorData.parte_a_nombre = marca?.nombre || '';
     mirrorData.parte_a_rfc = '';
     mirrorData.parte_a_domicilio = '';
-    mirrorData.parte_b_nombre = BEME_DATA.nombre;
-    mirrorData.parte_b_rfc = BEME_DATA.rfc;
-    mirrorData.parte_b_domicilio = BEME_DATA.domicilio;
+    mirrorData.parte_b_nombre = emp.nombre;
+    mirrorData.parte_b_rfc = emp.rfc || '';
+    mirrorData.parte_b_domicilio = emp.domicilio || '';
     mirrorData.monto = ct?.fee_marca || 0;
   }
 
