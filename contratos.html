@@ -2150,9 +2150,10 @@ async function exportSignedPDF(contractId) {
     const contraData = c.firma_url ? await imgToDataUrl(c.firma_url) : '';
     root = document.createElement('div');
     // 718px ≈ ancho útil de A4 con márgenes de 10mm → render 1:1 sin achicar.
-    // Adjuntado al DOM (fuera de pantalla) para que html2canvas lo mida bien;
-    // si está "suelto" sale cortado/incompleto.
-    root.style.cssText = "position:fixed;left:-10000px;top:0;width:718px;box-sizing:border-box;background:#fff;color:#111;font-family:'Times New Roman',Georgia,serif;font-size:13px;line-height:1.6";
+    // Posicionado en (0,0) DETRÁS del modal (z-index -1): coordenadas positivas
+    // → html2canvas lo mide y captura bien. (Fuera de pantalla con left negativo
+    // + windowWidth/scrollX hacía que saliera en blanco.)
+    root.style.cssText = "position:absolute;left:0;top:0;z-index:-1;width:718px;box-sizing:border-box;background:#fff;color:#111;font-family:'Times New Roman',Georgia,serif;font-size:13px;line-height:1.6";
     const doc = document.createElement('div');
     doc.innerHTML = sanitizeContractHtml(c.contenido_html);
     injectSignatures(doc, c, agenciaData, contraData);
@@ -2172,7 +2173,7 @@ async function exportSignedPDF(contractId) {
       margin: [10, 10, 12, 10],
       filename: `contrato-${c.numero_contrato || c.id}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#fff', windowWidth: 718, scrollX: 0, scrollY: 0 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#fff' },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
       pagebreak: { mode: ['css', 'legacy'] },
     };
