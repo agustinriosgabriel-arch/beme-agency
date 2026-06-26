@@ -221,12 +221,13 @@ exports.handler = async (event) => {
           const visibleCtIds = safe.map(ct => ct.id);
           let contratos = [];
           if (visibleCtIds.length) {
-            const { data: cons } = await sb
+            const { data: cons, error: consErr } = await sb
               .from('contratos')
-              .select('id,campana_id,campana_talento_id,tipo,idioma,estado,numero_contrato,contenido_html,archivo_url,archivo_nombre,es_externo,firma_url,firmante_nombre,firmado_at,firma_agencia_url,firma_agencia_nombre,firmado_agencia_at,pdf_firmado_url,bloqueado,parte_b_nombre,parte_b_rfc,parte_b_domicilio,datos_contraparte_ok')
+              .select('*')
               .in('campana_talento_id', visibleCtIds)
               .eq('tipo', 'talento')
               .in('estado', ['enviado', 'firmado']);
+            if (consErr) console.warn('talent contratos load:', consErr.message);
             contratos = cons || [];
           }
           // Comentarios + documentos requeridos por contrato (para el portal)

@@ -1317,7 +1317,7 @@ async function saveAdjunto() {
     const payload = {
       campana_id: campId,
       campana_talento_id: ctId,
-      numero_contrato: ct?.identificador || '',
+      numero_contrato: ct?.identificador ? `${ct.identificador}-${tipo === 'marca' ? 'M' : 'T'}` : '',
       tipo, idioma: 'es', estado,
       empresa_id: emp.id,
       parte_a_nombre: tipo === 'marca' ? (parte || marcaNombre) : emp.nombre,
@@ -1330,8 +1330,7 @@ async function saveAdjunto() {
       fecha_contrato: new Date().toISOString().slice(0, 10),
       created_by: currentUser.id,
     };
-    const { data, error } = await sb.from('contratos').insert(payload).select().single();
-    if (error) throw error;
+    const data = await insertContrato(payload);
     contratos.unshift(data);
     renderContratos();
     renderStats();
@@ -1655,11 +1654,15 @@ function toggleDerechos() {
 // ══════════════════════════════════════════════════════════
 function collectFormData() {
   const empId = parseInt(document.getElementById('c-empresa')?.value) || null;
+  const tipoVal = document.getElementById('c-tipo').value;
+  // El nº de contrato lleva sufijo por tipo (-M marca / -T talento) para que
+  // marca y talento del MISMO talento no choquen con el índice único.
+  const baseNum = selectedTalentCT?.identificador || '';
   return {
     campana_id: selectedCampaignId,
     campana_talento_id: selectedTalentCT?.id || null,
-    numero_contrato: selectedTalentCT?.identificador || '',
-    tipo: document.getElementById('c-tipo').value,
+    numero_contrato: baseNum ? `${baseNum}-${tipoVal === 'marca' ? 'M' : 'T'}` : '',
+    tipo: tipoVal,
     idioma: document.getElementById('c-idioma').value,
     estado: 'borrador',
     empresa_id: empId,
@@ -1703,13 +1706,23 @@ function validateContractPayload(p) {
   return null;
 }
 
+// Inserta un contrato; si el nº de contrato choca con el índice único, reintenta
+// con número vacío para que el trigger de la base genere uno único (MMYYNN).
+async function insertContrato(payload) {
+  let { data, error } = await sb.from('contratos').insert(payload).select().single();
+  if (error && /duplicate key|uniq_contratos_numero|23505/i.test(error.message || '')) {
+    ({ data, error } = await sb.from('contratos').insert({ ...payload, numero_contrato: '' }).select().single());
+  }
+  if (error) throw error;
+  return data;
+}
+
 async function saveContractDraft() {
   const payload = collectFormData();
   const err = validateContractPayload(payload);
   if (err) { showToast(err, 'error'); return; }
   try {
-    const {data, error} = await sb.from('contratos').insert(payload).select().single();
-    if (error) throw error;
+    const data = await insertContrato(payload);
     contratos.unshift(data);
     renderContratos();
     renderStats();
@@ -1752,8 +1765,7 @@ async function generateContract() {
   // Save draft first
   let contractId;
   try {
-    const {data, error} = await sb.from('contratos').insert(payload).select().single();
-    if (error) throw error;
+    const data = await insertContrato(payload);
     contractId = data.id;
     contratos.unshift(data);
   } catch(e) {
