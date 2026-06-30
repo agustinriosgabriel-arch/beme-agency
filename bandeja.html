@@ -490,12 +490,15 @@ async function crearPresupuesto(key){
 async function sincronizar(){
   const btn=document.getElementById('sync-btn'); const prev=btn.innerHTML; btn.innerHTML='<span class="spin"></span> Sincronizando...'; btn.disabled=true;
   try{
-    const res=await fetch(`${FN}/ingest-inbox?days=14&max=12`);
-    const data=await res.json();
-    if(!res.ok) throw new Error(data.error||'Error');
+    const res=await fetch(`${FN}/ingest-inbox?days=14&max=10`);
+    const txt=await res.text();
+    let data=null; try{ data=JSON.parse(txt); }catch(_){}
+    if(!res.ok) throw new Error((data&&data.error)||`HTTP ${res.status}: ${(txt||'').slice(0,120)}`);
+    if(!data) throw new Error('Respuesta vacía (posible timeout). Reintentá, va trayendo de a poco.');
     await loadData(); renderAll();
-    showToast(data.guardados?`${data.guardados} mensaje(s) nuevos`:'Bandeja al día','success');
-  }catch(e){ showToast('Error al sincronizar: '+e.message,'error'); }
+    if(data.diferidos) showToast(`${data.guardados||0} nuevos · quedan ${data.diferidos} para la próxima — apretá Sincronizar de nuevo`,'info',5000);
+    else showToast(data.guardados?`${data.guardados} mensaje(s) nuevos`:'Bandeja al día','success');
+  }catch(e){ showToast('Error al sincronizar: '+e.message,'error',5000); }
   btn.innerHTML=prev; btn.disabled=false;
 }
 

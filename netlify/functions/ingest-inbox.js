@@ -55,10 +55,15 @@ async function sbInsert(row) {
   return true;
 }
 async function existingMessageIds(ids) {
-  if (!ids.length) return new Set();
-  const inList = ids.map(id => `"${id.replace(/"/g, '')}"`).join(',');
-  const rows = await sbSelect(`bandeja_mensajes?select=message_id&message_id=in.(${encodeURIComponent(inList)})`);
-  return new Set(rows.map(r => r.message_id));
+  const out = new Set();
+  for (let i = 0; i < ids.length; i += 60) { // chunk para no romper el largo de la URL
+    const chunk = ids.slice(i, i + 60);
+    if (!chunk.length) continue;
+    const inList = chunk.map(id => `"${id.replace(/"/g, '')}"`).join(',');
+    const rows = await sbSelect(`bandeja_mensajes?select=message_id&message_id=in.(${encodeURIComponent(inList)})`);
+    rows.forEach(r => out.add(r.message_id));
+  }
+  return out;
 }
 async function threadHasRecibido(casilla, threadKey) {
   if (!threadKey) return false;
@@ -156,8 +161,8 @@ Reglas de tag: 'cotizacion'=pasa un precio/tarifa para una campaña; 'propuesta'
 }
 
 // ── Procesa una carpeta (INBOX=recibido / Sent=enviado) ──
-async function processFolder(client, mb, folderPath, direccion, sinceDays, maxPer, dry) {
-  const result = { casilla: mb.casilla, carpeta: folderPath, direccion, vistos: 0, nuevos: 0, guardados: 0, errores: 0, omitidos: 0 };
+async function processFolder(client, mb, folderPath, direccion, sinceDays, dry, state) {
+  const result = { casilla: mb.casilla, carpeta: folderPath, direccion, vistos: 0, nuevos: 0, guardados: 0, errores: 0, omitidos: 0, diferidos: 0 };
   let lock;
   try { lock = await client.getMailboxLock(folderPath); }
   catch (e) { result.error = `No se pudo abrir ${folderPath}: ${e.message}`; return result; }
@@ -167,6 +172,7 @@ async function processFolder(client, mb, folderPath, direccion, sinceDays, maxPe
     let uids = [];
     try { uids = await client.search({ since }, { uid: true }); } catch (e) { uids = []; }
     if (!uids || !uids.length) return result;
+    if (uids.length > 200) uids = uids.slice(-200); // solo los más recientes
 
     const candidates = [];
     for await (const msg of client.fetch(uids, { envelope: true }, { uid: true })) {
@@ -186,11 +192,13 @@ async function processFolder(client, mb, folderPath, direccion, sinceDays, maxPe
     }
 
     const known = await existingMessageIds(candidates.map(c => c.messageId));
-    let fresh = candidates.filter(c => !known.has(c.messageId));
+    const fresh = candidates.filter(c => !known.has(c.messageId));
     result.nuevos = fresh.length;
-    fresh = fresh.slice(0, maxPer);
 
     for (const c of fresh) {
+      // Presupuesto global + deadline para no pasarnos del timeout de Netlify
+      if (state.budget <= 0 || (Date.now() - state.startedAt) > state.deadlineMs) { result.diferidos++; continue; }
+      state.budget--;
       try {
         const full = await client.fetchOne(c.uid, { source: true }, { uid: true });
         const parsed = await simpleParser(full.source);
@@ -253,14 +261,15 @@ async function findSentFolder(client) {
   } catch (e) { return null; }
 }
 
-async function processMailbox(mb, sinceDays, maxPer, dry) {
+async function processMailbox(mb, sinceDays, dry, state) {
   const out = [];
+  if (state.budget <= 0) return out;
   const client = new ImapFlow({ host: IMAP_HOST, port: IMAP_PORT, secure: true, auth: { user: mb.user, pass: mb.pass }, logger: false });
   await client.connect();
   try {
-    out.push(await processFolder(client, mb, 'INBOX', 'recibido', sinceDays, maxPer, dry));
+    out.push(await processFolder(client, mb, 'INBOX', 'recibido', sinceDays, dry, state));
     const sentPath = await findSentFolder(client);
-    if (sentPath) out.push(await processFolder(client, mb, sentPath, 'enviado', sinceDays, maxPer, dry));
+    if (sentPath && state.budget > 0) out.push(await processFolder(client, mb, sentPath, 'enviado', sinceDays, dry, state));
   } finally { await client.logout().catch(() => {}); }
   return out;
 }
@@ -269,19 +278,26 @@ exports.handler = async (event) => {
   if (!SUPABASE_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'SUPABASE_SERVICE_KEY no configurada' }) };
   if (!ANTHROPIC_API_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY no configurada' }) };
 
-  const q = (event && event.queryStringParameters) || {};
-  const sinceDays = Number(q.days || SINCE_DAYS_DEFAULT);
-  const maxPer = Number(q.max || MAX_PER_FOLDER);
-  const dry = q.dry === '1' || q.dry === 'true';
+  try {
+    const q = (event && event.queryStringParameters) || {};
+    const sinceDays = Number(q.days || SINCE_DAYS_DEFAULT);
+    const budgetTotal = Number(q.max || MAX_PER_FOLDER); // tope TOTAL de mensajes nuevos por corrida
+    const dry = q.dry === '1' || q.dry === 'true';
+    const state = { budget: budgetTotal, startedAt: Date.now(), deadlineMs: Number(process.env.INBOX_DEADLINE_MS || 22000) };
 
-  const boxes = mailboxes();
-  if (!boxes.length) return { statusCode: 200, body: JSON.stringify({ message: 'Sin casillas configuradas (faltan SMTP_PASS / IMAP_MGMT_PASS)' }) };
+    const boxes = mailboxes();
+    if (!boxes.length) return { statusCode: 200, body: JSON.stringify({ message: 'Sin casillas configuradas (faltan SMTP_PASS / IMAP_MGMT_PASS)' }) };
 
-  let results = [];
-  for (const mb of boxes) {
-    try { results = results.concat(await processMailbox(mb, sinceDays, maxPer, dry)); }
-    catch (e) { console.error(`Casilla ${mb.casilla} falló:`, e.message); results.push({ casilla: mb.casilla, error: e.message }); }
+    let results = [];
+    for (const mb of boxes) {
+      try { results = results.concat(await processMailbox(mb, sinceDays, dry, state)); }
+      catch (e) { console.error(`Casilla ${mb.casilla} falló:`, e.message); results.push({ casilla: mb.casilla, error: e.message }); }
+    }
+    const guardados = results.reduce((a, r) => a + (r.guardados || 0), 0);
+    const diferidos = results.reduce((a, r) => a + (r.diferidos || 0), 0);
+    return { statusCode: 200, body: JSON.stringify({ success: true, dry, sinceDays, guardados, diferidos, results }) };
+  } catch (err) {
+    console.error('ingest-inbox fatal:', err);
+    return { statusCode: 500, body: JSON.stringify({ error: err.message || String(err) }) };
   }
-  const guardados = results.reduce((a, r) => a + (r.guardados || 0), 0);
-  return { statusCode: 200, body: JSON.stringify({ success: true, dry, sinceDays, maxPer, guardados, results }) };
 };
