@@ -250,6 +250,7 @@ const TAGS=[
   {key:'spam',label:'Spam'},
 ];
 const TAGLABEL={cotizacion:'Cotización',propuesta:'Propuesta',finanzas:'Finanzas',logistica:'Logística',spam:'Spam'};
+const ETAPALABEL={nueva:'Nueva',negociacion:'Negociación',cierre:'Cierre'};
 
 let currentUser=null, mensajes=[], threads=[], currentTag='cotizacion', isDark=false, openThreadKey=null;
 
@@ -299,11 +300,12 @@ function buildThreads(){
     const last=msgs[msgs.length-1];
     let tag=''; for(let i=recibidos.length-1;i>=0;i--){ if(recibidos[i].tag){tag=recibidos[i].tag;break;} }
     if(!tag) tag = msgs[0].casilla==='contacto'?'cotizacion':'propuesta';
+    let etapa=''; for(let i=recibidos.length-1;i>=0;i--){ const e=recibidos[i].datos&&recibidos[i].datos.etapa; if(e){etapa=e;break;} }
     const tMsg=msgs.find(m=>m.talento_nombre)||{};
     const baseMsg=recibidos[0]||msgs[0];
     threads.push({
       key:k, msgs, last,
-      tag, casilla:msgs[0].casilla,
+      tag, etapa, casilla:msgs[0].casilla,
       talento_id:tMsg.talento_id||null, talento_nombre:tMsg.talento_nombre||'',
       es_excl:msgs.some(m=>m.es_talento_exclusivo),
       de_nombre:baseMsg.de_nombre, de_email:baseMsg.de_email,
@@ -380,6 +382,7 @@ function threadCard(t){
     <div class="tc-snippet"><span class="dir">${dirIcon}</span> ${escHtml(snippet)||'—'}</div>
     <div class="tc-foot">
       <span class="badge b-tag">${TAGLABEL[t.tag]||t.tag}</span>
+      ${t.tag==='propuesta'&&t.etapa?`<span class="chip">${ETAPALABEL[t.etapa]||t.etapa}</span>`:''}
       ${nuevo}${pend}${excl}
       <span class="chip">${t.casilla==='contacto'?'contacto@':'management@'}</span>
       <span class="tc-count">${t.msgs.length} msj</span>
@@ -396,7 +399,7 @@ function openThread(key){
 
   const bubbles=t.msgs.map(m=>{
     const d=m.datos||{};
-    const chips=Object.entries({Precio:d.precio?(d.precio+(d.moneda?' '+d.moneda:'')):'',Campaña:d.campana,Plataformas:Array.isArray(d.plataformas)?d.plataformas.join(', '):d.plataformas,Deadline:d.deadline,Monto:d.monto,Tel:d.telefono})
+    const chips=Object.entries({Marca:d.marca,Etapa:d.etapa?(ETAPALABEL[d.etapa]||d.etapa):'',Monto:(d.monto||d.precio)?((d.monto||d.precio)+(d.moneda?' '+d.moneda:'')):'',Campaña:d.campana,Plataformas:Array.isArray(d.plataformas)?d.plataformas.join(', '):d.plataformas,Deadline:d.deadline,Contenido:d.tipo_contenido,Tel:d.telefono})
       .filter(([k,v])=>v&&String(v).trim()).map(([k,v])=>`<span class="chip k">${k}: ${escHtml(String(v))}</span>`).join('');
     const dir=m.direccion;
     return `<div class="bubble ${dir}">

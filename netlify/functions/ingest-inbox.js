@@ -18,7 +18,8 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ngstqwbzvnpggpklifat.s
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = process.env.INBOX_MODEL || 'claude-haiku-4-5-20251001';
+const MODEL = process.env.INBOX_MODEL || 'claude-sonnet-4-6';
+const MODEL_FALLBACK = process.env.INBOX_MODEL_FALLBACK || 'claude-sonnet-4-20250514'; // probado en la app
 
 const IMAP_HOST = process.env.IMAP_HOST || 'imap.hostinger.com';
 const IMAP_PORT = Number(process.env.IMAP_PORT || 993);
@@ -99,6 +100,21 @@ function extractEmails(text) {
   (String(text || '').match(EMAIL_RE) || []).forEach(e => { const l = e.toLowerCase(); if (!OWN_DOMAIN.test(l)) out.add(l); });
   return [...out];
 }
+function headerEmails(parsed, name) {
+  try { const v = parsed.headers && parsed.headers.get(name); if (!v) return []; return (String(v).match(EMAIL_RE) || []).map(e => e.toLowerCase()); } catch (e) { return []; }
+}
+// Junta TODOS los emails posibles (envelope, headers de reenvío, cuerpo) para
+// vincular el mensaje a uno de nuestros talentos exclusivos.
+function collectCandidateEmails(parsed, bodyText, c, direccion) {
+  const set = new Set();
+  const add = e => { if (e) { const l = String(e).toLowerCase().trim(); if (l.includes('@') && !OWN_DOMAIN.test(l)) set.add(l); } };
+  add(direccion === 'enviado' ? c.toEmail : c.fromEmail);
+  ['from', 'to', 'cc', 'replyTo'].forEach(k => { const a = parsed[k]; if (a && a.value) a.value.forEach(v => add(v.address)); });
+  ['delivered-to', 'return-path', 'x-forwarded-for', 'x-forwarded-to', 'x-original-to'].forEach(h => headerEmails(parsed, h).forEach(add));
+  add(extractForwardedSender(bodyText));
+  extractEmails(bodyText).forEach(add);
+  return [...set];
+}
 function refsToString(parsed) {
   const parts = [];
   if (parsed.references) parts.push(...(Array.isArray(parsed.references) ? parsed.references : [parsed.references]));
@@ -119,45 +135,73 @@ function stripJson(s) {
   const a = t.indexOf('{'), b = t.lastIndexOf('}'); if (a !== -1 && b !== -1) t = t.slice(a, b + 1);
   return t;
 }
-async function classify({ casilla, fromName, fromEmail, subject, body, talento }) {
-  const hint = casilla === 'contacto'
-    ? 'Casilla "contacto": son talentos/creadores prospectados que responden con el PRECIO (cotización) para una campaña.'
-    : `Casilla "management": mails reenviados de un talento exclusivo nuestro${talento ? ' ("' + talento.nombre + '")' : ''}. Pueden ser propuestas, temas de finanzas/pagos, logística o cotizaciones.`;
-  const userPrompt = `Clasificá y resumí este correo de una agencia de talentos (BEME). Respondé SOLO JSON válido.
+async function anthropic(userPrompt) {
+  const callModel = async (model) => fetch(ANTHROPIC_API_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model, max_tokens: 900, messages: [{ role: 'user', content: userPrompt }] }),
+  });
+  let res = await callModel(MODEL);
+  if (!res.ok && MODEL_FALLBACK && MODEL_FALLBACK !== MODEL) {
+    const errTxt = await res.text();
+    console.error(`Modelo ${MODEL} falló (${res.status}: ${errTxt.slice(0, 120)}) — uso ${MODEL_FALLBACK}`);
+    res = await callModel(MODEL_FALLBACK);
+  }
+  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  return (data.content || []).map(c => c.text || '').join('');
+}
 
-${hint}
+async function classify({ casilla, fromName, fromEmail, subject, body, talento }) {
+  const ctx = casilla === 'contacto'
+    ? 'CASILLA CONTACTO: acá RECIBIMOS las cotizaciones de creadores que prospectamos. Nosotros les escribimos pidiendo su PRECIO para una campaña y ellos responden con su tarifa.'
+    : 'CASILLA MANAGEMENT: bandeja de nuestros 3 talentos EXCLUSIVOS (Fer Goñi, Brenda Jair, Vicca). Llegan (reenviadas) las PROPUESTAS de marcas para esos talentos y toda su negociación, cierre y pago.';
+  const tHint = talento ? `Este mail está vinculado a nuestro talento: "${talento.nombre}".` : '';
+
+  const userPrompt = `Sos analista de una agencia de talentos e influencers (BEME). Leé el CONTENIDO del correo y clasificá según de qué se está hablando realmente. Respondé SOLO con JSON válido.
+
+${ctx}
+${tHint}
 
 DE: ${fromName || ''} <${fromEmail || ''}>
 ASUNTO: ${subject || '(sin asunto)'}
 CUERPO:
 """
-${String(body || '').slice(0, 6000)}
+${String(body || '').slice(0, 7000)}
 """
 
-Formato:
-{
-  "tag": "cotizacion" | "propuesta" | "finanzas" | "logistica" | "spam",
-  "resumen": "2 o 3 frases en español con lo importante (montos, plazos, qué pide).",
-  "datos": { "precio": "", "moneda": "", "campana": "", "plataformas": [], "tipo_contenido": "", "deadline": "", "monto": "", "asunto_finanzas": "", "telefono": "", "nota": "" }
-}
-Reglas de tag: 'cotizacion'=pasa un precio/tarifa para una campaña; 'propuesta'=propone idea/colaboración/contenido; 'finanzas'=pagos, facturas, datos bancarios, cobros; 'logistica'=envíos, fechas, dudas operativas/administrativas; 'spam'=basura/promoción no solicitada. Dejá vacío lo que no aparezca. No inventes.`;
+ETIQUETAS (elegí UNA según el contenido):
+- "cotizacion": SOLO en contacto — un creador prospectado nos pasa o negocia su PRECIO/tarifa para una campaña.
+- "propuesta": un negocio entre una MARCA y un talento exclusivo nuestro, EN CUALQUIER ETAPA: la marca propone; la negociación; cuando NOSOTROS le mandamos nuestra cotización/presupuesto a la marca (sigue siendo propuesta); y el CIERRE, cuando la marca acepta y manda el precio final o las condiciones de pago. El cierre SIGUE siendo 'propuesta', NO es finanzas.
+- "finanzas": SOLO la ejecución de un pago YA cerrado: facturas, comprobantes de transferencia, datos bancarios, cobros o recordatorios de pago.
+- "logistica": envíos de producto, fechas/agenda, coordinación operativa o dudas administrativas.
+- "spam": no solicitado, promociones, newsletters.
 
-  const res = await fetch(ANTHROPIC_API_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 700, messages: [{ role: 'user', content: userPrompt }] }),
-  });
-  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  const txt = (data.content || []).map(c => c.text || '').join('');
-  try {
-    const p = JSON.parse(stripJson(txt));
-    const tags = ['cotizacion', 'propuesta', 'finanzas', 'logistica', 'spam'];
-    if (!tags.includes(p.tag)) p.tag = casilla === 'contacto' ? 'cotizacion' : 'propuesta';
-    return p;
-  } catch (e) {
-    return { tag: casilla === 'contacto' ? 'cotizacion' : 'propuesta', resumen: txt.slice(0, 300), datos: {} };
-  }
+EJEMPLOS:
+- "Somos [Marca], queremos que [talento] participe en nuestra campaña..." → propuesta (etapa: nueva)
+- (nosotros→marca) "Les paso nuestra cotización: 1 reel + 2 historias = $X" → propuesta (etapa: negociacion)
+- (marca→nosotros) "Aprobado, $X, el pago es a 30 días contra factura" → propuesta (etapa: cierre)
+- "Adjunto la factura / el comprobante de transferencia / los datos bancarios" → finanzas
+- (creador prospectado en contacto) "Mi tarifa por el reel es $X" → cotizacion
+
+Devolvé:
+{
+  "tag": "cotizacion|propuesta|finanzas|logistica|spam",
+  "etapa": "nueva|negociacion|cierre|"  (solo si tag=propuesta; si no, ""),
+  "resumen": "2-3 frases concretas: marca o creador, qué se pide/ofrece, montos y plazos si los hay.",
+  "datos": { "marca": "", "talento": "", "monto": "", "moneda": "", "campana": "", "plataformas": [], "deadline": "", "tipo_contenido": "", "telefono": "", "nota": "" }
+}
+No inventes; dejá vacío lo que no aparezca.`;
+
+  const txt = await anthropic(userPrompt);
+  let p;
+  try { p = JSON.parse(stripJson(txt)); }
+  catch (e) { p = { tag: casilla === 'contacto' ? 'cotizacion' : 'propuesta', resumen: txt.slice(0, 300), datos: {} }; }
+  const tags = ['cotizacion', 'propuesta', 'finanzas', 'logistica', 'spam'];
+  if (!tags.includes(p.tag)) p.tag = casilla === 'contacto' ? 'cotizacion' : 'propuesta';
+  if (!p.datos) p.datos = {};
+  if (p.etapa) p.datos.etapa = p.etapa;
+  return p;
 }
 
 // ── Procesa una carpeta (INBOX=recibido / Sent=enviado) ──
@@ -212,12 +256,9 @@ async function processFolder(client, mb, folderPath, direccion, sinceDays, dry, 
           if (!belongs) { result.omitidos++; continue; }
         }
 
-        // Talento: en management SIEMPRE intentamos vincular por el mail original del reenvío.
+        // Talento: vincular por cualquier email que aparezca (headers + reenvío + cuerpo).
         let talento = null;
-        const fwd = extractForwardedSender(bodyText);
-        const replyTo = (parsed.replyTo && parsed.replyTo.value && parsed.replyTo.value[0] && parsed.replyTo.value[0].address) || '';
-        const otherParty = direccion === 'enviado' ? c.toEmail : c.fromEmail;
-        const candEmails = [fwd, replyTo.toLowerCase(), otherParty, ...extractEmails(bodyText)].filter(Boolean);
+        const candEmails = collectCandidateEmails(parsed, bodyText, c, direccion);
         for (const em of candEmails) { talento = await findTalentByEmail(em); if (talento) break; }
 
         let tag = '', resumen = '', datos = {};
