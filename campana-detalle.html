@@ -379,6 +379,23 @@ details.tl-details[open] .tl-summary::before{transform:rotate(90deg)}
 select.form-input{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
 .form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
+/* ── Editar campaña: grid + chips + dropdown ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid .form-group{margin-bottom:0}
+.form-grid .form-group.full{grid-column:1/-1}
+.form-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:4px;grid-column:1/-1}
+.chips-input-wrap{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 8px;display:flex;flex-wrap:wrap;gap:5px;cursor:text;transition:border 0.2s}
+.chips-input-wrap:focus-within{border-color:var(--primary)}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:var(--surface3);border-radius:20px;font-size:12px;font-weight:600}
+.chip-remove{cursor:pointer;color:var(--text-dim);display:flex;align-items:center;line-height:1}
+.chip-remove:hover{color:var(--text)}
+.chips-input{background:none;border:none;outline:none;font-size:12px;font-family:inherit;color:var(--text);min-width:100px;padding:2px 4px}
+.option-list{position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:var(--shadow);max-height:200px;overflow-y:auto;margin-top:4px}
+.option-item{padding:9px 12px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.1s}
+.option-item:hover{background:var(--surface2)}
+.option-avatar{width:24px;height:24px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;flex-shrink:0}
+@media(max-width:560px){.form-grid{grid-template-columns:1fr}}
+
 /* ── Toast ── */
 .toast-wrap{position:fixed;top:68px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .toast{padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;display:flex;align-items:center;gap:9px;animation:tin 0.2s ease;max-width:300px;pointer-events:all}
@@ -927,6 +944,138 @@ body.dark .toast.inf{background:#1a2a3a;border-color:#3b82f644;color:#60a5fa}
   </div>
 </div>
 
+<!-- MODAL: EDITAR CAMPAÑA (in-place) -->
+<div class="modal-overlay" id="modal-campana">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-campana-title">Editar Campaña</div>
+      <button class="modal-close" onclick="closeModal('modal-campana')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-section-title">Información General</div>
+
+        <div class="form-group full">
+          <label class="form-label">Nombre de la Campaña *</label>
+          <input type="text" id="c-nombre" class="form-input" placeholder="Ej: Lanzamiento Verano 2025">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cliente *</label>
+          <select id="c-cliente" class="form-input" onchange="onClienteChange()">
+            <option value="">Seleccionar cliente...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Marca *</label>
+          <select id="c-marca" class="form-input" onchange="onMarcaChange()">
+            <option value="">Primero seleccioná un cliente</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha de Inicio</label>
+          <input type="date" id="c-fecha-inicio" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha de Fin</label>
+          <input type="date" id="c-fecha-fin" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estado</label>
+          <select id="c-estado" class="form-input">
+            <option value="sin_iniciar">Sin iniciar</option>
+            <option value="en_curso">En curso</option>
+            <option value="etapa_finanzas">Etapa Finanzas</option>
+            <option value="finalizada">Finalizada</option>
+            <option value="pausada">Pausada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Descripción / Brief (texto)</label>
+          <textarea id="c-descripcion" class="form-input" placeholder="Descripción general de la campaña..."></textarea>
+        </div>
+
+        <div class="form-section-title">Asignaciones</div>
+
+        <div class="form-group full">
+          <label class="form-label">Admins de Campaña (internos)</label>
+          <div class="chips-input-wrap" id="managers-wrap" onclick="focusChipInput('managers-input')">
+            <input type="text" id="managers-input" class="chips-input" placeholder="Buscar usuario..." oninput="searchUsers('managers-input','managers-dropdown','manager')" onfocus="searchUsers('managers-input','managers-dropdown','manager')">
+          </div>
+          <div style="position:relative">
+            <div class="option-list" id="managers-dropdown" style="display:none"></div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Handler(s) de Marca</label>
+          <div class="chips-input-wrap" id="handlers-wrap" onclick="focusChipInput('handlers-input')">
+            <input type="text" id="handlers-input" class="chips-input" placeholder="Buscar handler..." oninput="searchUsers('handlers-input','handlers-dropdown','handler')" onfocus="searchUsers('handlers-input','handlers-dropdown','handler')">
+          </div>
+          <div style="position:relative">
+            <div class="option-list" id="handlers-dropdown" style="display:none"></div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Talentos</label>
+          <div class="chips-input-wrap" id="talentos-wrap" onclick="focusChipInput('talentos-input')">
+            <input type="text" id="talentos-input" class="chips-input" placeholder="Escribí el nombre..." oninput="searchTalentos('talentos-input','talentos-dropdown')">
+          </div>
+          <div style="position:relative">
+            <div class="option-list" id="talentos-dropdown" style="display:none"></div>
+          </div>
+          <div class="form-hint" style="font-size:11px;color:var(--text-dim)">Solo se agregan talentos nuevos; los existentes no se quitan desde aquí.</div>
+        </div>
+
+        <!-- Sección financiera — solo admin -->
+        <div id="seccion-finanzas" style="display:none;grid-column:1/-1">
+          <div class="form-grid" style="margin-top:0">
+            <div class="form-section-title">Datos Financieros <span style="font-size:10px;color:var(--primary);font-weight:600;text-transform:none;letter-spacing:0">(solo visible para administradores)</span></div>
+            <div class="form-group full">
+              <div style="background:rgba(178,0,93,0.06);border:1px solid rgba(178,0,93,0.15);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text-muted)">
+                💡 Los fees por talento (Fee Marca y Fee Talento) se configuran dentro del detalle de la campaña. La ganancia de la agencia se calcula automáticamente.
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Método de Pago (Marca)</label>
+              <input type="text" id="c-metodo-pago" class="form-input" placeholder="Ej: Transferencia, PayPal...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Días de pago de la Marca</label>
+              <input type="number" id="c-dias-pago-marca" class="form-input" min="0" placeholder="Ej: 30">
+              <div class="form-hint" style="font-size:11px;color:var(--text-muted)">El talento ve la fecha estimada de cobro: fin de campaña + estos días + 15.</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">País de Facturación</label>
+              <select id="c-pais-facturacion" class="form-input">
+                <option value="">Sin especificar</option>
+                <option value="USA">USA</option>
+                <option value="Mexico">México</option>
+                <option value="Argentina">Argentina</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Requiere Factura</label>
+              <select id="c-requiere-factura" class="form-input">
+                <option value="no">No</option>
+                <option value="si">Sí</option>
+                <option value="solo_invoice">Solo Invoice</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label class="form-label">Notas Financieras</label>
+              <textarea id="c-notas-finanzas" class="form-input" style="min-height:60px" placeholder="Notas internas de facturación..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-campana')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCampana()" id="btn-save-campana">Guardar Campaña</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ════════════════════════════════════════════════
 // CONFIG
@@ -938,6 +1087,10 @@ const campanaId = parseInt(new URLSearchParams(location.search).get('id'));
 
 let campana = null, currentUser = null, currentProfile = null;
 let talentosList = [], editingDrCtId = null, editingPrCtId = null;
+// Estado del modal "Editar Campaña" (in-place)
+let clientes = [], marcas = [], usuarios = [];
+let selectedManagers = [], selectedHandlers = [], selectedTalentos = [];
+let editingCampanaId = null, _editDataLoaded = false;
 let terceros = [], comisiones = []; // comisiones de terceros de esta campaña
 let _savingContenido = false;
 
@@ -1894,18 +2047,20 @@ function renderContenido(c, ct) {
     fileButtonsHTML += `<a href="${esc(normalizeUrl(c.url_publicacion))}" target="_blank" rel="noopener" class="file-access-btn link">${labelLink}</a>`;
   }
   if (c.url_publicacion_2) {
-    fileButtonsHTML += `<a href="${esc(normalizeUrl(c.url_publicacion_2))}" target="_blank" rel="noopener" class="file-access-btn link">🔗 TikTok</a>`;
+    const labelLink2 = c.tipo === 'reel_tiktok_espejo' ? '🔗 TikTok' : '🔗 Ver publicación 2';
+    fileButtonsHTML += `<a href="${esc(normalizeUrl(c.url_publicacion_2))}" target="_blank" rel="noopener" class="file-access-btn link">${labelLink2}</a>`;
   }
   fileButtonsHTML += '</div>';
   // Only show section if there are files
   const hasFiles = briefs.length || contBriefs.length || scripts.length || drafts.length || c.url_publicacion;
 
-  // ── Back button (admin only) ──
+  // ── Back button (admin only) — disponible siempre, incluso cuando está completado ──
   let backBtnHTML = '';
-  if (isInternal() && paso > 1 && paso <= 8) {
+  if (isInternal() && paso > 1) {
+    const prev = pasoAnteriorReal(c);
     backBtnHTML = `<button class="back-paso-btn" onclick="retrocederPaso(${c.id},${paso})">
       <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-      Volver al paso anterior (paso ${paso-1})
+      Volver al paso anterior (paso ${prev})
     </button>`;
   }
 
@@ -2116,7 +2271,7 @@ function buildActions(c, ct) {
   if (paso === 6 && (canI || canT)) {
     const isEspejo = c.tipo === 'reel_tiktok_espejo';
     html += `<div class="workflow-action-box">
-      <div class="action-box-title">🔗 Cargar Link de Publicación</div>
+      <div class="action-box-title">🔗 Cargar Link${isEspejo?'s':''} de Publicación</div>
       ${isEspejo ? `
       <div class="link-group" style="margin-bottom:8px">
         <span style="font-size:11px;font-weight:700;color:var(--text-muted);min-width:60px">Reel</span>
@@ -2128,10 +2283,15 @@ function buildActions(c, ct) {
       </div>
       <div style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="saveLink(${c.id},true)">Confirmar ambos →</button></div>
       ` : `
+      <div class="link-group" style="margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--text-muted);min-width:60px">Link 1</span>
+        <input type="text" class="link-input" id="link-${c.id}" placeholder="https://www.tiktok.com/@... o https://www.instagram.com/reel/..." value="${esc(c.url_publicacion||'')}">
+      </div>
       <div class="link-group">
-        <input type="text" class="link-input" id="link-${c.id}" placeholder="https://www.tiktok.com/@..." value="${esc(c.url_publicacion||'')}">
-        <button class="btn btn-primary btn-sm" onclick="saveLink(${c.id})">Confirmar →</button>
-      </div>`}
+        <span style="font-size:11px;font-weight:700;color:var(--text-muted);min-width:60px">Link 2</span>
+        <input type="text" class="link-input" id="link2-${c.id}" placeholder="Segundo link (opcional) — ej. la versión en la otra red" value="${esc(c.url_publicacion_2||'')}">
+      </div>
+      <div style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="saveLink(${c.id})">Confirmar →</button></div>`}
     </div>`;
   }
 
@@ -2228,11 +2388,21 @@ async function saveCopyAndAdvance(contId) {
   } catch(e) { toast('Error: '+e.message,'err'); }
 }
 
+// Calcula el paso anterior real respetando los pasos salteados
+// (sin script: 1↔4; sin estadísticas: 6↔8).
+function pasoAnteriorReal(c) {
+  let p = (c.paso_actual || 1) - 1;
+  if (p === 7 && !c.estadisticas_requeridas) p = 6;        // saltea Estadísticas
+  if ((p === 3 || p === 2) && !c.script_requerido) p = 1;  // saltea Script + Aprobación Script
+  return Math.max(1, p);
+}
+
 async function retrocederPaso(contId, pasoActual) {
   if (pasoActual <= 1) return;
-  if (!confirm('¿Volver al paso ' + (pasoActual-1) + '? Esto reinicia el paso actual.')) return;
+  const c = findCont(contId);
+  const nuevoPaso = c ? pasoAnteriorReal(c) : Math.max(1, pasoActual - 1);
+  if (!confirm('¿Volver al paso ' + nuevoPaso + '? Esto reinicia el paso actual.')) return;
   try {
-    const nuevoPaso = pasoActual - 1;
     const {error} = await sb.from('contenidos').update({paso_actual: nuevoPaso}).eq('id', contId);
     if (error) throw error;
     // Log in historial
@@ -2295,10 +2465,14 @@ async function saveLink(contId, isDual) {
   const rawLink = document.getElementById('link-'+contId)?.value.trim();
   if (!rawLink) { toast('Ingresá el link de publicación','err'); return; }
   const updateData = {url_publicacion: normalizeUrl(rawLink)};
+  const rawLink2 = document.getElementById('link2-'+contId)?.value.trim();
   if (isDual) {
-    const rawLink2 = document.getElementById('link2-'+contId)?.value.trim();
+    // Reel/TikTok Espejo: ambos links son obligatorios
     if (!rawLink2) { toast('Ingresá el segundo link (TikTok)','err'); return; }
     updateData.url_publicacion_2 = normalizeUrl(rawLink2);
+  } else {
+    // Resto de tipos: segundo link opcional (ej. misma pieza en otra red)
+    updateData.url_publicacion_2 = rawLink2 ? normalizeUrl(rawLink2) : null;
   }
   await sb.from('contenidos').update(updateData).eq('id', contId);
   await avanzar(contId);
@@ -2966,7 +3140,7 @@ function openEditContenidoBtn(ctId) {
   document.getElementById('mc-tipo').value='tiktok_video';
   document.getElementById('mc-fecha').value='';
   document.getElementById('mc-script').checked=false;
-  document.getElementById('mc-stats').checked=false;
+  document.getElementById('mc-stats').checked=true; // estadísticas requeridas por defecto (no saltear paso 7)
   document.getElementById('mc-spark-dias').value='';
   document.getElementById('mc-pauta-dias').value='';
   applyContenidoPriceVisibility();
@@ -3207,8 +3381,322 @@ async function setTalentoEstado(ctId, val) {
   } catch(e) { toast('Error: '+e.message,'err'); }
 }
 
-function openEditCampana() {
-  window.location.href = 'campanas.html?edit='+campanaId;
+// ════════════════════════════════════════════════
+// EDITAR CAMPAÑA — modal in-place (sin salir del detalle)
+// ════════════════════════════════════════════════
+function escHtml(s){ return esc(s); }
+function showToast(msg, type){ toast(msg, type==='error'?'err':(type==='success'?'ok':'inf')); }
+
+// Carga diferida de catálogos que el modal necesita (clientes/marcas + usuarios).
+// talentosList ya se carga al iniciar el detalle.
+async function loadEditCatalogos() {
+  if (_editDataLoaded) return;
+  await Promise.all([
+    (async () => {
+      const {data} = await sb.from('clientes').select('*, marcas(*)').order('nombre');
+      clientes = data || [];
+      marcas = clientes.flatMap(c => (c.marcas||[]).map(m => ({...m, cliente_nombre: c.nombre})));
+    })(),
+    (async () => {
+      if (!isInternal()) return;
+      const {data} = await sb.from('user_profiles').select('*').order('nombre');
+      usuarios = data || [];
+    })(),
+  ]);
+  _editDataLoaded = true;
+}
+
+async function openEditCampana() {
+  if (!campana || !isInternal()) return;
+  const btn = document.getElementById('btn-editar');
+  if (btn) { btn.disabled = true; }
+  try { await loadEditCatalogos(); }
+  finally { if (btn) btn.disabled = false; }
+
+  editingCampanaId = campanaId;
+  clearCampanaForm();
+  populateClienteSelect();
+
+  // Información general
+  document.getElementById('c-nombre').value = campana.nombre || '';
+  document.getElementById('c-estado').value = campana.estado || 'sin_iniciar';
+  document.getElementById('c-fecha-inicio').value = campana.fecha_inicio || '';
+  document.getElementById('c-fecha-fin').value = campana.fecha_fin || '';
+  document.getElementById('c-descripcion').value = campana.descripcion || '';
+
+  // Cliente / Marca — resolver de forma tolerante (RLS / no cargado)
+  const marcaId = campana.marca_id || campana.marcas?.id || null;
+  const marcaObj = marcaId ? marcas.find(m => m.id === marcaId) : null;
+  const clienteId = campana.cliente_id || marcaObj?.cliente_id || null;
+
+  if (clienteId) {
+    const selCli = document.getElementById('c-cliente');
+    if (!selCli.querySelector(`option[value="${clienteId}"]`)) {
+      const nombre = marcaObj?.cliente_nombre || campana.marcas?.clientes?.nombre || `Cliente #${clienteId}`;
+      selCli.insertAdjacentHTML('beforeend', `<option value="${clienteId}">${escHtml(nombre)}</option>`);
+    }
+    selCli.value = String(clienteId);
+    onClienteChange();
+  }
+  if (marcaId) {
+    const selM = document.getElementById('c-marca');
+    if (!selM.querySelector(`option[value="${marcaId}"]`)) {
+      const nombre = campana.marcas?.nombre || marcaObj?.nombre || `Marca #${marcaId}`;
+      selM.insertAdjacentHTML('beforeend', `<option value="${marcaId}">${escHtml(nombre)}</option>`);
+    }
+    selM.value = String(marcaId);
+  }
+
+  // Managers / Handlers — resolver nombres desde usuarios o teamNames
+  const resolveName = (uid) => {
+    const u = usuarios.find(x => x.id === uid);
+    return u?.nombre || teamNames[uid] || (uid ? uid.substring(0,8)+'…' : '?');
+  };
+  selectedManagers = (campana.campana_managers||[]).map(m => ({ id: m.user_id, nombre: resolveName(m.user_id) }));
+  renderChips('managers-wrap','managers-input', selectedManagers, removeManager);
+  selectedHandlers = (campana.campana_handlers||[]).map(h => ({ id: h.user_id, nombre: resolveName(h.user_id) }));
+  renderChips('handlers-wrap','handlers-input', selectedHandlers, removeHandler);
+
+  // Talentos
+  selectedTalentos = (campana.campana_talentos||[]).map(ct => ({ id: ct.talent_id, nombre: ct.talentos?.nombre || '' }));
+  renderChips('talentos-wrap','talentos-input', selectedTalentos, removeTalento);
+
+  // Finanzas (solo admin)
+  if (isAdmin()) {
+    document.getElementById('seccion-finanzas').style.display = 'block';
+    const mp = document.getElementById('c-metodo-pago'); if (mp) mp.value = campana.metodo_pago_marca || '';
+    const dpm = document.getElementById('c-dias-pago-marca'); if (dpm) dpm.value = (campana.dias_pago_marca != null ? campana.dias_pago_marca : '');
+    const pf = document.getElementById('c-pais-facturacion'); if (pf) pf.value = campana.pais_facturacion || '';
+    const rf = document.getElementById('c-requiere-factura'); if (rf) rf.value = campana.requiere_factura || 'no';
+    const nf = document.getElementById('c-notas-finanzas'); if (nf) nf.value = campana.notas_finanzas || '';
+  }
+
+  openModal('modal-campana');
+}
+
+function clearCampanaForm() {
+  ['c-nombre','c-fecha-inicio','c-fecha-fin','c-descripcion','c-metodo-pago','c-dias-pago-marca','c-notas-finanzas'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('c-estado').value = 'sin_iniciar';
+  const pf = document.getElementById('c-pais-facturacion'); if (pf) pf.value = '';
+  const rf = document.getElementById('c-requiere-factura'); if (rf) rf.value = 'no';
+  selectedManagers = []; selectedHandlers = []; selectedTalentos = [];
+  renderChips('managers-wrap','managers-input', selectedManagers, removeManager);
+  renderChips('handlers-wrap','handlers-input', selectedHandlers, removeHandler);
+  renderChips('talentos-wrap','talentos-input', selectedTalentos, removeTalento);
+  if (!isAdmin()) document.getElementById('seccion-finanzas').style.display = 'none';
+}
+
+// ── Cliente / Marca selects ──
+function populateClienteSelect() {
+  const sel = document.getElementById('c-cliente');
+  sel.innerHTML = '<option value="">Seleccionar cliente...</option>' +
+    clientes.map(c => `<option value="${c.id}">${escHtml(c.nombre)}</option>`).join('');
+}
+function onClienteChange() {
+  const clienteId = parseInt(document.getElementById('c-cliente').value) || 0;
+  const sel = document.getElementById('c-marca');
+  const filtered = marcas.filter(m => m.cliente_id === clienteId);
+  sel.innerHTML = filtered.length
+    ? '<option value="">Seleccionar marca...</option>' + filtered.map(m => `<option value="${m.id}">${escHtml(m.nombre)}</option>`).join('')
+    : '<option value="">No hay marcas para este cliente</option>';
+}
+function onMarcaChange() { /* reservado para autocompletar handlers a futuro */ }
+
+// ── Chips multi-select ──
+function renderChips(wrapId, inputId, items, removeFn) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  wrap.querySelectorAll('.chip').forEach(c => c.remove());
+  const input = document.getElementById(inputId);
+  items.forEach(item => {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.innerHTML = `${escHtml(item.nombre)}<span class="chip-remove" onclick="event.stopPropagation();${removeFn.name}('${item.id}')">
+      <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </span>`;
+    wrap.insertBefore(chip, input);
+  });
+}
+function focusChipInput(id) { document.getElementById(id)?.focus(); }
+
+function searchUsers(inputId, dropdownId, roleFilter) {
+  const q = (document.getElementById(inputId)?.value || '').toLowerCase();
+  const dropdown = document.getElementById(dropdownId);
+  if (!dropdown) return;
+  const roles = roleFilter === 'manager' ? ['admin','campaign_manager'] : ['brand_handler'];
+  const results = usuarios.filter(u =>
+    roles.includes(u.role) &&
+    (u.nombre||'').toLowerCase().includes(q) &&
+    !selectedManagers.find(m => m.id === u.id) &&
+    !selectedHandlers.find(h => h.id === u.id)
+  ).slice(0, 8);
+  if (!results.length) { dropdown.style.display = 'none'; return; }
+  dropdown.style.display = 'block';
+  dropdown.innerHTML = results.map(u => `
+    <div class="option-item" onclick="addUser('${u.id}','${escHtml(u.nombre)}','${roleFilter}')">
+      <div class="option-avatar">${(u.nombre||'?').substring(0,1).toUpperCase()}</div>
+      <div>
+        <div style="font-size:13px;font-weight:600">${escHtml(u.nombre)}</div>
+        <div style="font-size:11px;color:var(--text-dim)">${escHtml(u.email||'')}</div>
+      </div>
+    </div>`).join('');
+}
+function addUser(id, nombre, type) {
+  const item = { id, nombre };
+  if (type === 'manager') {
+    if (!selectedManagers.find(m => m.id === id)) {
+      selectedManagers.push(item);
+      renderChips('managers-wrap','managers-input', selectedManagers, removeManager);
+    }
+    document.getElementById('managers-input').value = '';
+    document.getElementById('managers-dropdown').style.display = 'none';
+  } else {
+    if (!selectedHandlers.find(h => h.id === id)) {
+      selectedHandlers.push(item);
+      renderChips('handlers-wrap','handlers-input', selectedHandlers, removeHandler);
+    }
+    document.getElementById('handlers-input').value = '';
+    document.getElementById('handlers-dropdown').style.display = 'none';
+  }
+}
+function removeManager(id) {
+  selectedManagers = selectedManagers.filter(m => m.id !== id);
+  renderChips('managers-wrap','managers-input', selectedManagers, removeManager);
+}
+function removeHandler(id) {
+  selectedHandlers = selectedHandlers.filter(h => h.id !== id);
+  renderChips('handlers-wrap','handlers-input', selectedHandlers, removeHandler);
+}
+
+let _talentSearchTimeout = null;
+function searchTalentos(inputId, dropdownId) {
+  clearTimeout(_talentSearchTimeout);
+  _talentSearchTimeout = setTimeout(() => _doSearchTalentos(inputId, dropdownId), 150);
+}
+function _doSearchTalentos(inputId, dropdownId) {
+  const q = (document.getElementById(inputId)?.value || '').toLowerCase().trim();
+  const dropdown = document.getElementById(dropdownId);
+  if (!dropdown) return;
+  if (!q) { dropdown.style.display = 'none'; return; }
+  const results = talentosList.filter(t =>
+    (t.nombre||'').toLowerCase().includes(q) &&
+    !selectedTalentos.find(x => x.id === t.id)
+  ).slice(0, 10);
+  if (!results.length) {
+    dropdown.style.display = 'block';
+    dropdown.innerHTML = '<div class="option-item" style="color:var(--text-dim)">Sin resultados para "'+escHtml(q)+'"</div>';
+    return;
+  }
+  dropdown.style.display = 'block';
+  dropdown.innerHTML = results.map(t => `
+    <div class="option-item" onclick="addTalento(${t.id},'${escHtml(t.nombre).replace(/'/g,"\\'")}')">
+      <div class="option-avatar">${t.foto ? `<img src="${t.foto}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">` : (t.nombre||'?').substring(0,1).toUpperCase()}</div>
+      <div><div style="font-size:13px;font-weight:600">${escHtml(t.nombre)}</div></div>
+    </div>`).join('');
+}
+function addTalento(id, nombre) {
+  if (!selectedTalentos.find(t => t.id === id)) {
+    selectedTalentos.push({ id, nombre });
+    renderChips('talentos-wrap','talentos-input', selectedTalentos, removeTalento);
+  }
+  document.getElementById('talentos-input').value = '';
+  document.getElementById('talentos-dropdown').style.display = 'none';
+}
+function removeTalento(id) {
+  id = parseInt(id);
+  selectedTalentos = selectedTalentos.filter(t => t.id !== id);
+  renderChips('talentos-wrap','talentos-input', selectedTalentos, removeTalento);
+}
+
+// Cerrar dropdowns al hacer click afuera
+document.addEventListener('click', e => {
+  ['managers-dropdown','handlers-dropdown','talentos-dropdown'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.closest('.chips-input-wrap') && !e.target.closest('#'+id)) el.style.display = 'none';
+  });
+});
+
+async function saveCampana() {
+  const nombre = document.getElementById('c-nombre').value.trim();
+  if (!nombre) { showToast('El nombre es obligatorio','error'); return; }
+
+  const marcaId = parseInt(document.getElementById('c-marca').value) || null;
+  const clienteId = parseInt(document.getElementById('c-cliente').value) || null;
+
+  const payload = {
+    nombre,
+    marca_id: marcaId,
+    cliente_id: clienteId,
+    estado: document.getElementById('c-estado').value,
+    fecha_inicio: document.getElementById('c-fecha-inicio').value || null,
+    fecha_fin: document.getElementById('c-fecha-fin').value || null,
+    descripcion: document.getElementById('c-descripcion').value.trim(),
+  };
+  if (isAdmin()) {
+    Object.assign(payload, {
+      metodo_pago_marca: document.getElementById('c-metodo-pago')?.value.trim() || '',
+      dias_pago_marca: (function(){ const v = document.getElementById('c-dias-pago-marca')?.value; return v !== '' && v != null ? parseInt(v) : null; })(),
+      pais_facturacion: document.getElementById('c-pais-facturacion')?.value || '',
+      requiere_factura: document.getElementById('c-requiere-factura')?.value || 'no',
+      notas_finanzas: document.getElementById('c-notas-finanzas')?.value.trim() || '',
+    });
+  }
+
+  const btn = document.getElementById('btn-save-campana');
+  btn.textContent = 'Guardando...'; btn.disabled = true;
+  try {
+    payload.updated_by = currentUser.id;
+    const {error} = await sb.from('campanas').update(payload).eq('id', editingCampanaId);
+    if (error) throw error;
+
+    // Sync managers — diff para no borrar+reinsertar al propio usuario (RLS)
+    const existingMgrIds = (campana.campana_managers||[]).map(m => m.user_id);
+    const selectedMgrIds = selectedManagers.map(m => m.id);
+    const mgrsToRemove = existingMgrIds.filter(id => !selectedMgrIds.includes(id));
+    const mgrsToAdd = selectedMgrIds.filter(id => !existingMgrIds.includes(id));
+    if (mgrsToRemove.length) {
+      const {error: e1} = await sb.from('campana_managers').delete().eq('campana_id', editingCampanaId).in('user_id', mgrsToRemove);
+      if (e1) throw new Error('Quitar managers: '+e1.message);
+    }
+    if (mgrsToAdd.length) {
+      const {error: e2} = await sb.from('campana_managers').insert(mgrsToAdd.map(uid => ({campana_id: editingCampanaId, user_id: uid})));
+      if (e2) throw new Error('Agregar managers: '+e2.message);
+    }
+
+    // Sync handlers — mismo diff
+    const existingHndIds = (campana.campana_handlers||[]).map(h => h.user_id);
+    const selectedHndIds = selectedHandlers.map(h => h.id);
+    const hndsToRemove = existingHndIds.filter(id => !selectedHndIds.includes(id));
+    const hndsToAdd = selectedHndIds.filter(id => !existingHndIds.includes(id));
+    if (hndsToRemove.length) {
+      const {error: e3} = await sb.from('campana_handlers').delete().eq('campana_id', editingCampanaId).in('user_id', hndsToRemove);
+      if (e3) throw new Error('Quitar handlers: '+e3.message);
+    }
+    if (hndsToAdd.length) {
+      const {error: e4} = await sb.from('campana_handlers').insert(hndsToAdd.map(uid => ({campana_id: editingCampanaId, user_id: uid})));
+      if (e4) throw new Error('Agregar handlers: '+e4.message);
+    }
+
+    // Sync talentos (solo agregar nuevos; no se quitan los existentes para no perder datos)
+    const existing = await sb.from('campana_talentos').select('talent_id').eq('campana_id', editingCampanaId);
+    const existingIds = new Set((existing.data||[]).map(ct => ct.talent_id));
+    const nuevos = selectedTalentos.filter(t => !existingIds.has(t.id));
+    if (nuevos.length) {
+      const {error: e5} = await sb.from('campana_talentos').insert(nuevos.map(t => ({campana_id: editingCampanaId, talent_id: t.id})));
+      if (e5) throw new Error('Agregar talentos: '+e5.message);
+    }
+
+    closeModal('modal-campana');
+    await loadCampana();
+    renderAll();
+    showToast('Campaña actualizada ✓','success');
+  } catch(e) {
+    console.error('saveCampana:', e);
+    showToast('Error al guardar: '+e.message,'error');
+  }
+  btn.textContent = 'Guardar Campaña'; btn.disabled = false;
 }
 
 async function deleteCampana() {
