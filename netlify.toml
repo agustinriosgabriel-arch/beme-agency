@@ -23,6 +23,15 @@
   timeout = 26
   schedule = "*/15 * * * *"  # every 15 minutes — prospección email sequences
 
+[functions."ingest-inbox"]
+  timeout = 30
+  schedule = "*/15 * * * *"  # every 15 minutes — resumen de mails (contacto@ + management@) → Bandeja
+  external_node_modules = ["imapflow", "mailparser"]
+
+[functions."reply-email"]
+  timeout = 26
+  external_node_modules = ["imapflow"]
+
 [functions."brand-notify"]
   timeout = 20
   schedule = "*/10 * * * *"  # every 10 minutes — avisos a marcas (script/contenido/spark/stats)

@@ -6763,3 +6763,22 @@ function exportAuditCSV() {
   document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
 }
+
+// ── Precarga desde Bandeja: crear talento con datos de una propuesta ──
+(function bandejaTalentoPrefill(){
+  let raw; try { raw = localStorage.getItem('beme_talento_prefill'); } catch(e) { return; }
+  if (!raw) return;
+  let d; try { d = JSON.parse(raw); } catch(e) { try{localStorage.removeItem('beme_talento_prefill');}catch(_){} return; }
+  let tries = 0;
+  (function waitReady(){
+    const ready = (typeof currentUser !== 'undefined' && currentUser) && typeof openAddModal === 'function' && document.getElementById('talent-modal');
+    if (!ready) { if (tries++ < 80) return setTimeout(waitReady, 300); return; }
+    try { localStorage.removeItem('beme_talento_prefill'); } catch(e) {}
+    openAddModal();
+    const set = (id, v) => { const el = document.getElementById(id); if (el && v != null && String(v).trim() !== '') el.value = v; };
+    set('f-nombre', d.nombre); set('f-instagram', d.instagram); set('f-tiktok', d.tiktok);
+    set('f-youtube', d.youtube); set('f-email', d.email); set('f-telefono', d.telefono);
+    set('f-ciudad', d.ciudad); set('f-keywords', d.keywords); set('f-notas-internas', d.notas);
+    if (typeof showToast === 'function') showToast('Datos del creador precargados — revisá y guardá.', 'info');
+  })();
+})();
