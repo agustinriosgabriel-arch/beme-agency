@@ -10,9 +10,12 @@
 
 const nodemailer = require('nodemailer');
 const MailComposer = require('nodemailer/lib/mail-composer');
-const { ImapFlow } = require('imapflow');
 const { corsOrigin } = require('./lib/cors');
 const { buildEmailContent } = require('./lib/email-signature');
+
+let ImapFlow, DEP_ERROR = null;
+try { ({ ImapFlow } = require('imapflow')); }
+catch (e) { DEP_ERROR = e.message || String(e); }
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -35,6 +38,7 @@ function compileRaw(mailOptions) {
   });
 }
 async function appendToSent(creds, raw) {
+  if (!ImapFlow) return false; // sin imapflow: igual se envía, solo no se copia a Enviados
   const client = new ImapFlow({ host: IMAP_HOST, port: IMAP_PORT, secure: true, auth: { user: creds.user, pass: creds.pass }, logger: false });
   await client.connect();
   try {

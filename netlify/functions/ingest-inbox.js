@@ -11,8 +11,10 @@
 //      IMAP_HOST (def imap.hostinger.com), IMAP_PORT (def 993),
 //      SMTP_USER/SMTP_PASS (contacto@), IMAP_MGMT_USER/IMAP_MGMT_PASS (management@)
 
-const { ImapFlow } = require('imapflow');
-const { simpleParser } = require('mailparser');
+// Carga protegida: si falta una dependencia, devolvemos JSON claro en vez de 502 mudo.
+let ImapFlow, simpleParser, DEP_ERROR = null;
+try { ({ ImapFlow } = require('imapflow')); ({ simpleParser } = require('mailparser')); }
+catch (e) { DEP_ERROR = e.message || String(e); }
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -316,6 +318,7 @@ async function processMailbox(mb, sinceDays, dry, state) {
 }
 
 exports.handler = async (event) => {
+  if (DEP_ERROR) return { statusCode: 500, body: JSON.stringify({ error: 'Dependencias no cargaron (imapflow/mailparser): ' + DEP_ERROR }) };
   if (!SUPABASE_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'SUPABASE_SERVICE_KEY no configurada' }) };
   if (!ANTHROPIC_API_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY no configurada' }) };
 
