@@ -1,13 +1,12 @@
-// Netlify Function: Reply Email (en el hilo, con firma BEME, copia en Enviados)
-// POST /.netlify/functions/reply-email  { bandeja_id, body, to?, subject? }
+// Netlify Function: Reply Email (en el hilo, firma BEME, copia en Enviados)
+// POST /.netlify/functions/reply-email  { mensaje_id, body, to?, subject? }
 //
-// - Carga el mail de bandeja_emails (service key) para tomar message_id /
-//   references / remitente / casilla.
-// - Responde DESDE la misma casilla que lo recibió (contacto@ o management@),
-//   con In-Reply-To + References → queda en el hilo (seguimiento de campaña).
-// - Inyecta la firma/membrete BEME (lib/email-signature.js), igual que Hostinger.
-// - Sube una copia a la carpeta "Enviados" por IMAP (para que aparezca en webmail).
-// - Registra la respuesta en bandeja_respuestas (visible en la app).
+// - Carga el mensaje recibido de bandeja_mensajes para tomar hilo/remitente/casilla.
+// - Responde DESDE la misma casilla (contacto@ / management@) con In-Reply-To +
+//   References → queda en el hilo. Firma/membrete BEME (lib/email-signature.js).
+// - Sube copia a la carpeta Enviados (IMAP append).
+// - Inserta el mensaje 'enviado' en bandeja_mensajes (mismo thread_key) → visible
+//   en la conversación. Marca los recibidos del hilo como gestionados.
 
 const nodemailer = require('nodemailer');
 const MailComposer = require('nodemailer/lib/mail-composer');
@@ -23,25 +22,18 @@ const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
 const IMAP_HOST = process.env.IMAP_HOST || 'imap.hostinger.com';
 const IMAP_PORT = Number(process.env.IMAP_PORT || 993);
 
-// Credenciales SMTP/IMAP por casilla (en Hostinger, IMAP y SMTP comparten contraseña por cuenta).
 function credsFor(casilla) {
-  if (casilla === 'management') {
-    return { user: process.env.IMAP_MGMT_USER || 'management@bemeagency.com', pass: process.env.IMAP_MGMT_PASS };
-  }
+  if (casilla === 'management') return { user: process.env.IMAP_MGMT_USER || 'management@bemeagency.com', pass: process.env.IMAP_MGMT_PASS };
   return { user: process.env.SMTP_USER || 'contacto@bemeagency.com', pass: process.env.SMTP_PASS };
 }
-
 function sbHeaders() {
   return { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
 }
-
 function compileRaw(mailOptions) {
   return new Promise((resolve, reject) => {
     new MailComposer(mailOptions).compile().build((err, message) => err ? reject(err) : resolve(message));
   });
 }
-
-// Sube una copia a la carpeta Enviados/Sent. Best-effort (no rompe el envío).
 async function appendToSent(creds, raw) {
   const client = new ImapFlow({ host: IMAP_HOST, port: IMAP_PORT, secure: true, auth: { user: creds.user, pass: creds.pass }, logger: false });
   await client.connect();
@@ -51,12 +43,10 @@ async function appendToSent(creds, raw) {
       const list = await client.list();
       const sent = list.find(m => m.specialUse === '\\Sent') || list.find(m => /(^|[./])sent$|enviado/i.test(m.path));
       if (sent) mailbox = sent.path;
-    } catch (e) { /* usa 'Sent' por defecto */ }
+    } catch (e) { /* default */ }
     await client.append(mailbox, raw, ['\\Seen']);
     return true;
-  } finally {
-    await client.logout().catch(() => {});
-  }
+  } finally { await client.logout().catch(() => {}); }
 }
 
 exports.handler = async (event) => {
@@ -70,41 +60,30 @@ exports.handler = async (event) => {
   if (!SUPABASE_KEY) return { statusCode: 500, headers, body: JSON.stringify({ error: 'SUPABASE_SERVICE_KEY no configurada' }) };
 
   try {
-    const { bandeja_id, body, to, subject } = JSON.parse(event.body || '{}');
-    if (!bandeja_id || !body) {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Faltan campos: bandeja_id, body' }) };
-    }
+    const { mensaje_id, body, to, subject } = JSON.parse(event.body || '{}');
+    if (!mensaje_id || !body) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Faltan campos: mensaje_id, body' }) };
 
-    // Cargar el mail original
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/bandeja_emails?id=eq.${encodeURIComponent(bandeja_id)}&select=*&limit=1`, { headers: sbHeaders() });
-    if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
-    const mail = (await res.json())[0];
-    if (!mail) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Mail no encontrado' }) };
+    const rows = await (await fetch(`${SUPABASE_URL}/rest/v1/bandeja_mensajes?id=eq.${encodeURIComponent(mensaje_id)}&select=*&limit=1`, { headers: sbHeaders() })).json();
+    const msg = rows && rows[0];
+    if (!msg) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Mensaje no encontrado' }) };
 
-    const creds = credsFor(mail.casilla);
-    if (!creds.pass) return { statusCode: 500, headers, body: JSON.stringify({ error: `Falta la contraseña de la casilla ${mail.casilla}` }) };
+    const creds = credsFor(msg.casilla);
+    if (!creds.pass) return { statusCode: 500, headers, body: JSON.stringify({ error: `Falta la contraseña de la casilla ${msg.casilla}` }) };
 
-    const dest = to || mail.remitente_email;
-    if (!dest) return { statusCode: 400, headers, body: JSON.stringify({ error: 'El mail no tiene remitente para responder' }) };
+    const dest = to || msg.de_email;
+    if (!dest) return { statusCode: 400, headers, body: JSON.stringify({ error: 'El mensaje no tiene remitente para responder' }) };
 
-    let subj = subject || mail.asunto || '';
+    let subj = subject || msg.asunto || '';
     if (!/^re:/i.test(subj)) subj = `Re: ${subj}`;
 
-    // Threading: In-Reply-To = message_id original; References = cadena previa + original
-    const references = [mail.thread_references || '', mail.message_id || ''].join(' ').trim();
+    const references = [msg.thread_references || '', msg.message_id || ''].join(' ').trim();
     const { text, html } = buildEmailContent(body);
 
     const mailOptions = {
-      from: `"BEME Agency" <${creds.user}>`,
-      to: dest,
-      subject: subj,
-      text, html,
-      replyTo: creds.user,
-      inReplyTo: mail.message_id || undefined,
-      references: references || undefined,
+      from: `"BEME Agency" <${creds.user}>`, to: dest, subject: subj, text, html,
+      replyTo: creds.user, inReplyTo: msg.message_id || undefined, references: references || undefined,
     };
 
-    // Compilar una sola vez para usar el mismo mensaje en SMTP y en Enviados.
     const raw = await compileRaw(mailOptions);
     const sentMessageId = (String(raw).match(/^message-id:\s*(<[^>]+>)/im) || [])[1] || '';
 
@@ -112,23 +91,27 @@ exports.handler = async (event) => {
     await transporter.sendMail({ envelope: { from: creds.user, to: [dest] }, raw });
 
     let savedToSent = false;
-    try { savedToSent = await appendToSent(creds, raw); }
-    catch (e) { console.error('appendToSent error:', e.message); }
+    try { savedToSent = await appendToSent(creds, raw); } catch (e) { console.error('appendToSent:', e.message); }
 
-    // Registrar la respuesta + marcar gestionado
-    await fetch(`${SUPABASE_URL}/rest/v1/bandeja_respuestas`, {
-      method: 'POST',
-      headers: { ...sbHeaders(), Prefer: 'return=minimal' },
+    // Insertar el mensaje enviado en el mismo hilo
+    await fetch(`${SUPABASE_URL}/rest/v1/bandeja_mensajes`, {
+      method: 'POST', headers: { ...sbHeaders(), Prefer: 'return=minimal' },
       body: JSON.stringify({
-        bandeja_id, direccion: 'saliente', from_email: creds.user, to_email: dest,
-        asunto: subj, cuerpo: body, message_id: sentMessageId, guardado_en_enviados: savedToSent,
+        message_id: sentMessageId || `app-${mensaje_id}-${Math.random().toString(36).slice(2)}`,
+        thread_key: msg.thread_key || msg.message_id,
+        thread_references: references,
+        casilla: msg.casilla, direccion: 'enviado',
+        de_nombre: 'BEME Agency', de_email: creds.user, para_email: dest,
+        asunto: subj, fecha: new Date().toISOString(),
+        resumen: '', tag: '', datos: {}, cuerpo_preview: body.slice(0, 3000),
+        es_talento_exclusivo: msg.es_talento_exclusivo, talento_id: msg.talento_id, talento_nombre: msg.talento_nombre,
+        estado: 'gestionado',
       }),
     }).catch(() => {});
 
-    await fetch(`${SUPABASE_URL}/rest/v1/bandeja_emails?id=eq.${encodeURIComponent(bandeja_id)}`, {
-      method: 'PATCH',
-      headers: { ...sbHeaders(), Prefer: 'return=minimal' },
-      body: JSON.stringify({ estado: 'gestionado', respondido_en: new Date().toISOString() }),
+    // Marcar los recibidos del hilo como gestionados
+    await fetch(`${SUPABASE_URL}/rest/v1/bandeja_mensajes?casilla=eq.${msg.casilla}&thread_key=eq.${encodeURIComponent(msg.thread_key || msg.message_id)}&direccion=eq.recibido`, {
+      method: 'PATCH', headers: { ...sbHeaders(), Prefer: 'return=minimal' }, body: JSON.stringify({ estado: 'gestionado' }),
     }).catch(() => {});
 
     return { statusCode: 200, headers, body: JSON.stringify({ success: true, messageId: sentMessageId, to: dest, from: creds.user, savedToSent }) };
