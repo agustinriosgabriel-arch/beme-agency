@@ -2573,6 +2573,11 @@ async function saveTalent() {
           if(ind) { ind.style.opacity='1'; setTimeout(()=>{ind.style.opacity='0';},1800); }
           // Persist nextTalentId if this was a new talent
           if(!_wasEditingId) sb.from('app_config').upsert({key:'next_talent_id', value: nextTalentId}).catch(e => console.warn('next_talent_id:', e));
+          // Auto-scrape once so a brand-new talent loads with followers/metadata.
+          // Runs AFTER the insert confirms, so saveFollowers' UPDATE lands on an existing row.
+          if(!_wasEditingId && (savedTalent.tiktok || savedTalent.instagram || savedTalent.youtube)) {
+            updateTalentAll(savedTalent.id);
+          }
         }
       });
   }
