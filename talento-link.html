@@ -652,7 +652,7 @@ function renderCampaignCard(ct) {
   const contenidos = ct.contenidos || [];
   const done = contenidos.filter(c=>c.paso_actual>=8).length;
 
-  const mon = ct.moneda||'USD';
+  const mon = ct.moneda_talento||ct.moneda||'USD';
   const pagado = ct.pago_estado==='pagado';
   const feeHTML = `<div class="fee-strip">
     <div class="fee-pill"><div class="lbl">${esc(t('feeLabel'))}</div><div class="val">${fmtMoney(ct.fee_talento||0,mon)}</div></div>
@@ -1202,7 +1202,7 @@ function openCreateInvoice(ctId){
     <div class="fld" style="margin-bottom:12px"><label>${esc(t('invAddress'))}</label><textarea id="inv-address" style="min-height:54px"></textarea></div>
     <div class="form-grid" style="margin-bottom:12px">
       <div class="fld"><label>${esc(t('invAmount'))}</label><input type="number" id="inv-amount" value="${ct.fee_talento||0}"></div>
-      <div class="fld"><label>${esc(t('payCurrency'))}</label><input type="text" id="inv-currency" value="${esc(ct.moneda||'USD')}"></div>
+      <div class="fld"><label>${esc(t('payCurrency'))}</label><input type="text" id="inv-currency" value="${esc(ct.moneda_talento||ct.moneda||'USD')}"></div>
     </div>
     <div class="fld"><label>${esc(t('invAccount'))} <span class="req">*</span></label>
       ${cuentas.length?`<select id="inv-account">${accOpts}</select>`:`<p class="sec-note">${esc(t('invAccountNone'))}</p>`}

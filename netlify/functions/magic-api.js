@@ -98,7 +98,7 @@ exports.handler = async (event) => {
   async function notifyFinanzasInvoice(ct, invoice_url, tipo, factura_datos) {
     try {
       const { data } = await sb.from('campana_talentos')
-        .select('fee_talento,moneda,talentos(nombre),campanas(nombre)')
+        .select('fee_talento,moneda,moneda_talento,talentos(nombre),campanas(nombre)')
         .eq('id', ct.id).maybeSingle();
       await sendInvoiceToFinanzas({
         talentoNombre: data?.talentos?.nombre || 'Talento',
@@ -106,7 +106,7 @@ exports.handler = async (event) => {
         invoiceUrl: invoice_url,
         tipo,
         monto: (factura_datos && factura_datos.monto) || data?.fee_talento,
-        moneda: (factura_datos && factura_datos.moneda) || data?.moneda,
+        moneda: (factura_datos && factura_datos.moneda) || data?.moneda_talento || data?.moneda,
       });
     } catch (e) { console.warn('notifyFinanzasInvoice:', e.message); }
   }
