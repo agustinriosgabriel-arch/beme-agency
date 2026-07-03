@@ -134,6 +134,7 @@ let CATEGORIES = [...BASE_CATEGORIES];
 let talents = [];
 let rosters = [];
 let rosterLinks = [];
+let pedidosCliente = [];
 let talentCampaigns = []; // campaign history per talent
 let talentActiveProsps = {}; // talento_id -> [{prospeccion_id, marca, pendingCount}]
 let rosterBrandEdits = {}; // roster_id → count of brand edits
@@ -540,6 +541,7 @@ async function loadFromSupabase() {
     populateCountryDropdown();
     updateApiKeyUI();
     loadGeneralRosters();
+    loadPedidosCliente();
     loadRosterBrandEdits();
 
     // Subscribe to realtime changes so all users see updates instantly
@@ -929,6 +931,9 @@ let FN_MAP = {
   closeManageCatsModal,
   closeManageLinksModal: function(){ closeModal('manage-links-modal'); },
   createRosterLink,
+  copyPedidoClienteUrl,
+  closePedidoDetalle: function(){ closeModal('pedido-detalle-modal'); },
+  savePedidoPrecios,
   addCategoryFromModal,
   togglePaisDropdown,
   toggleSortDropdown,
@@ -985,6 +990,7 @@ let ACTION_MAP = {
   'copy-url':        (id)    => copyRosterUrl(parseInt(id)),
   'copy-url-compact':(id)    => copyCompactRosterUrl(parseInt(id)),
   'switch-roster-subtab': (id) => switchRosterSubtab(id),
+  'open-pedido': (id) => openPedidoDetalle(parseInt(id)),
   'edit-general-roster':  (id) => openCreateGeneralRosterModal(parseInt(id)),
   'delete-general-roster':(id) => deleteGeneralRoster(id),
   'copy-general-roster-url':(id) => copyGeneralRosterUrl(id),
@@ -3807,10 +3813,15 @@ function switchRosterSubtab(tab) {
   currentRosterSubtab = tab;
   document.getElementById('subtab-generales').classList.toggle('active', tab === 'generales');
   document.getElementById('subtab-personalizados').classList.toggle('active', tab === 'personalizados');
+  const sp = document.getElementById('subtab-pedidos');
+  if (sp) sp.classList.toggle('active', tab === 'pedidos');
   document.getElementById('roster-subtab-generales').style.display = tab === 'generales' ? 'block' : 'none';
   document.getElementById('roster-subtab-personalizados').style.display = tab === 'personalizados' ? 'block' : 'none';
+  const rp = document.getElementById('roster-subtab-pedidos');
+  if (rp) rp.style.display = tab === 'pedidos' ? 'block' : 'none';
   if (tab === 'generales') renderGeneralRosters();
   if (tab === 'personalizados') renderRosters();
+  if (tab === 'pedidos') renderPedidosCliente();
 }
 
 function openCreateGeneralRosterModal(id) {
@@ -4024,6 +4035,189 @@ function updateGeneralRosterBadge() {
   if (el) el.textContent = generalRosters.length;
   const el2 = document.getElementById('subtab-personalizados-badge');
   if (el2) el2.textContent = rosters.length;
+}
+
+// ===================== PEDIDOS DE CLIENTES =====================
+// Selecciones que arman los clientes desde pedido-cliente.html (link público).
+let _pedidoEditing = null;
+let _pedidosRealtime = false;
+
+async function loadPedidosCliente() {
+  if (!sb || !currentUser) return;
+  const { data, error } = await sb
+    .from('pedidos_cliente')
+    .select('*, pedido_cliente_items(*)')
+    .order('submitted_at', { ascending: false });
+  if (error) { console.warn('[Beme] Error loading pedidos_cliente:', error.message); return; }
+  pedidosCliente = data || [];
+  renderPedidosCliente();
+  updatePedidosBadge();
+
+  if (!_pedidosRealtime) {
+    _pedidosRealtime = true;
+    try {
+      sb.channel('pedidos_cliente_rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos_cliente' }, () => { loadPedidosCliente(); })
+        .subscribe();
+    } catch (e) { /* realtime best-effort */ }
+  }
+}
+
+function updatePedidosBadge() {
+  const el = document.getElementById('subtab-pedidos-badge');
+  if (el) el.textContent = pedidosCliente.filter(p => p.estado === 'enviado').length;
+}
+
+const PEDIDO_ESTADOS = {
+  enviado:  { txt: 'Pendiente de cotizar', bg: 'rgba(245,159,0,0.15)',  c: '#c77700' },
+  cotizado: { txt: 'Cotizado',             bg: 'rgba(46,160,67,0.15)',  c: '#2a7d3a' },
+  cerrado:  { txt: 'Cerrado',              bg: 'rgba(120,120,120,0.15)', c: '#777' },
+};
+
+function renderPedidosCliente() {
+  const grid = document.getElementById('pedidos-cliente-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  if (pedidosCliente.length === 0) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:60px 20px"><div class="empty-icon" style="font-size:40px">📥</div><h3>Sin pedidos todavía</h3><p>Copiá el link para clientes y compartilo. Cuando armen una selección, aparece acá.</p></div>';
+    return;
+  }
+  pedidosCliente.forEach(p => {
+    const items = p.pedido_cliente_items || [];
+    const st = PEDIDO_ESTADOS[p.estado] || PEDIDO_ESTADOS.enviado;
+    const fecha = p.submitted_at ? new Date(p.submitted_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+    const sub = [p.contacto_nombre, p.contacto_email].filter(Boolean).join(' · ');
+    const card = document.createElement('div');
+    card.className = 'rg-card';
+    card.innerHTML = '\
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">\
+        <div class="rg-name">' + escapeHtml(p.marca_nombre || 'Sin marca') + '</div>\
+        <span style="flex-shrink:0;background:' + st.bg + ';color:' + st.c + ';font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;">' + st.txt + '</span>\
+      </div>\
+      ' + (sub ? '<div class="rg-desc">' + escapeHtml(sub) + '</div>' : '') + '\
+      <div class="rg-meta">\
+        <span class="rg-talent-count">\
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>\
+          ' + items.length + ' talentos\
+        </span>\
+        ' + (fecha ? '<span style="font-size:11px;color:var(--text-dim);">' + fecha + '</span>' : '') + '\
+      </div>\
+      <div class="rg-actions">\
+        <button class="btn btn-primary btn-sm" style="flex:1" data-action="open-pedido" data-id="' + p.id + '">\
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>\
+          ' + (p.estado === 'enviado' ? 'Cotizar' : 'Ver / editar') + '\
+        </button>\
+      </div>';
+    grid.appendChild(card);
+  });
+}
+
+async function copyPedidoClienteUrl() {
+  const url = 'https://bemeagency.netlify.app/pedido-cliente.html';
+  await copyTextWithToast(url, '✓ Link para clientes copiado. Compartilo con tu cliente.');
+}
+
+function openPedidoDetalle(id) {
+  const p = pedidosCliente.find(x => x.id === id);
+  if (!p) return;
+  const items = (p.pedido_cliente_items || []).slice().sort((a, b) => (a.orden || 0) - (b.orden || 0));
+  _pedidoEditing = {
+    id: p.id,
+    items: items.map(it => ({
+      id: it.id,
+      talento_nombre: it.talento_nombre,
+      lineas: (it.lineas || []).map(l => ({ tipo: l.tipo || 'accion', descripcion: l.descripcion || '', precio: (l.precio == null ? '' : l.precio) })),
+    })),
+  };
+  document.getElementById('pd-title').textContent = p.marca_nombre || 'Pedido';
+  const fecha = p.submitted_at ? new Date(p.submitted_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
+  const subParts = [p.contacto_nombre, p.contacto_email, fecha].filter(Boolean);
+  document.getElementById('pd-sub').textContent = subParts.join(' · ');
+  renderPedidoDetalleBody(p);
+  openModal('pedido-detalle-modal');
+}
+
+function renderPedidoDetalleBody(p) {
+  const body = document.getElementById('pd-body');
+  if (!body || !_pedidoEditing) return;
+  let html = '';
+  if (p.notas) {
+    html += '<div style="background:var(--surface2);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--text-muted);"><b style="color:var(--text);">Notas del cliente:</b> ' + escapeHtml(p.notas) + '</div>';
+  }
+  _pedidoEditing.items.forEach(it => {
+    html += '<div style="border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;">';
+    html += '<div style="font-weight:700;font-size:14px;margin-bottom:8px;">' + escapeHtml(it.talento_nombre || 'Talento') + '</div>';
+    if (!it.lineas.length) {
+      html += '<div style="font-size:12px;color:var(--text-dim);">Sin acciones especificadas.</div>';
+    }
+    it.lineas.forEach((l, idx) => {
+      const badge = l.tipo === 'paquete'
+        ? '<span style="background:rgba(76,110,245,0.15);color:#4c6ef5;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">PAQUETE</span>'
+        : '<span style="background:rgba(148,20,224,0.15);color:#9414E0;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">ACCIÓN</span>';
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);flex-wrap:wrap;">'
+        + '<div style="flex-shrink:0;">' + badge + '</div>'
+        + '<div style="flex:1;min-width:120px;font-size:13px;">' + escapeHtml(l.descripcion || '') + '</div>'
+        + '<div style="display:flex;align-items:center;gap:4px;"><span style="color:var(--text-dim);">$</span>'
+        + '<input type="number" class="form-input" style="width:120px;" data-pl-item="' + it.id + '" data-pl-idx="' + idx + '" value="' + (l.precio === '' ? '' : escapeHtml(String(l.precio))) + '" placeholder="0"></div>'
+        + '</div>';
+    });
+    html += '</div>';
+  });
+  body.innerHTML = html;
+  updatePedidoTotal();
+}
+
+function updatePedidoTotal() {
+  if (!_pedidoEditing) return;
+  let total = 0;
+  _pedidoEditing.items.forEach(it => it.lineas.forEach(l => { const n = Number(l.precio); if (l.precio !== '' && !isNaN(n)) total += n; }));
+  const el = document.getElementById('pd-total');
+  if (el) el.textContent = total > 0 ? ('Total: $' + total.toLocaleString('es-ES')) : '';
+}
+
+// Actualiza el modelo de precios en vivo (listener único a nivel documento)
+document.addEventListener('input', (e) => {
+  const inp = e.target.closest && e.target.closest('[data-pl-item]');
+  if (!inp || !_pedidoEditing) return;
+  const itemId = parseInt(inp.dataset.plItem);
+  const idx = parseInt(inp.dataset.plIdx);
+  const item = _pedidoEditing.items.find(i => i.id === itemId);
+  if (item && item.lineas[idx]) { item.lineas[idx].precio = inp.value; updatePedidoTotal(); }
+});
+
+async function savePedidoPrecios() {
+  if (!_pedidoEditing || !sb) return;
+  const btn = document.getElementById('pd-save-btn');
+  const old = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+  try {
+    for (const it of _pedidoEditing.items) {
+      const lineas = it.lineas.map(l => ({
+        tipo: l.tipo, descripcion: l.descripcion,
+        precio: (l.precio === '' || l.precio == null) ? null : Number(l.precio),
+      }));
+      const { error } = await sb.from('pedido_cliente_items').update({ lineas }).eq('id', it.id);
+      if (error) throw error;
+    }
+    await sb.from('pedidos_cliente').update({ estado: 'cotizado' }).eq('id', _pedidoEditing.id);
+    // Sync local state
+    const p = pedidosCliente.find(x => x.id === _pedidoEditing.id);
+    if (p) {
+      p.estado = 'cotizado';
+      (p.pedido_cliente_items || []).forEach(it => {
+        const ed = _pedidoEditing.items.find(x => x.id === it.id);
+        if (ed) it.lineas = ed.lineas.map(l => ({ tipo: l.tipo, descripcion: l.descripcion, precio: (l.precio === '' || l.precio == null) ? null : Number(l.precio) }));
+      });
+    }
+    showToast('Precios guardados. Pedido marcado como cotizado.', 'success');
+    renderPedidosCliente();
+    updatePedidosBadge();
+    closeModal('pedido-detalle-modal');
+  } catch (e) {
+    showToast('Error al guardar: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = old; }
+  }
 }
 
 function copyGeneralRosterUrl(id) {

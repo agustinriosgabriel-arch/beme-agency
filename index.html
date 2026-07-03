@@ -1599,6 +1599,11 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
           Rosters Generales
           <span class="subtab-badge" id="subtab-generales-badge">0</span>
         </button>
+        <button class="roster-subtab" id="subtab-pedidos" data-action="switch-roster-subtab" data-id="pedidos">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          Pedidos de clientes
+          <span class="subtab-badge" id="subtab-pedidos-badge">0</span>
+        </button>
       </div>
 
       <!-- ====== ROSTERS PERSONALIZADOS SECTION ====== -->
@@ -1662,9 +1667,47 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
         <div class="roster-grid-mgr" id="general-roster-grid"></div>
       </div>
 
+      <!-- ====== PEDIDOS DE CLIENTES SECTION ====== -->
+      <div id="roster-subtab-pedidos" style="display:none">
+        <div class="roster-manager-header">
+          <div>
+            <h1 class="main-title">Pedidos de clientes</h1>
+            <div class="main-sub">Selecciones que arman los clientes desde el link público. Completá los precios acá.</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn btn-primary" data-fn="copyPedidoClienteUrl" style="background:linear-gradient(135deg,#9414E0,#4c6ef5);">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Copiar link para clientes
+            </button>
+          </div>
+        </div>
+        <div class="roster-grid-mgr" id="pedidos-cliente-grid"></div>
+      </div>
+
     </div>
 
   </main>
+</div>
+
+<!-- MODAL: DETALLE / COTIZACIÓN DE PEDIDO DE CLIENTE -->
+<div class="modal-overlay" id="pedido-detalle-modal">
+  <div class="modal" style="max-width:820px;width:96%;max-height:92vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+      <div>
+        <h2 class="modal-title" id="pd-title">Pedido</h2>
+        <div class="modal-sub" id="pd-sub" style="font-size:12px;color:var(--text-dim);margin-top:2px;"></div>
+      </div>
+      <button class="modal-close" data-fn="closePedidoDetalle" aria-label="Cerrar">&times;</button>
+    </div>
+    <div class="modal-body" id="pd-body" style="overflow-y:auto;flex:1;"></div>
+    <div class="modal-footer" style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+      <div id="pd-total" style="font-weight:800;font-size:15px;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" data-fn="closePedidoDetalle">Cerrar</button>
+        <button class="btn btn-primary btn-sm" data-fn="savePedidoPrecios" id="pd-save-btn">Guardar precios</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- BOTTOM SELECTION BAR -->
