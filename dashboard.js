@@ -133,6 +133,7 @@ function normalizeCategory(cat) {
 let CATEGORIES = [...BASE_CATEGORIES];
 let talents = [];
 let rosters = [];
+let deletedRosters = []; // papelera: rosters con deleted_at seteado
 let rosterLinks = [];
 let pedidosCliente = [];
 let talentCampaigns = []; // campaign history per talent
@@ -450,14 +451,18 @@ async function loadFromSupabase() {
       saveData();
     }
 
-    // Process rosters
+    // Process rosters — separar los de la papelera (deleted_at) del resto.
+    // (Se filtra en el cliente, no en la query, para no romper si la migración
+    //  add_soft_delete_rosters aún no corrió: ahí deleted_at es undefined.)
     if (rosterResult.error) console.error('[Beme] Error loading rosters:', rosterResult.error);
-    rosters = (rosterResult.data || []).map(r => ({
+    const _allRosters = (rosterResult.data || []).map(r => ({
       ...r,
       talentIds: (r.talent_ids || []).map(id => parseInt(id)),
       platforms: r.platforms || {tt:true,ig:true,yt:true},
       public_token: r.public_token || generateToken()
     }));
+    rosters = _allRosters.filter(r => !r.deleted_at);
+    deletedRosters = _allRosters.filter(r => r.deleted_at);
     rosterLinks = linksResult.data || [];
 
     // Only migrate from localStorage if query succeeded and returned 0
@@ -631,6 +636,7 @@ function setupRealtimeSubscription() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'rosters' }, (payload) => {
       if (payload.eventType === 'INSERT') {
         const r = payload.new;
+        if (r.deleted_at) return; // nace en la papelera (raro): ignorar acá
         if (!rosters.find(x => x.id === r.id)) {
           rosters.push({ ...r, talentIds: (r.talent_ids||[]).map(id => parseInt(id)), platforms: r.platforms||{tt:true,ig:true,yt:true} });
           renderRosters(); updateStats();
@@ -639,27 +645,38 @@ function setupRealtimeSubscription() {
         const r = payload.new;
         if (!r || !r.id) {
           sb.from('rosters').select('*').order('created_at', {ascending:false}).then(({ data }) => {
-            if (data) { rosters = data.map(x => ({...x, talentIds:x.talent_ids||[], platforms:x.platforms||{tt:true,ig:true,yt:true}})); renderRosters(); updateStats(); }
+            if (data) {
+              const all = data.map(x => ({...x, talentIds:x.talent_ids||[], platforms:x.platforms||{tt:true,ig:true,yt:true}}));
+              rosters = all.filter(x => !x.deleted_at);
+              deletedRosters = all.filter(x => x.deleted_at);
+              renderRosters(); updateStats(); renderPapelera();
+            }
           });
         } else {
-          const idx = rosters.findIndex(x => x.id === r.id);
           // Always use talent_ids from Supabase payload as source of truth
           const mapped = {
             ...r,
             talentIds: (Array.isArray(r.talent_ids) ? r.talent_ids : (r.talent_ids || [])).map(id => parseInt(id)),
             platforms: r.platforms || {tt:true,ig:true,yt:true}
           };
-          if (idx >= 0) {
-            rosters[idx] = mapped;
+          const idx = rosters.findIndex(x => x.id === r.id);
+          const dIdx = deletedRosters.findIndex(x => x.id === r.id);
+          if (r.deleted_at) {
+            // pasó a la papelera: sacar de activos, poner/actualizar en papelera
+            if (idx >= 0) rosters.splice(idx, 1);
+            if (dIdx >= 0) deletedRosters[dIdx] = mapped; else deletedRosters.unshift(mapped);
           } else {
-            rosters.push(mapped);
+            // activo: sacar de papelera, poner/actualizar en activos
+            if (dIdx >= 0) deletedRosters.splice(dIdx, 1);
+            if (idx >= 0) rosters[idx] = mapped; else rosters.push(mapped);
           }
-          renderRosters(); updateStats();
+          renderRosters(); updateStats(); renderPapelera();
         }
       } else if (payload.eventType === 'DELETE') {
-        const before = rosters.length;
+        const before = rosters.length + deletedRosters.length;
         rosters = rosters.filter(x => x.id !== payload.old.id);
-        if (rosters.length !== before) { renderRosters(); updateStats(); }
+        deletedRosters = deletedRosters.filter(x => x.id !== payload.old.id);
+        if (rosters.length + deletedRosters.length !== before) { renderRosters(); updateStats(); renderPapelera(); }
       }
     })
     .subscribe((status) => {
@@ -910,6 +927,8 @@ let FN_MAP = {
   toggleRosterSortDropdown,
   setRosterSort,
   toggleArchivedRosters,
+  openPapelera,
+  closePapeleraModal: function(){ closeModal('papelera-modal'); },
   deleteSelectedTalents,
   fetchPhotosSelected,
   toggleNetUpdateDropdown,
@@ -931,9 +950,10 @@ let FN_MAP = {
   closeManageCatsModal,
   closeManageLinksModal: function(){ closeModal('manage-links-modal'); },
   createRosterLink,
-  copyPedidoClienteUrl,
+  generarLinkCliente,
   closePedidoDetalle: function(){ closeModal('pedido-detalle-modal'); },
   savePedidoPrecios,
+  replyPedidoComentario,
   addCategoryFromModal,
   togglePaisDropdown,
   toggleSortDropdown,
@@ -991,6 +1011,7 @@ let ACTION_MAP = {
   'copy-url-compact':(id)    => copyCompactRosterUrl(parseInt(id)),
   'switch-roster-subtab': (id) => switchRosterSubtab(id),
   'open-pedido': (id) => openPedidoDetalle(parseInt(id)),
+  'copy-pedido-link': (id) => copyPedidoLink(parseInt(id)),
   'delete-pedido': (id) => deletePedidoCliente(parseInt(id)),
   'edit-general-roster':  (id) => openCreateGeneralRosterModal(parseInt(id)),
   'delete-general-roster':(id) => deleteGeneralRoster(id),
@@ -3296,6 +3317,9 @@ function renderRosters() {
       archSection.style.display = 'none';
     }
   }
+
+  // Mantener el botón/contador de la papelera en sync.
+  renderPapelera();
 }
 
 // ── ROSTER SORT ──────────────────────────────────────────────
@@ -3474,17 +3498,104 @@ function deleteCurrentRoster() {
 async function deleteRoster(id) {
   const roster = rosters.find(r => r.id === id);
   if(!roster) return;
-  if(!confirm('¿Eliminar "' + roster.name + '"? Se puede deshacer.')) return;
+  if(!confirm('¿Enviar "' + roster.name + '" a la papelera? Vas a poder restaurarlo.')) return;
   const rosterCopy = JSON.parse(JSON.stringify(roster));
 
   _lastUndo = {type: 'delete-roster', roster: rosterCopy};
 
+  // Soft delete: sale de activos y entra a la papelera (NO se borra la fila).
+  const nowIso = new Date().toISOString();
   rosters = rosters.filter(r => r.id !== id);
-  renderRosters(); updateStats();
+  rosterCopy.deleted_at = nowIso;
+  deletedRosters.unshift(rosterCopy);
+  renderRosters(); updateStats(); renderPapelera();
   if(sb && currentUser) {
-    await sb.from('rosters').delete().eq('id', id);
+    const {error} = await sb.from('rosters').update({deleted_at: nowIso}).eq('id', id);
+    if(error) {
+      // Falló (probablemente falta correr add_soft_delete_rosters.sql): revertir
+      // el movimiento local para NO esconder el roster ni perder nada.
+      deletedRosters = deletedRosters.filter(r => r.id !== id);
+      rosterCopy.deleted_at = null;
+      rosters.push(rosterCopy);
+      _lastUndo = null;
+      renderRosters(); updateStats(); renderPapelera();
+      dismissUndo();
+      showToast('No se pudo mover a la papelera. Falta correr la migración SQL de la papelera.', 'error');
+      return;
+    }
   }
-  showUndoToast('Roster "' + rosterCopy.name + '" eliminado');
+  showUndoToast('Roster "' + rosterCopy.name + '" enviado a la papelera');
+}
+
+// Restaurar un roster desde la papelera (deleted_at → NULL).
+async function restoreRoster(id) {
+  id = parseInt(id);
+  const idx = deletedRosters.findIndex(r => r.id === id);
+  if (idx === -1) return;
+  const roster = deletedRosters[idx];
+  deletedRosters.splice(idx, 1);
+  roster.deleted_at = null;
+  rosters.push(roster);
+  renderRosters(); updateStats(); renderPapelera();
+  if (sb && currentUser) {
+    const {error} = await sb.from('rosters').update({deleted_at: null}).eq('id', id);
+    if (error) showToast('Error al restaurar: ' + error.message, 'error');
+  }
+  showToast('Roster "' + roster.name + '" restaurado', 'success');
+}
+
+// Borrar DEFINITIVAMENTE desde la papelera (esto sí es físico e irreversible).
+async function deleteRosterPermanent(id) {
+  id = parseInt(id);
+  const roster = deletedRosters.find(r => r.id === id);
+  if (!roster) return;
+  if (!confirm('¿Eliminar "' + roster.name + '" DEFINITIVAMENTE?\n\nEsto borra el roster y las selecciones/links del cliente para siempre. No se puede deshacer.')) return;
+  deletedRosters = deletedRosters.filter(r => r.id !== id);
+  renderPapelera();
+  if (sb && currentUser) {
+    // Limpiar dependencias antes del delete (funciona aunque la FK cascade no esté aplicada).
+    await sb.from('roster_links').delete().eq('roster_id', id);
+    await sb.from('roster_selecciones').delete().eq('roster_id', id);
+    rosterLinks = rosterLinks.filter(l => l.roster_id !== id);
+    const {error} = await sb.from('rosters').delete().eq('id', id);
+    if (error) { showToast('Error al eliminar: ' + error.message, 'error'); return; }
+  }
+  showToast('Roster eliminado definitivamente', 'info');
+}
+
+// ── PAPELERA DE ROSTERS ──────────────────────────────────────
+function openPapelera() {
+  renderPapelera();
+  openModal('papelera-modal');
+}
+
+function renderPapelera() {
+  // Actualizar el contador del botón (aunque el modal esté cerrado).
+  const btnCount = document.getElementById('papelera-count');
+  if (btnCount) btnCount.textContent = deletedRosters.length ? String(deletedRosters.length) : '';
+  const btn = document.getElementById('papelera-btn');
+  if (btn) btn.style.display = deletedRosters.length ? 'inline-flex' : 'none';
+
+  const list = document.getElementById('papelera-list');
+  if (!list) return;
+  if (!deletedRosters.length) {
+    list.innerHTML = '<div style="text-align:center;padding:32px 20px;color:var(--text-dim);font-size:13px;">La papelera está vacía.</div>';
+    return;
+  }
+  const sorted = deletedRosters.slice().sort((a,b) => (b.deleted_at||'').localeCompare(a.deleted_at||''));
+  list.innerHTML = sorted.map(function(r) {
+    const count = (r.talentIds || r.talent_ids || []).length;
+    let when = '';
+    try { when = r.deleted_at ? new Date(r.deleted_at).toLocaleDateString('es-ES', {day:'2-digit',month:'short',year:'numeric'}) : ''; } catch(e) {}
+    return '<div style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);">' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(r.name || 'Sin nombre') + '</div>' +
+        '<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">' + count + ' talento' + (count!==1?'s':'') + (when ? ' · eliminado el ' + when : '') + '</div>' +
+      '</div>' +
+      '<button class="btn btn-primary btn-sm" onclick="restoreRoster(' + r.id + ')" title="Restaurar" style="white-space:nowrap;">↩ Restaurar</button>' +
+      '<button class="btn btn-danger btn-sm" onclick="deleteRosterPermanent(' + r.id + ')" title="Eliminar definitivamente" style="padding:4px 8px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>' +
+    '</div>';
+  }).join('');
 }
 
 // ===================== MANAGE TALENTS IN ROSTER =====================
@@ -4070,22 +4181,26 @@ function updatePedidosBadge() {
 }
 
 const PEDIDO_ESTADOS = {
+  borrador: { txt: 'Link enviado — esperando al cliente', bg: 'rgba(120,120,120,0.12)', c: '#888' },
   enviado:  { txt: 'Pendiente de cotizar', bg: 'rgba(245,159,0,0.15)',  c: '#c77700' },
   cotizado: { txt: 'Cotizado',             bg: 'rgba(46,160,67,0.15)',  c: '#2a7d3a' },
   cerrado:  { txt: 'Cerrado',              bg: 'rgba(120,120,120,0.15)', c: '#777' },
 };
+
+const PEDIDO_LINK_BASE = 'https://bemeagency.netlify.app/pedido-cliente.html?t=';
 
 function renderPedidosCliente() {
   const grid = document.getElementById('pedidos-cliente-grid');
   if (!grid) return;
   grid.innerHTML = '';
   if (pedidosCliente.length === 0) {
-    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:60px 20px"><div class="empty-icon" style="font-size:40px">📥</div><h3>Sin pedidos todavía</h3><p>Copiá el link para clientes y compartilo. Cuando armen una selección, aparece acá.</p></div>';
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:60px 20px"><div class="empty-icon" style="font-size:40px">📥</div><h3>Sin pedidos todavía</h3><p>Generá un link para un cliente y compartilo. Cuando arme su roster, aparece acá.</p></div>';
     return;
   }
   pedidosCliente.forEach(p => {
     const items = p.pedido_cliente_items || [];
     const st = PEDIDO_ESTADOS[p.estado] || PEDIDO_ESTADOS.enviado;
+    const nComs = Array.isArray(p.comentarios) ? p.comentarios.length : 0;
     const fecha = p.submitted_at ? new Date(p.submitted_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
     const sub = [p.contacto_nombre, p.contacto_email].filter(Boolean).join(' · ');
     const card = document.createElement('div');
@@ -4102,21 +4217,41 @@ function renderPedidosCliente() {
           ' + items.length + ' talentos\
         </span>\
         ' + (fecha ? '<span style="font-size:11px;color:var(--text-dim);">' + fecha + '</span>' : '') + '\
+        ' + (nComs ? '<span style="font-size:11px;color:#9414E0;font-weight:700;">💬 ' + nComs + '</span>' : '') + '\
       </div>\
       <div class="rg-actions">\
         <button class="btn btn-primary btn-sm" style="flex:1" data-action="open-pedido" data-id="' + p.id + '">\
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>\
-          ' + (p.estado === 'enviado' ? 'Cotizar' : 'Ver / editar') + '\
+          ' + (p.estado === 'enviado' ? 'Cotizar' : (p.estado === 'borrador' ? 'Ver' : 'Ver / editar')) + '\
         </button>\
+        <button class="btn btn-outline btn-sm" data-action="copy-pedido-link" data-id="' + p.id + '" title="Copiar link del cliente"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>\
         <button class="btn btn-danger btn-sm" data-action="delete-pedido" data-id="' + p.id + '" title="Eliminar pedido"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>\
       </div>';
     grid.appendChild(card);
   });
 }
 
-async function copyPedidoClienteUrl() {
-  const url = 'https://bemeagency.netlify.app/pedido-cliente.html';
-  await copyTextWithToast(url, '✓ Link para clientes copiado. Compartilo con tu cliente.');
+async function generarLinkCliente() {
+  const marca = (prompt('Nombre del cliente / marca para este link:') || '').trim();
+  if (!marca) return;
+  try {
+    const { data, error } = await sb.from('pedidos_cliente')
+      .insert({ marca_nombre: marca, estado: 'borrador' })
+      .select('id, token').single();
+    if (error) throw error;
+    // Refrescar lista local (el realtime también dispara, pero así es instantáneo)
+    const { data: full } = await sb.from('pedidos_cliente').select('*, pedido_cliente_items(*)').eq('id', data.id).single();
+    if (full) { pedidosCliente.unshift(full); renderPedidosCliente(); updatePedidosBadge(); }
+    await copyTextWithToast(PEDIDO_LINK_BASE + data.token, '✓ Link de "' + marca + '" copiado. Enviáselo al cliente.');
+  } catch (e) {
+    showToast('Error al generar el link: ' + e.message, 'error');
+  }
+}
+
+async function copyPedidoLink(id) {
+  const p = pedidosCliente.find(x => x.id === id);
+  if (!p || !p.token) { showToast('Este pedido no tiene link.', 'error'); return; }
+  await copyTextWithToast(PEDIDO_LINK_BASE + p.token, '✓ Link de "' + (p.marca_nombre || 'cliente') + '" copiado.');
 }
 
 function openPedidoDetalle(id) {
@@ -4213,8 +4348,55 @@ function renderPedidoDetalleBody(p) {
     html += '</div></div>';
   });
 
+  if (!_pedidoEditing.items.length) {
+    html += '<div style="text-align:center;color:var(--text-dim);padding:22px;font-size:13px;border:1px dashed var(--border);border-radius:12px;margin-bottom:14px;">El cliente todavía no armó su selección en el link.</div>';
+  }
+  html += renderPedidoComentarios(p);
+
   body.innerHTML = html;
   updatePedidoTotal();
+}
+
+function renderPedidoComentarios(p) {
+  const coms = Array.isArray(p.comentarios) ? p.comentarios : [];
+  let h = '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:14px;">';
+  h += '<div style="font-weight:700;font-size:13px;margin-bottom:10px;">Comentarios con el cliente</div>';
+  if (!coms.length) h += '<div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">Sin comentarios todavía.</div>';
+  coms.forEach(c => {
+    const mine = c.autor === 'beme';
+    const when = c.ts ? new Date(c.ts).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    h += '<div style="display:flex;justify-content:' + (mine ? 'flex-end' : 'flex-start') + ';margin-bottom:8px;">'
+      + '<div style="max-width:80%;background:' + (mine ? 'linear-gradient(135deg,#9414E0,#4c6ef5)' : 'var(--surface2)') + ';color:' + (mine ? '#fff' : 'var(--text)') + ';padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.4;">'
+      + '<div style="font-size:10px;opacity:.85;margin-bottom:2px;">' + (mine ? 'Beme' : escapeHtml(p.marca_nombre || 'Cliente')) + (when ? ' · ' + when : '') + '</div>'
+      + escapeHtml(c.texto || '')
+      + '</div></div>';
+  });
+  h += '<div style="display:flex;gap:8px;margin-top:10px;">'
+    + '<input id="pd-comment-input" class="form-input" style="flex:1;" placeholder="Escribí una respuesta al cliente...">'
+    + '<button class="btn btn-primary btn-sm" data-fn="replyPedidoComentario">Enviar</button>'
+    + '</div>';
+  h += '</div>';
+  return h;
+}
+
+async function replyPedidoComentario() {
+  if (!_pedidoEditing || !sb) return;
+  const inp = document.getElementById('pd-comment-input');
+  const texto = (inp && inp.value || '').trim();
+  if (!texto) return;
+  const p = pedidosCliente.find(x => x.id === _pedidoEditing.id);
+  if (!p) return;
+  const comentarios = Array.isArray(p.comentarios) ? p.comentarios.slice() : [];
+  comentarios.push({ autor: 'beme', texto, ts: new Date().toISOString() });
+  try {
+    const { error } = await sb.from('pedidos_cliente').update({ comentarios }).eq('id', p.id);
+    if (error) throw error;
+    p.comentarios = comentarios;
+    renderPedidoDetalleBody(p);     // re-render (los precios editados viven en _pedidoEditing y se preservan)
+    renderPedidosCliente();
+  } catch (e) {
+    showToast('Error al enviar el comentario: ' + e.message, 'error');
+  }
 }
 
 function safeHref(url) { if (!url) return '#'; return /^https?:\/\//.test(url) ? url : 'https://' + url; }
@@ -6491,17 +6673,8 @@ async function executeUndo() {
     }
 
     else if (action.type === 'delete-roster') {
-      rosters.push(action.roster);
-      if (sb && currentUser) {
-        var r = action.roster;
-        await sb.from('rosters').upsert([{
-          id:r.id, name:r.name||'', description:r.description||'',
-          platforms:r.platforms||{tt:true,ig:true,yt:true},
-          talent_ids:r.talentIds||r.talent_ids||[],
-          public_token:r.public_token||'', created:r.created||''
-        }], {onConflict:'id'});
-      }
-      showToast('Roster restaurado ✓', 'success');
+      // El roster está en la papelera (soft delete): restaurarlo.
+      await restoreRoster(action.roster.id);
     }
 
     else if (action.type === 'edit-talent') {

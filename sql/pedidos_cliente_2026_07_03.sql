@@ -73,6 +73,8 @@ CREATE TABLE IF NOT EXISTS pedidos_cliente (
 
 -- Moneda con la que BEME cotiza el pedido (se completa en el dashboard).
 ALTER TABLE pedidos_cliente ADD COLUMN IF NOT EXISTS moneda text DEFAULT 'USD';
+-- Hilo de comentarios cliente↔BEME: [{autor:'cliente'|'beme', texto, ts}]
+ALTER TABLE pedidos_cliente ADD COLUMN IF NOT EXISTS comentarios jsonb NOT NULL DEFAULT '[]'::jsonb;
 
 CREATE TABLE IF NOT EXISTS pedido_cliente_items (
   id              serial PRIMARY KEY,

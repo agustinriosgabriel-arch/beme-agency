@@ -1627,6 +1627,10 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
                 <button class="roster-sort-opt" data-action="set-roster-sort" data-id="name-desc">Nombre: Z → A</button>
               </div>
             </div>
+            <button class="btn btn-outline btn-sm" data-fn="openPapelera" id="papelera-btn" title="Papelera de rosters" style="gap:5px;display:none;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M8 6l1-3h6l1 3"/></svg>
+              Papelera <span id="papelera-count" style="font-weight:800;color:var(--primary);"></span>
+            </button>
             <button class="btn btn-primary" data-fn="openCreateRosterModal">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
               Nuevo Roster
@@ -1672,12 +1676,12 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
         <div class="roster-manager-header">
           <div>
             <h1 class="main-title">Pedidos de clientes</h1>
-            <div class="main-sub">Selecciones que arman los clientes desde el link público. Completá los precios acá.</div>
+            <div class="main-sub">Generá un link por cliente: arman su roster, vos completás los precios y se comentan por el mismo link.</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <button class="btn btn-primary" data-fn="copyPedidoClienteUrl" style="background:linear-gradient(135deg,#9414E0,#4c6ef5);">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-              Copiar link para clientes
+            <button class="btn btn-primary" data-fn="generarLinkCliente" style="background:linear-gradient(135deg,#9414E0,#4c6ef5);">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              Generar link para cliente
             </button>
           </div>
         </div>
@@ -2535,6 +2539,22 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
         <input type="text" id="new-link-roster-title" class="form-input" placeholder="Título del roster para la marca (opcional, usa el nombre del roster si vacío)" style="font-size:12px;">
       </div>
       <div id="links-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAPELERA DE ROSTERS -->
+<div class="modal-overlay" id="papelera-modal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h2 class="modal-title">Papelera de rosters</h2>
+      <button class="modal-close" data-fn="closePapeleraModal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Los rosters eliminados quedan acá. Restaurá el que necesites, o borralo definitivamente. Se limpian solos a los 30 días.</p>
+      <div id="papelera-list" style="display:flex;flex-direction:column;gap:8px;"></div>
     </div>
   </div>
 </div>

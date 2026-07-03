@@ -158,6 +158,22 @@ tr.talent-row.selected{background:#f6edfc;}
 .vm-close{background:none;border:none;font-size:26px;line-height:1;color:#999;cursor:pointer;padding:0 4px;}
 .vm-body{padding:18px;overflow-y:auto;font-size:14px;line-height:1.65;color:#333;white-space:pre-wrap;}
 
+/* Precios (modo cotizado) + comentarios */
+.ln-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;flex-shrink:0;}
+.ln-badge.act{background:rgba(148,20,224,.15);color:#9414E0;}
+.ln-badge.pkg{background:rgba(76,110,245,.15);color:#4c6ef5;}
+.quote-banner{background:#eef8f0;border:1px solid #cbead1;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#2a7d3a;font-weight:600;}
+.grand-total{text-align:right;font-size:17px;font-weight:800;margin:12px 0 4px;color:#111;}
+.cm-msg{display:flex;margin-bottom:8px;}
+.cm-bubble{max-width:82%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.45;}
+.cm-bubble .cm-meta{font-size:10px;opacity:.85;margin-bottom:2px;}
+.cm-send-btn{cursor:pointer;background:linear-gradient(135deg,#9414E0,#4c6ef5);color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:13px;font-weight:700;min-height:40px;}
+body.locked .catalog{display:none;}
+body.locked .layout{grid-template-columns:1fr;max-width:840px;}
+body.locked .cart{position:static;max-height:none;width:auto;transform:none;}
+body.locked .cart-foot{display:none;}
+body.locked .cart-fab{display:none!important;}
+
 .desktop-view{display:block;}
 .mobile-view{display:none;}
 .mob-card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.07);margin-bottom:12px;}
@@ -261,7 +277,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield;}
       <div class="cart-body" id="cart-body"></div>
       <div class="cart-foot">
         <button class="submit-btn" id="submit-btn">
-          <span id="submit-label">Enviar solicitud</span>
+          <span id="submit-label">Guardar y enviar a Beme</span>
         </button>
         <div class="submit-msg" id="submit-msg"></div>
       </div>
@@ -338,13 +354,30 @@ const photoLoaded=new Set();      // ids already fetched
 const selection=new Map();        // id -> { nombre, override:null | [{tipo,descripcion}] }
 let commonLines=[{tipo:'accion',descripcion:''}];
 const selectedCats=new Set();     // categorías acumuladas en el filtro
+let TOKEN=null;
+let PEDIDO=null;                  // {marca_nombre,contacto_nombre,contacto_email,notas,moneda,estado,comentarios,lineas_comunes}
+const serverItems=new Map();      // talento_id -> {lineas:[{tipo,descripcion,precio}], moneda}
+let LOCKED=false;                 // true cuando estado = cotizado/cerrado (solo lectura)
+
+function fmtMoney(n,cur){try{return new Intl.NumberFormat('en-US',{style:'currency',currency:cur||'USD',minimumFractionDigits:0,maximumFractionDigits:0}).format(Number(n)||0);}catch(e){return '$'+(Number(n)||0);}}
+async function api(action,extra){
+  const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({action,token:TOKEN},extra))});
+  return res.json().catch(()=>({ok:false,error:'Respuesta inválida del servidor'}));
+}
+function sameLines(a,b){if(a.length!==b.length)return false;for(let i=0;i<a.length;i++){if(a[i].tipo!==b[i].tipo||a[i].descripcion!==b[i].descripcion)return false;}return true;}
 
 // ── Init ──
+function showFatal(msg){
+  const lm=document.getElementById('load-msg'); if(lm) lm.textContent=msg;
+  const sp=document.querySelector('.loader-spinner'); if(sp) sp.style.display='none';
+}
+
 async function init(){
   try{
-    const sub=new URLSearchParams(location.search).get('n');
-    if(sub) document.getElementById('topbar-sub').textContent='Selección para '+sub;
+    TOKEN=new URLSearchParams(location.search).get('t');
+    if(!TOKEN){ showFatal('Necesitás un link válido de Beme para ver esta página.'); return; }
 
+    // Catálogo público
     let from=0;const PAGE=1000;
     while(true){
       const {data,error}=await sb.from('talentos_publicos').select(SAFE_COLS).order('nombre').range(from,from+PAGE-1);
@@ -353,7 +386,16 @@ async function init(){
       if(!data||data.length<PAGE)break;
       from+=PAGE;
     }
-    restoreDraft();
+
+    // Pedido de este cliente (por token)
+    const j=await api('open',{});
+    if(!j||!j.ok){ showFatal((j&&j.error)||'Link inválido o vencido.'); return; }
+    PEDIDO=j.pedido;
+    LOCKED=(PEDIDO.estado==='cotizado'||PEDIDO.estado==='cerrado');
+    loadFromServer(j.items||[]);
+    if(PEDIDO.marca_nombre) document.getElementById('topbar-sub').textContent='Selección para '+PEDIDO.marca_nombre;
+    if(LOCKED) document.body.classList.add('locked');
+
     populateCountryFilter();
     populateCategoryFilter();
     setupFilterListeners();
@@ -363,9 +405,23 @@ async function init(){
     document.getElementById('loading-screen').style.display='none';
     document.getElementById('app').style.display='block';
   }catch(e){
-    document.getElementById('load-msg').textContent='Error al cargar: '+e.message;
-    document.querySelector('.loader-spinner').style.display='none';
+    showFatal('Error al cargar: '+e.message);
   }
+}
+
+function loadFromServer(items){
+  window._form={marca:PEDIDO.marca_nombre||'',contacto:PEDIDO.contacto_nombre||'',email:PEDIDO.contacto_email||'',notas:PEDIDO.notas||'',moneda:PEDIDO.moneda||'USD'};
+  commonLines=(PEDIDO.lineas_comunes&&PEDIDO.lineas_comunes.length)?PEDIDO.lineas_comunes.map(l=>({tipo:l.tipo||'accion',descripcion:l.descripcion||''})):[{tipo:'accion',descripcion:''}];
+  const commonClean=commonLines.filter(l=>l.descripcion.trim());
+  selection.clear(); serverItems.clear();
+  (items||[]).forEach(it=>{
+    const t=CATALOG.find(x=>x.id===it.talento_id);
+    const nombre=it.talento_nombre||(t?t.nombre:'');
+    const itLines=(it.lineas||[]).map(l=>({tipo:l.tipo||'accion',descripcion:l.descripcion||''}));
+    const override=sameLines(itLines,commonClean)?null:itLines;
+    selection.set(it.talento_id,{nombre,override});
+    serverItems.set(it.talento_id,{lineas:it.lineas||[],moneda:it.moneda});
+  });
 }
 
 function populateCountryFilter(){
@@ -574,7 +630,12 @@ function renderCart(){
   document.getElementById('fab-count').textContent=n;
   const body=document.getElementById('cart-body');
 
+  if(LOCKED){ renderCartLocked(body); return; }
+
   let html='';
+  if(PEDIDO&&PEDIDO.estado==='enviado'){
+    html+='<div class="quote-banner" style="background:#fff7e6;border-color:#ffe0a3;color:#b26a00;">Ya enviaste tu selección. Podés ajustarla y volver a guardar — Beme está preparando la cotización.</div>';
+  }
   // Common actions
   html+='<div class="cart-section-title">'+SVG.accion+'Acciones a cotizar</div>';
   html+='<div class="cart-help">Estas acciones se piden para <b>todos</b> los talentos que elijas. Podés ajustar alguno en particular más abajo.</div>';
@@ -610,7 +671,62 @@ function renderCart(){
   html+='<div class="form-field"><label>Notas (opcional)</label><textarea id="in-notas" placeholder="Fechas, presupuesto estimado, campaña...">'+esc(f.notas||'')+'</textarea></div>';
   html+='<input class="hp-field" id="in-hp" tabindex="-1" autocomplete="off" aria-hidden="true" placeholder="No completar">';
 
+  html+=renderComentariosHTML();
   body.innerHTML=html;
+}
+
+// Vista solo-lectura con precios (estado cotizado/cerrado)
+function renderCartLocked(body){
+  let html='<div class="quote-banner">✓ Beme te envió la cotización. Revisala abajo y dejanos tus comentarios.</div>';
+  const byCur={};
+  [...serverItems.entries()].forEach(([id,si])=>{
+    const t=CATALOG.find(x=>x.id===id)||{id,nombre:(selection.get(id)||{}).nombre};
+    const nombre=(selection.get(id)||{}).nombre||t.nombre||'Talento';
+    const cur=si.moneda||PEDIDO.moneda||'USD';
+    let sub=0;
+    html+='<div class="sel-item"><div class="sel-item-head">'+avatarHTML(t)+'<div class="sel-name">'+esc(nombre)+'</div></div><div style="margin-top:6px;">';
+    (si.lineas||[]).forEach(l=>{
+      const badge=l.tipo==='paquete'?'<span class="ln-badge pkg">PAQUETE</span>':'<span class="ln-badge act">ACCIÓN</span>';
+      const has=(l.precio!=null&&l.precio!=='');
+      if(has)sub+=Number(l.precio)||0;
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #f0f0f0;">'+badge+'<span style="flex:1;font-size:13px;">'+esc(l.descripcion)+'</span><b style="white-space:nowrap;">'+(has?fmtMoney(l.precio,cur):'<span style=\"color:#bbb;\">a definir</span>')+'</b></div>';
+    });
+    byCur[cur]=(byCur[cur]||0)+sub;
+    html+='<div style="text-align:right;font-size:12px;font-weight:700;color:#666;margin-top:6px;">Subtotal: '+fmtMoney(sub,cur)+'</div></div></div>';
+  });
+  const totals=Object.keys(byCur).filter(c=>byCur[c]>0).map(c=>fmtMoney(byCur[c],c));
+  if(totals.length) html+='<div class="grand-total">Total: '+totals.join('  ·  ')+'</div>';
+  html+=renderComentariosHTML();
+  body.innerHTML=html;
+  // Cargar fotos de los talentos cotizados (el catálogo está oculto en modo locked)
+  lazyPhotos([...serverItems.keys()].map(id=>CATALOG.find(x=>x.id===id)).filter(Boolean));
+}
+
+// Hilo de comentarios cliente↔Beme
+function renderComentariosHTML(){
+  const coms=(PEDIDO&&PEDIDO.comentarios)||[];
+  let h='<div style="margin-top:16px;border-top:1px solid #eee;padding-top:14px;">';
+  h+='<div class="cart-section-title">Comentarios</div>';
+  h+='<div class="cart-help">Escribinos cualquier duda o ajuste. Beme te responde por este mismo link.</div>';
+  if(!coms.length) h+='<div style="font-size:12.5px;color:#999;margin-bottom:8px;">Sin comentarios todavía.</div>';
+  coms.forEach(c=>{
+    const mine=c.autor==='cliente';
+    const who=c.autor==='beme'?'Beme':(PEDIDO.marca_nombre||'Vos');
+    const when=c.ts?new Date(c.ts).toLocaleString('es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+    h+='<div class="cm-msg" style="justify-content:'+(mine?'flex-end':'flex-start')+';"><div class="cm-bubble" style="background:'+(mine?'linear-gradient(135deg,#9414E0,#4c6ef5)':'#f2ecfa')+';color:'+(mine?'#fff':'#333')+';"><div class="cm-meta">'+esc(who)+(when?' · '+when:'')+'</div>'+esc(c.texto)+'</div></div>';
+  });
+  h+='<div style="display:flex;gap:8px;margin-top:10px;"><input id="cm-input" class="line-desc" placeholder="Escribí un comentario..."><button type="button" class="cm-send-btn" id="cm-send">Enviar</button></div>';
+  h+='</div>';
+  return h;
+}
+async function postComentario(){
+  const inp=document.getElementById('cm-input'); const texto=(inp&&inp.value||'').trim(); if(!texto) return;
+  const btn=document.getElementById('cm-send'); if(btn)btn.disabled=true;
+  const j=await api('comment',{texto});
+  if(btn)btn.disabled=false;
+  if(!j||!j.ok){ alert((j&&j.error)||'No se pudo enviar el comentario.'); return; }
+  PEDIDO.comentarios=j.comentarios||PEDIDO.comentarios;
+  renderCart();
 }
 
 // Persistence
@@ -657,6 +773,8 @@ function setupUI(){
   // Cart interactions (delegated)
   const body=document.getElementById('cart-body');
   body.addEventListener('click',e=>{
+    const cm=e.target.closest('#cm-send');
+    if(cm){postComentario();return;}
     const addLine=e.target.closest('[data-addline]');
     if(addLine){linesFor(addLine.dataset.addline).push({tipo:'accion',descripcion:''});renderCart();saveDraft();return;}
     const seg=e.target.closest('[data-linetipo]');
@@ -674,6 +792,8 @@ function setupUI(){
     if(inp){const row=inp.closest('.line-row');linesFor(row.dataset.scope)[+row.dataset.idx].descripcion=inp.value;saveDraft();return;}
     if(e.target.closest('#in-marca,#in-contacto,#in-email,#in-notas,#in-moneda')){saveDraft();}
   });
+  // Enter en el comentario
+  body.addEventListener('keydown',e=>{ if(e.target.id==='cm-input'&&e.key==='Enter'){e.preventDefault();postComentario();} });
 
   // Mobile cart toggle
   const cart=document.getElementById('cart'),scrim=document.getElementById('cart-scrim');
@@ -683,7 +803,7 @@ function setupUI(){
   document.getElementById('cart-close').addEventListener('click',closeCart);
   scrim.addEventListener('click',closeCart);
 
-  document.getElementById('submit-btn').addEventListener('click',submitPedido);
+  document.getElementById('submit-btn').addEventListener('click',savePedido);
 }
 function linesFor(scope){
   if(scope==='common')return commonLines;
@@ -692,18 +812,18 @@ function linesFor(scope){
   return s.override;
 }
 
-// ── Submit ──
-async function submitPedido(){
+// ── Guardar / enviar a Beme ──
+async function savePedido(){
   readForm();
-  const msg=document.getElementById('submit-msg');msg.className='submit-msg';msg.textContent='';
-  document.getElementById('ff-marca').classList.remove('err');
-  document.getElementById('ff-email').classList.remove('err');
+  const msg=document.getElementById('submit-msg');msg.className='submit-msg';msg.textContent='';msg.style.color='';
+  const ffm=document.getElementById('ff-marca');if(ffm)ffm.classList.remove('err');
+  const ffe=document.getElementById('ff-email');if(ffe)ffe.classList.remove('err');
 
   const marca=val('in-marca').trim();
   const email=val('in-email').trim();
   let bad=false;
-  if(!marca){document.getElementById('ff-marca').classList.add('err');bad=true;}
-  if(email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){document.getElementById('ff-email').classList.add('err');bad=true;}
+  if(!marca&&ffm){ffm.classList.add('err');bad=true;}
+  if(email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)&&ffe){ffe.classList.add('err');bad=true;}
   if(selection.size===0){msg.className='submit-msg error';msg.textContent='Agregá al menos un talento.';return;}
   const common=commonLines.filter(l=>l.descripcion.trim());
   const hasAnyAction=common.length>0||[...selection.values()].some(s=>s.override&&s.override.some(l=>l.descripcion.trim()));
@@ -715,26 +835,19 @@ async function submitPedido(){
     if(s.override){const ov=s.override.filter(l=>l.descripcion.trim());if(ov.length)it.lineas_override=ov.map(l=>({tipo:l.tipo,descripcion:l.descripcion.trim()}));}
     return it;
   });
-  const payload={
-    action:'submit',marca_nombre:marca,contacto_nombre:val('in-contacto').trim(),
-    contacto_email:email,notas:val('in-notas').trim(),moneda:val('in-moneda')||'USD',hp:val('in-hp'),
-    lineas_comunes:common.map(l=>({tipo:l.tipo,descripcion:l.descripcion.trim()})),
-    items
-  };
 
   const btn=document.getElementById('submit-btn');
   btn.disabled=true;
-  document.getElementById('submit-label').innerHTML='<span class="loader-spinner"></span> Enviando...';
-  try{
-    const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const j=await res.json().catch(()=>({}));
-    if(!res.ok||!j.ok)throw new Error(j.error||'No se pudo enviar. Intentá de nuevo.');
-    localStorage.removeItem(LS_KEY);
-    document.getElementById('success-screen').style.display='flex';
-  }catch(e){
-    msg.className='submit-msg error';msg.textContent=e.message;
-    btn.disabled=false;document.getElementById('submit-label').textContent='Enviar solicitud';
-  }
+  document.getElementById('submit-label').innerHTML='<span class="loader-spinner"></span> Guardando...';
+  const j=await api('save',{
+    marca_nombre:marca,contacto_nombre:val('in-contacto').trim(),contacto_email:email,
+    notas:val('in-notas').trim(),moneda:val('in-moneda')||'USD',
+    lineas_comunes:common.map(l=>({tipo:l.tipo,descripcion:l.descripcion.trim()})),items
+  });
+  btn.disabled=false;document.getElementById('submit-label').textContent='Guardar y enviar a Beme';
+  if(!j||!j.ok){ msg.className='submit-msg error'; msg.textContent=(j&&j.error)||'No se pudo guardar. Intentá de nuevo.'; return; }
+  PEDIDO.estado='enviado';
+  msg.className='submit-msg'; msg.style.color='#2a7d3a'; msg.textContent='✓ ¡Guardado! Beme va a preparar tu cotización.';
 }
 
 // Prevent number wheel scroll
