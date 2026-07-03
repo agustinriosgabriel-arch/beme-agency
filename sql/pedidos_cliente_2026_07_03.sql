@@ -71,6 +71,9 @@ CREATE TABLE IF NOT EXISTS pedidos_cliente (
   updated_at      timestamptz DEFAULT now()
 );
 
+-- Moneda con la que BEME cotiza el pedido (se completa en el dashboard).
+ALTER TABLE pedidos_cliente ADD COLUMN IF NOT EXISTS moneda text DEFAULT 'USD';
+
 CREATE TABLE IF NOT EXISTS pedido_cliente_items (
   id              serial PRIMARY KEY,
   pedido_id       integer NOT NULL REFERENCES pedidos_cliente(id) ON DELETE CASCADE,

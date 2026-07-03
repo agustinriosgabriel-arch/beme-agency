@@ -4125,8 +4125,10 @@ function openPedidoDetalle(id) {
   const items = (p.pedido_cliente_items || []).slice().sort((a, b) => (a.orden || 0) - (b.orden || 0));
   _pedidoEditing = {
     id: p.id,
+    moneda: p.moneda || 'USD',
     items: items.map(it => ({
       id: it.id,
+      talento_id: it.talento_id,
       talento_nombre: it.talento_nombre,
       lineas: (it.lineas || []).map(l => ({ tipo: l.tipo || 'accion', descripcion: l.descripcion || '', precio: (l.precio == null ? '' : l.precio) })),
     })),
@@ -4139,16 +4141,51 @@ function openPedidoDetalle(id) {
   openModal('pedido-detalle-modal');
 }
 
+const PD_TT_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg>';
+const PD_IG_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg>';
+const PD_YT_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg>';
+
 function renderPedidoDetalleBody(p) {
   const body = document.getElementById('pd-body');
   if (!body || !_pedidoEditing) return;
   let html = '';
+
+  // Moneda + notas
+  html += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">'
+    + '<label style="font-size:12px;font-weight:700;color:var(--text-muted);">Moneda</label>'
+    + '<select id="pd-moneda" class="form-input" style="width:auto;">'
+    + ['USD', 'MXN', 'ARS', 'EUR'].map(m => '<option value="' + m + '"' + (_pedidoEditing.moneda === m ? ' selected' : '') + '>' + m + '</option>').join('')
+    + '</select></div>';
   if (p.notas) {
     html += '<div style="background:var(--surface2);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--text-muted);"><b style="color:var(--text);">Notas del cliente:</b> ' + escapeHtml(p.notas) + '</div>';
   }
+
   _pedidoEditing.items.forEach(it => {
-    html += '<div style="border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;">';
-    html += '<div style="font-weight:700;font-size:14px;margin-bottom:8px;">' + escapeHtml(it.talento_nombre || 'Talento') + '</div>';
+    const t = (typeof talents !== 'undefined' ? talents.find(x => x.id === it.talento_id) : null) || {};
+    const seg = t.seguidores || { tiktok: 0, instagram: 0, youtube: 0 };
+    const av = t.foto
+      ? '<img src="' + t.foto + '" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;">'
+      : '<span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:#2a2a2a;color:#b2005d;font-weight:800;font-size:15px;flex-shrink:0;">' + getInitials(it.talento_nombre || '') + '</span>';
+    const countries = (t.paises || []).filter(Boolean).map(c => (COUNTRY_FLAGS[c] || '') + ' ' + c).join(' · ');
+    const netItem = (svg, url, color, val) => '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:#555;">' + svg + '<a href="' + safeHref(url) + '" target="_blank" rel="noopener" style="color:' + color + ';text-decoration:none;font-weight:600;">' + escapeHtml(extractHandle(url)) + '</a><b style="color:#111;">' + formatFollowers(val) + '</b></span>';
+    const nets = [
+      t.tiktok ? netItem(PD_TT_SVG, t.tiktok, '#ff0050', seg.tiktok) : '',
+      t.instagram ? netItem(PD_IG_SVG, t.instagram, '#e1306c', seg.instagram) : '',
+      t.youtube ? netItem(PD_YT_SVG, t.youtube, '#cc0000', seg.youtube) : '',
+    ].filter(Boolean).join('');
+    const cats = (t.categorias || []).slice(0, 5).map(c => '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text-muted);">' + escapeHtml(c) + '</span>').join(' ');
+
+    html += '<div style="border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px;">';
+    // Roster-style dark header
+    html += '<div style="background:linear-gradient(135deg,#1a1a1a,#2a2a2a);padding:13px 16px;display:flex;align-items:center;gap:12px;">'
+      + av
+      + '<div style="flex:1;min-width:0;"><div style="color:#fff;font-weight:700;font-size:14px;">' + escapeHtml(it.talento_nombre || 'Talento') + '</div>'
+      + (countries ? '<div style="color:rgba(255,255,255,.5);font-size:11px;margin-top:2px;">' + countries + (t.ciudad ? ', ' + escapeHtml(t.ciudad) : '') + '</div>' : '')
+      + '</div></div>';
+    html += '<div style="padding:12px 16px;">';
+    if (nets) html += '<div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;">' + nets + '</div>';
+    if (cats) html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">' + cats + '</div>';
+
     if (!it.lineas.length) {
       html += '<div style="font-size:12px;color:var(--text-dim);">Sin acciones especificadas.</div>';
     }
@@ -4163,18 +4200,31 @@ function renderPedidoDetalleBody(p) {
         + '<input type="number" class="form-input" style="width:120px;" data-pl-item="' + it.id + '" data-pl-idx="' + idx + '" value="' + (l.precio === '' ? '' : escapeHtml(String(l.precio))) + '" placeholder="0"></div>'
         + '</div>';
     });
-    html += '</div>';
+    html += '<div style="text-align:right;font-size:12px;font-weight:700;color:var(--text-muted);margin-top:8px;" data-subtotal="' + it.id + '"></div>';
+    html += '</div></div>';
   });
+
   body.innerHTML = html;
+  const ms = document.getElementById('pd-moneda');
+  if (ms) ms.addEventListener('change', () => { _pedidoEditing.moneda = ms.value; updatePedidoTotal(); });
   updatePedidoTotal();
 }
 
+function safeHref(url) { if (!url) return '#'; return /^https?:\/\//.test(url) ? url : 'https://' + url; }
+
 function updatePedidoTotal() {
   if (!_pedidoEditing) return;
+  const cur = _pedidoEditing.moneda || 'USD';
   let total = 0;
-  _pedidoEditing.items.forEach(it => it.lineas.forEach(l => { const n = Number(l.precio); if (l.precio !== '' && !isNaN(n)) total += n; }));
+  _pedidoEditing.items.forEach(it => {
+    let sub = 0;
+    it.lineas.forEach(l => { const n = Number(l.precio); if (l.precio !== '' && !isNaN(n)) sub += n; });
+    total += sub;
+    const se = document.querySelector('[data-subtotal="' + it.id + '"]');
+    if (se) se.textContent = sub > 0 ? ('Subtotal: ' + formatMoney(sub, cur)) : '';
+  });
   const el = document.getElementById('pd-total');
-  if (el) el.textContent = total > 0 ? ('Total: $' + total.toLocaleString('es-ES')) : '';
+  if (el) el.textContent = total > 0 ? ('Total: ' + formatMoney(total, cur)) : '';
 }
 
 // Actualiza el modelo de precios en vivo (listener único a nivel documento)
@@ -4218,11 +4268,12 @@ async function savePedidoPrecios() {
       const { error } = await sb.from('pedido_cliente_items').update({ lineas }).eq('id', it.id);
       if (error) throw error;
     }
-    await sb.from('pedidos_cliente').update({ estado: 'cotizado' }).eq('id', _pedidoEditing.id);
+    await sb.from('pedidos_cliente').update({ estado: 'cotizado', moneda: _pedidoEditing.moneda }).eq('id', _pedidoEditing.id);
     // Sync local state
     const p = pedidosCliente.find(x => x.id === _pedidoEditing.id);
     if (p) {
       p.estado = 'cotizado';
+      p.moneda = _pedidoEditing.moneda;
       (p.pedido_cliente_items || []).forEach(it => {
         const ed = _pedidoEditing.items.find(x => x.id === it.id);
         if (ed) it.lineas = ed.lineas.map(l => ({ tipo: l.tipo, descripcion: l.descripcion, precio: (l.precio === '' || l.precio == null) ? null : Number(l.precio) }));
