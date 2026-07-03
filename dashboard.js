@@ -4225,18 +4225,22 @@ function propuestaRow(p) {
     + '</div>';
 }
 
-function brandCardHTML(marca, linkId, props) {
-  const copyBtn = linkId
-    ? '<button class="btn btn-outline btn-sm" data-action="copy-brand-link" data-id="' + linkId + '" title="Copiar link de la marca"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Copiar link</button>'
+function brandCardHTML(link, props) {
+  const url = link.token ? (PEDIDO_LINK_BASE + link.token) : '';
+  const linkRow = url
+    ? '<div style="display:flex;gap:6px;align-items:center;margin:2px 0 12px;">'
+      + '<input class="form-input" style="flex:1;font-size:11.5px;padding:7px 9px;font-family:monospace;" readonly value="' + escapeHtml(url) + '" onclick="this.select()" title="Link del cliente">'
+      + '<button class="btn btn-primary btn-sm" data-action="copy-brand-link" data-id="' + link.id + '" title="Copiar link de la marca"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Copiar</button>'
+      + '</div>'
     : '';
   const body = props.length
     ? props.map(propuestaRow).join('')
-    : '<div style="padding:12px 0;font-size:12.5px;color:var(--text-dim);">Esperando que el cliente arme propuestas…</div>';
+    : '<div style="padding:10px 0;font-size:12.5px;color:var(--text-dim);">Esperando que el cliente arme propuestas…</div>';
   return '<div class="rg-card" style="grid-column:1/-1;">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">'
-    +   '<div class="rg-name">🔗 ' + escapeHtml(marca || 'Sin marca') + ' <span style="font-size:11px;font-weight:600;color:var(--text-dim);">(' + props.length + ')</span></div>'
-    +   copyBtn
+    + '<div style="margin-bottom:2px;">'
+    +   '<div class="rg-name">🔗 ' + escapeHtml(link.marca_nombre || 'Sin marca') + ' <span style="font-size:11px;font-weight:600;color:var(--text-dim);">(' + props.length + ' propuesta' + (props.length === 1 ? '' : 's') + ')</span></div>'
     + '</div>'
+    + linkRow
     + body
     + '</div>';
 }
@@ -4249,17 +4253,17 @@ function renderPedidosCliente() {
     grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:60px 20px"><div class="empty-icon" style="font-size:40px">📥</div><h3>Sin links todavía</h3><p>Generá un link para una marca y compartilo. El cliente arma sus propuestas y aparecen acá.</p></div>';
     return;
   }
-  // Una tarjeta por marca (clientes_link), con sus propuestas dentro
+  // Una tarjeta por marca (clientes_link), con su link a la vista + sus propuestas dentro
   clientesLink.forEach(link => {
     const props = pedidosCliente.filter(p => p.cliente_link_id === link.id);
-    grid.insertAdjacentHTML('beforeend', brandCardHTML(link.marca_nombre, link.id, props));
+    grid.insertAdjacentHTML('beforeend', brandCardHTML(link, props));
   });
   // Propuestas legacy sin link (datos viejos)
   const huerfanas = pedidosCliente.filter(p => !p.cliente_link_id);
   if (huerfanas.length) {
     const byMarca = {};
     huerfanas.forEach(p => { (byMarca[p.marca_nombre || 'Sin marca'] = byMarca[p.marca_nombre || 'Sin marca'] || []).push(p); });
-    Object.keys(byMarca).forEach(m => grid.insertAdjacentHTML('beforeend', brandCardHTML(m, null, byMarca[m])));
+    Object.keys(byMarca).forEach(m => grid.insertAdjacentHTML('beforeend', brandCardHTML({ id: null, token: null, marca_nombre: m }, byMarca[m])));
   }
 }
 

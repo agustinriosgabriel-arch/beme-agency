@@ -421,7 +421,9 @@ async function init(){
     populateCategoryFilter();
     setupFilterListeners();
     setupUI();
-    newProposal();   // arranca en una propuesta nueva (las existentes están en la barra)
+    // Arranca en la última propuesta (con sus precios si ya está cotizada); si no hay, una nueva.
+    if(PROPUESTAS.length) loadProposal(PROPUESTAS[PROPUESTAS.length-1].id);
+    else newProposal();
     document.getElementById('loading-screen').style.display='none';
     document.getElementById('app').style.display='block';
   }catch(e){
@@ -654,6 +656,7 @@ function closeValores(){document.getElementById('valores-modal').classList.remov
 
 // ── Selection / lines ──
 function toggleTalent(id){
+  if(LOCKED) return; // propuesta cotizada: no se puede editar; crear una nueva
   if(selection.has(id))selection.delete(id);
   else{const t=CATALOG.find(x=>x.id===id);selection.set(id,{nombre:t?t.nombre:'',override:null});}
   document.querySelectorAll('[data-row="'+id+'"]').forEach(r=>r.classList.toggle('selected',selection.has(id)));
