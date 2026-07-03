@@ -142,6 +142,17 @@ tr.talent-row.selected{background:#f6edfc;}
 .success-card h2{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin-bottom:10px;}
 .success-card p{font-size:14.5px;color:#666;line-height:1.6;}
 
+/* Valores link + modal */
+.val-link{display:inline-block;margin-top:3px;background:none;border:none;padding:0;color:#9414E0;font-size:11px;font-weight:700;cursor:pointer;text-decoration:underline;}
+.val-link:hover{color:#7a10bd;}
+.vm-overlay{position:fixed;inset:0;background:rgba(20,10,35,.55);z-index:400;display:none;align-items:center;justify-content:center;padding:20px;}
+.vm-overlay.open{display:flex;}
+.vm-card{background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,0,0,.25);}
+.vm-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px;border-bottom:1px solid #eee;}
+.vm-head h3{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;}
+.vm-close{background:none;border:none;font-size:26px;line-height:1;color:#999;cursor:pointer;padding:0 4px;}
+.vm-body{padding:18px;overflow-y:auto;font-size:14px;line-height:1.65;color:#333;white-space:pre-wrap;}
+
 .desktop-view{display:block;}
 .mobile-view{display:none;}
 .mob-card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.07);margin-bottom:12px;}
@@ -199,7 +210,9 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield;}
       <div class="panel">
         <div class="filters-bar">
           <span class="filter-label">Filtrar</span>
-          <input type="text" class="filter-input" id="filter-search" placeholder="Buscar por nombre..." aria-label="Buscar por nombre">
+          <input type="text" class="filter-input" id="filter-search" placeholder="Buscar por nombre o ciudad..." aria-label="Buscar por nombre">
+          <input type="text" class="filter-input" id="filter-keywords" placeholder="Palabras clave (ej. fitness, mamá)..." aria-label="Palabras clave" style="flex:1;min-width:180px;">
+          <select class="filter-select" id="filter-category" aria-label="Categoría"><option value="">Todas las categorías</option></select>
           <select class="filter-select" id="filter-network" aria-label="Red social">
             <option value="">Todas las redes</option>
             <option value="tiktok">TikTok</option>
@@ -209,15 +222,21 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield;}
           <select class="filter-select" id="filter-country" aria-label="País"><option value="">Todos los países</option></select>
           <select class="filter-select" id="filter-gender" aria-label="Género">
             <option value="">Todos los géneros</option>
-            <option value="Femenino">Femenino</option>
-            <option value="Masculino">Masculino</option>
-            <option value="No binario">No binario</option>
+            <option value="Mujer">Mujer</option>
+            <option value="Hombre">Hombre</option>
+            <option value="Otro">Otro</option>
           </select>
           <div class="filter-seg-group">
             <input type="number" class="filter-seg-input" id="filter-min-seg" placeholder="Min seg." aria-label="Seguidores mínimos">
             <span style="color:#aaa;">—</span>
             <input type="number" class="filter-seg-input" id="filter-max-seg" placeholder="Max seg." aria-label="Seguidores máximos">
           </div>
+          <select class="filter-select" id="filter-sort" aria-label="Ordenar">
+            <option value="ig-desc">Instagram: más seguidores</option>
+            <option value="tt-desc">TikTok: más seguidores</option>
+            <option value="total-desc">Total: más seguidores</option>
+            <option value="name-asc">Nombre: A → Z</option>
+          </select>
           <button class="filter-clear" id="filter-clear-btn">Limpiar</button>
         </div>
       </div>
@@ -261,6 +280,16 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield;}
   </div>
 </div>
 
+<div id="valores-modal" class="vm-overlay" aria-hidden="true">
+  <div class="vm-card">
+    <div class="vm-head">
+      <h3 id="vm-title">Valores de contenido</h3>
+      <button class="vm-close" id="vm-close" aria-label="Cerrar">&times;</button>
+    </div>
+    <div class="vm-body" id="vm-body"></div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_1E2K-9D-KzOSVCgROnfa-g_-WCnWCDb';
@@ -269,7 +298,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const API = '/.netlify/functions/pedido-cliente-api';
 const LS_KEY = 'beme_pedido_draft_v1';
 const PAGE_SIZE = 60;
-const SAFE_COLS = 'id,nombre,paises,ciudad,tiktok,instagram,youtube,categorias,seguidores,genero,keywords';
+const SAFE_COLS = 'id,nombre,paises,ciudad,tiktok,instagram,youtube,categorias,seguidores,genero,keywords,valores';
 
 const FLAG_MAP = {"Argentina":"\u{1F1E6}\u{1F1F7}","Bolivia":"\u{1F1E7}\u{1F1F4}","Brasil":"\u{1F1E7}\u{1F1F7}","Chile":"\u{1F1E8}\u{1F1F1}","Colombia":"\u{1F1E8}\u{1F1F4}","Costa Rica":"\u{1F1E8}\u{1F1F7}","Cuba":"\u{1F1E8}\u{1F1FA}","Ecuador":"\u{1F1EA}\u{1F1E8}","El Salvador":"\u{1F1F8}\u{1F1FB}","España":"\u{1F1EA}\u{1F1F8}","Estados Unidos":"\u{1F1FA}\u{1F1F8}","Guatemala":"\u{1F1EC}\u{1F1F9}","Honduras":"\u{1F1ED}\u{1F1F3}","México":"\u{1F1F2}\u{1F1FD}","Nicaragua":"\u{1F1F3}\u{1F1EE}","Panamá":"\u{1F1F5}\u{1F1E6}","Paraguay":"\u{1F1F5}\u{1F1FE}","Perú":"\u{1F1F5}\u{1F1EA}","Puerto Rico":"\u{1F1F5}\u{1F1F7}","República Dominicana":"\u{1F1E9}\u{1F1F4}","Uruguay":"\u{1F1FA}\u{1F1FE}","Venezuela":"\u{1F1FB}\u{1F1EA}"};
 
@@ -320,6 +349,7 @@ async function init(){
     }
     restoreDraft();
     populateCountryFilter();
+    populateCategoryFilter();
     setupFilterListeners();
     setupUI();
     applyFilters();
@@ -338,16 +368,42 @@ function populateCountryFilter(){
   const sel=document.getElementById('filter-country');
   [...set].sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=(FLAG_MAP[c]||'')+' '+c;sel.appendChild(o);});
 }
+function populateCategoryFilter(){
+  const set=new Set();
+  CATALOG.forEach(t=>(t.categorias||[]).forEach(c=>{if(c)set.add(c);}));
+  const sel=document.getElementById('filter-category');
+  [...set].sort((a,b)=>a.localeCompare(b,'es')).forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+}
+
+function sortFiltered(mode){
+  const seg=(t,net)=>net==='ig'?(t.seguidores.instagram||0):net==='tt'?(t.seguidores.tiktok||0):totalSeg(t);
+  if(mode==='name-asc') FILTERED.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));
+  else if(mode==='tt-desc') FILTERED.sort((a,b)=>seg(b,'tt')-seg(a,'tt'));
+  else if(mode==='total-desc') FILTERED.sort((a,b)=>seg(b,'total')-seg(a,'total'));
+  else FILTERED.sort((a,b)=>seg(b,'ig')-seg(a,'ig')); // ig-desc (default)
+}
 
 function applyFilters(){
   const search=(document.getElementById('filter-search').value||'').toLowerCase().trim();
+  const kwRaw=(document.getElementById('filter-keywords').value||'').toLowerCase();
+  const keywords=kwRaw.split(',').map(s=>s.trim()).filter(Boolean);
+  const category=document.getElementById('filter-category').value;
   const network=document.getElementById('filter-network').value;
   const country=document.getElementById('filter-country').value;
   const gender=document.getElementById('filter-gender').value;
   const minSeg=parseInt(document.getElementById('filter-min-seg').value)||0;
   const maxSeg=parseInt(document.getElementById('filter-max-seg').value)||0;
+  const sort=document.getElementById('filter-sort').value;
   FILTERED=CATALOG.filter(t=>{
-    if(search&&!(t.nombre||'').toLowerCase().includes(search))return false;
+    if(search){
+      const hay=((t.nombre||'')+' '+(t.ciudad||'')).toLowerCase();
+      if(!hay.includes(search))return false;
+    }
+    if(keywords.length){
+      const kws=((t.keywords||'')+' '+(t.nombre||'')+' '+(t.valores||'')).toLowerCase();
+      if(!keywords.every(k=>kws.includes(k)))return false;
+    }
+    if(category&&!(t.categorias||[]).includes(category))return false;
     if(network==='tiktok'&&!t.tiktok)return false;
     if(network==='instagram'&&!t.instagram)return false;
     if(network==='youtube'&&!t.youtube)return false;
@@ -358,6 +414,7 @@ function applyFilters(){
     if(maxSeg>0&&tot>maxSeg)return false;
     return true;
   });
+  sortFiltered(sort);
   shown=PAGE_SIZE;
   document.getElementById('showing-count').textContent=
     FILTERED.length===CATALOG.length?FILTERED.length+' talentos':'Mostrando '+FILTERED.length+' de '+CATALOG.length+' talentos';
@@ -367,13 +424,17 @@ function applyFilters(){
 function setupFilterListeners(){
   let deb=null;const run=()=>{clearTimeout(deb);deb=setTimeout(applyFilters,200);};
   document.getElementById('filter-search').addEventListener('input',run);
+  document.getElementById('filter-keywords').addEventListener('input',run);
+  document.getElementById('filter-category').addEventListener('change',applyFilters);
   document.getElementById('filter-network').addEventListener('change',applyFilters);
   document.getElementById('filter-country').addEventListener('change',applyFilters);
   document.getElementById('filter-gender').addEventListener('change',applyFilters);
   document.getElementById('filter-min-seg').addEventListener('input',run);
   document.getElementById('filter-max-seg').addEventListener('input',run);
+  document.getElementById('filter-sort').addEventListener('change',applyFilters);
   document.getElementById('filter-clear-btn').addEventListener('click',()=>{
-    ['filter-search','filter-network','filter-country','filter-gender','filter-min-seg','filter-max-seg'].forEach(id=>document.getElementById(id).value='');
+    ['filter-search','filter-keywords','filter-category','filter-network','filter-country','filter-gender','filter-min-seg','filter-max-seg'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('filter-sort').value='ig-desc';
     applyFilters();
   });
 }
@@ -382,6 +443,7 @@ function selBtn(id){
   const on=selection.has(id);
   return '<button class="add-btn '+(on?'on':'')+'" data-act="toggle" data-id="'+id+'">'+(on?SVG.check+' Agregado':SVG.plus+' Agregar')+'</button>';
 }
+function valBtn(t){ return (t.valores && String(t.valores).trim()) ? '<button class="val-link" data-act="valores" data-id="'+t.id+'">Ver valores de contenido</button>' : ''; }
 function avatarHTML(t,big){
   const foto=photoCache.get(t.id);
   const size=big?'width:50px;height:50px;font-size:17px;':'';
@@ -403,7 +465,7 @@ function renderCatalog(){
     const cats=(t.categorias||[]).slice(0,4).map(c=>'<span class="cat-tag">'+esc(c)+'</span>').join('');
     return '<tr class="talent-row '+(selection.has(t.id)?'selected':'')+'" data-row="'+t.id+'">'+
       '<td>'+selBtn(t.id)+'</td>'+
-      '<td><div style="display:flex;align-items:center;gap:8px;">'+avatarHTML(t)+'<div><div class="talent-name">'+esc(t.nombre)+'</div>'+(t.ciudad?'<div class="talent-city">'+esc(t.ciudad)+'</div>':'')+'</div></div></td>'+
+      '<td><div style="display:flex;align-items:center;gap:8px;">'+avatarHTML(t)+'<div><div class="talent-name">'+esc(t.nombre)+'</div>'+(t.ciudad?'<div class="talent-city">'+esc(t.ciudad)+'</div>':'')+valBtn(t)+'</div></div></td>'+
       '<td style="font-size:12px;color:#444;line-height:1.6;">'+ctries+'</td>'+
       '<td>'+ttCell+'</td><td>'+igCell+'</td><td>'+ytCell+'</td>'+
       '<td><div style="display:flex;flex-wrap:wrap;gap:2px;">'+cats+'</div></td></tr>';
@@ -421,7 +483,7 @@ function renderCatalog(){
       '<div class="mob-card-header">'+avatarHTML(t,true)+'<div style="flex:1;min-width:0;"><div class="mob-card-name">'+esc(t.nombre)+'</div><div class="mob-card-loc">'+ctries+(t.ciudad?' · '+esc(t.ciudad):'')+'</div></div></div>'+
       (nets?'<div style="padding:0 16px;">'+nets+'</div>':'')+
       (cats?'<div style="padding:10px 16px;border-top:1px solid #f5f5f5;display:flex;flex-wrap:wrap;gap:5px;">'+cats+'</div>':'')+
-      '<div class="mob-add">'+selBtn(t.id)+'</div></div>';
+      '<div class="mob-add">'+(valBtn(t)?'<div style="margin-bottom:8px;">'+valBtn(t)+'</div>':'')+selBtn(t.id)+'</div></div>';
   }).join('');
 
   cont.innerHTML='<div class="desktop-view"><div class="table-wrap"><table><thead><tr><th style="width:120px;">Agregar</th><th>Talento</th><th>País</th><th>TikTok</th><th>Instagram</th><th>YouTube</th><th>Categorías</th></tr></thead><tbody>'+rows+'</tbody></table></div></div><div class="mobile-view">'+mob+'</div>';
@@ -450,6 +512,16 @@ async function lazyPhotos(list){
     });
   }
 }
+
+// ── Valores modal ──
+function openValores(id){
+  const t=CATALOG.find(x=>x.id===id);if(!t)return;
+  document.getElementById('vm-title').textContent='Valores de contenido — '+(t.nombre||'');
+  const v=(t.valores&&String(t.valores).trim())||'';
+  document.getElementById('vm-body').textContent = v || 'Este talento no tiene valores de contenido cargados.';
+  document.getElementById('valores-modal').classList.add('open');
+}
+function closeValores(){document.getElementById('valores-modal').classList.remove('open');}
 
 // ── Selection / lines ──
 function toggleTalent(id){
@@ -550,11 +622,18 @@ function restoreDraft(){
 
 // ── Events ──
 function setupUI(){
-  // Catalog toggle (delegated)
+  // Catalog toggle + valores (delegated)
   document.getElementById('content').addEventListener('click',e=>{
+    const vb=e.target.closest('[data-act="valores"]');
+    if(vb){openValores(parseInt(vb.dataset.id));return;}
     const btn=e.target.closest('[data-act="toggle"]');
     if(btn){toggleTalent(parseInt(btn.dataset.id));}
   });
+
+  // Valores modal close
+  const vmOv=document.getElementById('valores-modal');
+  document.getElementById('vm-close').addEventListener('click',closeValores);
+  vmOv.addEventListener('click',e=>{if(e.target===vmOv)closeValores();});
 
   // Cart interactions (delegated)
   const body=document.getElementById('cart-body');
