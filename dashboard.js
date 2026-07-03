@@ -4463,6 +4463,7 @@ async function deletePedidoCliente(id) {
 
 async function savePedidoPrecios() {
   if (!_pedidoEditing || !sb) return;
+  if (!_pedidoEditing.items.length) { showToast('El cliente todavía no armó su selección — no hay nada para cotizar.', 'error'); return; }
   const btn = document.getElementById('pd-save-btn');
   const old = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
