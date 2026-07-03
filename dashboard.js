@@ -991,6 +991,7 @@ let ACTION_MAP = {
   'copy-url-compact':(id)    => copyCompactRosterUrl(parseInt(id)),
   'switch-roster-subtab': (id) => switchRosterSubtab(id),
   'open-pedido': (id) => openPedidoDetalle(parseInt(id)),
+  'delete-pedido': (id) => deletePedidoCliente(parseInt(id)),
   'edit-general-roster':  (id) => openCreateGeneralRosterModal(parseInt(id)),
   'delete-general-roster':(id) => deleteGeneralRoster(id),
   'copy-general-roster-url':(id) => copyGeneralRosterUrl(id),
@@ -4107,6 +4108,7 @@ function renderPedidosCliente() {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>\
           ' + (p.estado === 'enviado' ? 'Cotizar' : 'Ver / editar') + '\
         </button>\
+        <button class="btn btn-danger btn-sm" data-action="delete-pedido" data-id="' + p.id + '" title="Eliminar pedido"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>\
       </div>';
     grid.appendChild(card);
   });
@@ -4184,6 +4186,23 @@ document.addEventListener('input', (e) => {
   const item = _pedidoEditing.items.find(i => i.id === itemId);
   if (item && item.lineas[idx]) { item.lineas[idx].precio = inp.value; updatePedidoTotal(); }
 });
+
+async function deletePedidoCliente(id) {
+  const p = pedidosCliente.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm('¿Eliminar el pedido de "' + (p.marca_nombre || 'sin marca') + '"? No se puede deshacer.')) return;
+  try {
+    // pedido_cliente_items se borra en cascada (ON DELETE CASCADE)
+    const { error } = await sb.from('pedidos_cliente').delete().eq('id', id);
+    if (error) throw error;
+    pedidosCliente = pedidosCliente.filter(x => x.id !== id);
+    renderPedidosCliente();
+    updatePedidosBadge();
+    showToast('Pedido eliminado.', 'success');
+  } catch (e) {
+    showToast('Error al eliminar: ' + e.message, 'error');
+  }
+}
 
 async function savePedidoPrecios() {
   if (!_pedidoEditing || !sb) return;
