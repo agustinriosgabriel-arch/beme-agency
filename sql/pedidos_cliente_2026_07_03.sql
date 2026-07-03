@@ -29,7 +29,11 @@
 --    se carga lazy por id solo para las tarjetas visibles.
 -- ──────────────────────────────────────────────────────────────────
 -- OJO: `valores` es información PRIVADA — NO exponerla al cliente.
-CREATE OR REPLACE VIEW talentos_publicos AS
+-- DROP + CREATE (no CREATE OR REPLACE) porque Postgres no permite QUITAR
+-- columnas de una vista existente (error 42P16). El DROP es seguro: nada
+-- depende de la vista y los GRANT se re-otorgan abajo.
+DROP VIEW IF EXISTS talentos_publicos;
+CREATE VIEW talentos_publicos AS
   SELECT
     id,
     nombre,
