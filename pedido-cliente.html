@@ -46,6 +46,11 @@ input,button,textarea,select{font-family:inherit;}
 .filter-seg-input{width:96px;}
 .filter-clear{background:none;border:1px solid #ddd;border-radius:9px;padding:9px 14px;font-size:12.5px;font-weight:600;color:#9414E0;cursor:pointer;}
 .filter-clear:hover{background:#f5f0fa;}
+.cat-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid #ece5f5;}
+.cat-chips-label{font-size:11px;font-weight:700;color:#9414E0;letter-spacing:.5px;text-transform:uppercase;align-self:center;margin-right:2px;}
+.cat-chip{padding:7px 13px;border-radius:20px;border:1px solid #d8c8ea;background:#fff;color:#7a3fa0;font-size:12.5px;font-weight:600;cursor:pointer;min-height:36px;}
+.cat-chip:hover{background:#f7f0fc;}
+.cat-chip.active{background:#9414E0;color:#fff;border-color:#9414E0;}
 
 .count-bar{display:flex;align-items:center;justify-content:space-between;margin:2px 4px 12px;}
 .count-text{font-size:13px;color:#777;font-weight:500;}
@@ -112,8 +117,8 @@ tr.talent-row.selected{background:#f6edfc;}
 .form-field{margin-bottom:12px;}
 .form-field label{display:block;font-size:12px;font-weight:700;color:#444;margin-bottom:5px;}
 .form-field label .req{color:#d6336c;}
-.form-field input,.form-field textarea{width:100%;padding:11px 12px;border:1px solid #ddd;border-radius:10px;font-size:14px;outline:none;}
-.form-field input:focus,.form-field textarea:focus{border-color:#9414E0;box-shadow:0 0 0 3px rgba(148,20,224,.1);}
+.form-field input,.form-field textarea,.form-field select{width:100%;padding:11px 12px;border:1px solid #ddd;border-radius:10px;font-size:14px;outline:none;background:#fff;font-family:inherit;color:#111;}
+.form-field input:focus,.form-field textarea:focus,.form-field select:focus{border-color:#9414E0;box-shadow:0 0 0 3px rgba(148,20,224,.1);}
 .form-field textarea{resize:vertical;min-height:64px;}
 .form-field.err input{border-color:#d6336c;}
 .field-err{color:#d6336c;font-size:11.5px;margin-top:4px;display:none;}
@@ -212,7 +217,6 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield;}
           <span class="filter-label">Filtrar</span>
           <input type="text" class="filter-input" id="filter-search" placeholder="Buscar por nombre o ciudad..." aria-label="Buscar por nombre">
           <input type="text" class="filter-input" id="filter-keywords" placeholder="Palabras clave (ej. fitness, mamá)..." aria-label="Palabras clave" style="flex:1;min-width:180px;">
-          <select class="filter-select" id="filter-category" aria-label="Categoría"><option value="">Todas las categorías</option></select>
           <select class="filter-select" id="filter-network" aria-label="Red social">
             <option value="">Todas las redes</option>
             <option value="tiktok">TikTok</option>
@@ -239,6 +243,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield;}
           </select>
           <button class="filter-clear" id="filter-clear-btn">Limpiar</button>
         </div>
+        <div class="cat-chips" id="cat-chips"></div>
       </div>
 
       <div class="count-bar"><span class="count-text" id="showing-count"></span></div>
@@ -332,6 +337,7 @@ const photoCache=new Map();       // id -> foto (base64/url)
 const photoLoaded=new Set();      // ids already fetched
 const selection=new Map();        // id -> { nombre, override:null | [{tipo,descripcion}] }
 let commonLines=[{tipo:'accion',descripcion:''}];
+const selectedCats=new Set();     // categorías acumuladas en el filtro
 
 // ── Init ──
 async function init(){
@@ -371,8 +377,20 @@ function populateCountryFilter(){
 function populateCategoryFilter(){
   const set=new Set();
   CATALOG.forEach(t=>(t.categorias||[]).forEach(c=>{if(c)set.add(c);}));
-  const sel=document.getElementById('filter-category');
-  [...set].sort((a,b)=>a.localeCompare(b,'es')).forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+  const wrap=document.getElementById('cat-chips');
+  let html='<span class="cat-chips-label">Categorías</span>';
+  [...set].sort((a,b)=>a.localeCompare(b,'es')).forEach(c=>{
+    html+='<button type="button" class="cat-chip'+(selectedCats.has(c)?' active':'')+'" data-cat="'+esc(c)+'">'+esc(c)+'</button>';
+  });
+  wrap.innerHTML=html;
+  wrap.querySelectorAll('.cat-chip').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const c=btn.dataset.cat;
+      if(selectedCats.has(c))selectedCats.delete(c);else selectedCats.add(c);
+      btn.classList.toggle('active',selectedCats.has(c));
+      applyFilters();
+    });
+  });
 }
 
 function sortFiltered(mode){
@@ -387,7 +405,6 @@ function applyFilters(){
   const search=(document.getElementById('filter-search').value||'').toLowerCase().trim();
   const kwRaw=(document.getElementById('filter-keywords').value||'').toLowerCase();
   const keywords=kwRaw.split(',').map(s=>s.trim()).filter(Boolean);
-  const category=document.getElementById('filter-category').value;
   const network=document.getElementById('filter-network').value;
   const country=document.getElementById('filter-country').value;
   const gender=document.getElementById('filter-gender').value;
@@ -403,7 +420,7 @@ function applyFilters(){
       const kws=((t.keywords||'')+' '+(t.nombre||'')+' '+(t.valores||'')).toLowerCase();
       if(!keywords.every(k=>kws.includes(k)))return false;
     }
-    if(category&&!(t.categorias||[]).includes(category))return false;
+    if(selectedCats.size&&!(t.categorias||[]).some(c=>selectedCats.has(c)))return false;
     if(network==='tiktok'&&!t.tiktok)return false;
     if(network==='instagram'&&!t.instagram)return false;
     if(network==='youtube'&&!t.youtube)return false;
@@ -425,7 +442,6 @@ function setupFilterListeners(){
   let deb=null;const run=()=>{clearTimeout(deb);deb=setTimeout(applyFilters,200);};
   document.getElementById('filter-search').addEventListener('input',run);
   document.getElementById('filter-keywords').addEventListener('input',run);
-  document.getElementById('filter-category').addEventListener('change',applyFilters);
   document.getElementById('filter-network').addEventListener('change',applyFilters);
   document.getElementById('filter-country').addEventListener('change',applyFilters);
   document.getElementById('filter-gender').addEventListener('change',applyFilters);
@@ -433,8 +449,10 @@ function setupFilterListeners(){
   document.getElementById('filter-max-seg').addEventListener('input',run);
   document.getElementById('filter-sort').addEventListener('change',applyFilters);
   document.getElementById('filter-clear-btn').addEventListener('click',()=>{
-    ['filter-search','filter-keywords','filter-category','filter-network','filter-country','filter-gender','filter-min-seg','filter-max-seg'].forEach(id=>document.getElementById(id).value='');
+    ['filter-search','filter-keywords','filter-network','filter-country','filter-gender','filter-min-seg','filter-max-seg'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('filter-sort').value='ig-desc';
+    selectedCats.clear();
+    document.querySelectorAll('#cat-chips .cat-chip').forEach(b=>b.classList.remove('active'));
     applyFilters();
   });
 }
@@ -588,6 +606,7 @@ function renderCart(){
   html+='<div class="form-field" id="ff-marca"><label>Marca / Empresa <span class="req">*</span></label><input id="in-marca" value="'+esc(f.marca||'')+'" placeholder="Nombre de la marca"><div class="field-err">Ingresá el nombre de la marca.</div></div>';
   html+='<div class="form-field"><label>Nombre de contacto</label><input id="in-contacto" value="'+esc(f.contacto||'')+'" placeholder="Tu nombre"></div>';
   html+='<div class="form-field" id="ff-email"><label>Email</label><input id="in-email" type="email" autocomplete="email" value="'+esc(f.email||'')+'" placeholder="tu@email.com"><div class="field-err">Email inválido.</div></div>';
+  html+='<div class="form-field"><label>Moneda de la cotización</label><select id="in-moneda">'+['USD','MXN','ARS','EUR'].map(m=>'<option value="'+m+'"'+((f.moneda||'USD')===m?' selected':'')+'>'+m+'</option>').join('')+'</select></div>';
   html+='<div class="form-field"><label>Notas (opcional)</label><textarea id="in-notas" placeholder="Fechas, presupuesto estimado, campaña...">'+esc(f.notas||'')+'</textarea></div>';
   html+='<input class="hp-field" id="in-hp" tabindex="-1" autocomplete="off" aria-hidden="true" placeholder="No completar">';
 
@@ -597,7 +616,7 @@ function renderCart(){
 // Persistence
 function readForm(){
   window._form={
-    marca:val('in-marca'),contacto:val('in-contacto'),email:val('in-email'),notas:val('in-notas')
+    marca:val('in-marca'),contacto:val('in-contacto'),email:val('in-email'),notas:val('in-notas'),moneda:val('in-moneda')||'USD'
   };
 }
 function val(id){const e=document.getElementById(id);return e?e.value:'';}
@@ -653,7 +672,7 @@ function setupUI(){
   body.addEventListener('input',e=>{
     const inp=e.target.closest('[data-linedesc]');
     if(inp){const row=inp.closest('.line-row');linesFor(row.dataset.scope)[+row.dataset.idx].descripcion=inp.value;saveDraft();return;}
-    if(e.target.closest('#in-marca,#in-contacto,#in-email,#in-notas')){saveDraft();}
+    if(e.target.closest('#in-marca,#in-contacto,#in-email,#in-notas,#in-moneda')){saveDraft();}
   });
 
   // Mobile cart toggle
@@ -698,7 +717,7 @@ async function submitPedido(){
   });
   const payload={
     action:'submit',marca_nombre:marca,contacto_nombre:val('in-contacto').trim(),
-    contacto_email:email,notas:val('in-notas').trim(),hp:val('in-hp'),
+    contacto_email:email,notas:val('in-notas').trim(),moneda:val('in-moneda')||'USD',hp:val('in-hp'),
     lineas_comunes:common.map(l=>({tipo:l.tipo,descripcion:l.descripcion.trim()})),
     items
   };

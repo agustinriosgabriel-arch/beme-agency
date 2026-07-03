@@ -26,6 +26,7 @@ const MAX_TXT = 200;                // largo de campos de texto cortos (marca, c
 const MAX_NOTAS = 2000;
 const MAX_BODY = 1_000_000;         // ~1 MB (el cliente no manda fotos, solo texto+ids)
 const TIPOS = ['accion', 'paquete'];
+const MONEDAS = ['USD', 'MXN', 'ARS', 'EUR'];
 
 function json(statusCode, body, origin) {
   return {
@@ -92,6 +93,7 @@ exports.handler = async (event) => {
     return json(400, { error: 'Email inválido' }, origin);
   }
   const notas = clampStr(body.notas, MAX_NOTAS);
+  const moneda = MONEDAS.includes(body.moneda) ? body.moneda : 'USD';
 
   // ── Validar líneas comunes ──
   const lineas_comunes = cleanLineas(body.lineas_comunes);
@@ -148,6 +150,7 @@ exports.handler = async (event) => {
       contacto_nombre,
       contacto_email,
       notas,
+      moneda,
       lineas_comunes,
       estado: 'enviado',
     })

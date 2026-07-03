@@ -89,6 +89,9 @@ CREATE TABLE IF NOT EXISTS pedido_cliente_items (
 
 CREATE INDEX IF NOT EXISTS idx_pedido_items_pedido ON pedido_cliente_items(pedido_id);
 
+-- Moneda por talento (override opcional; si es NULL hereda la moneda del pedido).
+ALTER TABLE pedido_cliente_items ADD COLUMN IF NOT EXISTS moneda text;
+
 -- ──────────────────────────────────────────────────────────────────
 -- 3. RLS — solo el equipo interno (authenticated). SIN policy anon.
 --    (El anon escribe únicamente vía la function con service_role.)

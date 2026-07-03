@@ -4130,6 +4130,7 @@ function openPedidoDetalle(id) {
       id: it.id,
       talento_id: it.talento_id,
       talento_nombre: it.talento_nombre,
+      moneda: it.moneda || p.moneda || 'USD',
       lineas: (it.lineas || []).map(l => ({ tipo: l.tipo || 'accion', descripcion: l.descripcion || '', precio: (l.precio == null ? '' : l.precio) })),
     })),
   };
@@ -4141,6 +4142,7 @@ function openPedidoDetalle(id) {
   openModal('pedido-detalle-modal');
 }
 
+const PD_MONEDAS = ['USD', 'MXN', 'ARS', 'EUR'];
 const PD_TT_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.04-8.68a8.25 8.25 0 004.82 1.55V4.72a4.85 4.85 0 01-1.01-.03z"/></svg>';
 const PD_IG_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg>';
 const PD_YT_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/></svg>';
@@ -4150,12 +4152,13 @@ function renderPedidoDetalleBody(p) {
   if (!body || !_pedidoEditing) return;
   let html = '';
 
-  // Moneda + notas
+  // Moneda general (la eligió el cliente; BEME puede ajustarla y aplica a todos) + notas
   html += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">'
-    + '<label style="font-size:12px;font-weight:700;color:var(--text-muted);">Moneda</label>'
-    + '<select id="pd-moneda" class="form-input" style="width:auto;">'
-    + ['USD', 'MXN', 'ARS', 'EUR'].map(m => '<option value="' + m + '"' + (_pedidoEditing.moneda === m ? ' selected' : '') + '>' + m + '</option>').join('')
-    + '</select></div>';
+    + '<label style="font-size:12px;font-weight:700;color:var(--text-muted);">Moneda del cliente</label>'
+    + '<select id="pd-moneda-general" class="form-input" style="width:auto;">'
+    + PD_MONEDAS.map(m => '<option value="' + m + '"' + (_pedidoEditing.moneda === m ? ' selected' : '') + '>' + m + '</option>').join('')
+    + '</select>'
+    + '<span style="font-size:11px;color:var(--text-dim);">Aplica a todos — podés cambiarla por talento abajo.</span></div>';
   if (p.notas) {
     html += '<div style="background:var(--surface2);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--text-muted);"><b style="color:var(--text);">Notas del cliente:</b> ' + escapeHtml(p.notas) + '</div>';
   }
@@ -4185,6 +4188,12 @@ function renderPedidoDetalleBody(p) {
     html += '<div style="padding:12px 16px;">';
     if (nets) html += '<div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;">' + nets + '</div>';
     if (cats) html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">' + cats + '</div>';
+    // Moneda de ESTE talento (override individual)
+    html += '<div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-bottom:6px;">'
+      + '<span style="font-size:11px;color:var(--text-dim);">Moneda de este talento</span>'
+      + '<select class="form-input" style="width:auto;padding:5px 8px;font-size:12px;" data-pm-item="' + it.id + '">'
+      + PD_MONEDAS.map(m => '<option value="' + m + '"' + (it.moneda === m ? ' selected' : '') + '>' + m + '</option>').join('')
+      + '</select></div>';
 
     if (!it.lineas.length) {
       html += '<div style="font-size:12px;color:var(--text-dim);">Sin acciones especificadas.</div>';
@@ -4205,26 +4214,42 @@ function renderPedidoDetalleBody(p) {
   });
 
   body.innerHTML = html;
-  const ms = document.getElementById('pd-moneda');
-  if (ms) ms.addEventListener('change', () => { _pedidoEditing.moneda = ms.value; updatePedidoTotal(); });
   updatePedidoTotal();
 }
 
 function safeHref(url) { if (!url) return '#'; return /^https?:\/\//.test(url) ? url : 'https://' + url; }
 
+// Cambios de moneda (general + por talento) — listener único a nivel documento
+document.addEventListener('change', (e) => {
+  if (!_pedidoEditing || !e.target.closest) return;
+  const gm = e.target.closest('#pd-moneda-general');
+  if (gm) {
+    _pedidoEditing.moneda = gm.value;
+    _pedidoEditing.items.forEach(it => { it.moneda = gm.value; });
+    renderPedidoDetalleBody(pedidosCliente.find(x => x.id === _pedidoEditing.id) || {});
+    return;
+  }
+  const pm = e.target.closest('[data-pm-item]');
+  if (pm) {
+    const item = _pedidoEditing.items.find(i => i.id === parseInt(pm.dataset.pmItem));
+    if (item) { item.moneda = pm.value; updatePedidoTotal(); }
+  }
+});
+
 function updatePedidoTotal() {
   if (!_pedidoEditing) return;
-  const cur = _pedidoEditing.moneda || 'USD';
-  let total = 0;
+  const byCur = {};
   _pedidoEditing.items.forEach(it => {
+    const cur = it.moneda || _pedidoEditing.moneda || 'USD';
     let sub = 0;
     it.lineas.forEach(l => { const n = Number(l.precio); if (l.precio !== '' && !isNaN(n)) sub += n; });
-    total += sub;
+    byCur[cur] = (byCur[cur] || 0) + sub;
     const se = document.querySelector('[data-subtotal="' + it.id + '"]');
     if (se) se.textContent = sub > 0 ? ('Subtotal: ' + formatMoney(sub, cur)) : '';
   });
+  const parts = Object.keys(byCur).filter(c => byCur[c] > 0).map(c => formatMoney(byCur[c], c));
   const el = document.getElementById('pd-total');
-  if (el) el.textContent = total > 0 ? ('Total: ' + formatMoney(total, cur)) : '';
+  if (el) el.textContent = parts.length ? ('Total: ' + parts.join('  ·  ')) : '';
 }
 
 // Actualiza el modelo de precios en vivo (listener único a nivel documento)
@@ -4265,7 +4290,7 @@ async function savePedidoPrecios() {
         tipo: l.tipo, descripcion: l.descripcion,
         precio: (l.precio === '' || l.precio == null) ? null : Number(l.precio),
       }));
-      const { error } = await sb.from('pedido_cliente_items').update({ lineas }).eq('id', it.id);
+      const { error } = await sb.from('pedido_cliente_items').update({ lineas, moneda: it.moneda }).eq('id', it.id);
       if (error) throw error;
     }
     await sb.from('pedidos_cliente').update({ estado: 'cotizado', moneda: _pedidoEditing.moneda }).eq('id', _pedidoEditing.id);
@@ -4276,7 +4301,7 @@ async function savePedidoPrecios() {
       p.moneda = _pedidoEditing.moneda;
       (p.pedido_cliente_items || []).forEach(it => {
         const ed = _pedidoEditing.items.find(x => x.id === it.id);
-        if (ed) it.lineas = ed.lineas.map(l => ({ tipo: l.tipo, descripcion: l.descripcion, precio: (l.precio === '' || l.precio == null) ? null : Number(l.precio) }));
+        if (ed) { it.moneda = ed.moneda; it.lineas = ed.lineas.map(l => ({ tipo: l.tipo, descripcion: l.descripcion, precio: (l.precio === '' || l.precio == null) ? null : Number(l.precio) })); }
       });
     }
     showToast('Precios guardados. Pedido marcado como cotizado.', 'success');
