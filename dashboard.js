@@ -476,8 +476,11 @@ async function loadFromSupabase() {
       const maxTalentId = talents.reduce((m,t)=>t.id>m?t.id:m,0);
       if(nextTalentId <= maxTalentId) { nextTalentId = maxTalentId + 1; console.warn('[Beme] Fixed nextTalentId →', nextTalentId); }
     }
-    if(rosters.length > 0) {
-      const maxRosterId = rosters.reduce((m,r)=>r.id>m?r.id:m,0);
+    // Incluir los de la papelera: siguen existiendo en la DB, así que sus ids
+    // están tomados y nextRosterId nunca debe caer sobre ellos.
+    const _allForMax = rosters.concat(deletedRosters);
+    if(_allForMax.length > 0) {
+      const maxRosterId = _allForMax.reduce((m,r)=>r.id>m?r.id:m,0);
       if(nextRosterId <= maxRosterId) { nextRosterId = maxRosterId + 1; console.warn('[Beme] Fixed nextRosterId →', nextRosterId); }
     }
 
@@ -1011,7 +1014,7 @@ let ACTION_MAP = {
   'copy-url-compact':(id)    => copyCompactRosterUrl(parseInt(id)),
   'switch-roster-subtab': (id) => switchRosterSubtab(id),
   'open-pedido': (id) => openPedidoDetalle(parseInt(id)),
-  'copy-pedido-link': (id) => copyPedidoLink(parseInt(id)),
+  'copy-brand-link': (id) => copyBrandLink(parseInt(id)),
   'delete-pedido': (id) => deletePedidoCliente(parseInt(id)),
   'edit-general-roster':  (id) => openCreateGeneralRosterModal(parseInt(id)),
   'delete-general-roster':(id) => deleteGeneralRoster(id),
@@ -3454,20 +3457,32 @@ async function saveRoster() {
     const newToken = generateToken();
     const newCreated = new Date().toISOString().split('T')[0];
     if(sb && currentUser) {
-      const newId = nextRosterId++;
       // Include pending talent IDs if creating from "Add to Roster" flow
       const initialTalentIds = _pendingRosterTalentIds ? _pendingRosterTalentIds.map(id => parseInt(id)) : [];
       _pendingRosterTalentIds = null;
 
-      const {data: inserted, error} = await sb.from('rosters').insert({
-        id: newId, name, description: desc, platforms,
-        talent_ids: initialTalentIds, public_token: newToken, created: newCreated,
-        lineas_comunes: lineasComunes, mostrar_total: mostrarTotal, moneda
-      }).select('*').single();
-      if(error) {
-        console.error('Roster insert error:', error);
-        showToast('Error al crear roster: ' + error.message, 'error');
-        nextRosterId--;
+      // Insertar con reintento anti-colisión: si el id generado en el cliente
+      // ya existe (multiusuario / contador atrasado), recalcula el id real
+      // desde la DB y reintenta, para que el roster SIEMPRE quede persistido.
+      let inserted = null, lastErr = null;
+      for(let attempt = 0; attempt < 4; attempt++) {
+        const tryId = nextRosterId++;
+        const {data, error} = await sb.from('rosters').insert({
+          id: tryId, name, description: desc, platforms,
+          talent_ids: initialTalentIds, public_token: newToken, created: newCreated,
+          lineas_comunes: lineasComunes, mostrar_total: mostrarTotal, moneda
+        }).select('*').single();
+        if(!error) { inserted = data; break; }
+        lastErr = error;
+        const isDup = error.code === '23505' || /duplicate key|already exists/i.test(error.message || '');
+        if(!isDup) break;
+        const {data: maxRow} = await sb.from('rosters').select('id').order('id', {ascending:false}).limit(1).maybeSingle();
+        const maxId = (maxRow && typeof maxRow.id === 'number') ? maxRow.id : 0;
+        nextRosterId = Math.max(nextRosterId, maxId + 1);
+      }
+      if(!inserted) {
+        console.error('Roster insert error:', lastErr);
+        showToast('Error al crear roster: ' + (lastErr ? lastErr.message : 'no se pudo asignar un ID único'), 'error');
       } else {
         if(!rosters.find(r => r.id === inserted.id)) {
           rosters.unshift({...inserted, talentIds: (inserted.talent_ids||[]).map(id=>parseInt(id)), platforms: inserted.platforms||{tt:true,ig:true,yt:true}});
@@ -4150,18 +4165,21 @@ function updateGeneralRosterBadge() {
 }
 
 // ===================== PEDIDOS DE CLIENTES =====================
-// Selecciones que arman los clientes desde pedido-cliente.html (link público).
+// 1 link por marca (clientes_link) → N propuestas (pedidos_cliente) que arma el cliente.
+let clientesLink = [];
 let _pedidoEditing = null;
 let _pedidosRealtime = false;
 
 async function loadPedidosCliente() {
   if (!sb || !currentUser) return;
-  const { data, error } = await sb
-    .from('pedidos_cliente')
-    .select('*, pedido_cliente_items(*)')
-    .order('submitted_at', { ascending: false });
-  if (error) { console.warn('[Beme] Error loading pedidos_cliente:', error.message); return; }
-  pedidosCliente = data || [];
+  const [linksRes, propsRes] = await Promise.all([
+    sb.from('clientes_link').select('*').order('created_at', { ascending: false }),
+    sb.from('pedidos_cliente').select('*, pedido_cliente_items(*)').order('created_at', { ascending: false }),
+  ]);
+  if (linksRes.error) console.warn('[Beme] Error loading clientes_link:', linksRes.error.message);
+  if (propsRes.error) { console.warn('[Beme] Error loading pedidos_cliente:', propsRes.error.message); return; }
+  clientesLink = linksRes.data || [];
+  pedidosCliente = propsRes.data || [];
   renderPedidosCliente();
   updatePedidosBadge();
 
@@ -4170,6 +4188,7 @@ async function loadPedidosCliente() {
     try {
       sb.channel('pedidos_cliente_rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos_cliente' }, () => { loadPedidosCliente(); })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes_link' }, () => { loadPedidosCliente(); })
         .subscribe();
     } catch (e) { /* realtime best-effort */ }
   }
@@ -4189,69 +4208,81 @@ const PEDIDO_ESTADOS = {
 
 const PEDIDO_LINK_BASE = 'https://bemeagency.netlify.app/pedido-cliente.html?t=';
 
+function propuestaRow(p) {
+  const items = p.pedido_cliente_items || [];
+  const st = PEDIDO_ESTADOS[p.estado] || PEDIDO_ESTADOS.enviado;
+  const nComs = Array.isArray(p.comentarios) ? p.comentarios.length : 0;
+  const label = p.estado === 'enviado' ? 'Cotizar' : (p.estado === 'borrador' ? 'Ver' : 'Ver / editar');
+  return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--border);">'
+    + '<div style="flex:1;min-width:0;">'
+    +   '<div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(p.nombre || 'Propuesta') + '</div>'
+    +   '<div style="font-size:11px;color:var(--text-dim);">' + items.length + ' talentos'
+    +     (nComs ? ' · <span style="color:#9414E0;font-weight:700;">💬 ' + nComs + '</span>' : '') + '</div>'
+    + '</div>'
+    + '<span style="flex-shrink:0;background:' + st.bg + ';color:' + st.c + ';font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;">' + st.txt + '</span>'
+    + '<button class="btn btn-primary btn-sm" data-action="open-pedido" data-id="' + p.id + '">' + label + '</button>'
+    + '<button class="btn btn-danger btn-sm" data-action="delete-pedido" data-id="' + p.id + '" title="Eliminar propuesta"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>'
+    + '</div>';
+}
+
+function brandCardHTML(marca, linkId, props) {
+  const copyBtn = linkId
+    ? '<button class="btn btn-outline btn-sm" data-action="copy-brand-link" data-id="' + linkId + '" title="Copiar link de la marca"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Copiar link</button>'
+    : '';
+  const body = props.length
+    ? props.map(propuestaRow).join('')
+    : '<div style="padding:12px 0;font-size:12.5px;color:var(--text-dim);">Esperando que el cliente arme propuestas…</div>';
+  return '<div class="rg-card" style="grid-column:1/-1;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">'
+    +   '<div class="rg-name">🔗 ' + escapeHtml(marca || 'Sin marca') + ' <span style="font-size:11px;font-weight:600;color:var(--text-dim);">(' + props.length + ')</span></div>'
+    +   copyBtn
+    + '</div>'
+    + body
+    + '</div>';
+}
+
 function renderPedidosCliente() {
   const grid = document.getElementById('pedidos-cliente-grid');
   if (!grid) return;
   grid.innerHTML = '';
-  if (pedidosCliente.length === 0) {
-    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:60px 20px"><div class="empty-icon" style="font-size:40px">📥</div><h3>Sin pedidos todavía</h3><p>Generá un link para un cliente y compartilo. Cuando arme su roster, aparece acá.</p></div>';
+  if (clientesLink.length === 0 && pedidosCliente.length === 0) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:60px 20px"><div class="empty-icon" style="font-size:40px">📥</div><h3>Sin links todavía</h3><p>Generá un link para una marca y compartilo. El cliente arma sus propuestas y aparecen acá.</p></div>';
     return;
   }
-  pedidosCliente.forEach(p => {
-    const items = p.pedido_cliente_items || [];
-    const st = PEDIDO_ESTADOS[p.estado] || PEDIDO_ESTADOS.enviado;
-    const nComs = Array.isArray(p.comentarios) ? p.comentarios.length : 0;
-    const fecha = p.submitted_at ? new Date(p.submitted_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-    const sub = [p.contacto_nombre, p.contacto_email].filter(Boolean).join(' · ');
-    const card = document.createElement('div');
-    card.className = 'rg-card';
-    card.innerHTML = '\
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">\
-        <div class="rg-name">' + escapeHtml(p.marca_nombre || 'Sin marca') + '</div>\
-        <span style="flex-shrink:0;background:' + st.bg + ';color:' + st.c + ';font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;">' + st.txt + '</span>\
-      </div>\
-      ' + (sub ? '<div class="rg-desc">' + escapeHtml(sub) + '</div>' : '') + '\
-      <div class="rg-meta">\
-        <span class="rg-talent-count">\
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>\
-          ' + items.length + ' talentos\
-        </span>\
-        ' + (fecha ? '<span style="font-size:11px;color:var(--text-dim);">' + fecha + '</span>' : '') + '\
-        ' + (nComs ? '<span style="font-size:11px;color:#9414E0;font-weight:700;">💬 ' + nComs + '</span>' : '') + '\
-      </div>\
-      <div class="rg-actions">\
-        <button class="btn btn-primary btn-sm" style="flex:1" data-action="open-pedido" data-id="' + p.id + '">\
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>\
-          ' + (p.estado === 'enviado' ? 'Cotizar' : (p.estado === 'borrador' ? 'Ver' : 'Ver / editar')) + '\
-        </button>\
-        <button class="btn btn-outline btn-sm" data-action="copy-pedido-link" data-id="' + p.id + '" title="Copiar link del cliente"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>\
-        <button class="btn btn-danger btn-sm" data-action="delete-pedido" data-id="' + p.id + '" title="Eliminar pedido"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>\
-      </div>';
-    grid.appendChild(card);
+  // Una tarjeta por marca (clientes_link), con sus propuestas dentro
+  clientesLink.forEach(link => {
+    const props = pedidosCliente.filter(p => p.cliente_link_id === link.id);
+    grid.insertAdjacentHTML('beforeend', brandCardHTML(link.marca_nombre, link.id, props));
   });
+  // Propuestas legacy sin link (datos viejos)
+  const huerfanas = pedidosCliente.filter(p => !p.cliente_link_id);
+  if (huerfanas.length) {
+    const byMarca = {};
+    huerfanas.forEach(p => { (byMarca[p.marca_nombre || 'Sin marca'] = byMarca[p.marca_nombre || 'Sin marca'] || []).push(p); });
+    Object.keys(byMarca).forEach(m => grid.insertAdjacentHTML('beforeend', brandCardHTML(m, null, byMarca[m])));
+  }
 }
 
 async function generarLinkCliente() {
   const marca = (prompt('Nombre del cliente / marca para este link:') || '').trim();
   if (!marca) return;
   try {
-    const { data, error } = await sb.from('pedidos_cliente')
-      .insert({ marca_nombre: marca, estado: 'borrador' })
+    const { data, error } = await sb.from('clientes_link')
+      .insert({ marca_nombre: marca })
       .select('id, token').single();
     if (error) throw error;
-    // Refrescar lista local (el realtime también dispara, pero así es instantáneo)
-    const { data: full } = await sb.from('pedidos_cliente').select('*, pedido_cliente_items(*)').eq('id', data.id).single();
-    if (full) { pedidosCliente.unshift(full); renderPedidosCliente(); updatePedidosBadge(); }
+    clientesLink.unshift({ id: data.id, token: data.token, marca_nombre: marca });
+    renderPedidosCliente();
     await copyTextWithToast(PEDIDO_LINK_BASE + data.token, '✓ Link de "' + marca + '" copiado. Enviáselo al cliente.');
   } catch (e) {
     showToast('Error al generar el link: ' + e.message, 'error');
   }
 }
 
-async function copyPedidoLink(id) {
-  const p = pedidosCliente.find(x => x.id === id);
-  if (!p || !p.token) { showToast('Este pedido no tiene link.', 'error'); return; }
-  await copyTextWithToast(PEDIDO_LINK_BASE + p.token, '✓ Link de "' + (p.marca_nombre || 'cliente') + '" copiado.');
+async function copyBrandLink(linkId) {
+  const link = clientesLink.find(x => x.id === linkId);
+  if (!link || !link.token) { showToast('Esta marca no tiene link.', 'error'); return; }
+  await copyTextWithToast(PEDIDO_LINK_BASE + link.token, '✓ Link de "' + (link.marca_nombre || 'marca') + '" copiado.');
 }
 
 function openPedidoDetalle(id) {
@@ -4269,9 +4300,9 @@ function openPedidoDetalle(id) {
       lineas: (it.lineas || []).map(l => ({ tipo: l.tipo || 'accion', descripcion: l.descripcion || '', precio: (l.precio == null ? '' : l.precio) })),
     })),
   };
-  document.getElementById('pd-title').textContent = p.marca_nombre || 'Pedido';
+  document.getElementById('pd-title').textContent = p.nombre || 'Propuesta';
   const fecha = p.submitted_at ? new Date(p.submitted_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
-  const subParts = [p.contacto_nombre, p.contacto_email, fecha].filter(Boolean);
+  const subParts = [p.marca_nombre, p.contacto_nombre, p.contacto_email, fecha].filter(Boolean);
   document.getElementById('pd-sub').textContent = subParts.join(' · ');
   renderPedidoDetalleBody(p);
   openModal('pedido-detalle-modal');
@@ -6283,34 +6314,59 @@ async function duplicateRoster(id) {
   const source = rosters.find(r => r.id === id);
   if(!source) return;
   const copyName = source.name + ' (copia)';
-  const newId = nextRosterId++;
   const newToken = generateToken();
   const newCreated = new Date().toISOString().split('T')[0];
-  const newRoster = {
-    id: newId,
+  const basePayload = {
     name: copyName,
     description: source.description || '',
-    talentIds: [...source.talentIds],
-    talent_ids: [...source.talentIds],
     platforms: source.platforms ? {...source.platforms} : {tt:true,ig:true,yt:true},
+    talent_ids: [...source.talentIds],
     public_token: newToken,
-    created: newCreated
+    created: newCreated,
+    lineas_comunes: source.lineas_comunes || [],
+    mostrar_total: source.mostrar_total || false,
+    moneda: source.moneda || 'USD',
   };
-  rosters.push(newRoster);
-  updateStats();
-  renderRosters();
-  if(sb && currentUser) {
-    const {error} = await sb.from('rosters').insert({
-      id: newId, name: copyName, description: newRoster.description,
-      platforms: newRoster.platforms, talent_ids: newRoster.talentIds,
-      public_token: newToken, created: newCreated
-    });
-    if(error) showToast('Error al duplicar: ' + error.message, 'error');
-    else showToast(`Roster duplicado: "${copyName}"`, 'success');
-    sb.from('app_config').upsert({key:'next_roster_id', value: nextRosterId}).catch(e => console.warn('next_roster_id:', e));
-  } else {
+
+  if(!(sb && currentUser)) {
+    // Modo local (sin sesión): solo estado en memoria.
+    const localId = nextRosterId++;
+    rosters.push({ id: localId, ...basePayload, talentIds: [...source.talentIds] });
+    updateStats(); renderRosters();
     showToast(`Roster duplicado: "${copyName}"`, 'success');
+    return;
   }
+
+  // Persistir PRIMERO en Supabase y recién ahí mostrarlo, usando la fila real
+  // que devuelve la DB. Si el id generado en el cliente choca (clave duplicada,
+  // típico con varios usuarios), recalcula el id real y reintenta.
+  let inserted = null, lastErr = null;
+  for(let attempt = 0; attempt < 4; attempt++) {
+    const tryId = nextRosterId++;
+    const {data, error} = await sb.from('rosters')
+      .insert({ id: tryId, ...basePayload })
+      .select('*').single();
+    if(!error) { inserted = data; break; }
+    lastErr = error;
+    const isDup = error.code === '23505' || /duplicate key|already exists/i.test(error.message || '');
+    if(!isDup) break; // error distinto: no reintentar
+    // Recalcular el id real desde la DB y volver a intentar por encima de ese.
+    const {data: maxRow} = await sb.from('rosters').select('id').order('id', {ascending:false}).limit(1).maybeSingle();
+    const maxId = (maxRow && typeof maxRow.id === 'number') ? maxRow.id : 0;
+    nextRosterId = Math.max(nextRosterId, maxId + 1);
+  }
+
+  if(!inserted) {
+    showToast('Error al duplicar: ' + (lastErr ? lastErr.message : 'no se pudo asignar un ID único'), 'error');
+    return;
+  }
+
+  if(!rosters.find(r => r.id === inserted.id)) {
+    rosters.push({ ...inserted, talentIds: (inserted.talent_ids||[]).map(x=>parseInt(x)), platforms: inserted.platforms||{tt:true,ig:true,yt:true} });
+  }
+  updateStats(); renderRosters();
+  sb.from('app_config').upsert({key:'next_roster_id', value: nextRosterId}).catch(e => console.warn('next_roster_id:', e));
+  showToast(`Roster duplicado: "${copyName}"`, 'success');
 }
 
 // ===================== ROSTER VIEW MODE =====================

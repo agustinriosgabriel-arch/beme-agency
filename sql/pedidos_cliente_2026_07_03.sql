@@ -28,6 +28,7 @@
 --    OJO: la página NO debe traer `foto` en el select masivo (base64 pesado):
 --    se carga lazy por id solo para las tarjetas visibles.
 -- ──────────────────────────────────────────────────────────────────
+-- OJO: `valores` es información PRIVADA — NO exponerla al cliente.
 CREATE OR REPLACE VIEW talentos_publicos AS
   SELECT
     id,
@@ -42,7 +43,6 @@ CREATE OR REPLACE VIEW talentos_publicos AS
     genero,
     keywords,
     tipo_contenido,
-    valores,
     idioma,
     foto
   FROM talentos;
@@ -75,6 +75,28 @@ CREATE TABLE IF NOT EXISTS pedidos_cliente (
 ALTER TABLE pedidos_cliente ADD COLUMN IF NOT EXISTS moneda text DEFAULT 'USD';
 -- Hilo de comentarios cliente↔BEME: [{autor:'cliente'|'beme', texto, ts}]
 ALTER TABLE pedidos_cliente ADD COLUMN IF NOT EXISTS comentarios jsonb NOT NULL DEFAULT '[]'::jsonb;
+
+-- ──────────────────────────────────────────────────────────────────
+-- Multi-propuesta: 1 link por MARCA (clientes_link) → N propuestas (pedidos_cliente)
+-- ──────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS clientes_link (
+  id              serial PRIMARY KEY,
+  token           text UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(12), 'hex'),
+  marca_nombre    text NOT NULL DEFAULT '',
+  contacto_nombre text DEFAULT '',
+  contacto_email  text DEFAULT '',
+  created_by      uuid,
+  created_at      timestamptz DEFAULT now()
+);
+ALTER TABLE clientes_link ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS cl_auth_all ON clientes_link;
+CREATE POLICY cl_auth_all ON clientes_link
+  FOR ALL USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Cada pedidos_cliente pasa a ser UNA propuesta dentro de un link de marca.
+ALTER TABLE pedidos_cliente ADD COLUMN IF NOT EXISTS cliente_link_id integer REFERENCES clientes_link(id) ON DELETE CASCADE;
+ALTER TABLE pedidos_cliente ADD COLUMN IF NOT EXISTS nombre text DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_pedidos_cliente_link ON pedidos_cliente(cliente_link_id);
 
 CREATE TABLE IF NOT EXISTS pedido_cliente_items (
   id              serial PRIMARY KEY,

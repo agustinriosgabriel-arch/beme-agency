@@ -28,8 +28,24 @@ input,button,textarea,select{font-family:inherit;}
 .topbar-txt h1{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;line-height:1.15;}
 .topbar-txt p{font-size:12.5px;opacity:.9;margin-top:2px;}
 
+/* Proposals bar */
+.proposals-wrap{background:#fff;border-bottom:1px solid #ece5f5;}
+.proposals-inner{max-width:1320px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.proposals-label{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#9414E0;flex-shrink:0;}
+.proposals-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex:1;}
+.prop-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:12px;border:1px solid #e0d5ee;background:#fff;color:#333;font-size:13px;font-weight:600;cursor:pointer;min-height:40px;}
+.prop-chip:hover{background:#faf6fe;}
+.prop-chip.active{border-color:#9414E0;background:#f5edfc;color:#9414E0;box-shadow:0 0 0 2px rgba(148,20,224,.12);}
+.prop-chip .est{font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:10px;text-transform:uppercase;letter-spacing:.3px;}
+.prop-chip .est.borrador{background:#eee;color:#888;}
+.prop-chip .est.enviado{background:rgba(245,159,0,.18);color:#b26a00;}
+.prop-chip .est.cotizado{background:rgba(46,160,67,.18);color:#2a7d3a;}
+.prop-new{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:12px;border:1px dashed #c9b3e6;background:#f5f0fa;color:#9414E0;font-size:13px;font-weight:700;cursor:pointer;min-height:40px;}
+.prop-new:hover{background:#efe6fa;}
+
 /* Layout */
 .layout{max-width:1320px;margin:0 auto;padding:20px;display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start;}
+body.locked .proposals-wrap{position:sticky;top:0;z-index:50;}
 .catalog{min-width:0;}
 .cart{position:sticky;top:20px;background:#fff;border-radius:16px;box-shadow:0 4px 32px rgba(0,0,0,0.08);max-height:calc(100vh - 40px);display:flex;flex-direction:column;overflow:hidden;}
 
@@ -221,8 +237,15 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield;}
   <div class="topbar">
     <div class="logo"><img src="assets/brand/logos/Beme1Color.png" alt="Beme"></div>
     <div class="topbar-txt">
-      <h1>Armá tu selección de talentos</h1>
-      <p id="topbar-sub">Elegí los talentos, indicá las acciones a cotizar y enviános tu solicitud.</p>
+      <h1>Armá tus propuestas</h1>
+      <p id="topbar-sub">Creá una o varias propuestas y seguí los precios que Beme te va cargando.</p>
+    </div>
+  </div>
+
+  <div class="proposals-wrap">
+    <div class="proposals-inner">
+      <span class="proposals-label">Mis propuestas</span>
+      <div class="proposals-bar" id="proposals-bar"></div>
     </div>
   </div>
 
@@ -319,7 +342,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const API = '/.netlify/functions/pedido-cliente-api';
 const LS_KEY = 'beme_pedido_draft_v1';
 const PAGE_SIZE = 60;
-const SAFE_COLS = 'id,nombre,paises,ciudad,tiktok,instagram,youtube,categorias,seguidores,genero,keywords,valores';
+const SAFE_COLS = 'id,nombre,paises,ciudad,tiktok,instagram,youtube,categorias,seguidores,genero,keywords';
 
 const FLAG_MAP = {"Argentina":"\u{1F1E6}\u{1F1F7}","Bolivia":"\u{1F1E7}\u{1F1F4}","Brasil":"\u{1F1E7}\u{1F1F7}","Chile":"\u{1F1E8}\u{1F1F1}","Colombia":"\u{1F1E8}\u{1F1F4}","Costa Rica":"\u{1F1E8}\u{1F1F7}","Cuba":"\u{1F1E8}\u{1F1FA}","Ecuador":"\u{1F1EA}\u{1F1E8}","El Salvador":"\u{1F1F8}\u{1F1FB}","España":"\u{1F1EA}\u{1F1F8}","Estados Unidos":"\u{1F1FA}\u{1F1F8}","Guatemala":"\u{1F1EC}\u{1F1F9}","Honduras":"\u{1F1ED}\u{1F1F3}","México":"\u{1F1F2}\u{1F1FD}","Nicaragua":"\u{1F1F3}\u{1F1EE}","Panamá":"\u{1F1F5}\u{1F1E6}","Paraguay":"\u{1F1F5}\u{1F1FE}","Perú":"\u{1F1F5}\u{1F1EA}","Puerto Rico":"\u{1F1F5}\u{1F1F7}","República Dominicana":"\u{1F1E9}\u{1F1F4}","Uruguay":"\u{1F1FA}\u{1F1FE}","Venezuela":"\u{1F1FB}\u{1F1EA}"};
 
@@ -355,9 +378,10 @@ const selection=new Map();        // id -> { nombre, override:null | [{tipo,desc
 let commonLines=[{tipo:'accion',descripcion:''}];
 const selectedCats=new Set();     // categorías acumuladas en el filtro
 let TOKEN=null;
-let PEDIDO=null;                  // {marca_nombre,contacto_nombre,contacto_email,notas,moneda,estado,comentarios,lineas_comunes}
-const serverItems=new Map();      // talento_id -> {lineas:[{tipo,descripcion,precio}], moneda}
-let LOCKED=false;                 // true cuando estado = cotizado/cerrado (solo lectura)
+let LINK=null;                    // {marca_nombre, contacto_nombre, contacto_email}
+let PROPUESTAS=[];                // propuestas del link (server)
+let CURRENT=null;                 // propuesta activa (working): {id, nombre, moneda, estado, comentarios, items}
+let LOCKED=false;                 // CURRENT cotizada/cerrada (solo lectura)
 
 function fmtMoney(n,cur){try{return new Intl.NumberFormat('en-US',{style:'currency',currency:cur||'USD',minimumFractionDigits:0,maximumFractionDigits:0}).format(Number(n)||0);}catch(e){return '$'+(Number(n)||0);}}
 async function api(action,extra){
@@ -387,21 +411,17 @@ async function init(){
       from+=PAGE;
     }
 
-    // Pedido de este cliente (por token)
+    // Link de la marca + propuestas
     const j=await api('open',{});
     if(!j||!j.ok){ showFatal((j&&j.error)||'Link inválido o vencido.'); return; }
-    PEDIDO=j.pedido;
-    LOCKED=(PEDIDO.estado==='cotizado'||PEDIDO.estado==='cerrado');
-    loadFromServer(j.items||[]);
-    if(PEDIDO.marca_nombre) document.getElementById('topbar-sub').textContent='Selección para '+PEDIDO.marca_nombre;
-    if(LOCKED) document.body.classList.add('locked');
+    LINK=j.link||{}; PROPUESTAS=j.propuestas||[];
+    if(LINK.marca_nombre) document.getElementById('topbar-sub').textContent='Marca: '+LINK.marca_nombre;
 
     populateCountryFilter();
     populateCategoryFilter();
     setupFilterListeners();
     setupUI();
-    applyFilters();
-    renderCart();
+    newProposal();   // arranca en una propuesta nueva (las existentes están en la barra)
     document.getElementById('loading-screen').style.display='none';
     document.getElementById('app').style.display='block';
   }catch(e){
@@ -409,19 +429,54 @@ async function init(){
   }
 }
 
-function loadFromServer(items){
-  window._form={marca:PEDIDO.marca_nombre||'',contacto:PEDIDO.contacto_nombre||'',email:PEDIDO.contacto_email||'',notas:PEDIDO.notas||'',moneda:PEDIDO.moneda||'USD'};
-  commonLines=(PEDIDO.lineas_comunes&&PEDIDO.lineas_comunes.length)?PEDIDO.lineas_comunes.map(l=>({tipo:l.tipo||'accion',descripcion:l.descripcion||''})):[{tipo:'accion',descripcion:''}];
+// ── Propuestas ──
+function refreshProposalUI(){
+  LOCKED=!!(CURRENT&&(CURRENT.estado==='cotizado'||CURRENT.estado==='cerrado'));
+  document.body.classList.toggle('locked',LOCKED);
+  renderProposalsBar();
+  applyFilters();   // re-render catálogo (estados de selección)
+  renderCart();
+}
+function newProposal(){
+  CURRENT={id:null,nombre:'',moneda:'USD',estado:'borrador',comentarios:[],items:[]};
+  selection.clear();
+  commonLines=[{tipo:'accion',descripcion:''}];
+  window._form={nombre:'',contacto:(LINK&&LINK.contacto_nombre)||'',email:(LINK&&LINK.contacto_email)||'',notas:'',moneda:'USD'};
+  refreshProposalUI();
+}
+function loadProposal(id){
+  const p=PROPUESTAS.find(x=>x.id===id); if(!p) return;
+  CURRENT=JSON.parse(JSON.stringify(p));
+  commonLines=(CURRENT.lineas_comunes&&CURRENT.lineas_comunes.length)?CURRENT.lineas_comunes.map(l=>({tipo:l.tipo||'accion',descripcion:l.descripcion||''})):[{tipo:'accion',descripcion:''}];
   const commonClean=commonLines.filter(l=>l.descripcion.trim());
-  selection.clear(); serverItems.clear();
-  (items||[]).forEach(it=>{
+  selection.clear();
+  (CURRENT.items||[]).forEach(it=>{
     const t=CATALOG.find(x=>x.id===it.talento_id);
     const nombre=it.talento_nombre||(t?t.nombre:'');
     const itLines=(it.lineas||[]).map(l=>({tipo:l.tipo||'accion',descripcion:l.descripcion||''}));
     const override=sameLines(itLines,commonClean)?null:itLines;
     selection.set(it.talento_id,{nombre,override});
-    serverItems.set(it.talento_id,{lineas:it.lineas||[],moneda:it.moneda});
   });
+  window._form={nombre:CURRENT.nombre||'',contacto:(LINK&&LINK.contacto_nombre)||'',email:(LINK&&LINK.contacto_email)||'',notas:CURRENT.notas||'',moneda:CURRENT.moneda||'USD'};
+  refreshProposalUI();
+}
+function renderProposalsBar(){
+  const bar=document.getElementById('proposals-bar'); if(!bar) return;
+  let h='';
+  PROPUESTAS.forEach(p=>{
+    const active=CURRENT&&CURRENT.id===p.id;
+    const est=p.estado||'borrador';
+    const estTxt=est==='cotizado'?'Cotizada':(est==='enviado'?'Enviada':'Borrador');
+    h+='<button type="button" class="prop-chip'+(active?' active':'')+'" data-prop="'+p.id+'">'+esc(p.nombre||'Propuesta')+'<span class="est '+est+'">'+estTxt+'</span></button>';
+  });
+  h+='<button type="button" class="prop-new'+(CURRENT&&!CURRENT.id?' active':'')+'" id="prop-new-btn">'+SVG.plus+' Nueva propuesta</button>';
+  bar.innerHTML=h;
+}
+async function refreshProposals(selectId){
+  const jo=await api('open',{});
+  if(jo&&jo.ok){ LINK=jo.link||LINK; PROPUESTAS=jo.propuestas||[]; }
+  if(selectId){ const s=PROPUESTAS.find(p=>p.id===selectId); if(s){ loadProposal(s.id); return; } }
+  newProposal();
 }
 
 function populateCountryFilter(){
@@ -473,7 +528,7 @@ function applyFilters(){
       if(!hay.includes(search))return false;
     }
     if(keywords.length){
-      const kws=((t.keywords||'')+' '+(t.nombre||'')+' '+(t.valores||'')).toLowerCase();
+      const kws=((t.keywords||'')+' '+(t.nombre||'')).toLowerCase();
       if(!keywords.every(k=>kws.includes(k)))return false;
     }
     if(selectedCats.size&&!(t.categorias||[]).some(c=>selectedCats.has(c)))return false;
@@ -517,7 +572,7 @@ function selBtn(id){
   const on=selection.has(id);
   return '<button class="add-btn '+(on?'on':'')+'" data-act="toggle" data-id="'+id+'">'+(on?SVG.check+' Agregado':SVG.plus+' Agregar')+'</button>';
 }
-function valBtn(t){ return (t.valores && String(t.valores).trim()) ? '<button class="val-link" data-act="valores" data-id="'+t.id+'">Ver valores de contenido</button>' : ''; }
+function valBtn(t){ return ''; } /* valores es privado — no se muestra al cliente */
 function avatarHTML(t,big){
   const foto=photoCache.get(t.id);
   const size=big?'width:50px;height:50px;font-size:17px;':'';
@@ -633,8 +688,10 @@ function renderCart(){
   if(LOCKED){ renderCartLocked(body); return; }
 
   let html='';
-  if(PEDIDO&&PEDIDO.estado==='enviado'){
-    html+='<div class="quote-banner" style="background:#fff7e6;border-color:#ffe0a3;color:#b26a00;">Ya enviaste tu selección. Podés ajustarla y volver a guardar — Beme está preparando la cotización.</div>';
+  const wf=window._form||{};
+  html+='<div class="form-field" id="ff-nombre"><label>Nombre de la propuesta</label><input id="in-nombre" value="'+esc(wf.nombre||'')+'" placeholder="Ej. Campaña Verano"></div>';
+  if(CURRENT&&CURRENT.estado==='enviado'){
+    html+='<div class="quote-banner" style="background:#fff7e6;border-color:#ffe0a3;color:#b26a00;">Ya enviaste esta propuesta. Podés ajustarla y volver a guardar — Beme está preparando la cotización.</div>';
   }
   // Common actions
   html+='<div class="cart-section-title">'+SVG.accion+'Acciones a cotizar</div>';
@@ -661,31 +718,29 @@ function renderCart(){
     });
   }
 
-  // Form
+  // Form (la marca es fija = la del link; no se pide)
   const f=window._form||{};
   html+='<div style="height:8px;"></div><div class="cart-section-title">Tus datos</div>';
-  html+='<div class="form-field" id="ff-marca"><label>Marca / Empresa <span class="req">*</span></label><input id="in-marca" value="'+esc(f.marca||'')+'" placeholder="Nombre de la marca"><div class="field-err">Ingresá el nombre de la marca.</div></div>';
   html+='<div class="form-field"><label>Nombre de contacto</label><input id="in-contacto" value="'+esc(f.contacto||'')+'" placeholder="Tu nombre"></div>';
   html+='<div class="form-field" id="ff-email"><label>Email</label><input id="in-email" type="email" autocomplete="email" value="'+esc(f.email||'')+'" placeholder="tu@email.com"><div class="field-err">Email inválido.</div></div>';
-  html+='<div class="form-field"><label>Moneda de la cotización</label><select id="in-moneda">'+['USD','MXN','ARS','EUR'].map(m=>'<option value="'+m+'"'+((f.moneda||'USD')===m?' selected':'')+'>'+m+'</option>').join('')+'</select></div>';
+  html+='<div class="form-field"><label>Moneda de la propuesta</label><select id="in-moneda">'+['USD','MXN','ARS','EUR'].map(m=>'<option value="'+m+'"'+((f.moneda||'USD')===m?' selected':'')+'>'+m+'</option>').join('')+'</select></div>';
   html+='<div class="form-field"><label>Notas (opcional)</label><textarea id="in-notas" placeholder="Fechas, presupuesto estimado, campaña...">'+esc(f.notas||'')+'</textarea></div>';
-  html+='<input class="hp-field" id="in-hp" tabindex="-1" autocomplete="off" aria-hidden="true" placeholder="No completar">';
 
   html+=renderComentariosHTML();
   body.innerHTML=html;
 }
 
-// Vista solo-lectura con precios (estado cotizado/cerrado)
+// Vista solo-lectura con precios (propuesta cotizada/cerrada)
 function renderCartLocked(body){
-  let html='<div class="quote-banner">✓ Beme te envió la cotización. Revisala abajo y dejanos tus comentarios.</div>';
+  let html='<div class="quote-banner">✓ Beme cotizó esta propuesta. Para elegir otros talentos, creá una <b>Nueva propuesta</b> arriba.</div>';
   const byCur={};
-  [...serverItems.entries()].forEach(([id,si])=>{
-    const t=CATALOG.find(x=>x.id===id)||{id,nombre:(selection.get(id)||{}).nombre};
-    const nombre=(selection.get(id)||{}).nombre||t.nombre||'Talento';
-    const cur=si.moneda||PEDIDO.moneda||'USD';
+  (CURRENT.items||[]).forEach(it=>{
+    const t=CATALOG.find(x=>x.id===it.talento_id)||{id:it.talento_id,nombre:it.talento_nombre};
+    const nombre=it.talento_nombre||t.nombre||'Talento';
+    const cur=it.moneda||CURRENT.moneda||'USD';
     let sub=0;
     html+='<div class="sel-item"><div class="sel-item-head">'+avatarHTML(t)+'<div class="sel-name">'+esc(nombre)+'</div></div><div style="margin-top:6px;">';
-    (si.lineas||[]).forEach(l=>{
+    (it.lineas||[]).forEach(l=>{
       const badge=l.tipo==='paquete'?'<span class="ln-badge pkg">PAQUETE</span>':'<span class="ln-badge act">ACCIÓN</span>';
       const has=(l.precio!=null&&l.precio!=='');
       if(has)sub+=Number(l.precio)||0;
@@ -698,20 +753,23 @@ function renderCartLocked(body){
   if(totals.length) html+='<div class="grand-total">Total: '+totals.join('  ·  ')+'</div>';
   html+=renderComentariosHTML();
   body.innerHTML=html;
-  // Cargar fotos de los talentos cotizados (el catálogo está oculto en modo locked)
-  lazyPhotos([...serverItems.keys()].map(id=>CATALOG.find(x=>x.id===id)).filter(Boolean));
+  lazyPhotos((CURRENT.items||[]).map(it=>CATALOG.find(x=>x.id===it.talento_id)).filter(Boolean));
 }
 
-// Hilo de comentarios cliente↔Beme
+// Hilo de comentarios cliente↔Beme (por propuesta)
 function renderComentariosHTML(){
-  const coms=(PEDIDO&&PEDIDO.comentarios)||[];
   let h='<div style="margin-top:16px;border-top:1px solid #eee;padding-top:14px;">';
   h+='<div class="cart-section-title">Comentarios</div>';
-  h+='<div class="cart-help">Escribinos cualquier duda o ajuste. Beme te responde por este mismo link.</div>';
+  if(!CURRENT||!CURRENT.id){
+    h+='<div style="font-size:12.5px;color:#999;">Guardá la propuesta para poder escribir comentarios.</div></div>';
+    return h;
+  }
+  const coms=CURRENT.comentarios||[];
+  h+='<div class="cart-help">Escribinos cualquier duda o ajuste de esta propuesta. Beme responde por este mismo link.</div>';
   if(!coms.length) h+='<div style="font-size:12.5px;color:#999;margin-bottom:8px;">Sin comentarios todavía.</div>';
   coms.forEach(c=>{
     const mine=c.autor==='cliente';
-    const who=c.autor==='beme'?'Beme':(PEDIDO.marca_nombre||'Vos');
+    const who=c.autor==='beme'?'Beme':((LINK&&LINK.marca_nombre)||'Vos');
     const when=c.ts?new Date(c.ts).toLocaleString('es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
     h+='<div class="cm-msg" style="justify-content:'+(mine?'flex-end':'flex-start')+';"><div class="cm-bubble" style="background:'+(mine?'linear-gradient(135deg,#9414E0,#4c6ef5)':'#f2ecfa')+';color:'+(mine?'#fff':'#333')+';"><div class="cm-meta">'+esc(who)+(when?' · '+when:'')+'</div>'+esc(c.texto)+'</div></div>';
   });
@@ -720,40 +778,25 @@ function renderComentariosHTML(){
   return h;
 }
 async function postComentario(){
+  if(!CURRENT||!CURRENT.id) return;
   const inp=document.getElementById('cm-input'); const texto=(inp&&inp.value||'').trim(); if(!texto) return;
   const btn=document.getElementById('cm-send'); if(btn)btn.disabled=true;
-  const j=await api('comment',{texto});
+  const j=await api('comment',{propuesta_id:CURRENT.id,texto});
   if(btn)btn.disabled=false;
   if(!j||!j.ok){ alert((j&&j.error)||'No se pudo enviar el comentario.'); return; }
-  PEDIDO.comentarios=j.comentarios||PEDIDO.comentarios;
+  CURRENT.comentarios=j.comentarios||CURRENT.comentarios;
+  const p=PROPUESTAS.find(x=>x.id===CURRENT.id); if(p) p.comentarios=CURRENT.comentarios;
   renderCart();
 }
 
 // Persistence
 function readForm(){
   window._form={
-    marca:val('in-marca'),contacto:val('in-contacto'),email:val('in-email'),notas:val('in-notas'),moneda:val('in-moneda')||'USD'
+    nombre:val('in-nombre'),contacto:val('in-contacto'),email:val('in-email'),notas:val('in-notas'),moneda:val('in-moneda')||'USD'
   };
 }
 function val(id){const e=document.getElementById(id);return e?e.value:'';}
-function saveDraft(){
-  try{
-    readForm();
-    localStorage.setItem(LS_KEY,JSON.stringify({
-      commonLines,form:window._form,
-      selection:[...selection.entries()].map(([id,s])=>({id,nombre:s.nombre,override:s.override}))
-    }));
-  }catch(e){}
-}
-function restoreDraft(){
-  try{
-    const raw=localStorage.getItem(LS_KEY);if(!raw)return;
-    const d=JSON.parse(raw);
-    if(Array.isArray(d.commonLines)&&d.commonLines.length)commonLines=d.commonLines;
-    window._form=d.form||{};
-    (d.selection||[]).forEach(s=>{if(CATALOG.find(x=>x.id===s.id))selection.set(s.id,{nombre:s.nombre,override:s.override||null});});
-  }catch(e){}
-}
+function saveDraft(){ readForm(); } // el estado vive en memoria; se persiste al guardar la propuesta
 
 // ── Events ──
 function setupUI(){
@@ -790,10 +833,18 @@ function setupUI(){
   body.addEventListener('input',e=>{
     const inp=e.target.closest('[data-linedesc]');
     if(inp){const row=inp.closest('.line-row');linesFor(row.dataset.scope)[+row.dataset.idx].descripcion=inp.value;saveDraft();return;}
-    if(e.target.closest('#in-marca,#in-contacto,#in-email,#in-notas,#in-moneda')){saveDraft();}
+    if(e.target.closest('#in-nombre,#in-contacto,#in-email,#in-notas,#in-moneda')){saveDraft();}
   });
   // Enter en el comentario
   body.addEventListener('keydown',e=>{ if(e.target.id==='cm-input'&&e.key==='Enter'){e.preventDefault();postComentario();} });
+
+  // Barra de propuestas
+  document.getElementById('proposals-bar').addEventListener('click',e=>{
+    const nb=e.target.closest('#prop-new-btn');
+    if(nb){newProposal();return;}
+    const pc=e.target.closest('[data-prop]');
+    if(pc){loadProposal(parseInt(pc.dataset.prop));}
+  });
 
   // Mobile cart toggle
   const cart=document.getElementById('cart'),scrim=document.getElementById('cart-scrim');
@@ -803,7 +854,7 @@ function setupUI(){
   document.getElementById('cart-close').addEventListener('click',closeCart);
   scrim.addEventListener('click',closeCart);
 
-  document.getElementById('submit-btn').addEventListener('click',savePedido);
+  document.getElementById('submit-btn').addEventListener('click',savePropuesta);
 }
 function linesFor(scope){
   if(scope==='common')return commonLines;
@@ -812,17 +863,14 @@ function linesFor(scope){
   return s.override;
 }
 
-// ── Guardar / enviar a Beme ──
-async function savePedido(){
+// ── Guardar propuesta ──
+async function savePropuesta(){
   readForm();
   const msg=document.getElementById('submit-msg');msg.className='submit-msg';msg.textContent='';msg.style.color='';
-  const ffm=document.getElementById('ff-marca');if(ffm)ffm.classList.remove('err');
   const ffe=document.getElementById('ff-email');if(ffe)ffe.classList.remove('err');
 
-  const marca=val('in-marca').trim();
   const email=val('in-email').trim();
   let bad=false;
-  if(!marca&&ffm){ffm.classList.add('err');bad=true;}
   if(email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)&&ffe){ffe.classList.add('err');bad=true;}
   if(selection.size===0){msg.className='submit-msg error';msg.textContent='Agregá al menos un talento.';return;}
   const common=commonLines.filter(l=>l.descripcion.trim());
@@ -840,14 +888,17 @@ async function savePedido(){
   btn.disabled=true;
   document.getElementById('submit-label').innerHTML='<span class="loader-spinner"></span> Guardando...';
   const j=await api('save',{
-    marca_nombre:marca,contacto_nombre:val('in-contacto').trim(),contacto_email:email,
+    propuesta_id:CURRENT&&CURRENT.id?CURRENT.id:undefined,
+    nombre:val('in-nombre').trim(),contacto_nombre:val('in-contacto').trim(),contacto_email:email,
     notas:val('in-notas').trim(),moneda:val('in-moneda')||'USD',
     lineas_comunes:common.map(l=>({tipo:l.tipo,descripcion:l.descripcion.trim()})),items
   });
   btn.disabled=false;document.getElementById('submit-label').textContent='Guardar y enviar a Beme';
   if(!j||!j.ok){ msg.className='submit-msg error'; msg.textContent=(j&&j.error)||'No se pudo guardar. Intentá de nuevo.'; return; }
-  PEDIDO.estado='enviado';
-  msg.className='submit-msg'; msg.style.color='#2a7d3a'; msg.textContent='✓ ¡Guardado! Beme va a preparar tu cotización.';
+  // Recargar propuestas y quedar parado en la guardada
+  await refreshProposals(j.propuesta_id);
+  const msg2=document.getElementById('submit-msg');
+  if(msg2){ msg2.className='submit-msg'; msg2.style.color='#2a7d3a'; msg2.textContent='✓ ¡Propuesta guardada! Beme va a cargar los precios.'; }
 }
 
 // Prevent number wheel scroll
