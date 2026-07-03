@@ -1714,6 +1714,33 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   </div>
 </div>
 
+<!-- MODAL: GENERAR LINK PARA CLIENTE (marca existente o nueva) -->
+<div class="modal-overlay" id="cliente-link-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title">Generar link para cliente</h2>
+      <button class="modal-close" data-fn="closeClienteLinkModal" aria-label="Cerrar">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:14px;">
+        <label class="form-label">Marca existente</label>
+        <select id="cl-marca-select" class="form-input">
+          <option value="">— Elegir marca del CRM —</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label class="form-label">O escribí una marca nueva</label>
+        <input type="text" id="cl-marca-nueva" class="form-input" placeholder="Nombre de la marca / cliente">
+      </div>
+      <div style="font-size:11.5px;color:var(--text-dim);line-height:1.5;">El link es único por marca: el cliente lo usa para armar todas sus propuestas y ver los precios que cargues.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" data-fn="closeClienteLinkModal">Cancelar</button>
+      <button class="btn btn-primary btn-sm" data-fn="confirmarClienteLink" id="cl-crear-btn">Generar y copiar link</button>
+    </div>
+  </div>
+</div>
+
 <!-- BOTTOM SELECTION BAR -->
 <div class="bottom-bar" id="bottom-bar">
   <div class="selected-count">

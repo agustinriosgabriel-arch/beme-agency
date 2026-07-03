@@ -102,6 +102,10 @@ ALTER TABLE pedidos_cliente ADD COLUMN IF NOT EXISTS cliente_link_id integer REF
 ALTER TABLE pedidos_cliente ADD COLUMN IF NOT EXISTS nombre text DEFAULT '';
 CREATE INDEX IF NOT EXISTS idx_pedidos_cliente_link ON pedidos_cliente(cliente_link_id);
 
+-- Vincular el link a un cliente/marca existente del CRM (opcional).
+ALTER TABLE clientes_link ADD COLUMN IF NOT EXISTS cliente_id integer REFERENCES clientes(id) ON DELETE SET NULL;
+ALTER TABLE clientes_link ADD COLUMN IF NOT EXISTS marca_id  integer REFERENCES marcas(id)  ON DELETE SET NULL;
+
 CREATE TABLE IF NOT EXISTS pedido_cliente_items (
   id              serial PRIMARY KEY,
   pedido_id       integer NOT NULL REFERENCES pedidos_cliente(id) ON DELETE CASCADE,

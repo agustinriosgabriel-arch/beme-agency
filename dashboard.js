@@ -954,6 +954,8 @@ let FN_MAP = {
   closeManageLinksModal: function(){ closeModal('manage-links-modal'); },
   createRosterLink,
   generarLinkCliente,
+  closeClienteLinkModal: function(){ closeModal('cliente-link-modal'); },
+  confirmarClienteLink,
   closePedidoDetalle: function(){ closeModal('pedido-detalle-modal'); },
   savePedidoPrecios,
   replyPedidoComentario,
@@ -4267,19 +4269,62 @@ function renderPedidosCliente() {
   }
 }
 
+let _crmMarcas = []; // [{id, nombre, cliente_id, clienteNombre}]
+
 async function generarLinkCliente() {
-  const marca = (prompt('Nombre del cliente / marca para este link:') || '').trim();
-  if (!marca) return;
+  // Cargar marcas del CRM (clientes → marcas, igual que campanas.html)
   try {
-    const { data, error } = await sb.from('clientes_link')
-      .insert({ marca_nombre: marca })
-      .select('id, token').single();
+    const { data } = await sb.from('clientes').select('id,nombre,activo,marcas(id,nombre,activo)').order('nombre');
+    _crmMarcas = [];
+    (data || []).forEach(c => {
+      if (c.activo === false) return;
+      (c.marcas || []).forEach(m => {
+        if (m.activo === false) return;
+        _crmMarcas.push({ id: m.id, nombre: m.nombre, cliente_id: c.id, clienteNombre: c.nombre });
+      });
+    });
+  } catch (e) { _crmMarcas = []; }
+
+  const sel = document.getElementById('cl-marca-select');
+  if (sel) {
+    sel.innerHTML = '<option value="">— Elegir marca del CRM —</option>' +
+      _crmMarcas.map((m, i) => '<option value="' + i + '">' + escapeHtml(m.nombre) + ' (' + escapeHtml(m.clienteNombre) + ')</option>').join('');
+  }
+  const inp = document.getElementById('cl-marca-nueva');
+  if (inp) inp.value = '';
+  openModal('cliente-link-modal');
+}
+
+async function confirmarClienteLink() {
+  const selIdx = document.getElementById('cl-marca-select')?.value;
+  const nueva = (document.getElementById('cl-marca-nueva')?.value || '').trim();
+  const crm = selIdx !== '' && selIdx != null ? _crmMarcas[parseInt(selIdx)] : null;
+  const marca = nueva || (crm ? crm.nombre : '');
+  if (!marca) { showToast('Elegí una marca del CRM o escribí una nueva.', 'error'); return; }
+
+  const btn = document.getElementById('cl-crear-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generando...'; }
+  try {
+    // Si ya existe un link para esa marca, reusarlo (no duplicar)
+    const existente = clientesLink.find(l =>
+      (crm && l.marca_id === crm.id) || (l.marca_nombre || '').toLowerCase() === marca.toLowerCase());
+    if (existente) {
+      closeModal('cliente-link-modal');
+      await copyTextWithToast(PEDIDO_LINK_BASE + existente.token, 'Esa marca ya tenía link — copiado.');
+      return;
+    }
+    const payload = { marca_nombre: marca };
+    if (crm && !nueva) { payload.marca_id = crm.id; payload.cliente_id = crm.cliente_id; }
+    const { data, error } = await sb.from('clientes_link').insert(payload).select('*').single();
     if (error) throw error;
-    clientesLink.unshift({ id: data.id, token: data.token, marca_nombre: marca });
+    clientesLink.unshift(data);
     renderPedidosCliente();
-    await copyTextWithToast(PEDIDO_LINK_BASE + data.token, '✓ Link de "' + marca + '" copiado. Enviáselo al cliente.');
+    closeModal('cliente-link-modal');
+    await copyTextWithToast(PEDIDO_LINK_BASE + data.token, '✓ Link de "' + marca + '" copiado. También quedó visible en la tarjeta de la marca.');
   } catch (e) {
     showToast('Error al generar el link: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Generar y copiar link'; }
   }
 }
 
