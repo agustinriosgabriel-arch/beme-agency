@@ -24,6 +24,10 @@ beme_v10/
 ├── prospecciones.html      → Brand prospection listing
 ├── prospeccion-detalle.html→ Prospection detail with kanban pipeline
 ├── talento-portal.html     → Talent-facing portal (separate login)
+├── artes-campana.html      → Auto-generates social art from a real campaign (?id=)
+├── templates-instagram.html→ Instagram template library (manual editing / Canva export)
+├── artes-engine.js         → Shared art engine: design system CSS + 12 templates + PNG/ZIP export
+├── artes-logos.js          → Beme logos as base64 (needed for the SVG-based PNG export)
 ├── CLAUDE.md               → This file (project instructions)
 ├── netlify.toml            → Netlify config
 ├── docs/                   → Project documentation
@@ -37,16 +41,21 @@ beme_v10/
 │   └── presupuestos.sql    → Presupuestos + presupuesto_items tables + RLS + triggers
 ├── agents/                 → AI agents and skills (by module)
 │   └── contratos/          → Contract agent config
+├── assets/brand/           → Brand assets
+│   ├── Manual-Beme.pdf     → Official identity manual (source of truth)
+│   ├── logos/              → Allowed logo versions
+│   └── fonts/              → Just Sans goes here; Plus Jakarta Sans is the fallback
 └── netlify/functions/      → Serverless functions
     ├── apify-scraper.js    → TikTok/IG scraping via Apify
     ├── contract-agent.js   → Contract generation + AI customization
+    ├── artes-agent.js      → Copywriting agent for campaign social art (Claude)
     └── fetch-profile-photo.js → Profile photo fetcher
 ```
 
 ## Critical Rules
 
 ### 1. Single-file pages
-Each HTML page is self-contained (CSS + HTML + JS in one file), EXCEPT index.html which loads dashboard.js externally. Do NOT split files or add build tools.
+Each HTML page is self-contained (CSS + HTML + JS in one file), EXCEPT index.html which loads dashboard.js externally, and the two art pages (`templates-instagram.html`, `artes-campana.html`) which share `artes-engine.js` + `artes-logos.js` because both render the same templates. Do NOT split anything else or add build tools.
 
 ### 2. Supabase client
 Every page creates its own Supabase client with the same URL/Key:
@@ -73,6 +82,14 @@ All social media URLs must have `https://`. Use `normalizeSocialUrl(raw, platfor
 
 ### 8. Categories persist to app_config
 When saving a talent with new categories, they must be pushed to `CATEGORIES[]` and then `saveData()` called to persist to `app_config` table in Supabase.
+
+### 9. Social art system (artes-engine.js)
+- Artboards are authored at **real Instagram pixels** (1080×1350 / 1080×1080 / 1080×1920). On screen they are shown with a CSS `transform: scale()`; `BemeArtes.toPng()` removes it before rendering so the export is always 1080 px wide.
+- PNG export uses **html-to-image**, not html2canvas: the templates rely on `-webkit-text-stroke` and `background-clip: text`, which html2canvas does not render.
+- Because that export renders through an SVG `foreignObject`, **every image must be a data URL**. External URLs are blocked inside the SVG. `artes-campana.html` downloads talent photos and brand logos and converts them before rendering; the logos ship base64 in `artes-logos.js`.
+- Engine CSS is scoped under `.a` so it never leaks into the host page. Do not add unscoped selectors there.
+- Display headlines that carry hand-placed `<br>` get the `fit` class; `BemeArtes.ajustar(el)` shrinks them after insertion so a long word never breaks mid-word. It must run with the artboard already in the DOM.
+- Visual language comes from the approved public web (`web.html`) plus the identity manual: black base with soft magenta/purple halos, ALL-CAPS ultrabold headlines mixing solid / outline / gradient fills, pink labels with wide tracking.
 
 ## Git & Deploy
 - **Auto-deploy:** After completing changes, always commit and push to `origin/main` without asking. Netlify deploys automatically from GitHub.

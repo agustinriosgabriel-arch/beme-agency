@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beme · Plantillas de Instagram</title>
+<link rel="icon" href="favicon.ico">
+<style>
+@font-face{
+  font-family:'Beme UI';
+  src:local('Just Sans'),url('assets/brand/fonts/PlusJakartaSans-Variable.woff2') format('woff2');
+  font-weight:200 800;font-display:swap;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Beme UI',-apple-system,'Segoe UI',sans-serif;
+  background:#0b0b0c;color:#e8e8ea;-webkit-font-smoothing:antialiased;
+}
+.app{display:flex;min-height:100vh}
+
+/* ---------------- Panel lateral ---------------- */
+.side{
+  width:320px;flex:0 0 320px;position:sticky;top:0;height:100vh;overflow-y:auto;
+  background:#151517;border-right:1px solid #26262a;padding:24px 22px 60px;
+}
+.side .brand{display:flex;align-items:center;gap:11px;margin-bottom:4px}
+.side .brand img{width:30px;height:auto}
+.side h1{font-size:15px;font-weight:800;margin:0;letter-spacing:-.2px;color:#fff}
+.side .sub{font-size:11.5px;color:#85858e;line-height:1.55;margin:10px 0 24px}
+.grp{margin-bottom:24px}
+.grp>label{display:block;font-size:9.5px;font-weight:800;letter-spacing:.14em;
+  text-transform:uppercase;color:#6f6f78;margin-bottom:10px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:40px;
+  padding:10px 14px;margin-bottom:8px;border:0;border-radius:10px;background:#26262b;color:#e8e8ea;
+  font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+  transition:background .18s ease,transform .18s ease}
+.btn:hover{background:#33333a}
+.btn:active{transform:scale(.985)}
+.btn:focus-visible{outline:2px solid #ed568f;outline-offset:2px}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.pri{background:linear-gradient(135deg,#9414e0,#d90e86);color:#fff}
+.btn.pri:hover{filter:brightness(1.1)}
+.btn.gho{background:transparent;border:1px solid #35353c}
+.btn.gho:hover{background:#232329}
+.btn svg{width:15px;height:15px;flex:0 0 15px}
+.zoom{display:flex;align-items:center;gap:10px}
+.zoom input{flex:1;accent-color:#ed568f}
+.zoom output{font-size:11px;color:#85858e;width:36px;text-align:right;font-variant-numeric:tabular-nums}
+.nav a{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;color:#a3a3ac;
+  text-decoration:none;font-size:12px;transition:background .15s,color .15s}
+.nav a:hover{background:#232329;color:#fff}
+.nav a .tag{margin-left:auto;font-size:9.5px;font-weight:700;color:#65656e;font-variant-numeric:tabular-nums}
+.tip{font-size:11px;line-height:1.65;color:#85858e;background:#1b1b1f;border:1px solid #26262a;
+  border-left:2px solid #b2005d;border-radius:0 9px 9px 0;padding:12px 14px;margin:0}
+.tip b{color:#c9c9d1;font-weight:600}
+.tip+.tip{margin-top:8px}
+
+/* ---------------- Zona de trabajo ---------------- */
+.main{flex:1;min-width:0;padding:36px 44px 140px}
+.mhead{max-width:940px;margin-bottom:12px}
+.mhead h2{font-size:28px;font-weight:800;letter-spacing:-.6px;margin:0 0 10px;color:#fff}
+.mhead p{font-size:13.5px;line-height:1.7;color:#85858e;margin:0}
+.mhead p a{color:#ed568f}
+.sec{padding-top:34px;margin-bottom:16px}
+.sec h3{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#ed568f;margin:0 0 5px}
+.row{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}
+.card{margin-bottom:6px}
+.card .meta{display:flex;align-items:center;gap:9px;margin-bottom:10px;flex-wrap:wrap}
+.card .nm{font-size:12.5px;font-weight:700;color:#e8e8ea}
+.card .dim{font-size:10.5px;color:#5c5c65;font-variant-numeric:tabular-nums}
+.card .acts{display:flex;gap:5px;margin-left:auto}
+.mini{border:1px solid #35353c;background:#1b1b1f;color:#a3a3ac;border-radius:7px;font-family:inherit;
+  font-size:10.5px;font-weight:700;padding:5px 10px;cursor:pointer;transition:background .15s,color .15s}
+.mini:hover{background:#2a2a31;color:#fff}
+.mini:focus-visible{outline:2px solid #ed568f;outline-offset:1px}
+.mini.on{background:#b2005d;border-color:#b2005d;color:#fff}
+.frame{position:relative;overflow:hidden;border-radius:6px;background:#000;
+  box-shadow:0 14px 40px rgba(0,0,0,.55)}
+
+/* ---------------- Impresión → PDF para Canva ---------------- */
+@media print{
+  @page{margin:0}
+  @page pf45{size:1080px 1350px}
+  @page psq {size:1080px 1080px}
+  @page pst {size:1080px 1920px}
+  html,body{background:#fff}
+  .side,.mhead,.sec,.card .meta{display:none!important}
+  .main{padding:0}
+  .row{display:block}
+  .card{margin:0}
+  .frame{border-radius:0;box-shadow:none;width:auto!important;height:auto!important}
+  .a{transform:none!important;break-after:page;page-break-after:always}
+  .a.f45{page:pf45} .a.sq{page:psq} .a.st{page:pst}
+  .row:last-of-type .card:last-child .a{break-after:auto;page-break-after:auto}
+  .safe,.slot .ph{display:none!important}
+  .a [data-field]{box-shadow:none!important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<aside class="side">
+  <div class="brand"><img id="sideLogo" alt="Beme"><h1>Plantillas de Instagram</h1></div>
+  <p class="sub">Doce artes construidas sobre la identidad de la web pública y el Manual de marca. Tocá cualquier texto para editarlo y cualquier foto para reemplazarla.</p>
+
+  <div class="grp">
+    <label>Exportar</label>
+    <button class="btn pri" id="btnZip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Todas en PNG (ZIP)
+    </button>
+    <button class="btn" id="btnPdf">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      PDF para Canva
+    </button>
+    <p class="tip">En el diálogo de impresión: <b>Guardar como PDF</b>, márgenes <b>Ninguno</b> y <b>Gráficos de fondo</b> activado. Canva importa ese PDF con el texto todavía editable.</p>
+  </div>
+
+  <div class="grp">
+    <label>Vista</label>
+    <div class="zoom">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#6f6f78" stroke-width="2" stroke-linecap="round" style="width:15px;height:15px;flex:0 0 15px"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.7" y2="16.7"/></svg>
+      <input type="range" id="zoom" min="12" max="70" value="30" step="1" aria-label="Zoom">
+      <output id="zoomOut">30%</output>
+    </div>
+    <button class="btn gho" id="btnReset" style="margin-top:10px">Restablecer todo</button>
+  </div>
+
+  <div class="grp">
+    <label>Plantillas</label>
+    <nav class="nav" id="nav"></nav>
+  </div>
+
+  <div class="grp">
+    <label>Notas de marca</label>
+    <p class="tip">Color principal <b>#b2005d</b> (Pantone 220 c). Secundarios <b>#9414e0</b>, <b>#440b5d</b>, <b>#ed568f</b>.</p>
+    <p class="tip">La tipografía oficial es <b>Just Sans</b>. Si la tenés instalada se usa sola; si no, dejá los <b>.woff2</b> en <b>assets/brand/fonts/</b> como <b>JustSans-Regular.woff2</b>. Mientras tanto se usa Plus Jakarta Sans, que comparte estructura geométrica.</p>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="mhead">
+    <h2>Pack de artes para Instagram</h2>
+    <p>Feed 4:5 (1080×1350), cuadrado (1080×1080) y stories/reels (1080×1920). Todo está a tamaño real: lo que ves es exactamente lo que se exporta. Las guías punteadas marcan lo que tapa la interfaz de Instagram y no salen en el PNG.</p>
+  </div>
+  <div id="grid"></div>
+</main>
+</div>
+
+<input type="file" id="picker" accept="image/*" hidden>
+
+<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="artes-engine.js"></script>
+<script src="artes-logos.js"></script>
+<script>
+/* ============================================================
+   Biblioteca de plantillas · editor manual
+   ============================================================ */
+BemeArtes.injectCSS();
+BemeArtes.setLogos(BEME_LOGOS.color, BEME_LOGOS.blanco);
+document.getElementById('sideLogo').src = BEME_LOGOS.blanco;
+
+const KEY  = 'beme-plantillas-ig-v2';
+const grid = document.getElementById('grid');
+const nav  = document.getElementById('nav');
+
+/* --- Grilla agrupada por formato --- */
+let grupoActual = '';
+BemeArtes.TEMPLATES.forEach((tpl, i) => {
+  if (tpl.grupo !== grupoActual){
+    grupoActual = tpl.grupo;
+    const sec = document.createElement('div');
+    sec.className = 'sec';
+    sec.innerHTML = `<h3>${tpl.grupo}</h3>`;
+    grid.appendChild(sec);
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.dataset.grupo = tpl.grupo;
+    grid.appendChild(row);
+  }
+  const row  = grid.querySelector(`.row[data-grupo="${tpl.grupo}"]`);
+  const art  = BemeArtes.build(tpl.id, {});
+  const dims = tpl.clase === 'f45' ? '1080×1350' : tpl.clase === 'sq' ? '1080×1080' : '1080×1920';
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.id = 'c-' + tpl.id;
+  card.innerHTML = `
+    <div class="meta">
+      <span class="nm">${String(i+1).padStart(2,'0')} · ${tpl.nombre}</span>
+      <span class="dim">${dims}</span>
+      <span class="acts">
+        <button class="mini" data-bg="oscuro">Oscuro</button>
+        <button class="mini" data-bg="claro">Claro</button>
+        <button class="mini" data-bg="vibrante">Vibrante</button>
+        <button class="mini" data-png>PNG</button>
+      </span>
+    </div>
+    <div class="frame"></div>`;
+  card.querySelector('.frame').appendChild(art);
+  row.appendChild(card);
+  BemeArtes.ajustar(art);   // el artboard ya está en el DOM: se puede medir
+
+  const a = document.createElement('a');
+  a.href = '#c-' + tpl.id;
+  a.innerHTML = `${tpl.nombre}<span class="tag">${tpl.clase === 'f45' ? '4:5' : tpl.clase === 'sq' ? '1:1' : '9:16'}</span>`;
+  nav.appendChild(a);
+});
+
+/* --- Zoom --- */
+const zoom = document.getElementById('zoom');
+const zoomOut = document.getElementById('zoomOut');
+function applyZoom(){
+  const z = zoom.value / 100;
+  zoomOut.textContent = zoom.value + '%';
+  document.querySelectorAll('.card').forEach(card => {
+    const art = card.querySelector('.a');
+    const frame = card.querySelector('.frame');
+    if (!art || !frame) return;
+    art.style.transform = `scale(${z})`;
+    frame.style.width  = Math.round(art.offsetWidth  * z) + 'px';
+    frame.style.height = Math.round(art.offsetHeight * z) + 'px';
+  });
+}
+zoom.addEventListener('input', applyZoom);
+applyZoom();
+window.addEventListener('load', applyZoom);
+document.fonts && document.fonts.ready.then(applyZoom);
+
+/* --- Selector de fondo por pieza --- */
+function syncBg(card){
+  const bg = card.querySelector('.a').dataset.bg;
+  card.querySelectorAll('[data-bg]').forEach(b => b.classList.toggle('on', b.dataset.bg === bg));
+}
+document.querySelectorAll('.card').forEach(card => {
+  syncBg(card);
+  card.querySelectorAll('[data-bg]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelector('.a').dataset.bg = btn.dataset.bg;
+      syncBg(card);
+      save();
+    });
+  });
+});
+
+/* --- Slots de imagen: clic o arrastrar --- */
+const picker = document.getElementById('picker');
+let destino = null;
+function pintar(slot, dataUrl){
+  slot.style.backgroundImage = `url('${dataUrl}')`;
+  slot.classList.add('has');
+  save();
+}
+function leer(slot, file){
+  if (!file || !file.type.startsWith('image/')) return;
+  const r = new FileReader();
+  r.onload = e => pintar(slot, e.target.result);
+  r.readAsDataURL(file);
+}
+document.addEventListener('click', e => {
+  const s = e.target.closest('.slot');
+  if (!s) return;
+  destino = s; picker.value = ''; picker.click();
+});
+picker.addEventListener('change', () => { if (destino && picker.files[0]) leer(destino, picker.files[0]); });
+document.addEventListener('dragover', e => { if (e.target.closest('.slot')) e.preventDefault(); });
+document.addEventListener('drop', e => {
+  const s = e.target.closest('.slot');
+  if (!s) return;
+  e.preventDefault();
+  leer(s, e.dataTransfer.files[0]);
+});
+
+/* --- Persistencia local --- */
+let t;
+function save(){
+  clearTimeout(t);
+  t = setTimeout(() => {
+    const data = {};
+    document.querySelectorAll('.a').forEach(art => {
+      const d = { bg: art.dataset.bg, txt: {}, img: {} };
+      art.querySelectorAll('[data-field]').forEach(el => { d.txt[el.dataset.field] = el.innerHTML; });
+      art.querySelectorAll('[data-img].has').forEach(el => { d.img[el.dataset.img] = el.style.backgroundImage; });
+      data[art.dataset.tpl] = d;
+    });
+    try { localStorage.setItem(KEY, JSON.stringify(data)); }
+    catch (err) { /* las fotos grandes pueden exceder la cuota del navegador */ }
+  }, 400);
+}
+function load(){
+  let data;
+  try { data = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return; }
+  if (!data) return;
+  document.querySelectorAll('.a').forEach(art => {
+    const d = data[art.dataset.tpl];
+    if (!d) return;
+    if (d.bg) art.dataset.bg = d.bg;
+    art.querySelectorAll('[data-field]').forEach(el => {
+      const v = d.txt && d.txt[el.dataset.field];
+      if (v != null) el.innerHTML = v;
+    });
+    art.querySelectorAll('[data-img]').forEach(el => {
+      const v = d.img && d.img[el.dataset.img];
+      if (v) { el.style.backgroundImage = v; el.classList.add('has'); }
+    });
+  });
+  document.querySelectorAll('.card').forEach(syncBg);
+}
+load();
+document.addEventListener('input', e => { if (e.target.isContentEditable) save(); });
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  if (!confirm('Se borran los textos y las fotos que cargaste y vuelven los originales. ¿Seguir?')) return;
+  localStorage.removeItem(KEY);
+  location.reload();
+});
+
+/* --- Exportar --- */
+document.querySelectorAll('[data-png]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const art = btn.closest('.card').querySelector('.a');
+    const txt = btn.textContent;
+    btn.textContent = '…'; btn.disabled = true;
+    try {
+      const blob = await BemeArtes.toPng(art);
+      BemeArtes.download(blob, `beme-${art.dataset.tpl}.png`);
+    } catch (err) {
+      alert('No se pudo exportar: ' + err.message);
+    } finally { btn.textContent = txt; btn.disabled = false; }
+  });
+});
+
+document.getElementById('btnZip').addEventListener('click', async () => {
+  const btn = document.getElementById('btnZip');
+  const html = btn.innerHTML;
+  btn.disabled = true;
+  try {
+    await BemeArtes.toZip([...document.querySelectorAll('.a')], 'beme-plantillas-instagram.zip',
+      (i, total) => { btn.textContent = `Renderizando ${i}/${total}…`; });
+  } catch (err) {
+    alert('Falló la exportación: ' + err.message);
+  } finally { btn.innerHTML = html; btn.disabled = false; }
+});
+
+document.getElementById('btnPdf').addEventListener('click', () => window.print());
+</script>
+</body>
+</html>
