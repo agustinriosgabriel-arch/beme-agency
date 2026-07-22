@@ -2254,8 +2254,11 @@ function buildActions(c, ct) {
       <div class="action-box-title">🎯 Aprobación de Contenido</div>
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Revisá el contenido usando el botón "🎬 Borrador" de arriba.</p>
       ${copyTxt ? `<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-bottom:10px">
-        <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px">📋 Copy / Caption propuesto:</div>
-        <div style="font-size:13px;color:var(--text);white-space:pre-wrap">${esc(copyTxt)}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px">
+          <span style="font-size:11px;font-weight:700;color:var(--text-muted)">📋 Copy / Caption propuesto:</span>
+          <button class="btn btn-outline btn-sm" onclick="copyCaption(${c.id})">Copiar</button>
+        </div>
+        <div id="copytxt-${c.id}" style="font-size:13px;color:var(--text);white-space:pre-wrap;word-break:break-word">${esc(copyTxt)}</div>
       </div>` : ''}
       <div class="obs-input-group">
         <textarea class="obs-textarea" id="obs-cont-${c.id}" placeholder="Comentario (requerido para rechazar)..."></textarea>
@@ -2264,6 +2267,17 @@ function buildActions(c, ct) {
           <button class="btn btn-red btn-sm" onclick="rechazarPaso(${c.id},5,'obs-cont-${c.id}')">✕ Rechazar → Producción</button>
         </div>
       </div>
+    </div>`;
+  }
+
+  // ── Copy / caption: sigue visible después de la aprobación (se necesita al publicar) ──
+  if (paso >= 6 && c.copy_texto) {
+    html += `<div class="workflow-action-box">
+      <div class="action-box-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <span>📋 Copy / Caption aprobado</span>
+        <button class="btn btn-outline btn-sm" onclick="copyCaption(${c.id})">Copiar</button>
+      </div>
+      <div id="copytxt-${c.id}" style="font-size:13px;line-height:1.55;color:var(--text);white-space:pre-wrap;word-break:break-word">${esc(c.copy_texto)}</div>
     </div>`;
   }
 
@@ -2377,6 +2391,15 @@ async function avanzar(contId) {
   } catch(e) { toast('Error: '+e.message,'err'); }
 }
 
+function copyCaption(contId) {
+  const el = document.getElementById('copytxt-' + contId);
+  if (!el) return;
+  const txt = el.innerText;
+  navigator.clipboard.writeText(txt).then(()=>toast('Copy copiado ✓','ok')).catch(()=>{
+    const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove(); toast('Copy copiado ✓','ok');
+  });
+}
 async function saveCopyAndAdvance(contId) {
   const copyEl = document.getElementById('copy-' + contId);
   const copyText = copyEl ? copyEl.value.trim() : '';

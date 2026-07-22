@@ -103,6 +103,7 @@ body.dark .tb-tiktok_video{background:rgba(255,255,255,0.08);color:#ccc}
 .step-btn.upload:hover{background:rgba(148,20,224,0.08)}
 .action-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
 .action-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:10px}
+.copy-text{font-size:13px;line-height:1.55;color:var(--text);white-space:pre-wrap;word-break:break-word}
 .action-btns{display:flex;gap:8px;flex-wrap:wrap}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;transition:all 0.15s;text-decoration:none}
 .btn-primary{background:var(--gradient);color:#fff}
@@ -371,6 +372,10 @@ const DICT = {
   aUploadContentBtn:{es:'⬆ Subir video/imagen',en:'⬆ Upload video/image',it:'⬆ Carica video/immagine',de:'⬆ Video/Bild hochladen',nl:'⬆ Video/afbeelding uploaden'},
   aCopyLabel:{es:'📋 Copy / Caption para la publicación',en:'📋 Copy / Caption for the post',it:'📋 Copy / Didascalia per il post',de:'📋 Copy / Caption für den Post',nl:'📋 Copy / Caption voor de post'},
   aCopyPh:{es:'Escribí el copy/caption que se usará...',en:'Write the copy/caption to be used...',it:'Scrivi il copy/didascalia da usare...',de:'Schreibe den zu verwendenden Text/Caption...',nl:'Schrijf de copy/caption die gebruikt wordt...'},
+  aCopySentLabel:{es:'📋 Copy / Caption enviado',en:'📋 Copy / Caption submitted',it:'📋 Copy / Didascalia inviata',de:'📋 Copy / Caption gesendet',nl:'📋 Copy / Caption verzonden'},
+  aCopyBtn:{es:'Copiar',en:'Copy',it:'Copia',de:'Kopieren',nl:'Kopiëren'},
+  aCopyDone:{es:'Copy copiado ✓',en:'Copy copied ✓',it:'Copy copiato ✓',de:'Copy kopiert ✓',nl:'Copy gekopieerd ✓'},
+  aCopyNone:{es:'No cargaste copy/caption para este contenido.',en:'You did not add a copy/caption for this content.',it:'Non hai inserito copy/didascalia per questo contenuto.',de:'Du hast keinen Copy/Caption für diesen Inhalt hinterlegt.',nl:'Je hebt geen copy/caption toegevoegd voor deze content.'},
   aContentReady:{es:'Contenido listo → Enviar a revisión',en:'Content ready → Send for review',it:'Contenuto pronto → Invia per revisione',de:'Inhalt fertig → Zur Prüfung senden',nl:'Content klaar → Verstuur ter review'},
   aWaitContentTitle:{es:'⏳ Esperando aprobación del contenido',en:'⏳ Waiting for content approval',it:'⏳ In attesa di approvazione del contenuto',de:'⏳ Warten auf Inhalts-Freigabe',nl:'⏳ Wachten op contentgoedkeuring'},
   aWaitContentMsg:{es:'La marca está revisando tu contenido.',en:'The brand is reviewing your content.',it:'Il brand sta esaminando il tuo contenuto.',de:'Die Marke prüft deinen Inhalt.',nl:'Het merk beoordeelt je content.'},
@@ -731,6 +736,15 @@ function renderContenido(c, ct) {
     </div>`;
   }).join('');
 
+  // Copy / caption ya enviado: visible desde revisión en adelante (clave al publicar)
+  const copySentHTML = (paso >= 5 && c.copy_texto) ? `<div class="action-box">
+    <div class="action-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <span>${esc(t('aCopySentLabel'))}</span>
+      <button class="btn btn-outline btn-sm" onclick="copyCaption(${c.id})">${esc(t('aCopyBtn'))}</button>
+    </div>
+    <div class="copy-text" id="copytxt-${c.id}">${esc(c.copy_texto)}</div>
+  </div>` : '';
+
   let actionHTML = '';
   if (paso === 2) {
     const hasScripts = scripts.length > 0;
@@ -802,6 +816,7 @@ function renderContenido(c, ct) {
     <div class="cont-body">
       <div class="steps-list">${stepsHTML}</div>
       ${actionHTML}
+      ${copySentHTML}
       ${obsHTML}
       ${sparkHTML}
       ${tlHTML}
@@ -846,6 +861,15 @@ async function saveCopyAndAdvance(contId) {
   const copyText = document.getElementById('copy-'+contId)?.value.trim() || '';
   try { if (copyText) await API('save-copy', { contenido_id: contId, copy_texto: copyText }); await advance(contId); }
   catch(e){ toast(t('errPrefix')+e.message,'err'); }
+}
+function copyCaption(contId) {
+  const el = document.getElementById('copytxt-' + contId);
+  if (!el) return;
+  const txt = el.innerText;
+  navigator.clipboard.writeText(txt).then(()=>toast(t('aCopyDone'),'ok')).catch(()=>{
+    const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove(); toast(t('aCopyDone'),'ok');
+  });
 }
 async function saveSpark(contId, texto) {
   try { await API('save-spark', { contenido_id: contId, spark_code_texto: (texto||'').trim() }); toast(t('sparkSaved'),'ok'); }

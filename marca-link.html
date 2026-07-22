@@ -71,6 +71,9 @@ body.dark .topbar{background:rgba(15,15,15,0.92)}
 .cont-body{display:none;padding:14px;border-top:1px solid var(--border)}.cont-card.open .cont-body{display:block}
 .files-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .file-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none;border:1px solid var(--border2);background:var(--surface2);color:var(--blue)}
+.copy-box{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px}
+.copy-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.copy-text{font-size:13px;line-height:1.55;color:var(--text);white-space:pre-wrap;word-break:break-word}
 .review-box{background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.22);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
 .review-title{font-size:12px;font-weight:800;color:var(--yellow);margin-bottom:10px}
 .cbox{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;font-family:inherit;color:var(--text);outline:none;resize:vertical;min-height:54px;margin-bottom:8px}
@@ -266,8 +269,16 @@ function renderContenido(c) {
   if (scripts.length) files += scripts.map(s=>`<a href="${esc(s.url_archivo)}" target="_blank" class="file-btn">📝 Script v${s.version||1}</a>`).join('');
   if (drafts.length) files += drafts.map(d=>`<a href="${esc(d.url_archivo)}" target="_blank" class="file-btn" style="color:#e1306c">🎬 ${esc((d.nombre_archivo||'Video').substring(0,22))}</a>`).join('');
   if (c.url_publicacion) files += `<a href="${esc(c.url_publicacion)}" target="_blank" class="file-btn" style="color:var(--green)">🔗 Publicación</a>`;
-  if (c.copy_texto) files += `<span class="file-btn" style="color:var(--text-muted);cursor:default" title="${esc(c.copy_texto)}">📋 Copy</span>`;
   const filesHTML = files ? `<div class="files-row">${files}</div>` : '<div class="info-box">Todavía no hay archivos para revisar en este contenido.</div>';
+
+  // Copy / caption propuesto por el talento (visible siempre que exista)
+  const copyHTML = c.copy_texto ? `<div class="copy-box">
+    <div class="copy-head">
+      <span>📋 Copy / Caption propuesto</span>
+      <button class="btn btn-outline btn-sm" onclick="copyCaption(${c.id})">Copiar</button>
+    </div>
+    <div class="copy-text" id="copytxt-${c.id}">${esc(c.copy_texto)}</div>
+  </div>` : '';
 
   // Acción de revisión
   let actionHTML = '';
@@ -314,6 +325,7 @@ function renderContenido(c) {
     <div class="cont-body">
       <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Etapa actual: ${PASO_LABELS[paso]||('Paso '+paso)}</div>
       ${filesHTML}
+      ${copyHTML}
       ${actionHTML}
       ${briefHTML}
       ${commentHTML}
@@ -330,6 +342,15 @@ function renderObs(obs) {
 }
 
 // ── ACCIONES ───────────────────────────────────────────────────
+function copyCaption(contId) {
+  const el = document.getElementById('copytxt-' + contId);
+  if (!el) return;
+  const txt = el.innerText;
+  navigator.clipboard.writeText(txt).then(()=>toast('Copy copiado ✓','ok')).catch(()=>{
+    const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove(); toast('Copy copiado ✓','ok');
+  });
+}
 async function approve(contId) {
   const obs = document.getElementById('rev-'+contId)?.value.trim() || '';
   try { const r = await API('approve', { contenido_id: contId, observacion: obs }); await refresh(); toast('Aprobado → '+(PASO_LABELS[r.paso]||r.paso),'ok'); }

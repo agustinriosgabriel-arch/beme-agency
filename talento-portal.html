@@ -113,6 +113,7 @@ body.dark .tb-tiktok_video{background:rgba(255,255,255,0.08);color:#ccc}
 /* ── Action box ── */
 .action-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
 .action-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:10px}
+.copy-text{font-size:13px;line-height:1.55;color:var(--text);white-space:pre-wrap;word-break:break-word}
 .action-btns{display:flex;gap:8px;flex-wrap:wrap}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;transition:all 0.15s;text-decoration:none}
 .btn-primary{background:var(--gradient);color:#fff}
@@ -747,6 +748,15 @@ function renderContenido(c, ct) {
   }).join('');
 
   // Action box for current step (only for steps talent can act on)
+  // Copy / caption ya enviado: visible desde revisión en adelante (clave al publicar)
+  const copySentHTML = (paso >= 5 && c.copy_texto) ? `<div class="action-box">
+    <div class="action-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <span>📋 Copy / Caption enviado</span>
+      <button class="btn btn-outline btn-sm" onclick="copyCaption(${c.id})">Copiar</button>
+    </div>
+    <div class="copy-text" id="copytxt-${c.id}">${esc(c.copy_texto)}</div>
+  </div>` : '';
+
   let actionHTML = '';
   if (paso === 2) {
     const hasScripts = scripts.length > 0;
@@ -836,6 +846,7 @@ function renderContenido(c, ct) {
     <div class="cont-body">
       <div class="steps-list">${stepsHTML}</div>
       ${actionHTML}
+      ${copySentHTML}
       ${obsHTML}
       ${sparkHTML}
       ${tlHTML}
@@ -976,6 +987,15 @@ async function replaceDraft(input, contId, draftId) {
   input.value='';
 }
 
+function copyCaption(contId) {
+  const el = document.getElementById('copytxt-' + contId);
+  if (!el) return;
+  const txt = el.innerText;
+  navigator.clipboard.writeText(txt).then(()=>toast('Copy copiado ✓','ok')).catch(()=>{
+    const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove(); toast('Copy copiado ✓','ok');
+  });
+}
 async function saveCopyAndAdvance(contId) {
   const copyEl = document.getElementById('copy-' + contId);
   const copyText = copyEl ? copyEl.value.trim() : '';
