@@ -26,7 +26,7 @@ beme_v10/
 ├── talento-portal.html     → Talent-facing portal (separate login)
 ├── artes-campana.html      → Auto-generates social art from a real campaign (?id=)
 ├── templates-instagram.html→ Instagram template library (manual editing / Canva export)
-├── artes-engine.js         → Shared art engine: design system CSS + 12 templates + PNG/ZIP export
+├── artes-engine.js         → Shared art engine: design system CSS + 14 templates + PNG/ZIP export
 ├── artes-logos.js          → Beme logos as base64 (needed for the SVG-based PNG export)
 ├── CLAUDE.md               → This file (project instructions)
 ├── netlify.toml            → Netlify config
@@ -89,7 +89,9 @@ When saving a talent with new categories, they must be pushed to `CATEGORIES[]` 
 - Because that export renders through an SVG `foreignObject`, **every image must be a data URL**. External URLs are blocked inside the SVG. `artes-campana.html` downloads talent photos and brand logos and converts them before rendering; the logos ship base64 in `artes-logos.js`.
 - Engine CSS is scoped under `.a` so it never leaks into the host page. Do not add unscoped selectors there.
 - Display headlines that carry hand-placed `<br>` get the `fit` class; `BemeArtes.ajustar(el)` shrinks them after insertion so a long word never breaks mid-word. It must run with the artboard already in the DOM.
-- Visual language comes from the approved public web (`web.html`) plus the identity manual: black base with soft magenta/purple halos, ALL-CAPS ultrabold headlines mixing solid / outline / gradient fills, pink labels with wide tracking.
+- Visual language follows what @beme.agency actually publishes: white/pastel base with lots of air, a small `BEME AGENCY` wordmark top-left plus the isotype top-right, phone mockups holding the creator's reel, packshots on white. Magenta `#b2005d` is an accent, not a background. The `oscuro` and `vibrante` backgrounds stay available for statements and reel covers.
+- The host pages define their own `.btn` and `.mini`; the engine renamed its text style to `.eyebrow` and hard-declares `width`/`min-height` on `.btn` so host toolbar CSS cannot leak into an artboard. Watch for this when adding component classes.
+- `artes-engine.js` and `artes-logos.js` are included with a `?v=` query. Bump it when the engine changes, otherwise browsers keep serving the cached copy.
 
 ## Git & Deploy
 - **Auto-deploy:** After completing changes, always commit and push to `origin/main` without asking. Netlify deploys automatically from GitHub.

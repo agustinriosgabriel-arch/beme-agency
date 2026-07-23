@@ -186,8 +186,8 @@ select:focus,textarea:focus,input:focus{outline:2px solid #ed568f;outline-offset
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="artes-engine.js"></script>
-<script src="artes-logos.js"></script>
+<script src="artes-engine.js?v=2"></script>
+<script src="artes-logos.js?v=2"></script>
 <script>
 /* ============================================================
    Artes de campaña · generación automática desde Supabase
@@ -504,9 +504,9 @@ function render(){
         <span class="nm">${escapeHtml(tpl.nombre)}</span>
         <span class="dim">${dims}</span>
         <span class="acts">
+          <button class="mini" data-bg="claro">Blanco</button>
+          <button class="mini" data-bg="luz">Pastel</button>
           <button class="mini" data-bg="oscuro">Oscuro</button>
-          <button class="mini" data-bg="claro">Claro</button>
-          <button class="mini" data-bg="vibrante">Vibrante</button>
           <button class="mini" data-png>PNG</button>
         </span>
       </div>
