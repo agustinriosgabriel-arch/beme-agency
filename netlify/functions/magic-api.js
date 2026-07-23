@@ -33,6 +33,14 @@ const CONT_SELECT = 'contenidos(*,contenido_observaciones(*),contenido_scripts(*
 const CT_SELECT_TALENT = `*,talentos(id,nombre,foto,idioma),${CONT_SELECT},campanas(*,marcas(id,nombre,clientes(nombre)),campana_briefs(*))`;
 const CAMPANA_SELECT_BRAND = `*,marcas(id,nombre,clientes(nombre)),campana_briefs(*),campana_talentos(*,talentos(id,nombre,foto),${CONT_SELECT})`;
 
+// Archivos que el talento puede borrar/reemplazar, y hasta qué paso.
+// maxPaso = último paso en el que el archivo todavía "es suyo" (después ya fue aprobado).
+const FILE_KINDS = {
+  script: { table: 'contenido_scripts',      urlCol: 'url_archivo',    bucket: 'content-scripts', maxPaso: 3, label: 'Eliminó un script' },
+  draft:  { table: 'contenido_borradores',   urlCol: 'url_archivo',    bucket: 'content-drafts',  maxPaso: 5, label: 'Eliminó un archivo de contenido' },
+  stat:   { table: 'contenido_estadisticas', urlCol: 'url_screenshot', bucket: 'content-stats',   maxPaso: 7, label: 'Eliminó una estadística' },
+};
+
 function json(statusCode, body, origin) {
   return {
     statusCode,
@@ -186,6 +194,20 @@ exports.handler = async (event) => {
     const h = event.headers || {};
     return (h['x-nf-client-connection-ip'] || (h['x-forwarded-for'] || '').split(',')[0] || '').trim();
   }
+  // Borra el objeto de storage a partir de su URL pública. Best-effort: si
+  // falla, la fila igual se eliminó y sólo queda un huérfano en el bucket.
+  async function removeStorageByUrl(bucket, url) {
+    try {
+      if (!url) return;
+      const marker = `/storage/v1/object/public/${bucket}/`;
+      const i = String(url).indexOf(marker);
+      const path = i >= 0 ? decodeURIComponent(String(url).slice(i + marker.length)) : String(url);
+      if (!path || path.startsWith('http')) return;
+      const { error } = await sb.storage.from(bucket).remove([path]);
+      if (error) console.warn('removeStorageByUrl:', error.message);
+    } catch (e) { console.warn('removeStorageByUrl:', e.message); }
+  }
+
   // Nombre de archivo seguro para storage
   function safeFile(name) {
     return String(name || 'file').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -355,12 +377,48 @@ exports.handler = async (event) => {
 
       case 'record-stats': {
         if (link.tipo !== 'talent') return json(403, { error: 'Solo el talento sube estadísticas' }, origin);
-        const { contenido_id, periodo, url_screenshot, nombre_archivo } = body;
+        const { contenido_id, periodo, url_screenshot, nombre_archivo, replace_id } = body;
         const scope = await assertContenidoScope(contenido_id);
         if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
-        const { error } = await sb.from('contenido_estadisticas').insert({ contenido_id, periodo, url_screenshot, nombre_archivo });
+        if (replace_id) {
+          const { error } = await sb.from('contenido_estadisticas').update({ url_screenshot, nombre_archivo }).eq('id', replace_id).eq('contenido_id', contenido_id);
+          if (error) throw error;
+        } else {
+          const { error } = await sb.from('contenido_estadisticas').insert({ contenido_id, periodo, url_screenshot, nombre_archivo });
+          if (error) throw error;
+        }
+        await regCambio(scope.ct.campana_id, contenido_id, replace_id ? 'Reemplazó estadísticas' : 'Subió estadísticas');
+        return json(200, { ok: true }, origin);
+      }
+
+      // ── ELIMINAR UN ARCHIVO (script / borrador / estadística) ─
+      case 'delete-file': {
+        if (link.tipo !== 'talent') return json(403, { error: 'Solo el talento puede borrar sus archivos' }, origin);
+        const { contenido_id, kind, file_id } = body;
+        const spec = FILE_KINDS[kind];
+        if (!spec) return json(400, { error: 'Tipo de archivo inválido' }, origin);
+        if (!file_id) return json(400, { error: 'Falta el archivo' }, origin);
+
+        const scope = await assertContenidoScope(contenido_id);
+        if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
+
+        // No dejar tocar archivos de un paso ya superado/aprobado
+        const { data: cont } = await sb.from('contenidos').select('paso_actual').eq('id', contenido_id).maybeSingle();
+        if (!cont) return json(404, { error: 'Contenido inexistente' }, origin);
+        if ((cont.paso_actual || 0) > spec.maxPaso) {
+          return json(409, { error: 'Este archivo ya fue aprobado. Pedile al equipo de BEME que lo cambie.' }, origin);
+        }
+
+        const { data: row, error: selErr } = await sb
+          .from(spec.table).select(`id,contenido_id,${spec.urlCol}`)
+          .eq('id', file_id).eq('contenido_id', contenido_id).maybeSingle();
+        if (selErr) throw selErr;
+        if (!row) return json(404, { error: 'Archivo inexistente' }, origin);
+
+        const { error } = await sb.from(spec.table).delete().eq('id', file_id).eq('contenido_id', contenido_id);
         if (error) throw error;
-        await regCambio(scope.ct.campana_id, contenido_id, 'Subió estadísticas');
+        await removeStorageByUrl(spec.bucket, row[spec.urlCol]);
+        await regCambio(scope.ct.campana_id, contenido_id, spec.label);
         return json(200, { ok: true }, origin);
       }
 

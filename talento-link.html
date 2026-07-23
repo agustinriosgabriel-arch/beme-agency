@@ -6,6 +6,7 @@
 <title>Beme — Tu espacio de campañas</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="media-compress.js"></script>
 <link rel="icon" href="favicon.ico" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
@@ -101,6 +102,11 @@ body.dark .tb-tiktok_video{background:rgba(255,255,255,0.08);color:#ccc}
 .step-btn.view:hover{background:rgba(14,165,233,0.08)}
 .step-btn.upload{color:var(--purple);border-color:rgba(148,20,224,0.3)}
 .step-btn.upload:hover{background:rgba(148,20,224,0.08)}
+.file-chip{display:inline-flex;align-items:stretch;border:1px solid var(--border2);border-radius:6px;overflow:hidden;background:var(--surface)}
+.file-chip .step-btn{border:none;border-radius:0;background:transparent}
+.file-chip .fc-act{display:inline-flex;align-items:center;justify-content:center;min-width:26px;padding:0 6px;font-size:12px;font-weight:700;cursor:pointer;border:none;border-left:1px solid var(--border2);background:transparent;color:var(--text-muted);font-family:inherit}
+.file-chip .fc-act:hover{background:rgba(148,20,224,0.08);color:var(--purple)}
+.file-chip .fc-act.danger:hover{background:rgba(220,38,38,0.1);color:var(--red)}
 .action-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
 .action-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:10px}
 .copy-text{font-size:13px;line-height:1.55;color:var(--text);white-space:pre-wrap;word-break:break-word}
@@ -372,6 +378,15 @@ const DICT = {
   aUploadContentBtn:{es:'⬆ Subir video/imagen',en:'⬆ Upload video/image',it:'⬆ Carica video/immagine',de:'⬆ Video/Bild hochladen',nl:'⬆ Video/afbeelding uploaden'},
   aCopyLabel:{es:'📋 Copy / Caption para la publicación',en:'📋 Copy / Caption for the post',it:'📋 Copy / Didascalia per il post',de:'📋 Copy / Caption für den Post',nl:'📋 Copy / Caption voor de post'},
   aCopyPh:{es:'Escribí el copy/caption que se usará...',en:'Write the copy/caption to be used...',it:'Scrivi il copy/didascalia da usare...',de:'Schreibe den zu verwendenden Text/Caption...',nl:'Schrijf de copy/caption die gebruikt wordt...'},
+  fcReplace:{es:'Reemplazar archivo',en:'Replace file',it:'Sostituisci file',de:'Datei ersetzen',nl:'Bestand vervangen'},
+  fcDelete:{es:'Eliminar archivo',en:'Delete file',it:'Elimina file',de:'Datei löschen',nl:'Bestand verwijderen'},
+  fcConfirmDel:{es:'¿Eliminar este archivo? No se puede deshacer.',en:'Delete this file? This cannot be undone.',it:'Eliminare questo file? Non è reversibile.',de:'Diese Datei löschen? Das kann nicht rückgängig gemacht werden.',nl:'Dit bestand verwijderen? Dit kan niet ongedaan worden gemaakt.'},
+  fcDeleted:{es:'Archivo eliminado ✓',en:'File deleted ✓',it:'File eliminato ✓',de:'Datei gelöscht ✓',nl:'Bestand verwijderd ✓'},
+  fcReplacing:{es:'Reemplazando archivo...',en:'Replacing file...',it:'Sostituzione file...',de:'Datei wird ersetzt...',nl:'Bestand vervangen...'},
+  fcReplaced:{es:'Archivo reemplazado ✓',en:'File replaced ✓',it:'File sostituito ✓',de:'Datei ersetzt ✓',nl:'Bestand vervangen ✓'},
+  cmpImage:{es:'Optimizando imagen...',en:'Optimizing image...',it:'Ottimizzazione immagine...',de:'Bild wird optimiert...',nl:'Afbeelding optimaliseren...'},
+  cmpVideo:{es:'Comprimiendo video...',en:'Compressing video...',it:'Compressione video...',de:'Video wird komprimiert...',nl:'Video comprimeren...'},
+  cmpSaved:{es:'Comprimido: {s}',en:'Compressed: {s}',it:'Compresso: {s}',de:'Komprimiert: {s}',nl:'Gecomprimeerd: {s}'},
   aCopySentLabel:{es:'📋 Copy / Caption enviado',en:'📋 Copy / Caption submitted',it:'📋 Copy / Didascalia inviata',de:'📋 Copy / Caption gesendet',nl:'📋 Copy / Caption verzonden'},
   aCopyBtn:{es:'Copiar',en:'Copy',it:'Copia',de:'Kopieren',nl:'Kopiëren'},
   aCopyDone:{es:'Copy copiado ✓',en:'Copy copied ✓',it:'Copy copiato ✓',de:'Copy kopiert ✓',nl:'Copy gekopieerd ✓'},
@@ -697,11 +712,24 @@ function renderCampaignCard(ct) {
   </div>`;
 }
 
+// Chip de archivo con acciones de reemplazar/eliminar (sólo mientras el
+// archivo siga siendo del talento, es decir antes de que lo aprueben)
+const FC_ACCEPT = { script: '.pdf,.doc,.docx,.txt', draft: 'video/*,image/*', stat: 'image/*' };
+function fileChip(kind, contId, fileId, url, label, editable) {
+  const link = `<a href="${esc(url||'')}" target="_blank" class="step-btn view">${esc(label)}</a>`;
+  if (!editable) return link;
+  return `<span class="file-chip">${link}
+    <label class="fc-act" title="${esc(t('fcReplace'))}"><input type="file" style="display:none" accept="${FC_ACCEPT[kind]}" onchange="replaceFile('${kind}',this,${contId},${fileId})">↻</label>
+    <button class="fc-act danger" title="${esc(t('fcDelete'))}" onclick="deleteFile('${kind}',${contId},${fileId})">✕</button>
+  </span>`;
+}
+
 function renderContenido(c, ct) {
   const paso = c.paso_actual;
   const isDone = paso >= 8;
   const pasoChipCls = isDone ? 'done' : paso > 1 ? 'active' : '';
   const scripts = (c.contenido_scripts||[]).sort((a,b)=>(b.version||1)-(a.version||1));
+  const stats = (c.contenido_estadisticas||[]);
   const drafts = (c.contenido_borradores||[]).sort((a,b)=>(b.version||1)-(a.version||1));
   const briefs = ct.campanas?.campana_briefs || [];
   const contBriefs = (c.contenido_briefs||[]).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
@@ -722,10 +750,11 @@ function renderContenido(c, ct) {
     let right = '';
     if (d || cur) {
       if (s.n === 1 && allBriefs.length) right = allBriefs.map(f => `<a href="${esc(f.url)}" target="_blank" class="step-btn view">${f.contenido_id ? '📋' : '📄'} ${esc((f.nombre||'Brief').substring(0,20))}</a>`).join('');
-      if ((s.n===2||s.n===3) && scripts.length) right = scripts.map(sc => `<a href="${esc(sc.url_archivo)}" target="_blank" class="step-btn view">📝 ${esc(t('stepScript'))} v${sc.version||1}</a>`).join('');
+      if ((s.n===2||s.n===3) && scripts.length) right = scripts.map(sc => fileChip('script', c.id, sc.id, sc.url_archivo, `📝 ${t('stepScript')} v${sc.version||1}`, paso<=3)).join('');
       if ((s.n===2) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" multiple onchange="uploadScript(this,${c.id})">${esc(t('upScriptInline'))}</label>`;
-      if ((s.n===4||s.n===5) && drafts.length) right = drafts.map(dr => `<a href="${esc(dr.url_archivo)}" target="_blank" class="step-btn view">🎬 ${esc((dr.nombre_archivo||t('draftWord')).substring(0,20))}</a>`).join('');
+      if ((s.n===4||s.n===5) && drafts.length) right = drafts.map(dr => fileChip('draft', c.id, dr.id, dr.url_archivo, `🎬 ${(dr.nombre_archivo||t('draftWord')).substring(0,20)}`, paso<=5)).join('');
       if ((s.n===4) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept="video/*,image/*" multiple onchange="uploadDraft(this,${c.id})">${esc(t('upDraftInline'))}</label>`;
+      if ((s.n===7) && stats.length) right = stats.map(st => fileChip('stat', c.id, st.id, st.url_screenshot, `📊 ${(st.nombre_archivo||st.periodo||'Stats').substring(0,20)}`, paso<=7)).join('');
       if (s.n===6 && c.url_publicacion) right = `<a href="${esc(c.url_publicacion)}" target="_blank" class="step-btn view">${esc(t('viewPost'))}</a>`;
     }
     return `<div class="step-row ${d?'done':cur?'current':'pending'}">
@@ -876,32 +905,68 @@ async function saveSpark(contId, texto) {
   catch(e){ toast(t('errPrefix')+e.message,'err'); }
 }
 
+// Comprime (si conviene) y sube. Devuelve el File finalmente subido.
 async function uploadOne(bucket, contId, file) {
-  const su = await API('signed-upload', { bucket, contenido_id: contId, filename: file.name });
-  const { error } = await sbStore.storage.from(bucket).uploadToSignedUrl(su.path, su.token, file);
+  const prepped = await squeeze(file);
+  const su = await API('signed-upload', { bucket, contenido_id: contId, filename: prepped.name });
+  const { error } = await sbStore.storage.from(bucket).uploadToSignedUrl(su.path, su.token, prepped);
   if (error) throw error;
-  return su.publicUrl || su.path;
+  return { url: su.publicUrl || su.path, file: prepped };
 }
 async function uploadScript(input, contId) {
   const files = Array.from(input.files); input.value=''; if (!files.length) return;
   toast(t('uploadingScript'),'inf');
-  try { for (const f of files){ const url = await uploadOne('content-scripts', contId, f); await API('record-script',{contenido_id:contId,url_archivo:url}); }
+  try { for (const f of files){ const up = await uploadOne('content-scripts', contId, f); await API('record-script',{contenido_id:contId,url_archivo:up.url}); }
     await refresh(); toast(files.length>1?t('scriptsUploaded',{n:files.length}):t('scriptUploaded'),'ok');
   } catch(e){ toast(t('errPrefix')+e.message,'err'); }
 }
 async function uploadDraft(input, contId) {
   const files = Array.from(input.files); input.value=''; if (!files.length) return;
   toast(t('uploadingContent'),'inf');
-  try { for (const f of files){ const url = await uploadOne('content-drafts', contId, f); await API('record-draft',{contenido_id:contId,url_archivo:url,nombre_archivo:f.name,size_bytes:f.size}); }
+  try { for (const f of files){ const up = await uploadOne('content-drafts', contId, f); await API('record-draft',{contenido_id:contId,url_archivo:up.url,nombre_archivo:up.file.name,size_bytes:up.file.size}); }
     await refresh(); toast(files.length>1?t('contentsUploaded',{n:files.length}):t('contentUploaded'),'ok');
   } catch(e){ toast(t('errPrefix')+e.message,'err'); }
 }
 async function uploadStats(input, contId) {
   const files = Array.from(input.files); input.value=''; if (!files.length) return;
   toast(t('uploadingStats'),'inf');
-  try { for (const f of files){ const url = await uploadOne('content-stats', contId, f); await API('record-stats',{contenido_id:contId,periodo:'7d',url_screenshot:url,nombre_archivo:f.name}); }
+  try { for (const f of files){ const up = await uploadOne('content-stats', contId, f); await API('record-stats',{contenido_id:contId,periodo:'7d',url_screenshot:up.url,nombre_archivo:up.file.name}); }
     await refresh(); toast(t('statsUploaded'),'ok');
   } catch(e){ toast(t('errPrefix')+e.message,'err'); }
+}
+
+// ── Reemplazar / eliminar un archivo ya subido ─────────────────
+const FC_BUCKET = { script:'content-scripts', draft:'content-drafts', stat:'content-stats' };
+async function replaceFile(kind, input, contId, fileId) {
+  const file = input.files[0]; input.value=''; if (!file) return;
+  toast(t('fcReplacing'),'inf');
+  try {
+    const up = await uploadOne(FC_BUCKET[kind], contId, file);
+    if (kind === 'script')      await API('record-script',{contenido_id:contId,url_archivo:up.url,replace_id:fileId});
+    else if (kind === 'draft')  await API('record-draft',{contenido_id:contId,url_archivo:up.url,nombre_archivo:up.file.name,size_bytes:up.file.size,replace_id:fileId});
+    else                        await API('record-stats',{contenido_id:contId,url_screenshot:up.url,nombre_archivo:up.file.name,replace_id:fileId});
+    await refresh(); toast(t('fcReplaced'),'ok');
+  } catch(e){ toast(t('errPrefix')+e.message,'err'); }
+}
+async function deleteFile(kind, contId, fileId) {
+  if (!confirm(t('fcConfirmDel'))) return;
+  try { await API('delete-file',{contenido_id:contId,kind,file_id:fileId}); await refresh(); toast(t('fcDeleted'),'ok'); }
+  catch(e){ toast(t('errPrefix')+e.message,'err'); }
+}
+
+// ── Compresión antes de subir (nunca bloquea la subida) ────────
+async function squeeze(file) {
+  if (!window.MediaCompress) return file;
+  const isVideo = (file.type||'').startsWith('video/');
+  const r = await MediaCompress.prepare(file, {
+    onProgress: (pct, label) => {
+      if (!label) return;
+      toast((isVideo ? t('cmpVideo') : t('cmpImage')) + ' ' + Math.round(pct*100) + '%', 'inf', 1200);
+    }
+  });
+  if (r.changed) toast(t('cmpSaved',{s:MediaCompress.savingsLabel(r)}),'ok');
+  else if (r.note) toast(r.note,'inf',5000);
+  return r.file;
 }
 
 // ── CONTRATO / FIRMA ───────────────────────────────────────────

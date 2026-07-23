@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beme — Portal del Talento</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
+<script src="media-compress.js"></script>
 <link rel="icon" href="favicon.ico" sizes="32x32">
 <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -108,6 +109,11 @@ body.dark .tb-tiktok_video{background:rgba(255,255,255,0.08);color:#ccc}
 .step-btn.view:hover{background:rgba(14,165,233,0.08)}
 .step-btn.upload{color:var(--purple);border-color:rgba(148,20,224,0.3)}
 .step-btn.upload:hover{background:rgba(148,20,224,0.08)}
+.file-chip{display:inline-flex;align-items:stretch;border:1px solid var(--border2);border-radius:6px;overflow:hidden;background:var(--surface)}
+.file-chip .step-btn{border:none;border-radius:0;background:transparent}
+.file-chip .fc-act{display:inline-flex;align-items:center;justify-content:center;min-width:26px;padding:0 6px;font-size:12px;font-weight:700;cursor:pointer;border:none;border-left:1px solid var(--border2);background:transparent;color:var(--text-muted);font-family:inherit}
+.file-chip .fc-act:hover{background:rgba(148,20,224,0.08);color:var(--purple)}
+.file-chip .fc-act.danger:hover{background:rgba(220,38,38,0.1);color:var(--red)}
 .step-no-file{font-size:10px;color:var(--text-dim);font-style:italic}
 
 /* ── Action box ── */
@@ -707,11 +713,24 @@ function renderCampaignCard(ct) {
   </div>`;
 }
 
+// Chip de archivo con acciones de reemplazar/eliminar (sólo mientras el
+// archivo siga siendo del talento, es decir antes de que lo aprueben)
+const FC_ACCEPT = { script: '.pdf,.doc,.docx,.txt', draft: 'video/*,image/*', stat: 'image/*' };
+function fileChip(kind, contId, fileId, url, label, editable) {
+  const link = `<a href="${esc(url||'')}" target="_blank" class="step-btn view">${esc(label)}</a>`;
+  if (!editable) return link;
+  return `<span class="file-chip">${link}
+    <label class="fc-act" title="Reemplazar archivo"><input type="file" style="display:none" accept="${FC_ACCEPT[kind]}" onchange="replaceFile('${kind}',this,${contId},${fileId})">↻</label>
+    <button class="fc-act danger" title="Eliminar archivo" onclick="deleteFile('${kind}',${contId},${fileId})">✕</button>
+  </span>`;
+}
+
 function renderContenido(c, ct) {
   const paso = c.paso_actual;
   const isDone = paso >= 8;
   const pasoChipCls = isDone ? 'done' : paso > 1 ? 'active' : '';
   const scripts = (c.contenido_scripts||[]).sort((a,b)=>(b.version||1)-(a.version||1));
+  const stats = (c.contenido_estadisticas||[]);
   const drafts = (c.contenido_borradores||[]).sort((a,b)=>(b.version||1)-(a.version||1));
   const briefs = ct.campanas?.campana_briefs || [];
   const contBriefs = (c.contenido_briefs||[]).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
@@ -733,11 +752,12 @@ function renderContenido(c, ct) {
     let right = '';
     if (d || cur) {
       if (s.n === 1 && allBriefs.length) right = allBriefs.map(f => `<a href="${esc(f.url)}" target="_blank" class="step-btn view">${f.contenido_id ? '📋' : '📄'} ${esc((f.nombre||'Brief').substring(0,20))}</a>`).join('');
-      if ((s.n===2||s.n===3) && scripts.length) right = scripts.map(sc => `<a href="${esc(sc.url_archivo)}" target="_blank" class="step-btn view">📝 Script v${sc.version||1}</a>`).join('');
+      if ((s.n===2||s.n===3) && scripts.length) right = scripts.map(sc => fileChip('script', c.id, sc.id, sc.url_archivo, `📝 Script v${sc.version||1}`, paso<=3)).join('');
       if ((s.n===2) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" multiple onchange="uploadScript(this,${c.id})">⬆ Subir script(s)</label>`;
-      if ((s.n===4||s.n===5) && drafts.length) right = drafts.map(dr => `<a href="${esc(dr.url_archivo)}" target="_blank" class="step-btn view">🎬 ${esc((dr.nombre_archivo||'Borrador').substring(0,20))}</a>`).join('');
+      if ((s.n===4||s.n===5) && drafts.length) right = drafts.map(dr => fileChip('draft', c.id, dr.id, dr.url_archivo, `🎬 ${(dr.nombre_archivo||'Borrador').substring(0,20)}`, paso<=5)).join('');
       if ((s.n===4) && cur) right += `<label class="step-btn upload"><input type="file" style="display:none" accept="video/*,image/*" multiple onchange="uploadDraft(this,${c.id})">⬆ Subir borrador(es)</label>`;
       if (s.n===6 && c.url_publicacion) right = `<a href="${esc(c.url_publicacion)}" target="_blank" class="step-btn view">🔗 Ver publicación</a>`;
+      if (s.n===7 && stats.length) right = stats.map(st => fileChip('stat', c.id, st.id, st.url_screenshot, `📊 ${(st.nombre_archivo||st.periodo||'Stats').substring(0,20)}`, paso<=7)).join('');
     }
     return `<div class="step-row ${d?'done':cur?'current':'pending'}">
       <div class="step-icon ${d?'done':cur?'current':'pending'}">${d?'✓':s.n}</div>
@@ -763,10 +783,7 @@ function renderContenido(c, ct) {
     let scriptFilesHTML = '';
     if (hasScripts) {
       scriptFilesHTML = `<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px">${scripts.map(sc =>
-        `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px">
-          <a href="${esc(sc.url_archivo)}" target="_blank" style="color:var(--purple);text-decoration:none">📝 v${sc.version||1}</a>
-          <label style="cursor:pointer;color:var(--text-muted)" title="Reemplazar"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" onchange="replaceScript(this,${c.id},${sc.id})">↻</label>
-        </span>`).join('')}</div>`;
+        fileChip('script', c.id, sc.id, sc.url_archivo, `📝 Script v${sc.version||1}`, true)).join('')}</div>`;
     }
     actionHTML = `<div class="action-box">
       <div class="action-title">📝 Subir Script</div>
@@ -786,10 +803,7 @@ function renderContenido(c, ct) {
     let draftFilesHTML = '';
     if (hasDrafts) {
       draftFilesHTML = `<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px">${drafts.map(dr =>
-        `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px">
-          <a href="${esc(dr.url_archivo)}" target="_blank" style="color:#ff0050;text-decoration:none">🎬 ${esc((dr.nombre_archivo||'Borrador').substring(0,20))}</a>
-          <label style="cursor:pointer;color:var(--text-muted)" title="Reemplazar"><input type="file" style="display:none" accept="video/*,image/*" onchange="replaceDraft(this,${c.id},${dr.id})">↻</label>
-        </span>`).join('')}</div>`;
+        fileChip('draft', c.id, dr.id, dr.url_archivo, `🎬 ${(dr.nombre_archivo||'Borrador').substring(0,20)}`, true)).join('')}</div>`;
     }
     actionHTML = `<div class="action-box">
       <div class="action-title">🎬 Subir Contenido</div>
@@ -919,72 +933,129 @@ async function saveLink(contId) {
   await avanzar(contId);
 }
 
+// ── Subida de archivos (con compresión previa) ─────────────────
+const FC_TABLE  = { script:'contenido_scripts', draft:'contenido_borradores', stat:'contenido_estadisticas' };
+const FC_BUCKET = { script:'content-scripts',   draft:'content-drafts',       stat:'content-stats' };
+const FC_URLCOL = { script:'url_archivo',       draft:'url_archivo',          stat:'url_screenshot' };
+
+// Comprime si conviene y sube al bucket. Devuelve {url, file}.
+async function putFile(kind, contId, file) {
+  const f = await squeeze(file);
+  const bucket = FC_BUCKET[kind];
+  const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${safeStorageName(f.name)}`;
+  const {error} = await sb.storage.from(bucket).upload(path, f);
+  if (error) throw error;
+  const {data:{publicUrl}} = sb.storage.from(bucket).getPublicUrl(path);
+  return { url: publicUrl || path, file: f };
+}
+
 async function uploadScript(input, contId) {
-  const files = Array.from(input.files); if (!files.length) return;
+  const files = Array.from(input.files); input.value=''; if (!files.length) return;
   toast('Subiendo script(s)...','inf');
   try {
     for (const file of files) {
-      const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${safeStorageName(file.name)}`;
-      const {error} = await sb.storage.from('content-scripts').upload(path, file);
-      if (error) throw error;
-      const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
-      await sb.from('contenido_scripts').insert({contenido_id:contId, url_archivo:publicUrl||path, subido_por:currentUser.id});
+      const up = await putFile('script', contId, file);
+      await sb.from('contenido_scripts').insert({contenido_id:contId, url_archivo:up.url, subido_por:currentUser.id});
     }
     notifyCambio(contId, 'Subió un script');
     await loadCampaigns(); renderAll();
     toast(files.length > 1 ? `${files.length} scripts subidos ✓` : 'Script subido ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
-  input.value='';
-}
-
-async function replaceScript(input, contId, scriptId) {
-  const file = input.files[0]; if (!file) return;
-  toast('Reemplazando script...','inf');
-  try {
-    const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${safeStorageName(file.name)}`;
-    const {error} = await sb.storage.from('content-scripts').upload(path, file);
-    if (error) throw error;
-    const {data:{publicUrl}} = sb.storage.from('content-scripts').getPublicUrl(path);
-    await sb.from('contenido_scripts').update({url_archivo:publicUrl||path}).eq('id',scriptId);
-    notifyCambio(contId, 'Reemplazó un script');
-    await loadCampaigns(); renderAll();
-    toast('Script reemplazado ✓','ok');
-  } catch(e) { toast('Error: '+e.message,'err'); }
-  input.value='';
 }
 
 async function uploadDraft(input, contId) {
-  const files = Array.from(input.files); if (!files.length) return;
+  const files = Array.from(input.files); input.value=''; if (!files.length) return;
   toast('Subiendo contenido...','inf');
   try {
     for (const file of files) {
-      const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${safeStorageName(file.name)}`;
-      const {error} = await sb.storage.from('content-drafts').upload(path, file);
-      if (error) throw error;
-      const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);
-      await sb.from('contenido_borradores').insert({contenido_id:contId, url_archivo:publicUrl||path, nombre_archivo:file.name, size_bytes:file.size, subido_por:currentUser.id});
+      const up = await putFile('draft', contId, file);
+      await sb.from('contenido_borradores').insert({contenido_id:contId, url_archivo:up.url, nombre_archivo:up.file.name, size_bytes:up.file.size, subido_por:currentUser.id});
     }
     notifyCambio(contId, 'Subió contenido');
     await loadCampaigns(); renderAll();
     toast(files.length > 1 ? `${files.length} archivos subidos ✓` : 'Contenido subido ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
-  input.value='';
 }
 
-async function replaceDraft(input, contId, draftId) {
-  const file = input.files[0]; if (!file) return;
-  toast('Reemplazando borrador...','inf');
+// ── Reemplazar / eliminar un archivo ya subido ─────────────────
+const FC_MAXPASO = { script: 3, draft: 5, stat: 7 };
+const FC_NOUN    = { script: 'script', draft: 'archivo', stat: 'estadística' };
+
+function fcGuard(contId, kind) {
+  const c = contenidoById(contId);
+  if (c && (c.paso_actual||0) > FC_MAXPASO[kind]) {
+    toast('Este archivo ya fue aprobado. Pedile al equipo de BEME que lo cambie.','err');
+    return false;
+  }
+  return true;
+}
+function contenidoById(contId) {
+  for (const ct of (campaigns||[])) {
+    const hit = (ct.contenidos||[]).find(c => c.id === contId);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+async function replaceFile(kind, input, contId, fileId) {
+  const file = input.files[0]; input.value=''; if (!file) return;
+  if (!fcGuard(contId, kind)) return;
+  toast(`Reemplazando ${FC_NOUN[kind]}...`,'inf');
   try {
-    const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${safeStorageName(file.name)}`;
-    const {error} = await sb.storage.from('content-drafts').upload(path, file);
+    const prev = await sb.from(FC_TABLE[kind]).select(FC_URLCOL[kind]).eq('id',fileId).maybeSingle();
+    const up = await putFile(kind, contId, file);
+    const patch = kind === 'script'
+      ? {url_archivo: up.url}
+      : kind === 'draft'
+        ? {url_archivo: up.url, nombre_archivo: up.file.name, size_bytes: up.file.size}
+        : {url_screenshot: up.url, nombre_archivo: up.file.name};
+    const {error} = await sb.from(FC_TABLE[kind]).update(patch).eq('id',fileId);
     if (error) throw error;
-    const {data:{publicUrl}} = sb.storage.from('content-drafts').getPublicUrl(path);
-    await sb.from('contenido_borradores').update({url_archivo:publicUrl||path, nombre_archivo:file.name, size_bytes:file.size}).eq('id',draftId);
-    notifyCambio(contId, 'Reemplazó el contenido');
+    removeStorageByUrl(FC_BUCKET[kind], prev.data && prev.data[FC_URLCOL[kind]]);
+    notifyCambio(contId, `Reemplazó un ${FC_NOUN[kind]}`);
     await loadCampaigns(); renderAll();
-    toast('Borrador reemplazado ✓','ok');
+    toast('Archivo reemplazado ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
-  input.value='';
+}
+
+async function deleteFile(kind, contId, fileId) {
+  if (!fcGuard(contId, kind)) return;
+  if (!confirm('¿Eliminar este archivo? No se puede deshacer.')) return;
+  try {
+    const prev = await sb.from(FC_TABLE[kind]).select(FC_URLCOL[kind]).eq('id',fileId).maybeSingle();
+    const {error} = await sb.from(FC_TABLE[kind]).delete().eq('id',fileId);
+    if (error) throw error;
+    removeStorageByUrl(FC_BUCKET[kind], prev.data && prev.data[FC_URLCOL[kind]]);
+    notifyCambio(contId, `Eliminó un ${FC_NOUN[kind]}`);
+    await loadCampaigns(); renderAll();
+    toast('Archivo eliminado ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+}
+
+// Borrado del objeto en storage: best-effort, el registro ya se eliminó
+async function removeStorageByUrl(bucket, url) {
+  try {
+    if (!url) return;
+    const marker = `/storage/v1/object/public/${bucket}/`;
+    const i = String(url).indexOf(marker);
+    const path = i >= 0 ? decodeURIComponent(String(url).slice(i + marker.length)) : null;
+    if (path) await sb.storage.from(bucket).remove([path]);
+  } catch(e) { console.warn('storage remove:', e.message); }
+}
+
+// ── Compresión antes de subir (nunca bloquea la subida) ────────
+async function squeeze(file) {
+  if (!window.MediaCompress) return file;
+  const isVideo = (file.type||'').startsWith('video/');
+  const r = await MediaCompress.prepare(file, {
+    onProgress: (pct, label) => {
+      if (!label) return;
+      toast((isVideo ? 'Comprimiendo video...' : 'Optimizando imagen...') + ' ' + Math.round(pct*100) + '%','inf',1200);
+    }
+  });
+  if (r.changed) toast('Comprimido: ' + MediaCompress.savingsLabel(r),'ok');
+  else if (r.note) toast(r.note,'inf',5000);
+  return r.file;
 }
 
 function copyCaption(contId) {
