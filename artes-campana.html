@@ -443,7 +443,11 @@ async function precargarImagenes(d){
 
 /* ---------------- Set de artes que se genera por campaña ---------------- */
 function plan(d){
+  // Arranca por los dos formatos que más publica la cuenta: el reel dentro
+  // del mockup y el packshot sobre blanco.
   const p = [
+    { tpl:'mockup-reel',      caption:'nueva_campana', talento:0 },
+    { tpl:'packshot',         caption:'nueva_campana' },
     { tpl:'nueva-campana',    caption:'nueva_campana' },
     { tpl:'caso-exito',       caption:'caso_exito' },
     { tpl:'talento-destacado',caption:'talento', talento:0 },
@@ -455,11 +459,12 @@ function plan(d){
     { tpl:'story-anuncio',    caption:'story' },
     { tpl:'reel-cover',       caption:null }
   ];
-  // Una pieza de talento por cada creador, no sólo el primero
+  // Una ficha y un mockup por cada creador, no sólo por el primero
   const extra = [];
   (d.talentos || []).forEach((t, i) => {
     if (i === 0) return;
     extra.push({ tpl:'talento-destacado', caption:'talento', talento:i });
+    extra.push({ tpl:'mockup-reel',       caption:'talento', talento:i });
   });
   return p.concat(extra);
 }
