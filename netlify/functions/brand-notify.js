@@ -16,6 +16,7 @@
 //           PUBLIC_APP_URL (opcional, default app.bemeagency.com)
 
 const nodemailer = require('nodemailer');
+const { requireInternalUser, hasAdminSecret, isValidEmail } = require('./lib/auth');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ngstqwbzvnpggpklifat.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -150,9 +151,19 @@ exports.handler = async (event) => {
   }
 
   // ── Modo prueba: /.netlify/functions/brand-notify?test=email@dominio.com ──
+  // PROTEGIDO: manda correo a una dirección arbitraria, así que exige sesión
+  // interna (Authorization: Bearer) o el secreto ADMIN_TASK_SECRET. Abierto era
+  // un open relay: cualquiera podía disparar mails desde el buzón de Beme.
   let testEmail = event?.queryStringParameters?.test || '';
   if (!testEmail && event?.body) { try { testEmail = JSON.parse(event.body).test_email || ''; } catch {} }
   if (testEmail) {
+    if (!isValidEmail(testEmail)) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'Email de prueba inválido' }) };
+    }
+    if (!hasAdminSecret(event)) {
+      const auth = await requireInternalUser(event);
+      if (!auth.ok) return { statusCode: auth.status, body: JSON.stringify({ error: auth.error }) };
+    }
     const body = `
       <div style="font-size:13px;color:#666;margin-bottom:12px">Esto es un <strong>email de prueba</strong> del sistema de avisos a marcas.</div>
       <div style="background:#f8f8f8;border:1px solid #eee;border-radius:8px;padding:12px;margin-bottom:12px">

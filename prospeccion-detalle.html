@@ -846,6 +846,16 @@ async function checkAuth() {
 }
 async function doLogout() { await sb.auth.signOut(); location.reload(); }
 
+// Headers para las functions que mandan correo. El token de la sesión es lo que
+// prueba del lado del servidor que el envío lo pide un usuario interno; sin él
+// send-email responde 401. No llamar a esos endpoints sin pasar por acá.
+async function authHeaders() {
+  const {data:{session}} = await sb.auth.getSession();
+  const h = { 'Content-Type': 'application/json' };
+  if (session?.access_token) h['Authorization'] = `Bearer ${session.access_token}`;
+  return h;
+}
+
 // ══════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════
@@ -2687,7 +2697,7 @@ async function confirmBulkSendEmail(templateIdOrDraft) {
     try {
       const resp = await fetch('/.netlify/functions/send-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({ to: c.email, subject, body }),
       });
       const data = await resp.json();
@@ -2754,7 +2764,7 @@ async function sendEmail() {
   try {
     const resp = await fetch('/.netlify/functions/send-email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders(),
       body: JSON.stringify({
         to: e.to,
         subject: e.subject,
@@ -3016,7 +3026,7 @@ async function confirmIniciarSecuencia() {
     try {
       const resp = await fetch('/.netlify/functions/send-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({ to: c.email, subject, body }),
       });
       const data = await resp.json();
@@ -3114,7 +3124,7 @@ async function forceNextEmail(contactoId) {
     // Trigger queue processor immediately
     fetch('/.netlify/functions/process-email-queue', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: await authHeaders(),
       body: JSON.stringify({cola_id: next.id}),
     }).catch(()=>{});
     showToast('Envío forzado. Procesando…', 'success');

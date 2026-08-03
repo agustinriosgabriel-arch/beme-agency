@@ -182,6 +182,7 @@ async function processColaRow(row) {
 // ── Handler ───────────────────────────────────────────────────
 
 const { corsOrigin } = require('./lib/cors');
+const { requireInternalUser } = require('./lib/auth');
 
 exports.handler = async (event) => {
   const headers = {
@@ -201,12 +202,20 @@ exports.handler = async (event) => {
   try {
     let rowsToProcess = [];
 
-    // Manual force: POST {cola_id: X}
+    // Manual force: POST {cola_id: X} — solo usuarios internos logueados.
+    // Sin auth cualquiera podía adelantar envíos de la secuencia desde afuera.
     if (event && event.httpMethod === 'POST' && event.body) {
       const body = JSON.parse(event.body || '{}');
       if (body.cola_id) {
-        const rows = await sbGet(`prospeccion_email_cola?id=eq.${body.cola_id}&status=eq.pendiente&select=*`);
-        rowsToProcess = rows;
+        const auth = await requireInternalUser(event);
+        if (!auth.ok) {
+          return { statusCode: auth.status, headers, body: JSON.stringify({ error: auth.error }) };
+        }
+        const colaId = Number(body.cola_id);
+        if (!Number.isInteger(colaId)) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: 'cola_id inválido' }) };
+        }
+        rowsToProcess = await sbGet(`prospeccion_email_cola?id=eq.${colaId}&status=eq.pendiente&select=*`);
       }
     }
 
