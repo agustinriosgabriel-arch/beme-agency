@@ -93,6 +93,15 @@ When saving a talent with new categories, they must be pushed to `CATEGORIES[]` 
 - The host pages define their own `.btn` and `.mini`; the engine renamed its text style to `.eyebrow` and hard-declares `width`/`min-height` on `.btn` so host toolbar CSS cannot leak into an artboard. Watch for this when adding component classes.
 - `artes-engine.js` and `artes-logos.js` are included with a `?v=` query. Bump it when the engine changes, otherwise browsers keep serving the cached copy.
 
+### 10. Netlify functions: CORS no es autenticación
+Toda function que **envía correo, escribe con el service_role key o hace algo en nombre de un usuario interno** debe llamar a `requireInternalUser(event)` de `netlify/functions/lib/auth.js` como primer paso. El allowlist de `lib/cors.js` solo restringe navegadores: un POST desde `curl` o desde un servidor ignora el CORS por completo.
+
+En agosto de 2026 `send-email.js` no validaba nada y quedó como **open relay**: bots que escanean GitHub (el repo es público) encontraron el endpoint y mandaron spam desde `contacto@bemeagency.com`. Reglas que salieron de eso:
+- El token de sesión viaja en `Authorization: Bearer <access_token>`. En el frontend usar el helper `authHeaders()` (ver `prospeccion-detalle.html`), nunca `{'Content-Type':'application/json'}` pelado contra un endpoint de envío.
+- Validar el destinatario con `isValidEmail()`: **un solo** email. Un `to` tipo `"a@x,b@y"` convierte el endpoint en difusor masivo, y un `\r\n` en asunto o `replyTo` permite inyectar headers `Bcc`.
+- Las functions con `schedule` en netlify.toml devuelven 403 desde el edge ante una invocación HTTP directa — pero eso es protección de la plataforma, no del código. Si alguna vez se les saca el `schedule`, quedan expuestas. Autenticarlas igual.
+- Ningún modo "de prueba" abierto: `brand-notify?test=` mandaba mail a cualquier dirección. Va detrás de sesión interna o `ADMIN_TASK_SECRET`.
+
 ## Git & Deploy
 - **Auto-deploy:** After completing changes, always commit and push to `origin/main` without asking. Netlify deploys automatically from GitHub.
 - Git remote: `origin` → `https://github.com/agustinriosgabriel-arch/beme-agency.git`
