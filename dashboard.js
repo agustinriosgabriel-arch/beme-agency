@@ -266,6 +266,7 @@ async function gateRoleAndMaybeRedirect(userId) {
     var prof = await sb.from('user_profiles').select('role').eq('id', userId).single();
     if (prof && prof.data) {
       if (prof.data.role === 'talent') { location.href = 'talento-portal.html'; return false; }
+      if (prof.data.role === 'contador') { location.href = 'finanzas.html'; return false; }
       if (prof.data.role !== 'admin') {
         document.querySelectorAll('.tab-btn[href="finanzas.html"], .nav-tab[href="finanzas.html"]').forEach(function(el){ el.style.display = 'none'; });
       }

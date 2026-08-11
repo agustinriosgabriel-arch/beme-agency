@@ -1164,6 +1164,7 @@ async function init() {
     currentProfile = p;
     // Talentos van al portal
     if (currentProfile.role === 'talent') { location.href = 'talento-portal.html'; return; }
+    if (currentProfile.role === 'contador') { location.href = 'finanzas.html'; return; }
 
     // Entró a ver la campaña → limpiar el badge de cambios para este usuario
     markCambiosVistos();

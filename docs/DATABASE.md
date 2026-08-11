@@ -394,11 +394,22 @@ user_id     uuid REFERENCES user_profiles(id)
 id          uuid PRIMARY KEY  -- matches auth.users.id
 nombre      text
 email       text
-role        text  -- admin|campaign_manager|brand_handler|talent
+role        text  -- admin|campaign_manager|brand_handler|talent|contador
 telefono    text
 talent_id   integer REFERENCES talentos(id)  -- only for role=talent
 activo      boolean DEFAULT true
 ```
+
+**Rol `contador`** (`sql/rol_contador_2026_08_11.sql`): trabaja SOLO el módulo
+Finanzas. Helper `is_contador()` (SECURITY DEFINER). Policies: CRUD en
+`facturas`, `pagos_marca`, `complementos_pago`, `pagos_talento`,
+`factura_talentos`, `facturas_auditoria`, `terceros`, `comisiones_terceros`,
+`pagos_tercero`, `clientes`; SELECT en `campanas`, `campana_talentos`, `marcas`,
+`talentos`, `talento_cuentas_pago`; UPDATE en `campanas` (finalizar) y
+`campana_talentos` (pago_estado/fecha/invoice_url). Solo el admin general puede
+crear/editar/borrar contadores (trigger `enforce_admin_role_grant` extendido +
+policy `user_profiles_delete`). Todas las páginas salvo finanzas.html lo
+redirigen a finanzas.html; allí se le oculta la nav al resto de módulos.
 
 ---
 
@@ -489,7 +500,7 @@ Contract types are "mirror" contracts:
 ```sql
 id              serial PRIMARY KEY
 talent_id       integer NOT NULL REFERENCES talentos(id) ON DELETE CASCADE
-pais            text DEFAULT ''     -- mexico|colombia|argentina|usa|espana|italia|holanda|alemania
+pais            text DEFAULT ''     -- mexico|colombia|argentina|brasil|usa|espana|italia|holanda|alemania
 nombre_completo text DEFAULT ''     -- account holder full name (common to all countries)
 banco           text DEFAULT ''
 datos_cuenta    jsonb DEFAULT '{}'  -- country-specific bank fields (clabe / cbu / iban+bic / routing+account / tipo_cuenta / documento ...)

@@ -460,7 +460,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
       <div class="form-group full" id="fac-talento-group" style="display:none"><label class="form-label">Talento(s) de la campaña *</label><div id="fac-talento" style="max-height:170px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:6px;background:var(--surface2)"></div><div style="font-size:11px;color:var(--text-dim);margin-top:4px">Marca uno o varios talentos para agruparlos en una sola factura. El monto suma su fee y el # Orden se autoasigna.</div><div id="fac-talento-warn" style="display:none;font-size:11px;color:var(--orange);font-weight:600;margin-top:4px"></div></div>
       <div class="form-group full"><label class="form-label"># Orden</label><input type="text" id="fac-numero" class="form-input" placeholder="La app lo sugiere al elegir talento — podés editarlo" oninput="this.dataset.manual='1'" style="font-family:'SF Mono',monospace;font-weight:600;color:var(--primary)"></div>
       <div class="form-group"><label class="form-label">Monto *</label><input type="number" id="fac-monto" class="form-input" placeholder="0.00" step="0.01" oninput="this.dataset.autofilled='0'"></div>
-      <div class="form-group"><label class="form-label">Moneda</label><select id="fac-moneda" class="form-input"><option value="MXN">MXN</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
+      <div class="form-group"><label class="form-label">Moneda</label><select id="fac-moneda" class="form-input"><option value="MXN">MXN</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="BRL">BRL</option></select></div>
       <div class="form-group"><label class="form-label">Fecha Emision</label><input type="date" id="fac-fecha-emision" class="form-input" onchange="updateVencimientoHint()"></div>
       <div class="form-group"><label class="form-label">Fecha de envío a cliente</label><input type="date" id="fac-fecha-envio" class="form-input" onchange="updateVencimientoHint()"><div class="form-hint">Desde aquí cuentan los días de crédito (cuando el cliente la recibe)</div></div>
       <div class="form-group"><label class="form-label">Plataforma de envío</label><select id="fac-plataforma-envio" class="form-input"><option value="">—</option><option value="mail">Mail</option><option value="chat">Chat</option><option value="plataforma">Plataforma</option></select></div>
@@ -527,7 +527,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
         <div style="display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span style="color:var(--text-muted)">Saldo pendiente</span><b id="pt-info-saldo" style="color:var(--orange)"></b></div>
       </div>
       <div class="form-group"><label class="form-label">Monto de este pago</label><input type="number" id="pt-monto" class="form-input" step="0.01"><div class="form-hint">Puede ser parcial (adelanto, 50/50) — el estado se actualiza solo</div></div>
-      <div class="form-group"><label class="form-label">Moneda</label><select id="pt-moneda" class="form-input"><option value="USD">USD</option><option value="MXN">MXN</option><option value="EUR">EUR</option></select></div>
+      <div class="form-group"><label class="form-label">Moneda</label><select id="pt-moneda" class="form-input"><option value="USD">USD</option><option value="MXN">MXN</option><option value="EUR">EUR</option><option value="BRL">BRL</option></select></div>
       <div class="form-group"><label class="form-label">Fecha de Pago *</label><input type="date" id="pt-fecha" class="form-input" required></div>
       <div class="form-group"><label class="form-label">Corredor *</label><select id="pt-corredor" class="form-input"><option value="">Seleccionar...</option><option value="mercury">Mercury</option><option value="wise">Wise</option><option value="flor">FLOR</option><option value="cxp_agustin_cash">CxP Agustin (CASH)</option></select></div>
       <div class="form-group"><label class="form-label">Comprobante</label><input type="file" id="pt-file" class="form-input" accept=".pdf,.png,.jpg,.jpeg"></div>
@@ -573,7 +573,7 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
         <div style="display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span style="color:var(--text-muted)">Saldo pendiente</span><b id="pc-info-saldo" style="color:var(--orange)"></b></div>
       </div>
       <div class="form-group"><label class="form-label">Monto de este pago</label><input type="number" id="pc-monto" class="form-input" step="0.01"><div class="form-hint">Puede ser parcial — el estado se actualiza solo</div></div>
-      <div class="form-group"><label class="form-label">Moneda</label><select id="pc-moneda" class="form-input"><option value="USD">USD</option><option value="MXN">MXN</option><option value="EUR">EUR</option><option value="ARS">ARS</option></select></div>
+      <div class="form-group"><label class="form-label">Moneda</label><select id="pc-moneda" class="form-input"><option value="USD">USD</option><option value="MXN">MXN</option><option value="EUR">EUR</option><option value="ARS">ARS</option><option value="BRL">BRL</option></select></div>
       <div class="form-group"><label class="form-label">Fecha de Pago *</label><input type="date" id="pc-fecha" class="form-input" required></div>
       <div class="form-group"><label class="form-label">Corredor *</label><select id="pc-corredor" class="form-input"><option value="">Seleccionar...</option><option value="mercury">Mercury</option><option value="wise">Wise</option><option value="flor">FLOR</option><option value="cxp_agustin_cash">CxP Agustin (CASH)</option></select></div>
       <div class="form-group"><label class="form-label">Comprobante</label><input type="file" id="pc-file" class="form-input" accept=".pdf,.png,.jpg,.jpeg"></div>
@@ -655,8 +655,10 @@ async function initApp(){
     if(!currentProfile){document.getElementById('load-overlay').style.display='none';document.getElementById('login-overlay').style.display='flex';showLoginErr('Sin perfil.');return;}
     // Talentos van al portal
     if(currentProfile.role==='talent'){location.href='talento-portal.html';return;}
-    // Solo admin puede acceder a Finanzas
-    if(currentProfile.role!=='admin'){document.getElementById('load-overlay').style.display='none';showToast('Acceso restringido: solo administradores','error');setTimeout(()=>{location.href='campanas.html';},1500);return;}
+    // Solo admin y contador pueden acceder a Finanzas
+    if(!['admin','contador'].includes(currentProfile.role)){document.getElementById('load-overlay').style.display='none';showToast('Acceso restringido: solo administradores','error');setTimeout(()=>{location.href='campanas.html';},1500);return;}
+    // El contador solo trabaja Finanzas: ocultar la navegación al resto de módulos
+    if(currentProfile.role==='contador'){document.querySelectorAll('a.tab-btn:not([href="finanzas.html"])').forEach(a=>{a.style.display='none';});}
     await loadData();
     document.getElementById('login-overlay').style.display='none';
     document.getElementById('app').style.display='block';
@@ -1836,9 +1838,9 @@ async function setFechaPagoEstimada(ctId,value){
 }
 
 // ── Datos de pago del talento (solo lectura) ──────────────────
-const DP_PAIS={mexico:'México',colombia:'Colombia',argentina:'Argentina',usa:'Estados Unidos',espana:'España',italia:'Italia',holanda:'Países Bajos',alemania:'Alemania'};
-const DP_LBL={clabe:'CLABE',cbu:'CBU/CVU',alias:'Alias',cuit:'CUIT',iban:'IBAN',bic:'BIC/SWIFT',routing:'Routing (ABA)',account:'Nº de cuenta',account_type:'Tipo de cuenta',tipo_cuenta:'Tipo de cuenta',numero_cuenta:'Nº de cuenta',documento:'Documento',calle:'Calle',num_ext:'Núm. ext.',num_int:'Núm. int.',estado:'Estado',ciudad:'Ciudad',cp:'C.P.',direccion:'Dirección',departamento:'Departamento',calle_num:'Calle y número',localidad:'Localidad',provincia:'Provincia',street:'Calle',city:'Ciudad',state:'Estado',zip:'C.P.'};
-const DP_VAL={savings:'Ahorros',checking:'Corriente'};
+const DP_PAIS={mexico:'México',colombia:'Colombia',argentina:'Argentina',brasil:'Brasil',usa:'Estados Unidos',espana:'España',italia:'Italia',holanda:'Países Bajos',alemania:'Alemania'};
+const DP_LBL={clabe:'CLABE',cbu:'CBU/CVU',alias:'Alias',cuit:'CUIT',iban:'IBAN',bic:'BIC/SWIFT',routing:'Routing (ABA)',account:'Nº de cuenta',account_type:'Tipo de cuenta',tipo_cuenta:'Tipo de cuenta',numero_cuenta:'Nº de cuenta',documento:'Documento',cpf_cnpj:'CPF/CNPJ',codigo_banco:'Código de banco',agencia:'Agencia',conta:'Nº de cuenta',tipo_conta:'Tipo de cuenta',chave_pix:'Clave Pix',tipo_chave:'Tipo de clave Pix',calle:'Calle',num_ext:'Núm. ext.',num_int:'Núm. int.',estado:'Estado',ciudad:'Ciudad',cp:'C.P.',direccion:'Dirección',departamento:'Departamento',calle_num:'Calle y número',localidad:'Localidad',provincia:'Provincia',street:'Calle',city:'Ciudad',state:'Estado',zip:'C.P.',bairro:'Barrio'};
+const DP_VAL={savings:'Ahorros',checking:'Corriente',corrente:'Corriente',poupanca:'Ahorros (poupança)',cpf_cnpj:'CPF/CNPJ',email:'Email',telefone:'Teléfono',aleatoria:'Aleatoria'};
 function dpRow(k,v){if(!v)return '';const lbl=DP_LBL[k]||k;const val=DP_VAL[v]||v;return `<div style="display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text-dim)">${esc(lbl)}</span><span style="font-weight:600;text-align:right">${esc(val)}</span></div>`;}
 async function verDatosPago(talId){
   const body=document.getElementById('modal-dp-body');

@@ -68,6 +68,7 @@ body.dark .logo .logo-dark{display:block}
 .role-badge.manager{background:rgba(14,165,233,0.15);color:#38bdf8}
 .role-badge.handler{background:rgba(245,158,11,0.15);color:#fbbf24}
 .role-badge.talent{background:rgba(34,197,94,0.15);color:#4ade80}
+.role-badge.contador{background:rgba(168,85,247,0.15);color:#c084fc}
 .icon-btn{width:32px;height:32px;border-radius:8px;border:none;background:var(--surface2);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
 .icon-btn:hover{background:var(--surface3);color:var(--text)}
 
@@ -854,6 +855,7 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
           <option value="campaign_manager">Manager</option>
           <option value="brand_handler">Handler</option>
           <option value="talent">Talento</option>
+          <option value="contador">Contador</option>
         </select>
         <select id="usuarios-filter-activo" class="form-input" style="width:auto;font-size:13px;padding:7px 24px 7px 10px" onchange="renderUsuariosLista()">
           <option value="">Activos e inactivos</option>
@@ -981,6 +983,7 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
             <option value="brand_handler">Handler de Marca</option>
             <option value="talent">Talento</option>
             <option value="admin">Administrador</option>
+            <option value="contador">Contador (solo Finanzas)</option>
           </select>
         </div>
         <div class="form-group">
@@ -1086,6 +1089,8 @@ async function initApp() {
     }
     // Talentos van al portal
     if (currentProfile.role === 'talent') { location.href = 'talento-portal.html'; return; }
+    // El contador solo trabaja Finanzas
+    if (currentProfile.role === 'contador') { location.href = 'finanzas.html'; return; }
 
     // Mostrar UI de usuario
     setupUserUI();
@@ -1207,9 +1212,9 @@ function setupUserUI() {
   document.getElementById('user-avatar').textContent = initials;
   document.getElementById('user-name').textContent = currentProfile.nombre || currentUser.email;
   const badge = document.getElementById('user-role-badge');
-  const roleLabels = {admin:'Admin',campaign_manager:'Manager',brand_handler:'Handler',talent:'Talento'};
+  const roleLabels = {admin:'Admin',campaign_manager:'Manager',brand_handler:'Handler',talent:'Talento',contador:'Contador'};
   badge.textContent = roleLabels[currentProfile.role]||currentProfile.role;
-  badge.className = 'role-badge '+({admin:'admin',campaign_manager:'manager',brand_handler:'handler',talent:'talent'}[currentProfile.role]||'');
+  badge.className = 'role-badge '+({admin:'admin',campaign_manager:'manager',brand_handler:'handler',talent:'talent',contador:'contador'}[currentProfile.role]||'');
 }
 
 // "Admin de Campaña" (campaign_manager) = mismos permisos que el Admin general
@@ -2350,8 +2355,8 @@ function openUsuariosModal() {
 
 function renderUsuariosLista() {
   const container = document.getElementById('usuarios-lista');
-  const roleLabels = {admin:'Admin',campaign_manager:'Manager',brand_handler:'Handler',talent:'Talento'};
-  const roleColors = {admin:'admin',campaign_manager:'manager',brand_handler:'handler',talent:'talent'};
+  const roleLabels = {admin:'Admin',campaign_manager:'Manager',brand_handler:'Handler',talent:'Talento',contador:'Contador'};
+  const roleColors = {admin:'admin',campaign_manager:'manager',brand_handler:'handler',talent:'talent',contador:'contador'};
 
   const q = (document.getElementById('usuarios-search')?.value||'').toLowerCase().trim();
   const filterRol = document.getElementById('usuarios-filter-rol')?.value||'';

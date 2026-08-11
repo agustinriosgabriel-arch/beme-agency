@@ -868,6 +868,7 @@ async function initApp() {
     if (!currentProfile) { document.getElementById('load-overlay').style.display='none'; document.getElementById('login-overlay').style.display='flex'; showLoginErr('Sin perfil.'); return; }
     // Talentos van al portal
     if (currentProfile.role === 'talent') { location.href = 'talento-portal.html'; return; }
+    if (currentProfile.role === 'contador') { location.href = 'finanzas.html'; return; }
     if (currentProfile.role !== 'admin') {
       document.querySelectorAll('.nav-tab[href="finanzas.html"]').forEach(el => el.style.display = 'none');
     }
