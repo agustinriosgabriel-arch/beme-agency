@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BEME × Big Agency — Argentina</title>
+<link rel="icon" href="favicon.ico">
+<style>
+  /* ══════════ Tokens (Manual Beme) ══════════ */
+  :root{
+    --magenta:#b2005d;
+    --magenta-claro:#ed568f;
+    --purpura:#9414e0;
+    --purpura-osc:#440b5d;
+    --negro:#1c1c1c;
+    --gris:#f4f4f4;
+    --gris-2:#e2e2e2;
+    --gris-txt:#3c3c3b;
+    --grad-1:linear-gradient(100deg,#b2005d,#ed568f);
+    --grad-2:linear-gradient(100deg,#440b5d,#9414e0);
+    --grad-3:linear-gradient(100deg,#9414e0,#d90e86);
+  }
+  @font-face{
+    font-family:'Plus Jakarta Sans';
+    src:url('assets/brand/fonts/PlusJakartaSans-Variable.woff2') format('woff2');
+    font-weight:200 800; font-display:swap;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Plus Jakarta Sans',-apple-system,'Segoe UI',sans-serif;
+    color:var(--negro); background:#fff;
+    -webkit-font-smoothing:antialiased;
+  }
+  img{max-width:100%}
+  a{color:inherit}
+
+  /* ══════════ Slides ══════════ */
+  .deck{scroll-snap-type:y mandatory;height:100svh;overflow-y:auto}
+  .slide{
+    scroll-snap-align:start;
+    min-height:100svh;
+    display:flex;align-items:center;justify-content:center;
+    position:relative;overflow:hidden;
+    padding:clamp(24px,4vw,64px);
+  }
+  .wrap{width:100%;max-width:1280px;position:relative;z-index:2}
+
+  .eyebrow{
+    font-size:13px;letter-spacing:.24em;text-transform:uppercase;
+    font-weight:700;color:var(--magenta);margin-bottom:18px;
+    display:flex;align-items:center;gap:14px;
+  }
+  .eyebrow::before{content:'';width:34px;height:2px;background:var(--magenta);display:inline-block}
+  .dark .eyebrow{color:var(--magenta-claro)}
+  .dark .eyebrow::before{background:var(--magenta-claro)}
+  h2{
+    font-size:clamp(30px,4.2vw,56px);line-height:1.06;
+    font-weight:800;letter-spacing:-.02em;margin-bottom:14px;
+  }
+  h2 .fino{font-weight:300}
+  h2 .mg{color:var(--magenta)}
+  .lead{font-size:clamp(15px,1.35vw,19px);color:var(--gris-txt);font-weight:400;max-width:720px;line-height:1.55}
+  .dark{background:var(--negro);color:#fff}
+  .dark .lead{color:#cfcfcf}
+
+  /* ── página nº ── */
+  .pagenum{position:absolute;bottom:26px;right:38px;font-weight:800;font-size:22px;color:var(--magenta);z-index:3}
+  .dark .pagenum{color:var(--magenta-claro)}
+
+  /* ══════════ 01 · Portada ══════════ */
+  .s-cover{background:#fff}
+  .cover-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center}
+  .cover-logos{display:flex;align-items:center;gap:26px;margin-bottom:44px}
+  .cover-logos img.beme{height:100px}
+  .cover-logos img.big{height:48px}
+  .cover-logos .x{font-size:34px;font-weight:200;color:var(--gris-2)}
+  .cover-title{font-size:clamp(40px,5.4vw,74px);line-height:1.02;font-weight:800;letter-spacing:-.025em}
+  .cover-title em{font-style:normal;font-weight:300}
+  .cover-title .mg{color:var(--magenta)}
+  .cover-sub{margin-top:26px;font-size:clamp(15px,1.4vw,20px);color:var(--gris-txt);max-width:520px;line-height:1.55}
+  .cover-meta{margin-top:44px;display:flex;gap:34px;font-size:13px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;color:var(--gris-txt)}
+  .cover-art{position:relative;height:min(70vh,600px)}
+  .cover-art .b1{position:absolute;right:-64px;top:8%;width:82%;height:66%;background:var(--magenta)}
+  .cover-art .b2{position:absolute;left:4%;bottom:6%;width:54%;height:26%;background:var(--grad-2)}
+  .cover-art .b3{position:absolute;left:18%;top:2%;width:20%;height:20%;background:var(--gris)}
+  .cover-art .iso{position:absolute;z-index:2;right:6%;top:20%;height:34%;width:auto}
+  .cover-art .pantone{position:absolute;z-index:3;left:14%;bottom:26%;background:#fff;padding:12px 18px;font-size:12px;letter-spacing:.14em;font-weight:700;box-shadow:0 10px 30px rgba(28,28,28,.14)}
+  .cover-art .pantone::before{content:'';display:inline-block;width:10px;height:10px;background:var(--magenta);margin-right:8px}
+  .cover-art .hex{position:absolute;z-index:3;right:2%;bottom:12%;font-size:12px;letter-spacing:.18em;font-weight:700;color:var(--gris-txt)}
+
+  /* ══════════ 02 · Alianza ══════════ */
+  .s-alianza{background:var(--gris)}
+  .al-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:38px}
+  .al-card{background:#fff;padding:clamp(24px,2.6vw,44px);position:relative;overflow:hidden}
+  .al-card::before{content:'';position:absolute;top:0;left:0;right:0;height:6px}
+  .al-card.beme::before{background:var(--grad-1)}
+  .al-card.big::before{background:var(--purpura-osc)}
+  .al-card img{height:42px;margin-bottom:22px}
+  .al-card.beme img{height:80px}
+  .al-card h3{font-size:clamp(18px,1.7vw,24px);font-weight:800;margin-bottom:8px}
+  .al-card .rol{font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;color:var(--magenta);margin-bottom:16px}
+  .al-card.big .rol{color:var(--purpura-osc)}
+  .al-card p{font-size:15px;color:var(--gris-txt);line-height:1.6}
+  .al-card ul{list-style:none;margin-top:18px;display:grid;gap:10px}
+  .al-card li{font-size:14.5px;color:var(--negro);font-weight:600;display:flex;gap:10px;align-items:baseline}
+  .al-card li::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--magenta);flex:none;transform:translateY(-1px)}
+  .al-card.big li::before{background:var(--purpura)}
+  .al-union{margin-top:26px;background:var(--negro);color:#fff;padding:22px 34px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .al-union strong{font-size:clamp(16px,1.6vw,22px);font-weight:800}
+  .al-union span{font-size:14.5px;color:#cfcfcf}
+
+  /* ══════════ 03 · Números ══════════ */
+  .s-stats{background:var(--negro);color:#fff}
+  .s-stats::after{content:'';position:absolute;right:-180px;top:-180px;width:520px;height:520px;border-radius:50%;background:var(--grad-3);opacity:.35;filter:blur(70px)}
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:52px}
+  .stat .num{font-size:clamp(38px,4.6vw,68px);font-weight:800;letter-spacing:-.03em;background:var(--grad-1);background:linear-gradient(100deg,#ed568f,#d783ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .stat .lbl{margin-top:8px;font-size:14px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:#cfcfcf}
+  .stat{border-top:2px solid rgba(255,255,255,.16);padding-top:22px}
+
+  /* ══════════ 04 · Marcas ══════════ */
+  .s-marcas{background:#fff}
+  .mk-group{margin-top:34px}
+  .mk-tag{display:inline-flex;align-items:center;gap:10px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:800;padding:8px 16px;margin-bottom:18px}
+  .mk-tag.beme{background:rgba(178,0,93,.08);color:var(--magenta)}
+  .mk-tag.big{background:rgba(68,11,93,.08);color:var(--purpura-osc)}
+  .mk-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:10px}
+  .mk-grid.big{grid-template-columns:repeat(8,1fr)}
+  .mk-cell{
+    background:var(--gris);height:74px;display:flex;align-items:center;justify-content:center;padding:14px 16px;
+  }
+  .mk-cell img{
+    max-height:34px;max-width:100%;width:auto;object-fit:contain;
+    filter:grayscale(1) brightness(.62) contrast(1.05);opacity:.85;
+  }
+  .mk-cell img.chico{max-height:26px}
+  .mk-cell img.alto{max-height:44px}
+  .mk-cell img.oscuro{filter:grayscale(1) brightness(.4) contrast(1.25);opacity:.9}
+  .mk-cell .txtlogo{font-weight:800;letter-spacing:.06em;font-size:15px;color:#565656;text-align:center;line-height:1.2}
+
+  /* ══════════ 05 · Campañas BEME ══════════ */
+  .s-camp{background:var(--gris)}
+  .camp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:26px}
+  .camp-card{background:#fff;overflow:hidden;display:flex;flex-direction:column}
+  .camp-img{height:104px;position:relative;display:flex;align-items:center;justify-content:center;background:#ececec}
+  .camp-img img.foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2}
+  .camp-img img.logo{max-height:30px;max-width:56%;filter:grayscale(1) brightness(.62) contrast(1.05);opacity:.8;position:relative;z-index:1}
+  .camp-body{padding:10px 14px}
+  .camp-body h4{font-size:14px;font-weight:800}
+  .camp-body span{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--magenta);font-weight:700}
+
+  /* ══════════ 06 · Casos Argentina ══════════ */
+  .s-casos{background:#fff}
+  .casos-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:34px}
+  .caso{display:grid;grid-template-columns:130px 1fr;background:var(--gris);overflow:hidden;min-height:150px}
+  .caso img.foto{width:100%;height:100%;object-fit:cover;object-position:top}
+  .caso-body{padding:18px 20px;display:flex;flex-direction:column;gap:7px;justify-content:center}
+  .caso-body img.mlogo{height:22px;width:auto;align-self:flex-start;filter:grayscale(1) brightness(.62) contrast(1.05);opacity:.9}
+  .caso-body img.mlogo.alto{height:30px}
+  .caso-body h4{font-size:16.5px;font-weight:800}
+  .caso-body p{font-size:13.5px;color:var(--gris-txt);line-height:1.5}
+  .caso-body a{font-size:12.5px;font-weight:700;color:var(--magenta);text-decoration:none;letter-spacing:.04em}
+  .caso-body a:hover{text-decoration:underline}
+
+  /* ══════════ 07/08 · Talentos ══════════ */
+  .s-tal-ar{background:#fff}
+  .s-tal-mx{background:var(--gris)}
+  .tal-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-top:26px}
+  .tal{position:relative;overflow:hidden;background:var(--gris)}
+  .tal img{width:100%;aspect-ratio:1/1.05;object-fit:cover;object-position:top;display:block}
+  .s-tal-mx .tal{background:#fff}
+  .s-tal-mx .tal img{aspect-ratio:1/0.95;object-position:center}
+  .tal-info{padding:9px 12px;background:#fff}
+  .s-tal-mx .tal-info{background:#fff}
+  .tal-info h4{font-size:14.5px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tal-info p{font-size:11.5px;color:var(--gris-txt);margin-top:3px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tal-info .cifra{display:inline-block;margin-top:6px;background:rgba(178,0,93,.08);color:var(--magenta);font-weight:800;font-size:11.5px;padding:3px 8px;letter-spacing:.03em}
+
+  /* ══════════ 09 · Servicios ══════════ */
+  .s-serv{background:var(--negro);color:#fff}
+  .serv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px}
+  .serv{border:1px solid rgba(255,255,255,.14);padding:24px;position:relative}
+  .serv .n{font-size:13px;font-weight:800;color:var(--magenta-claro);letter-spacing:.14em}
+  .serv h4{font-size:17.5px;font-weight:800;margin:10px 0 8px}
+  .serv p{font-size:13.5px;color:#cfcfcf;line-height:1.55}
+
+  /* ══════════ 10 · Por qué juntos ══════════ */
+  .s-why{background:#fff}
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:42px}
+  .why{padding:28px;background:var(--gris);position:relative;overflow:hidden}
+  .why::before{content:'';position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--grad-2)}
+  .why .big-n{font-size:52px;font-weight:800;color:var(--gris-2);line-height:1;letter-spacing:-.03em}
+  .why h4{font-size:19px;font-weight:800;margin:14px 0 8px;letter-spacing:-.01em}
+  .why p{font-size:14.5px;color:var(--gris-txt);line-height:1.6}
+
+  /* ══════════ 11 · Contacto ══════════ */
+  .s-cta{background:var(--negro);color:#fff}
+  .s-cta::before{content:'';position:absolute;left:-160px;bottom:-220px;width:560px;height:560px;border-radius:50%;background:var(--grad-2);opacity:.4;filter:blur(80px)}
+  .cta-inner{text-align:center;display:flex;flex-direction:column;align-items:center}
+  .cta-logos{display:flex;align-items:center;gap:30px;margin-bottom:44px}
+  .cta-logos img.beme{height:92px}
+  .cta-logos img.big{height:44px}
+  .cta-logos .x{font-size:30px;font-weight:200;color:#555}
+  .cta-title{font-size:clamp(34px,4.6vw,64px);font-weight:800;letter-spacing:-.02em;line-height:1.05}
+  .cta-title .fino{font-weight:300}
+  .cta-mail{margin-top:34px;display:inline-block;background:var(--grad-1);color:#fff;text-decoration:none;font-weight:800;font-size:clamp(16px,1.8vw,22px);padding:18px 42px;letter-spacing:.02em}
+  .cta-links{margin-top:26px;display:flex;gap:30px;font-size:14px;color:#cfcfcf;letter-spacing:.06em}
+
+  /* ══════════ Navegación ══════════ */
+  .dots{position:fixed;right:18px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:9px;z-index:50}
+  .dots a{width:8px;height:8px;border-radius:50%;background:var(--gris-2);display:block;transition:all .25s}
+  .dots a.on{background:var(--magenta);transform:scale(1.5)}
+  .topbar{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:14px 26px;z-index:50;pointer-events:none}
+  .topbar .cnt{font-size:12.5px;font-weight:800;letter-spacing:.2em;color:var(--gris-txt);background:rgba(255,255,255,.82);backdrop-filter:blur(6px);padding:7px 13px}
+  .topbar .pdf{pointer-events:auto;font-size:12.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;color:#fff;background:var(--magenta);padding:9px 18px}
+  .topbar .pdf:hover{background:#8e004a}
+
+  /* ══════════ Responsive ══════════ */
+  @media screen and (max-width:900px){
+    .deck{scroll-snap-type:none;height:auto;overflow:visible}
+    .slide{min-height:0;padding:56px 22px}
+    .cover-grid{grid-template-columns:1fr}
+    .cover-art{height:300px;margin-top:10px}
+    .cover-art .b1{right:-22px}
+    .al-grid,.casos-grid{grid-template-columns:1fr}
+    .stats-grid{grid-template-columns:1fr 1fr;gap:26px}
+    .mk-grid,.mk-grid.big{grid-template-columns:repeat(3,1fr)}
+    .camp-grid{grid-template-columns:1fr 1fr}
+    .tal-grid{grid-template-columns:1fr 1fr}
+    .serv-grid,.why-grid{grid-template-columns:1fr}
+    .dots{display:none}
+    .pagenum{display:none}
+  }
+
+  /* ══════════ Print / PDF ══════════ */
+  @page{size:1600px 900px;margin:0}
+  @media print{
+    body,.deck{height:auto;overflow:visible;scroll-snap-type:none}
+    .slide{
+      width:1600px;height:900px;min-height:900px;max-height:900px;
+      page-break-after:always;break-after:page;
+      padding:64px 80px;
+    }
+    .slide:last-child{page-break-after:auto}
+    .wrap{max-width:1440px}
+    .topbar,.dots{display:none!important}
+    .s-stats::after,.s-cta::before{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="cnt" id="cnt">01 / 11</span>
+  <a class="pdf" href="assets/deck/BEME-x-BigAgency-Argentina.pdf" download>Descargar PDF</a>
+</div>
+<nav class="dots" id="dots" aria-label="Navegación de slides"></nav>
+
+<main class="deck" id="deck">
+
+  <!-- ═══ 01 · PORTADA ═══ -->
+  <section class="slide s-cover" id="s1">
+    <div class="wrap cover-grid">
+      <div>
+        <div class="cover-logos">
+          <img class="beme" src="assets/deck/beme-logo.png" alt="Beme">
+          <span class="x">×</span>
+          <img class="big" src="assets/big/bigagency-logo.png" alt="Big Agency">
+        </div>
+        <h1 class="cover-title">Marcas <span class="mg">globales</span>,<br><em>cultura local.</em></h1>
+        <p class="cover-sub">Alianza estratégica de influencer marketing y representación de talento para <strong>Argentina, México y toda Latinoamérica</strong>.</p>
+        <div class="cover-meta"><span>Presentación comercial</span><span>Argentina · 2026</span></div>
+      </div>
+      <div class="cover-art" aria-hidden="true">
+        <div class="b3"></div>
+        <div class="b1"></div>
+        <div class="b2"></div>
+        <img class="iso" src="assets/deck/beme-iso-blanco.png" alt="">
+        <span class="pantone">Pantone 220 C</span>
+        <span class="hex">#B2005D</span>
+      </div>
+    </div>
+    <span class="pagenum">01</span>
+  </section>
+
+  <!-- ═══ 02 · LA ALIANZA ═══ -->
+  <section class="slide s-alianza" id="s2">
+    <div class="wrap">
+      <p class="eyebrow">La alianza</p>
+      <h2>Dos agencias, <span class="fino">un solo equipo</span> <span class="mg">regional.</span></h2>
+      <p class="lead">Unimos la operación de Beme en México y Latinoamérica con el talento y las relaciones locales de Big Agency en Argentina.</p>
+      <div class="al-grid">
+        <div class="al-card beme">
+          <img src="assets/deck/beme-logo.png" alt="Beme">
+          <p class="rol">México · Latinoamérica</p>
+          <h3>Agencia de talento e influencer marketing</h3>
+          <ul>
+            <li>+1.000 creadores exclusivos y representados</li>
+            <li>Campañas en 10+ países de habla hispana</li>
+            <li>Operación con contratos, datos y reporting verificable</li>
+          </ul>
+        </div>
+        <div class="al-card big">
+          <img src="assets/big/bigagency-logo.png" alt="Big Agency">
+          <p class="rol">Argentina</p>
+          <h3>El talento que mueve la conversación argentina</h3>
+          <ul>
+            <li>Creadores líderes en humor, entretenimiento y lifestyle</li>
+            <li>Vínculos anuales y embajadores con marcas top</li>
+            <li>Producción local y conocimiento del mercado argentino</li>
+          </ul>
+        </div>
+      </div>
+      <div class="al-union">
+        <strong>Un solo interlocutor. Cobertura total de LATAM.</strong>
+        <span>Estrategia, casting, contratos, producción y reporting bajo un mismo equipo.</span>
+      </div>
+    </div>
+    <span class="pagenum">02</span>
+  </section>
+
+  <!-- ═══ 03 · NÚMEROS ═══ -->
+  <section class="slide s-stats dark" id="s3">
+    <div class="wrap">
+      <p class="eyebrow">Alcance combinado</p>
+      <h2>La escala de una red,<br><span class="fino">la precisión de un equipo.</span></h2>
+      <div class="stats-grid">
+        <div class="stat"><div class="num" data-to="1000">+1.000</div><div class="lbl">Creadores</div></div>
+        <div class="stat"><div class="num" data-to="1200">1.200M</div><div class="lbl">Seguidores combinados</div></div>
+        <div class="stat"><div class="num" data-to="10">10+</div><div class="lbl">Países</div></div>
+        <div class="stat"><div class="num" data-to="50">+50</div><div class="lbl">Marcas líderes</div></div>
+      </div>
+    </div>
+    <span class="pagenum">03</span>
+  </section>
+
+  <!-- ═══ 04 · MARCAS ═══ -->
+  <section class="slide s-marcas" id="s4">
+    <div class="wrap">
+      <p class="eyebrow">Marcas que confiaron</p>
+      <h2>Compañía <span class="fino">de las marcas</span> <span class="mg">más grandes.</span></h2>
+      <div class="mk-group">
+        <span class="mk-tag beme">Beme · México &amp; LATAM</span>
+        <div class="mk-grid">
+          <div class="mk-cell"><img src="assets/marcas/kerastase.svg" alt="Kérastase"></div>
+          <div class="mk-cell"><img src="assets/marcas/garnier.svg" alt="Garnier" class="alto"></div>
+          <div class="mk-cell"><img src="assets/marcas/avon.svg" alt="Avon" class="alto"></div>
+          <div class="mk-cell"><img src="assets/marcas/kiehls.svg" alt="Kiehl's"></div>
+          <div class="mk-cell"><img src="assets/marcas/hm.svg" alt="H&M"></div>
+          <div class="mk-cell"><img src="assets/marcas/uriage.png" alt="Uriage"></div>
+          <div class="mk-cell"><img src="assets/marcas/sharkbeauty.webp" alt="Shark Beauty"></div>
+          <div class="mk-cell"><img src="assets/marcas/huawei.png" alt="Huawei" class="alto"></div>
+          <div class="mk-cell"><img src="assets/marcas/esika.png" alt="Ésika"></div>
+          <div class="mk-cell"><img src="assets/marcas/honkai.png" alt="Honkai" class="alto oscuro"></div>
+          <div class="mk-cell"><img src="assets/marcas/anker.svg" alt="Anker"></div>
+          <div class="mk-cell"><img src="assets/marcas/ecoflow.png" alt="EcoFlow"></div>
+          <div class="mk-cell"><span class="txtlogo">L'BEL</span></div>
+          <div class="mk-cell"><img src="assets/marcas/amazon.svg" alt="Amazon"></div>
+          <div class="mk-cell"><img src="assets/marcas/avene.png" alt="Avène"></div>
+          <div class="mk-cell"><img src="assets/marcas/realme.svg" alt="realme"></div>
+          <div class="mk-cell"><img src="assets/marcas/nivea.svg" alt="Nivea"></div>
+          <div class="mk-cell"><img src="assets/marcas/kleenex.png" alt="Kleenex"></div>
+          <div class="mk-cell"><img src="assets/marcas/kotex.svg" alt="Kotex" class="alto"></div>
+          <div class="mk-cell"><span class="txtlogo">NH COLLECTION</span></div>
+        </div>
+      </div>
+      <div class="mk-group">
+        <span class="mk-tag big">Big Agency · Argentina</span>
+        <div class="mk-grid big">
+          <div class="mk-cell"><img src="assets/marcas/disneyplus.svg" alt="Disney+" class="alto"></div>
+          <div class="mk-cell"><img src="assets/marcas/primevideo.svg" alt="Prime Video" class="alto"></div>
+          <div class="mk-cell"><img src="assets/marcas/warner.svg" alt="Warner Bros." class="alto"></div>
+          <div class="mk-cell"><img src="assets/marcas/spotify.svg" alt="Spotify" class="alto"></div>
+          <div class="mk-cell"><img src="assets/marcas/uber.svg" alt="Uber"></div>
+          <div class="mk-cell"><img src="assets/marcas/mcdonalds.svg" alt="McDonald's" class="alto"></div>
+          <div class="mk-cell"><img src="assets/marcas/mercadolibre.svg" alt="Mercado Libre"></div>
+          <div class="mk-cell"><img src="assets/marcas/rappi.svg" alt="Rappi"></div>
+          <div class="mk-cell"><img src="assets/marcas/pedidosya.svg" alt="PedidosYa"></div>
+          <div class="mk-cell"><img src="assets/marcas/didi.svg" alt="DiDi"></div>
+          <div class="mk-cell"><img src="assets/marcas/axe.svg" alt="AXE" class="alto"></div>
+          <div class="mk-cell"><img src="assets/marcas/dove.svg" alt="Dove"></div>
+          <div class="mk-cell"><img src="assets/marcas/maybelline.svg" alt="Maybelline"></div>
+          <div class="mk-cell"><img src="assets/marcas/kfc.svg" alt="KFC" class="alto"></div>
+          <div class="mk-cell"><img src="assets/marcas/sony.svg" alt="Sony"></div>
+          <div class="mk-cell"><img src="assets/marcas/garnier.svg" alt="Garnier" class="alto"></div>
+        </div>
+      </div>
+    </div>
+    <span class="pagenum">04</span>
+  </section>
+
+  <!-- ═══ 05 · CAMPAÑAS BEME ═══ -->
+  <section class="slide s-camp" id="s5">
+    <div class="wrap">
+      <p class="eyebrow">Beme · Campañas</p>
+      <h2>Campañas <span class="fino">que ya</span> <span class="mg">hicimos.</span></h2>
+      <p class="lead">Una selección de marcas con las que ejecutamos campañas de creadores en México y LATAM.</p>
+      <div class="camp-grid" id="campGrid">
+        <!-- data-marca coincide con el nombre de archivo en assets/deck/campanas/<marca>.jpg -->
+        <div class="camp-card" data-marca="huawei"><div class="camp-img"><img class="logo" src="assets/marcas/huawei.png" alt=""><img class="foto" src="assets/deck/campanas/huawei.jpg" alt="Campaña Huawei" onerror="this.remove()"></div><div class="camp-body"><span>Tecnología</span><h4>Huawei</h4></div></div>
+        <div class="camp-card" data-marca="sharkbeauty"><div class="camp-img"><img class="logo" src="assets/marcas/sharkbeauty.webp" alt=""><img class="foto" src="assets/deck/campanas/sharkbeauty.jpg" alt="Campaña Shark Beauty" onerror="this.remove()"></div><div class="camp-body"><span>Beauty tech</span><h4>Shark Beauty</h4></div></div>
+        <div class="camp-card" data-marca="kotex"><div class="camp-img"><img class="logo" src="assets/marcas/kotex.svg" alt=""><img class="foto" src="assets/deck/campanas/kotex.jpg" alt="Campaña Kotex" onerror="this.remove()"></div><div class="camp-body"><span>Cuidado personal</span><h4>Kotex</h4></div></div>
+        <div class="camp-card" data-marca="uriage"><div class="camp-img"><img class="logo" src="assets/marcas/uriage.png" alt=""><img class="foto" src="assets/deck/campanas/uriage.jpg" alt="Campaña Uriage" onerror="this.remove()"></div><div class="camp-body"><span>Dermocosmética</span><h4>Uriage</h4></div></div>
+        <div class="camp-card" data-marca="avon"><div class="camp-img"><img class="logo" src="assets/marcas/avon.svg" alt="" style="max-height:44px"><img class="foto" src="assets/deck/campanas/avon.jpg" alt="Campaña Avon" onerror="this.remove()"></div><div class="camp-body"><span>Belleza</span><h4>Avon</h4></div></div>
+        <div class="camp-card" data-marca="kiehls"><div class="camp-img"><img class="logo" src="assets/marcas/kiehls.svg" alt=""><img class="foto" src="assets/deck/campanas/kiehls.jpg" alt="Campaña Kiehl's" onerror="this.remove()"></div><div class="camp-body"><span>Skincare</span><h4>Kiehl's</h4></div></div>
+        <div class="camp-card" data-marca="hm"><div class="camp-img"><img class="logo" src="assets/marcas/hm.svg" alt=""><img class="foto" src="assets/deck/campanas/hm.jpg" alt="Campaña H&M" onerror="this.remove()"></div><div class="camp-body"><span>Moda</span><h4>H&amp;M</h4></div></div>
+        <div class="camp-card" data-marca="avene"><div class="camp-img"><img class="logo" src="assets/marcas/avene.png" alt=""><img class="foto" src="assets/deck/campanas/avene.jpg" alt="Campaña Avène" onerror="this.remove()"></div><div class="camp-body"><span>Dermocosmética</span><h4>Avène</h4></div></div>
+        <div class="camp-card" data-marca="ecoflow"><div class="camp-img"><img class="logo" src="assets/marcas/ecoflow.png" alt=""><img class="foto" src="assets/deck/campanas/ecoflow.jpg" alt="Campaña EcoFlow" onerror="this.remove()"></div><div class="camp-body"><span>Energía portátil</span><h4>EcoFlow</h4></div></div>
+        <div class="camp-card" data-marca="anker"><div class="camp-img"><img class="logo" src="assets/marcas/anker.svg" alt=""><img class="foto" src="assets/deck/campanas/anker.jpg" alt="Campaña Anker" onerror="this.remove()"></div><div class="camp-body"><span>Tecnología</span><h4>Anker</h4></div></div>
+        <div class="camp-card" data-marca="amazon"><div class="camp-img"><img class="logo" src="assets/marcas/amazon.svg" alt=""><img class="foto" src="assets/deck/campanas/amazon.jpg" alt="Campaña Amazon" onerror="this.remove()"></div><div class="camp-body"><span>E-commerce</span><h4>Amazon</h4></div></div>
+        <div class="camp-card" data-marca="honkai"><div class="camp-img"><img class="logo" src="assets/marcas/honkai.png" alt=""><img class="foto" src="assets/deck/campanas/honkai.jpg" alt="Campaña Honkai" onerror="this.remove()"></div><div class="camp-body"><span>Gaming</span><h4>Honkai: Star Rail</h4></div></div>
+      </div>
+    </div>
+    <span class="pagenum">05</span>
+  </section>
+
+  <!-- ═══ 06 · CASOS ARGENTINA ═══ -->
+  <section class="slide s-casos" id="s6">
+    <div class="wrap">
+      <p class="eyebrow">Big Agency · Casos</p>
+      <h2>Lo que ya pasó <span class="fino">en</span> <span class="mg">Argentina.</span></h2>
+      <div class="casos-grid">
+        <div class="caso">
+          <img class="foto" src="assets/big/benja-calero.jpg" alt="Benja Calero">
+          <div class="caso-body">
+            <img class="mlogo alto" src="assets/marcas/disneyplus.svg" alt="Disney+">
+            <h4>Disney+ × Benja Calero</h4>
+            <p>Plan Premium, "Patitas" y la serie de Once: el mensaje de Disney+ integrado al formato propio de Benja.</p>
+            <a href="https://www.tiktok.com/@benjacaldero/video/7642802795707501845" target="_blank" rel="noopener">Ver contenido ↗</a>
+          </div>
+        </div>
+        <div class="caso">
+          <img class="foto" src="assets/big/pelado-khe.jpg" alt="Pelado.Khe">
+          <div class="caso-body">
+            <img class="mlogo" src="assets/marcas/axe.svg" alt="AXE">
+            <h4>AXE × Pelado.Khe — vínculo anual</h4>
+            <p>Campaña anual de AXE con colaboración Panini × Álbum del Mundial y el lanzamiento "Oler de Lujo".</p>
+            <a href="https://www.tiktok.com/@pelao.khe/video/7646553774730906898" target="_blank" rel="noopener">Ver contenido ↗</a>
+          </div>
+        </div>
+        <div class="caso">
+          <img class="foto" src="assets/big/dulce-pink.jpg" alt="Dulce Pink">
+          <div class="caso-body">
+            <img class="mlogo" src="assets/marcas/uber.svg" alt="Uber">
+            <h4>Uber Línea U — 5 perfiles</h4>
+            <p>Lanzamiento de Línea U contado por cinco creadores, cada uno desde su propio formato y comunidad.</p>
+            <a href="https://www.tiktok.com/@_dulcepink_/video/7612302191143111957" target="_blank" rel="noopener">Ver contenido ↗</a>
+          </div>
+        </div>
+        <div class="caso">
+          <img class="foto" src="assets/big/pia-scarnato.jpg" alt="Pia Scarnato">
+          <div class="caso-body">
+            <img class="mlogo alto" src="assets/marcas/primevideo.svg" alt="Prime Video">
+            <h4>Prime Video × Pia Scarnato</h4>
+            <p>Cobertura en vivo de las premieres internacionales de "Culpa Tuya" (Londres) y "Maxton Hall" (Alemania).</p>
+            <a href="https://www.instagram.com/p/DZvfHWTHGuV/" target="_blank" rel="noopener">Ver contenido ↗</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <span class="pagenum">06</span>
+  </section>
+
+  <!-- ═══ 07 · TALENTOS ARGENTINA ═══ -->
+  <section class="slide s-tal-ar" id="s7">
+    <div class="wrap">
+      <p class="eyebrow">Big Agency · Talento</p>
+      <h2>Las caras <span class="fino">de la</span> <span class="mg">conversación argentina.</span></h2>
+      <div class="tal-grid">
+        <div class="tal"><img src="assets/big/pelado-khe.jpg" alt="Pelado.Khe"><div class="tal-info"><h4>Pelado.Khe</h4><p>AXE · Warner · Shell · McDonald's</p></div></div>
+        <div class="tal"><img src="assets/big/benja-calero.jpg" alt="Benja Calero"><div class="tal-info"><h4>Benja Calero</h4><p>Disney+ · Mercado Libre · Uber</p></div></div>
+        <div class="tal"><img src="assets/big/pia-scarnato.jpg" alt="Pia Scarnato"><div class="tal-info"><h4>Pia Scarnato</h4><p>Prime Video · Garnier · Maybelline</p></div></div>
+        <div class="tal"><img src="assets/big/renata-blasevich.jpg" alt="Renata Blasevich"><div class="tal-info"><h4>Renata Blasevich</h4><p>Spotify · SKY · CeraVe</p></div></div>
+        <div class="tal"><img src="assets/big/cris-pierri.jpg" alt="Cris Pierri"><div class="tal-info"><h4>Cris Pierri</h4><p>SKY · Uber · PedidosYa · Garnier</p></div></div>
+        <div class="tal"><img src="assets/big/juli-savioli.jpg" alt="Juli Savioli"><div class="tal-info"><h4>Juli Savioli</h4><p>Warner · McDonald's · BAFICI</p></div></div>
+        <div class="tal"><img src="assets/big/ber-scarnato.jpg" alt="Ber Scarnato"><div class="tal-info"><h4>Ber Scarnato</h4><p>SKY — embajador</p></div></div>
+        <div class="tal"><img src="assets/big/nacho-mer.jpg" alt="Nacho Mer"><div class="tal-info"><h4>Nacho Mer</h4><p>Disney · Frávega</p></div></div>
+        <div class="tal"><img src="assets/big/dulce-pink.jpg" alt="Dulce Pink"><div class="tal-info"><h4>Dulce Pink</h4><p>Uber · Rappi</p></div></div>
+        <div class="tal"><img src="assets/big/lean-riccio.jpg" alt="Lean Riccio"><div class="tal-info"><h4>Lean Riccio</h4><p>Dove</p></div></div>
+      </div>
+    </div>
+    <span class="pagenum">07</span>
+  </section>
+
+  <!-- ═══ 08 · TALENTOS LATAM ═══ -->
+  <section class="slide s-tal-mx" id="s8">
+    <div class="wrap">
+      <p class="eyebrow">Beme · Talento</p>
+      <h2>El alcance <span class="fino">de</span> <span class="mg">Latinoamérica.</span></h2>
+      <div class="tal-grid">
+        <div class="tal"><img src="assets/deck/yolo-aventura.jpg" alt="Yolo Aventura"><div class="tal-info"><h4>Yolo Aventura</h4><p>Familia · Entretenimiento</p><span class="cifra">68.3M seguidores</span></div></div>
+        <div class="tal"><img src="assets/deck/rodrigo-contreras.jpg" alt="Rodrigo Contreras"><div class="tal-info"><h4>Rodrigo Contreras</h4><p>Entretenimiento · Lifestyle</p><span class="cifra">53.0M seguidores</span></div></div>
+        <div class="tal"><img src="assets/deck/briggi-bozzo.jpg" alt="Briggi Bozzo"><div class="tal-info"><h4>Briggi Bozzo</h4><p>Lifestyle · Variedades</p><span class="cifra">35.3M seguidores</span></div></div>
+        <div class="tal"><img src="assets/deck/aaron-mercury.jpg" alt="Aaron Mercury"><div class="tal-info"><h4>Aaron Mercury</h4><p>Entretenimiento · Belleza</p><span class="cifra">28.7M seguidores</span></div></div>
+        <div class="tal"><img src="assets/deck/barbara-de-regil.jpg" alt="Bárbara de Regil"><div class="tal-info"><h4>Bárbara de Regil</h4><p>Belleza · Lifestyle</p><span class="cifra">28.4M seguidores</span></div></div>
+        <div class="tal"><img src="assets/deck/nicolle-amado.jpg" alt="Nicolle Amado"><div class="tal-info"><h4>Nicolle Amado</h4><p>Belleza · Moda</p><span class="cifra">28.2M seguidores</span></div></div>
+        <div class="tal"><img src="assets/deck/gemelas-ortega.jpg" alt="Gemelas Ortega"><div class="tal-info"><h4>Gemelas Ortega</h4><p>Moda · Variedades</p><span class="cifra">25.7M seguidores</span></div></div>
+        <div class="tal"><img src="assets/deck/fernanda-duran.jpg" alt="Fernanda Duran"><div class="tal-info"><h4>Fernanda Duran</h4><p>Belleza · Moda</p><span class="cifra">20.0M seguidores</span></div></div>
+        <div class="tal"><img src="assets/deck/stefanny-loaiza.jpg" alt="Stefanny Loaiza"><div class="tal-info"><h4>Stefanny Loaiza</h4><p>Entretenimiento · Moda</p><span class="cifra">19.4M seguidores</span></div></div>
+        <div class="tal"><img src="assets/deck/mateo-sarc.jpg" alt="Mateo Sarc"><div class="tal-info"><h4>Mateo Sarc</h4><p>Entretenimiento · Argentina</p><span class="cifra">16.3M seguidores</span></div></div>
+      </div>
+    </div>
+    <span class="pagenum">08</span>
+  </section>
+
+  <!-- ═══ 09 · SERVICIOS ═══ -->
+  <section class="slide s-serv dark" id="s9">
+    <div class="wrap">
+      <p class="eyebrow">Qué hacemos</p>
+      <h2>Del brief <span class="fino">al reporte,</span> todo adentro.</h2>
+      <div class="serv-grid">
+        <div class="serv"><span class="n">01</span><h4>Estrategia &amp; casting</h4><p>Selección de creadores por datos reales de audiencia, categoría y mercado — no por intuición.</p></div>
+        <div class="serv"><span class="n">02</span><h4>Campañas con creadores</h4><p>Negociación, contratos y ejecución completa con workflow de 9 pasos y aprobaciones de marca.</p></div>
+        <div class="serv"><span class="n">03</span><h4>Representación de talento</h4><p>Management exclusivo de los creadores más relevantes de México, LATAM y Argentina.</p></div>
+        <div class="serv"><span class="n">04</span><h4>Producción de contenido</h4><p>Guiones, producción y postproducción adaptados al lenguaje de cada creador y cada plataforma.</p></div>
+        <div class="serv"><span class="n">05</span><h4>Embajadores &amp; anuales</h4><p>Vínculos sostenidos marca–creador: AXE, Spotify, Garnier, Maybelline y SKY ya lo hacen con nosotros.</p></div>
+        <div class="serv"><span class="n">06</span><h4>Reporting verificable</h4><p>Seguidores, vistas e interacción medidos, no estimados. Datos de cada entregable, en un solo reporte.</p></div>
+      </div>
+    </div>
+    <span class="pagenum">09</span>
+  </section>
+
+  <!-- ═══ 10 · POR QUÉ JUNTOS ═══ -->
+  <section class="slide s-why" id="s10">
+    <div class="wrap">
+      <p class="eyebrow">Por qué esta alianza</p>
+      <h2>Tres razones <span class="fino">para decidir</span> <span class="mg">hoy.</span></h2>
+      <div class="why-grid">
+        <div class="why"><div class="big-n">01</div><h4>Un interlocutor, toda la región</h4><p>Una sola mesa para Argentina, México y LATAM: mismo equipo, mismos estándares, un solo contrato marco.</p></div>
+        <div class="why"><div class="big-n">02</div><h4>Credibilidad local real</h4><p>Los creadores correctos en cada mercado: talento argentino que la audiencia argentina ya eligió, y la red LATAM más grande detrás.</p></div>
+        <div class="why"><div class="big-n">03</div><h4>Operación probada</h4><p>Las marcas más grandes del mundo ya trabajaron con nosotros. Contratos, workflow y resultados medidos en cada campaña.</p></div>
+      </div>
+    </div>
+    <span class="pagenum">10</span>
+  </section>
+
+  <!-- ═══ 11 · CONTACTO ═══ -->
+  <section class="slide s-cta dark" id="s11">
+    <div class="wrap cta-inner">
+      <div class="cta-logos">
+        <img class="beme" src="assets/deck/beme-logo-blanco.png" alt="Beme">
+        <span class="x">×</span>
+        <img class="big" src="assets/big/bigagency-logo-blanco.png" alt="Big Agency">
+      </div>
+      <p class="cta-title">Tu próxima campaña<br><span class="fino">empieza acá.</span></p>
+      <a class="cta-mail" href="mailto:contacto@bemeagency.com">contacto@bemeagency.com</a>
+      <div class="cta-links">
+        <span>@beme.agency</span>
+        <span>Argentina · México · LATAM</span>
+      </div>
+    </div>
+    <span class="pagenum">11</span>
+  </section>
+
+</main>
+
+<script>
+  const deck   = document.getElementById('deck');
+  const slides = [...document.querySelectorAll('.slide')];
+  const dotsEl = document.getElementById('dots');
+  const cntEl  = document.getElementById('cnt');
+
+  // dots
+  slides.forEach((s,i)=>{
+    const a=document.createElement('a');
+    a.href='#'+s.id; a.setAttribute('aria-label','Slide '+(i+1));
+    dotsEl.appendChild(a);
+  });
+  const dots=[...dotsEl.children];
+
+  // slide activo
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      if(e.isIntersecting){
+        const i=slides.indexOf(e.target);
+        dots.forEach((d,j)=>d.classList.toggle('on',j===i));
+        cntEl.textContent=String(i+1).padStart(2,'0')+' / '+String(slides.length).padStart(2,'0');
+      }
+    });
+  },{root:null,threshold:.55});
+  slides.forEach(s=>io.observe(s));
+
+  // teclado
+  document.addEventListener('keydown',e=>{
+    const cur=dots.findIndex(d=>d.classList.contains('on'));
+    if(e.key==='ArrowDown'||e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();slides[Math.min(cur+1,slides.length-1)]?.scrollIntoView();}
+    if(e.key==='ArrowUp'||e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();slides[Math.max(cur-1,0)]?.scrollIntoView();}
+  });
+</script>
+</body>
+</html>
