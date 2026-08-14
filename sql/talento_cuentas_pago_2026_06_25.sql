@@ -11,8 +11,10 @@
 --   y dirección variable. Los campos variables van en JSONB para no
 --   inflar el esquema: el front los renderiza con un mapa por país.
 --
---   Países soportados: Mexico, Colombia, Argentina, USA, España,
---   Italia, Holanda, Alemania.
+--   Países soportados: Mexico, Colombia, Argentina, Brasil, USA,
+--   España, Italia, Holanda, Alemania. Brasil guarda en datos_cuenta:
+--   cpf_cnpj, codigo_banco, agencia, conta, tipo_conta (corrente|poupanca)
+--   y opcionalmente chave_pix + tipo_chave (según requisitos de Wise).
 --
 --   Escritura: el talento escribe vía magic-api (service_role → sin RLS).
 --   Lectura: el equipo interno (admin / campaign_manager) la ve en el
@@ -22,7 +24,7 @@
 CREATE TABLE IF NOT EXISTS talento_cuentas_pago (
   id              serial PRIMARY KEY,
   talent_id       integer NOT NULL REFERENCES talentos(id) ON DELETE CASCADE,
-  pais            text DEFAULT '',          -- mexico | colombia | argentina | usa | espana | italia | holanda | alemania
+  pais            text DEFAULT '',          -- mexico | colombia | argentina | brasil | usa | espana | italia | holanda | alemania
   nombre_completo text DEFAULT '',          -- titular de la cuenta (común a todos los países)
   banco           text DEFAULT '',
   datos_cuenta    jsonb DEFAULT '{}'::jsonb, -- campos bancarios variables por país (clabe, cbu, iban, bic, routing, account, tipo_cuenta, documento, ...)

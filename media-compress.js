@@ -26,7 +26,7 @@
     imgQuality: 0.82,
     // Video
     vidMinBytes: 20 * 1024 * 1024,    // por debajo de esto no se toca
-    vidMaxBytes: 400 * 1024 * 1024,   // por encima no se intenta (memoria del browser)
+    vidMaxBytes: 1024 * 1024 * 1024,  // por encima no se intenta (memoria del browser); si falla, la REGLA DE ORO devuelve el original
     vidMaxDim: 1920,                  // lado largo máximo (1080p vertical u horizontal)
     vidBpp: 0.085,                    // bits por pixel por frame → ~5 Mbps en 1080p30
     vidGopSec: 2,                     // keyframe cada 2s

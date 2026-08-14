@@ -348,6 +348,9 @@ exports.handler = async (event) => {
         const { contenido_id, url_archivo, replace_id } = body;
         const scope = await assertContenidoScope(contenido_id);
         if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
+        const { data: contS } = await sb.from('contenidos').select('paso_actual').eq('id', contenido_id).maybeSingle();
+        if (contS && (contS.paso_actual || 0) > FILE_KINDS.script.maxPaso)
+          return json(409, { error: 'El script ya fue aprobado. Pedile al equipo de BEME que lo cambie.' }, origin);
         if (replace_id) {
           const { error } = await sb.from('contenido_scripts').update({ url_archivo }).eq('id', replace_id).eq('contenido_id', contenido_id);
           if (error) throw error;
@@ -364,6 +367,9 @@ exports.handler = async (event) => {
         const { contenido_id, url_archivo, nombre_archivo, size_bytes, replace_id } = body;
         const scope = await assertContenidoScope(contenido_id);
         if (!scope.ok) return json(403, { error: 'Fuera de alcance' }, origin);
+        const { data: contD } = await sb.from('contenidos').select('paso_actual').eq('id', contenido_id).maybeSingle();
+        if (contD && (contD.paso_actual || 0) > FILE_KINDS.draft.maxPaso)
+          return json(409, { error: 'El contenido ya fue aprobado. Pedile al equipo de BEME que lo cambie.' }, origin);
         if (replace_id) {
           const { error } = await sb.from('contenido_borradores').update({ url_archivo, nombre_archivo, size_bytes }).eq('id', replace_id).eq('contenido_id', contenido_id);
           if (error) throw error;
@@ -419,7 +425,27 @@ exports.handler = async (event) => {
         if (error) throw error;
         await removeStorageByUrl(spec.bucket, row[spec.urlCol]);
         await regCambio(scope.ct.campana_id, contenido_id, spec.label);
-        return json(200, { ok: true }, origin);
+
+        // Si era el último archivo del paso en revisión, el contenido vuelve al
+        // paso de trabajo (igual que deleteDraft() del panel interno).
+        let pasoNuevo = null;
+        const back = kind === 'draft'  ? { from: 5, to: 4, accion: 'Contenido eliminado, vuelve a Producción' }
+                   : kind === 'script' ? { from: 3, to: 2, accion: 'Script eliminado, vuelve a Script' }
+                   : null;
+        if (back && (cont.paso_actual || 0) === back.from) {
+          const { count } = await sb.from(spec.table).select('id', { count: 'exact', head: true }).eq('contenido_id', contenido_id);
+          if ((count || 0) === 0) {
+            const { error: upErr } = await sb.from('contenidos').update({ paso_actual: back.to }).eq('id', contenido_id);
+            if (!upErr) {
+              pasoNuevo = back.to;
+              await sb.from('contenido_historial').insert({
+                contenido_id, paso_anterior: back.from, paso_nuevo: back.to,
+                accion: back.accion, autor_nombre: autorNombre,
+              });
+            }
+          }
+        }
+        return json(200, { ok: true, paso_nuevo: pasoNuevo }, origin);
       }
 
       // ── CAMPOS DE CONTENIDO (talento) ───────────────────────

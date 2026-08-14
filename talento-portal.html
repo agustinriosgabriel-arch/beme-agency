@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beme — Portal del Talento</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
-<script src="media-compress.js"></script>
+<script src="media-compress.js?v=2"></script>
 <link rel="icon" href="favicon.ico" sizes="32x32">
 <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -769,7 +769,7 @@ function renderContenido(c, ct) {
 
   // Action box for current step (only for steps talent can act on)
   // Copy / caption ya enviado: visible desde revisión en adelante (clave al publicar)
-  const copySentHTML = (paso >= 5 && c.copy_texto) ? `<div class="action-box">
+  const copySentHTML = (paso > 5 && c.copy_texto) ? `<div class="action-box">
     <div class="action-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <span>📋 Copy / Caption enviado</span>
       <button class="btn btn-outline btn-sm" onclick="copyCaption(${c.id})">Copiar</button>
@@ -796,7 +796,17 @@ function renderContenido(c, ct) {
     </div>`;
   }
   if (paso === 3) {
-    actionHTML = `<div class="action-box"><div class="action-title">⏳ Esperando aprobación del script</div><p style="font-size:12px;color:var(--text-muted)">El equipo de campaña está revisando tu script.</p></div>`;
+    const scriptFilesHTML = scripts.length ? `<div style="margin:8px 0;display:flex;flex-wrap:wrap;gap:4px">${scripts.map(sc =>
+      fileChip('script', c.id, sc.id, sc.url_archivo, `📝 Script v${sc.version||1}`, true)).join('')}</div>` : '';
+    actionHTML = `<div class="action-box">
+      <div class="action-title">⏳ Esperando aprobación del script</div>
+      <p style="font-size:12px;color:var(--text-muted)">Podés subir una versión nueva del script mientras esperás la revisión.</p>
+      ${scriptFilesHTML}
+      <div class="action-btns">
+        <label class="btn btn-primary btn-sm" style="cursor:pointer">
+          <input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" multiple onchange="uploadScript(this,${c.id})">⬆ Subir versión nueva</label>
+      </div>
+    </div>`;
   }
   if (paso === 4) {
     const hasDrafts = drafts.length > 0;
@@ -812,6 +822,10 @@ function renderContenido(c, ct) {
         <label class="btn btn-primary btn-sm" style="cursor:pointer">
           <input type="file" style="display:none" accept="video/*,image/*" multiple onchange="uploadDraft(this,${c.id})">⬆ Subir video/imagen</label>
       </div>
+      <div class="link-group" style="margin-top:8px">
+        <input type="text" class="link-input" id="extlink-${c.id}" placeholder="¿Archivo muy pesado? Pegá un link de Drive/WeTransfer">
+        <button class="btn btn-outline btn-sm" onclick="addExternalLink(${c.id})">Agregar link</button>
+      </div>
       <div style="margin-top:10px">
         <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">📋 Copy / Caption para la publicación</label>
         <textarea class="link-input" id="copy-${c.id}" placeholder="Escribí el copy/caption que se usará en la publicación..." style="min-height:60px;width:100%;resize:vertical;font-family:inherit;font-size:13px">${esc(c.copy_texto||'')}</textarea>
@@ -822,7 +836,28 @@ function renderContenido(c, ct) {
     </div>`;
   }
   if (paso === 5) {
-    actionHTML = `<div class="action-box"><div class="action-title">⏳ Esperando aprobación del contenido</div><p style="font-size:12px;color:var(--text-muted)">El equipo está revisando tu contenido.</p></div>`;
+    const draftFilesHTML = drafts.length ? `<div style="margin:8px 0;display:flex;flex-wrap:wrap;gap:4px">${drafts.map(dr =>
+      fileChip('draft', c.id, dr.id, dr.url_archivo, `🎬 ${(dr.nombre_archivo||'Borrador').substring(0,20)}`, true)).join('')}</div>` : '';
+    actionHTML = `<div class="action-box">
+      <div class="action-title">⏳ Esperando aprobación del contenido</div>
+      <p style="font-size:12px;color:var(--text-muted)">Mientras esperás la aprobación todavía podés cambiar el video o editar el copy.</p>
+      ${draftFilesHTML}
+      <div class="action-btns">
+        <label class="btn btn-primary btn-sm" style="cursor:pointer">
+          <input type="file" style="display:none" accept="video/*,image/*" multiple onchange="uploadDraft(this,${c.id})">⬆ Subir video/imagen</label>
+      </div>
+      <div class="link-group" style="margin-top:8px">
+        <input type="text" class="link-input" id="extlink-${c.id}" placeholder="¿Archivo muy pesado? Pegá un link de Drive/WeTransfer">
+        <button class="btn btn-outline btn-sm" onclick="addExternalLink(${c.id})">Agregar link</button>
+      </div>
+      <div style="margin-top:10px">
+        <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">📋 Copy / Caption para la publicación</label>
+        <textarea class="link-input" id="copy-${c.id}" placeholder="Escribí el copy/caption que se usará en la publicación..." style="min-height:60px;width:100%;resize:vertical;font-family:inherit;font-size:13px">${esc(c.copy_texto||'')}</textarea>
+      </div>
+      <div class="action-btns" style="margin-top:8px">
+        <button class="btn btn-outline btn-sm" onclick="saveCopyOnly(${c.id})">Guardar copy</button>
+      </div>
+    </div>`;
   }
   if (paso === 6) {
     actionHTML = `<div class="action-box">
@@ -938,42 +973,122 @@ const FC_TABLE  = { script:'contenido_scripts', draft:'contenido_borradores', st
 const FC_BUCKET = { script:'content-scripts',   draft:'content-drafts',       stat:'content-stats' };
 const FC_URLCOL = { script:'url_archivo',       draft:'url_archivo',          stat:'url_screenshot' };
 
+// ── Validación de tamaño + barra de progreso ───────────────────
+const MAX_UPLOAD_BYTES = 500 * 1024 * 1024;  // el bucket permite 512MB; margen para metadata
+const MAX_COMPRESS_IN  = 1024 * 1024 * 1024; // un video hasta 1GB puede entrar si la compresión lo achica
+function fmtBytes(n){ const u=['B','KB','MB','GB']; let i=0; n=+n||0; while(n>=1024&&i<u.length-1){n/=1024;i++;} return (i>=2?n.toFixed(1):Math.round(n))+' '+u[i]; }
+function checkSizes(files){
+  for (const f of files) {
+    const compressible = (f.type||'').startsWith('video/') && !!window.MediaCompress;
+    const cap = compressible ? MAX_COMPRESS_IN : MAX_UPLOAD_BYTES;
+    if (f.size > cap) {
+      toast(`${f.name} pesa ${fmtBytes(f.size)} y el máximo es ${fmtBytes(cap)}. Comprimilo o pegá un link de Drive/WeTransfer.`,'err',9000);
+      return false;
+    }
+  }
+  return true;
+}
+// Barra fija fuera de los contenedores re-renderizados (sobrevive a innerHTML)
+const uploadBar = (() => {
+  let el=null, txt=null, fill=null;
+  function ensure(){
+    if (el) return;
+    el = document.createElement('div');
+    el.id = 'upload-bar';
+    el.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;max-width:520px;margin:0 auto;z-index:9999;background:#1c1c24;color:#fff;border-radius:12px;padding:10px 14px;box-shadow:0 8px 30px rgba(0,0,0,.35);display:none;font-size:13px';
+    el.innerHTML = '<div data-r="txt" style="margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div><div style="height:6px;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden"><div data-r="fill" style="height:100%;width:0%;background:#b2005d;border-radius:3px;transition:width .2s"></div></div>';
+    document.body.appendChild(el);
+    txt = el.querySelector('[data-r="txt"]'); fill = el.querySelector('[data-r="fill"]');
+  }
+  return {
+    show(label){ ensure(); el.style.display='block'; txt.textContent=label||''; fill.style.width='0%'; },
+    set(pct,label){ ensure(); el.style.display='block'; if(label) txt.textContent=label; fill.style.width=Math.round(Math.max(0,Math.min(1,pct))*100)+'%'; },
+    hide(){ if(el) el.style.display='none'; }
+  };
+})();
+// PUT directo a la signed URL para tener progreso real
+function xhrPutSigned(signedUrl, file, onProgress){
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', signedUrl, true);
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    xhr.upload.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) return resolve();
+      const raw = (xhr.responseText || '').toLowerCase();
+      if (xhr.status === 413 || raw.includes('too large') || raw.includes('maximum allowed size'))
+        return reject(new Error(`El servidor rechazó el archivo por tamaño (máximo ${fmtBytes(MAX_UPLOAD_BYTES)}). Probá comprimirlo o pegá un link de Drive/WeTransfer.`));
+      reject(new Error('HTTP ' + xhr.status + (raw ? ' — ' + raw.slice(0,120) : '')));
+    };
+    xhr.onerror = () => reject(new Error('Se cortó la conexión durante la subida. Revisá tu internet y volvé a intentar.'));
+    xhr.send(file);
+  });
+}
+
 // Comprime si conviene y sube al bucket. Devuelve {url, file}.
-async function putFile(kind, contId, file) {
+async function putFile(kind, contId, file, labelPrefix) {
   const f = await squeeze(file);
+  if (f.size > MAX_UPLOAD_BYTES)
+    throw new Error(`${f.name} pesa ${fmtBytes(f.size)} incluso comprimido y el máximo es ${fmtBytes(MAX_UPLOAD_BYTES)}. Pegá un link de Drive/WeTransfer.`);
   const bucket = FC_BUCKET[kind];
   const path = `talent-${currentProfile.talent_id}/contenido-${contId}/${Date.now()}-${safeStorageName(f.name)}`;
-  const {error} = await sb.storage.from(bucket).upload(path, f);
-  if (error) throw error;
+  const label = (labelPrefix||'') + `Subiendo ${f.name}`;
+  uploadBar.show(label);
+  let signed = null;
+  try { const r = await sb.storage.from(bucket).createSignedUploadUrl(path); signed = r.data; } catch(_){}
+  if (signed && signed.signedUrl) {
+    await xhrPutSigned(signed.signedUrl, f, pct => uploadBar.set(pct, label + ' · ' + Math.round(pct*100) + '%'));
+  } else {
+    // Fallback sin progreso si la signed URL no está disponible (policies viejas)
+    const {error} = await sb.storage.from(bucket).upload(path, f);
+    if (error) throw error;
+  }
   const {data:{publicUrl}} = sb.storage.from(bucket).getPublicUrl(path);
   return { url: publicUrl || path, file: f };
 }
 
 async function uploadScript(input, contId) {
   const files = Array.from(input.files); input.value=''; if (!files.length) return;
-  toast('Subiendo script(s)...','inf');
+  if (!checkSizes(files)) return;
   try {
-    for (const file of files) {
-      const up = await putFile('script', contId, file);
+    for (let i=0;i<files.length;i++) {
+      const pfx = files.length>1 ? `Archivo ${i+1} de ${files.length} · ` : '';
+      const up = await putFile('script', contId, files[i], pfx);
       await sb.from('contenido_scripts').insert({contenido_id:contId, url_archivo:up.url, subido_por:currentUser.id});
     }
     notifyCambio(contId, 'Subió un script');
     await loadCampaigns(); renderAll();
     toast(files.length > 1 ? `${files.length} scripts subidos ✓` : 'Script subido ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
+  finally { uploadBar.hide(); }
 }
 
 async function uploadDraft(input, contId) {
   const files = Array.from(input.files); input.value=''; if (!files.length) return;
-  toast('Subiendo contenido...','inf');
+  if (!checkSizes(files)) return;
   try {
-    for (const file of files) {
-      const up = await putFile('draft', contId, file);
+    for (let i=0;i<files.length;i++) {
+      const pfx = files.length>1 ? `Archivo ${i+1} de ${files.length} · ` : '';
+      const up = await putFile('draft', contId, files[i], pfx);
       await sb.from('contenido_borradores').insert({contenido_id:contId, url_archivo:up.url, nombre_archivo:up.file.name, size_bytes:up.file.size, subido_por:currentUser.id});
     }
     notifyCambio(contId, 'Subió contenido');
     await loadCampaigns(); renderAll();
     toast(files.length > 1 ? `${files.length} archivos subidos ✓` : 'Contenido subido ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+  finally { uploadBar.hide(); }
+}
+
+// Link externo (Drive / WeTransfer) como borrador sin subir archivo
+async function addExternalLink(contId) {
+  const inp = document.getElementById('extlink-'+contId);
+  const url = (inp?.value || '').trim();
+  if (!/^https?:\/\/.+/.test(url)) { toast('Pegá un link válido (que empiece con http)','err'); return; }
+  try {
+    await sb.from('contenido_borradores').insert({contenido_id:contId, url_archivo:url, nombre_archivo:'Link externo', subido_por:currentUser.id});
+    notifyCambio(contId, 'Agregó un link externo de contenido');
+    await loadCampaigns(); renderAll();
+    toast('Link agregado ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
 }
 
@@ -1000,7 +1115,7 @@ function contenidoById(contId) {
 async function replaceFile(kind, input, contId, fileId) {
   const file = input.files[0]; input.value=''; if (!file) return;
   if (!fcGuard(contId, kind)) return;
-  toast(`Reemplazando ${FC_NOUN[kind]}...`,'inf');
+  if (!checkSizes([file])) return;
   try {
     const prev = await sb.from(FC_TABLE[kind]).select(FC_URLCOL[kind]).eq('id',fileId).maybeSingle();
     const up = await putFile(kind, contId, file);
@@ -1016,6 +1131,7 @@ async function replaceFile(kind, input, contId, fileId) {
     await loadCampaigns(); renderAll();
     toast('Archivo reemplazado ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
+  finally { uploadBar.hide(); }
 }
 
 async function deleteFile(kind, contId, fileId) {
@@ -1027,9 +1143,35 @@ async function deleteFile(kind, contId, fileId) {
     if (error) throw error;
     removeStorageByUrl(FC_BUCKET[kind], prev.data && prev.data[FC_URLCOL[kind]]);
     notifyCambio(contId, `Eliminó un ${FC_NOUN[kind]}`);
+    const stepped = await maybeStepBack(kind, contId);
     await loadCampaigns(); renderAll();
-    toast('Archivo eliminado ✓','ok');
+    toast(stepped ? 'Sin archivos: el contenido volvió al paso de producción' : 'Archivo eliminado ✓','ok');
   } catch(e) { toast('Error: '+e.message,'err'); }
+}
+
+// Si se borró el último archivo del paso en revisión, retrocede al paso de trabajo
+// (mismo comportamiento que deleteDraft() del panel interno en campana-detalle.html)
+async function maybeStepBack(kind, contId) {
+  try {
+    const c = contenidoById(contId); if (!c) return false;
+    const paso = c.paso_actual || 0;
+    const back = kind === 'draft'  ? {from:5, to:4, accion:'Contenido eliminado, vuelve a Producción'}
+               : kind === 'script' ? {from:3, to:2, accion:'Script eliminado, vuelve a Script'}
+               : null;
+    if (!back || paso !== back.from) return false;
+    const {count, error} = await sb.from(FC_TABLE[kind]).select('id',{count:'exact',head:true}).eq('contenido_id',contId);
+    if (error || (count||0) > 0) return false;
+    const {error: upErr} = await sb.from('contenidos').update({paso_actual: back.to}).eq('id', contId);
+    if (upErr) { console.warn('step back:', upErr.message); return false; }
+    try {
+      await sb.from('contenido_historial').insert({
+        contenido_id: contId, paso_anterior: back.from, paso_nuevo: back.to,
+        accion: back.accion,
+        autor_nombre: currentProfile?.nombre || currentUser?.email || 'Talento',
+      });
+    } catch(_) { /* best-effort: el retroceso ya se aplicó */ }
+    return true;
+  } catch(e) { console.warn('step back:', e.message); return false; }
 }
 
 // Borrado del objeto en storage: best-effort, el registro ya se eliminó
@@ -1050,7 +1192,7 @@ async function squeeze(file) {
   const r = await MediaCompress.prepare(file, {
     onProgress: (pct, label) => {
       if (!label) return;
-      toast((isVideo ? 'Comprimiendo video...' : 'Optimizando imagen...') + ' ' + Math.round(pct*100) + '%','inf',1200);
+      uploadBar.set(pct, (isVideo ? 'Comprimiendo video...' : 'Optimizando imagen...') + ' ' + Math.round(pct*100) + '%');
     }
   });
   if (r.changed) toast('Comprimido: ' + MediaCompress.savingsLabel(r),'ok');
@@ -1066,6 +1208,18 @@ function copyCaption(contId) {
     const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta);
     ta.select(); document.execCommand('copy'); ta.remove(); toast('Copy copiado ✓','ok');
   });
+}
+// Guarda el copy sin avanzar de paso (edición durante la revisión del cliente)
+async function saveCopyOnly(contId) {
+  const copyEl = document.getElementById('copy-' + contId);
+  const copyText = copyEl ? copyEl.value.trim() : '';
+  try {
+    const {error} = await sb.from('contenidos').update({copy_texto: copyText}).eq('id', contId);
+    if (error) throw error;
+    notifyCambio(contId, 'Editó el copy/caption');
+    await loadCampaigns(); renderAll();
+    toast('Copy guardado ✓','ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
 }
 async function saveCopyAndAdvance(contId) {
   const copyEl = document.getElementById('copy-' + contId);

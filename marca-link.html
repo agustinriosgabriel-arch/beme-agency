@@ -190,12 +190,17 @@ async function refresh() { await load(); renderAll(); }
 function renderAll() {
   const estadoLabels = {sin_iniciar:'Sin iniciar',en_curso:'En curso',etapa_finanzas:'Finanzas',finalizada:'Finalizada',cancelada:'Cancelada'};
   const cli = campana.marcas?.clientes?.nombre||'';
+  const pendientes = (campana.campana_talentos||[]).flatMap(ct=>ct.contenidos||[]).filter(c=>c.paso_actual===3||c.paso_actual===5).length;
+  const pendBadge = pendientes
+    ? `<button onclick="openPendientes()" style="border:none;cursor:pointer;background:#fef3c7;color:#92400e;font-weight:700;font-size:13px;padding:8px 14px;border-radius:99px;font-family:inherit">⏳ ${pendientes} contenido${pendientes!==1?'s':''} espera${pendientes!==1?'n':''} tu revisión</button>`
+    : '';
   document.getElementById('hero').innerHTML = `<div class="camp-hero">
     <div class="logo-box">${(campana.marcas?.nombre||'?').substring(0,2).toUpperCase()}</div>
     <div style="flex:1;min-width:0">
       <h1>${esc(campana.nombre)}</h1>
       <div class="sub">${esc(cli)} ${campana.marcas?.nombre?'· '+esc(campana.marcas.nombre):''}</div>
     </div>
+    ${pendBadge}
     <span class="estado-badge estado-${campana.estado}">${estadoLabels[campana.estado]||campana.estado}</span>
   </div>`;
 
@@ -232,6 +237,25 @@ function renderAll() {
   const openIds = []; cont.querySelectorAll('.open').forEach(el=>{ if(el.id) openIds.push(el.id); });
   cont.innerHTML = cts.map(ct=>renderTalento(ct)).join('');
   openIds.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('open'); });
+  // Primera carga: auto-abrir lo que espera revisión. En re-renders manda openIds
+  // (se respeta lo que el usuario cerró — regla de preservación de acordeones).
+  if (firstRender) { firstRender = false; expandPendientes(); }
+}
+
+let firstRender = true;
+function expandPendientes() {
+  let n = 0;
+  (campana.campana_talentos||[]).forEach(ct=>{
+    const pend = (ct.contenidos||[]).filter(c=>c.paso_actual===3||c.paso_actual===5);
+    if (!pend.length) return;
+    document.getElementById('tc-'+ct.id)?.classList.add('open');
+    pend.forEach(c=>{ document.getElementById('cont-'+c.id)?.classList.add('open'); n++; });
+  });
+  return n;
+}
+function openPendientes() {
+  expandPendientes();
+  setTimeout(()=>{ document.querySelector('.review-box')?.scrollIntoView({behavior:'smooth',block:'center'}); }, 100);
 }
 
 function renderTalento(ct) {
@@ -239,13 +263,16 @@ function renderTalento(ct) {
   const ini = (t.nombre||'?').split(' ').map(n=>n[0]||'').join('').substring(0,2).toUpperCase();
   const conts = ct.contenidos||[];
   const done = conts.filter(c=>c.paso_actual>=8).length;
+  const porRevisar = conts.filter(c=>c.paso_actual===3||c.paso_actual===5).length;
   const mon = ct.moneda||'USD';
   return `<div class="tal-card" id="tc-${ct.id}">
     <div class="tal-head" onclick="toggle('tc-${ct.id}')">
       <div class="t-avatar">${t.foto?`<img src="${esc(t.foto)}" loading="lazy">`:ini}</div>
       <div style="flex:1;min-width:0">
         <div class="t-name">${esc(t.nombre||'—')}</div>
-        <div class="t-meta">${conts.length} contenido${conts.length!==1?'s':''} · ${done} completado${done!==1?'s':''}</div>
+        <div class="t-meta">${conts.length} contenido${conts.length!==1?'s':''} · ${done} completado${done!==1?'s':''}
+          ${porRevisar?`<span style="display:inline-block;margin-left:6px;background:#fef3c7;color:#92400e;font-weight:700;font-size:11px;padding:2px 8px;border-radius:99px">● ${porRevisar} por revisar</span>`:''}
+        </div>
       </div>
       <div class="fee-chip"><div class="lbl">A pagar</div><div class="val">${fmtMoney(ct.fee_marca||0,mon)}</div></div>
       <svg class="cam-expand" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
@@ -271,24 +298,28 @@ function renderContenido(c) {
   if (c.url_publicacion) files += `<a href="${esc(c.url_publicacion)}" target="_blank" class="file-btn" style="color:var(--green)">🔗 Publicación</a>`;
   const filesHTML = files ? `<div class="files-row">${files}</div>` : '<div class="info-box">Todavía no hay archivos para revisar en este contenido.</div>';
 
-  // Copy / caption propuesto por el talento (visible siempre que exista)
-  const copyHTML = c.copy_texto ? `<div class="copy-box">
+  // Copy / caption propuesto por el talento. En paso 5 se muestra DENTRO de la
+  // caja de aprobación (aprobar el contenido incluye el copy); en el resto, aparte.
+  const copyBox = (extra) => c.copy_texto ? `<div class="copy-box">
     <div class="copy-head">
-      <span>📋 Copy / Caption propuesto</span>
+      <span>📋 Copy / Caption propuesto${extra||''}</span>
       <button class="btn btn-outline btn-sm" onclick="copyCaption(${c.id})">Copiar</button>
     </div>
     <div class="copy-text" id="copytxt-${c.id}">${esc(c.copy_texto)}</div>
   </div>` : '';
+  const copyHTML = paso===5 ? '' : copyBox();
 
   // Acción de revisión
   let actionHTML = '';
   if (inReview) {
-    const what = paso===3 ? 'el script' : 'el contenido';
+    const what = paso===3 ? 'del script' : 'del contenido (video + copy)';
+    const approveLbl = paso===3 ? '✓ Aprobar script' : '✓ Aprobar contenido y copy';
     actionHTML = `<div class="review-box">
-      <div class="review-title">⏳ Esperando tu revisión de ${what}</div>
+      <div class="review-title">⏳ Esperando tu revisión ${what}</div>
+      ${paso===5 ? copyBox(' — al aprobar, también apruebas este copy') : ''}
       <textarea class="cbox" id="rev-${c.id}" placeholder="Comentario (opcional para aprobar, obligatorio para pedir cambios)..."></textarea>
       <div class="action-btns">
-        <button class="btn btn-green btn-sm" onclick="approve(${c.id})">✓ Aprobar</button>
+        <button class="btn btn-green btn-sm" onclick="approve(${c.id})">${approveLbl}</button>
         <button class="btn btn-red btn-sm" onclick="reject(${c.id})">↩ Pedir cambios</button>
       </div>
     </div>`;

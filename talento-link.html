@@ -6,7 +6,7 @@
 <title>Beme — Tu espacio de campañas</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.0/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="media-compress.js"></script>
+<script src="media-compress.js?v=2"></script>
 <link rel="icon" href="favicon.ico" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
@@ -486,6 +486,7 @@ const DICT = {
   c_mexico:{es:'México',en:'Mexico',it:'Messico',de:'Mexiko',nl:'Mexico'},
   c_colombia:{es:'Colombia',en:'Colombia',it:'Colombia',de:'Kolumbien',nl:'Colombia'},
   c_argentina:{es:'Argentina',en:'Argentina',it:'Argentina',de:'Argentinien',nl:'Argentinië'},
+  c_brasil:{es:'Brasil',en:'Brazil',it:'Brasile',de:'Brasilien',nl:'Brazilië'},
   c_usa:{es:'Estados Unidos',en:'United States',it:'Stati Uniti',de:'USA',nl:'Verenigde Staten'},
   c_espana:{es:'España',en:'Spain',it:'Spagna',de:'Spanien',nl:'Spanje'},
   c_italia:{es:'Italia',en:'Italy',it:'Italia',de:'Italien',nl:'Italië'},
@@ -504,6 +505,20 @@ const DICT = {
   opt_checking:{es:'Corriente',en:'Checking',it:'Corrente',de:'Girokonto',nl:'Betaalrekening'},
   opt_savings:{es:'Ahorros',en:'Savings',it:'Risparmio',de:'Sparkonto',nl:'Spaarrekening'},
   f_documento:{es:'Documento (Cédula/NIT)',en:'ID (Cédula/NIT)',it:'Documento (Cédula/NIT)',de:'Ausweis (Cédula/NIT)',nl:'Document (Cédula/NIT)'},
+  f_cpf_cnpj:{es:'CPF (11 díg.) o CNPJ (14 díg.)',en:'CPF (11 digits) or CNPJ (14 digits)',it:'CPF (11 cifre) o CNPJ (14 cifre)',de:'CPF (11 Ziffern) oder CNPJ (14 Ziffern)',nl:'CPF (11 cijfers) of CNPJ (14 cijfers)'},
+  f_codigo_banco:{es:'Código de banco (3 díg.)',en:'Bank code (3 digits)',it:'Codice banca (3 cifre)',de:'Bankcode (3 Ziffern)',nl:'Bankcode (3 cijfers)'},
+  f_agencia:{es:'Agencia (4-5 díg.)',en:'Branch / Agência (4-5 digits)',it:'Agenzia (4-5 cifre)',de:'Filiale / Agência (4-5 Ziffern)',nl:'Filiaal / Agência (4-5 cijfers)'},
+  f_conta:{es:'Número de cuenta',en:'Account number',it:'Numero di conto',de:'Kontonummer',nl:'Rekeningnummer'},
+  opt_corrente:{es:'Corriente (corrente)',en:'Checking (corrente)',it:'Corrente',de:'Girokonto (corrente)',nl:'Betaalrekening (corrente)'},
+  opt_poupanca:{es:'Ahorros (poupança)',en:'Savings (poupança)',it:'Risparmio (poupança)',de:'Sparkonto (poupança)',nl:'Spaarrekening (poupança)'},
+  f_chave_pix:{es:'Clave Pix (opcional)',en:'Pix key (optional)',it:'Chiave Pix (opzionale)',de:'Pix-Schlüssel (optional)',nl:'Pix-sleutel (optioneel)'},
+  f_tipo_chave:{es:'Tipo de clave Pix (opcional)',en:'Pix key type (optional)',it:'Tipo di chiave Pix (opzionale)',de:'Pix-Schlüsseltyp (optional)',nl:'Type Pix-sleutel (optioneel)'},
+  opt_pix_doc:{es:'CPF / CNPJ',en:'CPF / CNPJ',it:'CPF / CNPJ',de:'CPF / CNPJ',nl:'CPF / CNPJ'},
+  opt_pix_email:{es:'Email',en:'Email',it:'Email',de:'E-Mail',nl:'E-mail'},
+  opt_pix_tel:{es:'Teléfono',en:'Phone',it:'Telefono',de:'Telefon',nl:'Telefoon'},
+  opt_pix_rand:{es:'Clave aleatoria',en:'Random key',it:'Chiave casuale',de:'Zufallsschlüssel',nl:'Willekeurige sleutel'},
+  f_bairro:{es:'Barrio (bairro)',en:'Neighborhood (bairro)',it:'Quartiere (bairro)',de:'Stadtteil (bairro)',nl:'Wijk (bairro)'},
+  f_cep:{es:'CEP (código postal)',en:'CEP (postal code)',it:'CEP (codice postale)',de:'CEP (PLZ)',nl:'CEP (postcode)'},
   f_calle:{es:'Calle',en:'Street',it:'Via',de:'Straße',nl:'Straat'},
   f_numext:{es:'Núm. exterior',en:'Ext. number',it:'Numero civico',de:'Hausnummer',nl:'Huisnummer'},
   f_numint:{es:'Núm. interior',en:'Int. number',it:'Interno',de:'Wohnung',nl:'Toevoeging'},
@@ -555,6 +570,25 @@ const DICT = {
   contentsUploaded:{es:'{n} archivos subidos ✓',en:'{n} files uploaded ✓',it:'{n} file caricati ✓',de:'{n} Dateien hochgeladen ✓',nl:'{n} bestanden geüpload ✓'},
   uploadingStats:{es:'Subiendo estadísticas...',en:'Uploading statistics...',it:'Caricamento statistiche...',de:'Statistiken werden hochgeladen...',nl:'Statistieken uploaden...'},
   statsUploaded:{es:'Estadísticas subidas ✓',en:'Statistics uploaded ✓',it:'Statistiche caricate ✓',de:'Statistiken hochgeladen ✓',nl:'Statistieken geüpload ✓'},
+  // subida con validación / progreso
+  errFileTooBig:{es:'{name} pesa {size} y el máximo es {max}. Comprimilo o pegá un link de Drive/WeTransfer más abajo.',en:'{name} is {size} and the limit is {max}. Compress it or paste a Drive/WeTransfer link below.',it:'{name} pesa {size} e il limite è {max}. Comprimilo o incolla un link Drive/WeTransfer qui sotto.',de:'{name} ist {size} groß, das Limit ist {max}. Komprimiere die Datei oder füge unten einen Drive/WeTransfer-Link ein.',nl:'{name} is {size} en het maximum is {max}. Comprimeer het bestand of plak hieronder een Drive/WeTransfer-link.'},
+  upUploading:{es:'Subiendo {name}',en:'Uploading {name}',it:'Caricamento di {name}',de:'{name} wird hochgeladen',nl:'{name} uploaden'},
+  upFileOfN:{es:'Archivo {i} de {n}',en:'File {i} of {n}',it:'File {i} di {n}',de:'Datei {i} von {n}',nl:'Bestand {i} van {n}'},
+  errUploadServerLimit:{es:'El servidor rechazó el archivo por tamaño (máximo {max}). Probá comprimirlo o pegá un link de Drive/WeTransfer.',en:'The server rejected the file for its size (max {max}). Try compressing it or paste a Drive/WeTransfer link.',it:'Il server ha rifiutato il file per dimensione (max {max}). Comprimilo o incolla un link Drive/WeTransfer.',de:'Der Server hat die Datei wegen ihrer Größe abgelehnt (max. {max}). Komprimiere sie oder füge einen Drive/WeTransfer-Link ein.',nl:'De server weigerde het bestand vanwege de grootte (max {max}). Comprimeer het of plak een Drive/WeTransfer-link.'},
+  errUploadNetwork:{es:'Se cortó la conexión durante la subida. Revisá tu internet y volvé a intentar.',en:'The connection dropped during the upload. Check your internet and try again.',it:'La connessione si è interrotta durante il caricamento. Controlla internet e riprova.',de:'Die Verbindung ist während des Uploads abgebrochen. Prüfe dein Internet und versuche es erneut.',nl:'De verbinding viel weg tijdens het uploaden. Controleer je internet en probeer opnieuw.'},
+  // link externo (Drive / WeTransfer)
+  extLinkTitle:{es:'¿Archivo muy pesado? Pegá un link',en:'File too heavy? Paste a link',it:'File troppo pesante? Incolla un link',de:'Datei zu groß? Link einfügen',nl:'Bestand te groot? Plak een link'},
+  extLinkPh:{es:'https://drive.google.com/... o WeTransfer',en:'https://drive.google.com/... or WeTransfer',it:'https://drive.google.com/... o WeTransfer',de:'https://drive.google.com/... oder WeTransfer',nl:'https://drive.google.com/... of WeTransfer'},
+  extLinkAdd:{es:'Agregar link',en:'Add link',it:'Aggiungi link',de:'Link hinzufügen',nl:'Link toevoegen'},
+  extLinkSaved:{es:'Link agregado ✓',en:'Link added ✓',it:'Link aggiunto ✓',de:'Link hinzugefügt ✓',nl:'Link toegevoegd ✓'},
+  extLinkInvalid:{es:'Pegá un link válido (que empiece con http)',en:'Paste a valid link (starting with http)',it:'Incolla un link valido (che inizi con http)',de:'Füge einen gültigen Link ein (beginnt mit http)',nl:'Plak een geldige link (beginnend met http)'},
+  extLinkChip:{es:'Link externo',en:'External link',it:'Link esterno',de:'Externer Link',nl:'Externe link'},
+  // edición en revisión (paso 3 / 5)
+  p5EditNote:{es:'Mientras esperás la aprobación todavía podés cambiar el video o editar el copy.',en:'While you wait for approval you can still change the video or edit the copy.',it:'Mentre aspetti l’approvazione puoi ancora cambiare il video o modificare il copy.',de:'Während du auf die Freigabe wartest, kannst du das Video noch ändern oder den Copy-Text bearbeiten.',nl:'Terwijl je op goedkeuring wacht kun je de video nog wijzigen of de copy bewerken.'},
+  p3EditNote:{es:'Podés subir una versión nueva del script mientras esperás la revisión.',en:'You can upload a new version of the script while you wait for the review.',it:'Puoi caricare una nuova versione dello script mentre aspetti la revisione.',de:'Du kannst eine neue Version des Skripts hochladen, während du auf die Prüfung wartest.',nl:'Je kunt een nieuwe versie van het script uploaden terwijl je op de beoordeling wacht.'},
+  saveCopyBtn:{es:'Guardar copy',en:'Save copy',it:'Salva copy',de:'Copy speichern',nl:'Copy opslaan'},
+  copySaved:{es:'Copy guardado ✓',en:'Copy saved ✓',it:'Copy salvato ✓',de:'Copy gespeichert ✓',nl:'Copy opgeslagen ✓'},
+  backToProduction:{es:'Sin archivos: el contenido volvió al paso de producción',en:'No files left: the content went back to the production step',it:'Nessun file: il contenuto è tornato al passo di produzione',de:'Keine Dateien mehr: der Inhalt ist zurück im Produktionsschritt',nl:'Geen bestanden meer: de content ging terug naar de productiestap'},
   sparkSaved:{es:'Spark Code guardado ✓',en:'Spark Code saved ✓',it:'Spark Code salvato ✓',de:'Spark Code gespeichert ✓',nl:'Spark Code opgeslagen ✓'},
   // PDF
   pdfInvoice:{es:'FACTURA',en:'INVOICE',it:'FATTURA',de:'RECHNUNG',nl:'FACTUUR'},
@@ -580,13 +614,14 @@ const COUNTRY_PAY = {
   mexico:    {flag:'🇲🇽', cur:'MXN', bank:[{k:'clabe',lk:'f_clabe'}], addr:[{k:'calle',lk:'f_calle'},{k:'num_ext',lk:'f_numext'},{k:'num_int',lk:'f_numint'},{k:'estado',lk:'f_estado'},{k:'ciudad',lk:'f_ciudad'},{k:'cp',lk:'f_cp'}]},
   colombia:  {flag:'🇨🇴', cur:'COP', bank:[{k:'tipo_cuenta',lk:'f_accounttype',type:'select',opts:{savings:'opt_savings',checking:'opt_checking'}},{k:'numero_cuenta',lk:'f_accountno'},{k:'documento',lk:'f_documento'}], addr:[{k:'direccion',lk:'f_direccion'},{k:'ciudad',lk:'f_ciudad'},{k:'departamento',lk:'f_departamento'}]},
   argentina: {flag:'🇦🇷', cur:'ARS', bank:[{k:'cbu',lk:'f_cbu'},{k:'alias',lk:'f_aliasbank'},{k:'cuit',lk:'f_cuit'}], addr:[{k:'calle_num',lk:'f_callenum'},{k:'localidad',lk:'f_localidad'},{k:'provincia',lk:'f_provincia'},{k:'cp',lk:'f_cp'}]},
+  brasil:    {flag:'🇧🇷', cur:'BRL', bank:[{k:'cpf_cnpj',lk:'f_cpf_cnpj'},{k:'codigo_banco',lk:'f_codigo_banco'},{k:'agencia',lk:'f_agencia'},{k:'conta',lk:'f_conta'},{k:'tipo_conta',lk:'f_accounttype',type:'select',opts:{corrente:'opt_corrente',poupanca:'opt_poupanca'}},{k:'chave_pix',lk:'f_chave_pix'},{k:'tipo_chave',lk:'f_tipo_chave',type:'select',opts:{cpf_cnpj:'opt_pix_doc',email:'opt_pix_email',telefone:'opt_pix_tel',aleatoria:'opt_pix_rand'}}], addr:[{k:'calle_num',lk:'f_callenum'},{k:'bairro',lk:'f_bairro'},{k:'ciudad',lk:'f_ciudad'},{k:'estado',lk:'f_estado'},{k:'cp',lk:'f_cep'}]},
   usa:       {flag:'🇺🇸', cur:'USD', bank:[{k:'routing',lk:'f_routing'},{k:'account',lk:'f_accountno'},{k:'account_type',lk:'f_accounttype',type:'select',opts:{checking:'opt_checking',savings:'opt_savings'}}], addr:[{k:'street',lk:'f_calle'},{k:'city',lk:'f_ciudad'},{k:'state',lk:'f_estado'},{k:'zip',lk:'f_cp'}]},
   espana:    {flag:'🇪🇸', cur:'EUR', bank:[{k:'iban',lk:'f_iban'},{k:'bic',lk:'f_bic'}], addr:[{k:'calle_num',lk:'f_callenum'},{k:'ciudad',lk:'f_ciudad'},{k:'provincia',lk:'f_region'},{k:'cp',lk:'f_cp'}]},
   italia:    {flag:'🇮🇹', cur:'EUR', bank:[{k:'iban',lk:'f_iban'},{k:'bic',lk:'f_bic'}], addr:[{k:'calle_num',lk:'f_callenum'},{k:'ciudad',lk:'f_ciudad'},{k:'provincia',lk:'f_region'},{k:'cp',lk:'f_cp'}]},
   holanda:   {flag:'🇳🇱', cur:'EUR', bank:[{k:'iban',lk:'f_iban'},{k:'bic',lk:'f_bic'}], addr:[{k:'calle_num',lk:'f_callenum'},{k:'ciudad',lk:'f_ciudad'},{k:'provincia',lk:'f_region'},{k:'cp',lk:'f_cp'}]},
   alemania:  {flag:'🇩🇪', cur:'EUR', bank:[{k:'iban',lk:'f_iban'},{k:'bic',lk:'f_bic'}], addr:[{k:'calle_num',lk:'f_callenum'},{k:'ciudad',lk:'f_ciudad'},{k:'provincia',lk:'f_region'},{k:'cp',lk:'f_cp'}]},
 };
-const COUNTRY_ORDER = ['mexico','colombia','argentina','usa','espana','italia','holanda','alemania'];
+const COUNTRY_ORDER = ['mexico','colombia','argentina','brasil','usa','espana','italia','holanda','alemania'];
 function countryName(c){ return t('c_'+c); }
 function countryFlag(c){ return (COUNTRY_PAY[c]||{}).flag || '🏳️'; }
 
@@ -766,7 +801,7 @@ function renderContenido(c, ct) {
   }).join('');
 
   // Copy / caption ya enviado: visible desde revisión en adelante (clave al publicar)
-  const copySentHTML = (paso >= 5 && c.copy_texto) ? `<div class="action-box">
+  const copySentHTML = (paso > 5 && c.copy_texto) ? `<div class="action-box">
     <div class="action-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <span>${esc(t('aCopySentLabel'))}</span>
       <button class="btn btn-outline btn-sm" onclick="copyCaption(${c.id})">${esc(t('aCopyBtn'))}</button>
@@ -785,13 +820,28 @@ function renderContenido(c, ct) {
       </div>
     </div>`;
   }
-  if (paso === 3) actionHTML = `<div class="action-box"><div class="action-title">${esc(t('aWaitScriptTitle'))}</div><p style="font-size:12px;color:var(--text-muted)">${esc(t('aWaitScriptMsg'))}</p></div>`;
+  if (paso === 3) {
+    const scriptFilesHTML = scripts.length ? `<div style="margin:8px 0;display:flex;flex-wrap:wrap;gap:4px">${scripts.map(sc =>
+      fileChip('script', c.id, sc.id, sc.url_archivo, `📝 ${t('stepScript')} v${sc.version||1}`, true)).join('')}</div>` : '';
+    actionHTML = `<div class="action-box">
+      <div class="action-title">${esc(t('aWaitScriptTitle'))}</div>
+      <p style="font-size:12px;color:var(--text-muted)">${esc(t('p3EditNote'))}</p>
+      ${scriptFilesHTML}
+      <div class="action-btns">
+        <label class="btn btn-primary btn-sm" style="cursor:pointer"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" multiple onchange="uploadScript(this,${c.id})">${esc(t('aUploadScriptBtn'))}</label>
+      </div>
+    </div>`;
+  }
   if (paso === 4) {
     const hasDrafts = drafts.length > 0;
     actionHTML = `<div class="action-box">
       <div class="action-title">${esc(t('aContentTitle'))}</div>
       <div class="action-btns">
         <label class="btn btn-primary btn-sm" style="cursor:pointer"><input type="file" style="display:none" accept="video/*,image/*" multiple onchange="uploadDraft(this,${c.id})">${esc(t('aUploadContentBtn'))}</label>
+      </div>
+      <div class="link-group" style="margin-top:8px">
+        <input type="text" class="link-input" id="extlink-${c.id}" placeholder="${esc(t('extLinkPh'))}" title="${esc(t('extLinkTitle'))}">
+        <button class="btn btn-outline btn-sm" onclick="addExternalLink(${c.id})">${esc(t('extLinkAdd'))}</button>
       </div>
       <div style="margin-top:10px">
         <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">${esc(t('aCopyLabel'))}</label>
@@ -802,7 +852,29 @@ function renderContenido(c, ct) {
       </div>
     </div>`;
   }
-  if (paso === 5) actionHTML = `<div class="action-box"><div class="action-title">${esc(t('aWaitContentTitle'))}</div><p style="font-size:12px;color:var(--text-muted)">${esc(t('aWaitContentMsg'))}</p></div>`;
+  if (paso === 5) {
+    const draftFilesHTML = drafts.length ? `<div style="margin:8px 0;display:flex;flex-wrap:wrap;gap:4px">${drafts.map(dr =>
+      fileChip('draft', c.id, dr.id, dr.url_archivo, `🎬 ${(dr.nombre_archivo||t('draftWord')).substring(0,20)}`, true)).join('')}</div>` : '';
+    actionHTML = `<div class="action-box">
+      <div class="action-title">${esc(t('aWaitContentTitle'))}</div>
+      <p style="font-size:12px;color:var(--text-muted)">${esc(t('p5EditNote'))}</p>
+      ${draftFilesHTML}
+      <div class="action-btns">
+        <label class="btn btn-primary btn-sm" style="cursor:pointer"><input type="file" style="display:none" accept="video/*,image/*" multiple onchange="uploadDraft(this,${c.id})">${esc(t('aUploadContentBtn'))}</label>
+      </div>
+      <div class="link-group" style="margin-top:8px">
+        <input type="text" class="link-input" id="extlink-${c.id}" placeholder="${esc(t('extLinkPh'))}" title="${esc(t('extLinkTitle'))}">
+        <button class="btn btn-outline btn-sm" onclick="addExternalLink(${c.id})">${esc(t('extLinkAdd'))}</button>
+      </div>
+      <div style="margin-top:10px">
+        <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">${esc(t('aCopyLabel'))}</label>
+        <textarea class="link-input" id="copy-${c.id}" placeholder="${esc(t('aCopyPh'))}" style="min-height:60px;width:100%;resize:vertical">${esc(c.copy_texto||'')}</textarea>
+      </div>
+      <div class="action-btns" style="margin-top:8px">
+        <button class="btn btn-outline btn-sm" onclick="saveCopyOnly(${c.id})">${esc(t('saveCopyBtn'))}</button>
+      </div>
+    </div>`;
+  }
   if (paso === 6) {
     actionHTML = `<div class="action-box">
       <div class="action-title">${esc(t('aPublishTitle'))}</div>
@@ -891,6 +963,12 @@ async function saveCopyAndAdvance(contId) {
   try { if (copyText) await API('save-copy', { contenido_id: contId, copy_texto: copyText }); await advance(contId); }
   catch(e){ toast(t('errPrefix')+e.message,'err'); }
 }
+// Guarda el copy sin avanzar de paso (edición durante la revisión del cliente)
+async function saveCopyOnly(contId) {
+  const copyText = document.getElementById('copy-'+contId)?.value.trim() || '';
+  try { await API('save-copy', { contenido_id: contId, copy_texto: copyText }); await refresh(); toast(t('copySaved'),'ok'); }
+  catch(e){ toast(t('errPrefix')+e.message,'err'); }
+}
 function copyCaption(contId) {
   const el = document.getElementById('copytxt-' + contId);
   if (!el) return;
@@ -905,33 +983,103 @@ async function saveSpark(contId, texto) {
   catch(e){ toast(t('errPrefix')+e.message,'err'); }
 }
 
+// ── Subida: validación de tamaño + barra de progreso ───────────
+const MAX_UPLOAD_BYTES = 500 * 1024 * 1024;  // el bucket permite 512MB; margen para metadata
+const MAX_COMPRESS_IN  = 1024 * 1024 * 1024; // un video hasta 1GB puede entrar si la compresión lo achica
+function fmtBytes(n){ const u=['B','KB','MB','GB']; let i=0; n=+n||0; while(n>=1024&&i<u.length-1){n/=1024;i++;} return (i>=2?n.toFixed(1):Math.round(n))+' '+u[i]; }
+function checkSizes(files){
+  for (const f of files) {
+    const compressible = (f.type||'').startsWith('video/') && !!window.MediaCompress;
+    const cap = compressible ? MAX_COMPRESS_IN : MAX_UPLOAD_BYTES;
+    if (f.size > cap) {
+      toast(t('errFileTooBig',{name:f.name,size:fmtBytes(f.size),max:fmtBytes(cap)}),'err',9000);
+      return false;
+    }
+  }
+  return true;
+}
+// Barra fija fuera de los contenedores re-renderizados (sobrevive a innerHTML)
+const uploadBar = (() => {
+  let el=null, txt=null, fill=null;
+  function ensure(){
+    if (el) return;
+    el = document.createElement('div');
+    el.id = 'upload-bar';
+    el.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;max-width:520px;margin:0 auto;z-index:9999;background:#1c1c24;color:#fff;border-radius:12px;padding:10px 14px;box-shadow:0 8px 30px rgba(0,0,0,.35);display:none;font-size:13px';
+    el.innerHTML = '<div data-r="txt" style="margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div><div style="height:6px;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden"><div data-r="fill" style="height:100%;width:0%;background:#b2005d;border-radius:3px;transition:width .2s"></div></div>';
+    document.body.appendChild(el);
+    txt = el.querySelector('[data-r="txt"]'); fill = el.querySelector('[data-r="fill"]');
+  }
+  return {
+    show(label){ ensure(); el.style.display='block'; txt.textContent=label||''; fill.style.width='0%'; },
+    set(pct,label){ ensure(); el.style.display='block'; if(label) txt.textContent=label; fill.style.width=Math.round(Math.max(0,Math.min(1,pct))*100)+'%'; },
+    hide(){ if(el) el.style.display='none'; }
+  };
+})();
+// PUT directo a la signed URL para tener progreso real (uploadToSignedUrl no lo expone)
+function xhrPutSigned(signedUrl, file, onProgress){
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', signedUrl, true);
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    xhr.upload.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) return resolve();
+      const raw = (xhr.responseText || '').toLowerCase();
+      if (xhr.status === 413 || raw.includes('too large') || raw.includes('maximum allowed size'))
+        return reject(new Error(t('errUploadServerLimit',{max:fmtBytes(MAX_UPLOAD_BYTES)})));
+      reject(new Error('HTTP ' + xhr.status + (raw ? ' — ' + raw.slice(0,120) : '')));
+    };
+    xhr.onerror = () => reject(new Error(t('errUploadNetwork')));
+    xhr.send(file);
+  });
+}
 // Comprime (si conviene) y sube. Devuelve el File finalmente subido.
-async function uploadOne(bucket, contId, file) {
+async function uploadOne(bucket, contId, file, labelPrefix) {
   const prepped = await squeeze(file);
+  if (prepped.size > MAX_UPLOAD_BYTES)
+    throw new Error(t('errFileTooBig',{name:prepped.name,size:fmtBytes(prepped.size),max:fmtBytes(MAX_UPLOAD_BYTES)}));
   const su = await API('signed-upload', { bucket, contenido_id: contId, filename: prepped.name });
-  const { error } = await sbStore.storage.from(bucket).uploadToSignedUrl(su.path, su.token, prepped);
-  if (error) throw error;
+  const label = (labelPrefix||'') + t('upUploading',{name:prepped.name});
+  uploadBar.show(label);
+  await xhrPutSigned(su.signedUrl, prepped, pct => uploadBar.set(pct, label + ' · ' + Math.round(pct*100) + '%'));
   return { url: su.publicUrl || su.path, file: prepped };
 }
 async function uploadScript(input, contId) {
   const files = Array.from(input.files); input.value=''; if (!files.length) return;
-  toast(t('uploadingScript'),'inf');
-  try { for (const f of files){ const up = await uploadOne('content-scripts', contId, f); await API('record-script',{contenido_id:contId,url_archivo:up.url}); }
+  if (!checkSizes(files)) return;
+  try { for (let i=0;i<files.length;i++){ const pfx = files.length>1 ? t('upFileOfN',{i:i+1,n:files.length})+' · ' : '';
+      const up = await uploadOne('content-scripts', contId, files[i], pfx); await API('record-script',{contenido_id:contId,url_archivo:up.url}); }
     await refresh(); toast(files.length>1?t('scriptsUploaded',{n:files.length}):t('scriptUploaded'),'ok');
   } catch(e){ toast(t('errPrefix')+e.message,'err'); }
+  finally { uploadBar.hide(); }
 }
 async function uploadDraft(input, contId) {
   const files = Array.from(input.files); input.value=''; if (!files.length) return;
-  toast(t('uploadingContent'),'inf');
-  try { for (const f of files){ const up = await uploadOne('content-drafts', contId, f); await API('record-draft',{contenido_id:contId,url_archivo:up.url,nombre_archivo:up.file.name,size_bytes:up.file.size}); }
+  if (!checkSizes(files)) return;
+  try { for (let i=0;i<files.length;i++){ const pfx = files.length>1 ? t('upFileOfN',{i:i+1,n:files.length})+' · ' : '';
+      const up = await uploadOne('content-drafts', contId, files[i], pfx); await API('record-draft',{contenido_id:contId,url_archivo:up.url,nombre_archivo:up.file.name,size_bytes:up.file.size}); }
     await refresh(); toast(files.length>1?t('contentsUploaded',{n:files.length}):t('contentUploaded'),'ok');
   } catch(e){ toast(t('errPrefix')+e.message,'err'); }
+  finally { uploadBar.hide(); }
 }
 async function uploadStats(input, contId) {
   const files = Array.from(input.files); input.value=''; if (!files.length) return;
-  toast(t('uploadingStats'),'inf');
-  try { for (const f of files){ const up = await uploadOne('content-stats', contId, f); await API('record-stats',{contenido_id:contId,periodo:'7d',url_screenshot:up.url,nombre_archivo:up.file.name}); }
+  if (!checkSizes(files)) return;
+  try { for (let i=0;i<files.length;i++){ const pfx = files.length>1 ? t('upFileOfN',{i:i+1,n:files.length})+' · ' : '';
+      const up = await uploadOne('content-stats', contId, files[i], pfx); await API('record-stats',{contenido_id:contId,periodo:'7d',url_screenshot:up.url,nombre_archivo:up.file.name}); }
     await refresh(); toast(t('statsUploaded'),'ok');
+  } catch(e){ toast(t('errPrefix')+e.message,'err'); }
+  finally { uploadBar.hide(); }
+}
+// Link externo (Drive / WeTransfer) como borrador sin subir archivo
+async function addExternalLink(contId) {
+  const inp = document.getElementById('extlink-'+contId);
+  const url = (inp?.value || '').trim();
+  if (!/^https?:\/\/.+/.test(url)) { toast(t('extLinkInvalid'),'err'); return; }
+  try {
+    await API('record-draft',{contenido_id:contId,url_archivo:url,nombre_archivo:t('extLinkChip'),size_bytes:null});
+    await refresh(); toast(t('extLinkSaved'),'ok');
   } catch(e){ toast(t('errPrefix')+e.message,'err'); }
 }
 
@@ -939,7 +1087,7 @@ async function uploadStats(input, contId) {
 const FC_BUCKET = { script:'content-scripts', draft:'content-drafts', stat:'content-stats' };
 async function replaceFile(kind, input, contId, fileId) {
   const file = input.files[0]; input.value=''; if (!file) return;
-  toast(t('fcReplacing'),'inf');
+  if (!checkSizes([file])) return;
   try {
     const up = await uploadOne(FC_BUCKET[kind], contId, file);
     if (kind === 'script')      await API('record-script',{contenido_id:contId,url_archivo:up.url,replace_id:fileId});
@@ -947,11 +1095,13 @@ async function replaceFile(kind, input, contId, fileId) {
     else                        await API('record-stats',{contenido_id:contId,url_screenshot:up.url,nombre_archivo:up.file.name,replace_id:fileId});
     await refresh(); toast(t('fcReplaced'),'ok');
   } catch(e){ toast(t('errPrefix')+e.message,'err'); }
+  finally { uploadBar.hide(); }
 }
 async function deleteFile(kind, contId, fileId) {
   if (!confirm(t('fcConfirmDel'))) return;
-  try { await API('delete-file',{contenido_id:contId,kind,file_id:fileId}); await refresh(); toast(t('fcDeleted'),'ok'); }
-  catch(e){ toast(t('errPrefix')+e.message,'err'); }
+  try { const r = await API('delete-file',{contenido_id:contId,kind,file_id:fileId}); await refresh();
+    toast(r && r.paso_nuevo ? t('backToProduction') : t('fcDeleted'),'ok');
+  } catch(e){ toast(t('errPrefix')+e.message,'err'); }
 }
 
 // ── Compresión antes de subir (nunca bloquea la subida) ────────
@@ -961,7 +1111,7 @@ async function squeeze(file) {
   const r = await MediaCompress.prepare(file, {
     onProgress: (pct, label) => {
       if (!label) return;
-      toast((isVideo ? t('cmpVideo') : t('cmpImage')) + ' ' + Math.round(pct*100) + '%', 'inf', 1200);
+      uploadBar.set(pct, (isVideo ? t('cmpVideo') : t('cmpImage')) + ' ' + Math.round(pct*100) + '%');
     }
   });
   if (r.changed) toast(t('cmpSaved',{s:MediaCompress.savingsLabel(r)}),'ok');
