@@ -162,7 +162,7 @@ let genderDropdownOpen = false;
 let reviewFilterActive = false;
 let currentPhoto = '';
 let filterDebounce = null;
-let currentSort = ''; // '' | 'az' | 'za' | 'tt-desc' | 'ig-desc' | 'yt-desc' | 'total-desc'
+let currentSort = ''; // '' | 'recientes' | 'az' | 'za' | 'tt-desc' | 'ig-desc' | 'yt-desc' | 'total-desc'
 let sortDropdownOpen = false;
 let rosterViewMode = 'table'; // 'table' | 'cards'
 let catDropdownOpen = false;
@@ -384,7 +384,7 @@ async function loadFromSupabase() {
 
     // Load all data in parallel for speed
     // Load WITHOUT foto first (base64 photos are huge, loaded in background after render)
-    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at,es_exclusivo,idioma';
+    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at,es_exclusivo,idioma,created_at';
     const [configResult, talentResult, rosterResult, linksResult] = await Promise.all([
       sb.from('app_config').select('key,value'),
       loadTalentosWithRetry(TALENT_COLS),
@@ -607,7 +607,7 @@ function setupRealtimeSubscription() {
         if (!t || !t.id) {
           // payload.new is empty — reload only changed columns (skip foto to save IO)
           // payload.new is empty — merge updated columns into existing talents (preserve foto, etc.)
-          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at,es_exclusivo,idioma';
+          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at,es_exclusivo,idioma,created_at';
           loadTalentosWithRetry(TALENT_COLS_RT).then(({ data }) => {
             if (data) {
               // Merge into existing talents to preserve fields not in RT select (like foto)
@@ -2571,7 +2571,7 @@ async function saveTalent() {
       showUndoToast('Talento "' + nombre + '" actualizado');
     }
   } else {
-    talents.push({id:nextTalentId++, ...data, seguidores: manualSeg});
+    talents.push({id:nextTalentId++, ...data, seguidores: manualSeg, created_at: new Date().toISOString()});
     showToast('Talento agregado', 'success');
   }
   const _wasEditingId = editingId;
@@ -6291,6 +6291,7 @@ function setSort(key) {
   // Update label
   const labels = {
     '': 'Ordenar',
+    'recientes': 'Recientes',
     'az': 'A → Z',
     'za': 'Z → A',
     'tt-desc': 'TikTok ↓',
@@ -6307,7 +6308,11 @@ function setSort(key) {
 function applySortToList(list) {
   if(!currentSort) return list;
   const sorted = [...list];
-  if(currentSort === 'az') sorted.sort((a,b) => a.nombre.localeCompare(b.nombre, 'es'));
+  if(currentSort === 'recientes') sorted.sort((a,b) => {
+    const cmp = (b.created_at||'').localeCompare(a.created_at||'');
+    return cmp !== 0 ? cmp : (b.id||0) - (a.id||0);
+  });
+  else if(currentSort === 'az') sorted.sort((a,b) => a.nombre.localeCompare(b.nombre, 'es'));
   else if(currentSort === 'za') sorted.sort((a,b) => b.nombre.localeCompare(a.nombre, 'es'));
   else if(currentSort === 'tt-desc') sorted.sort((a,b) => (b.seguidores.tiktok||0) - (a.seguidores.tiktok||0));
   else if(currentSort === 'ig-desc') sorted.sort((a,b) => (b.seguidores.instagram||0) - (a.seguidores.instagram||0));
