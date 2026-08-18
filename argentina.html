@@ -93,11 +93,11 @@
   /* ══════════ 02 · Alianza ══════════ */
   .s-alianza{background:var(--gris)}
   .al-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:38px}
-  .al-card{background:#fff;padding:clamp(24px,2.6vw,44px);position:relative;overflow:hidden}
+  .al-card{background:#fff;padding:clamp(24px,2.6vw,44px);position:relative;overflow:hidden;display:grid;grid-template-rows:subgrid;grid-row:span 4;align-content:start}
   .al-card::before{content:'';position:absolute;top:0;left:0;right:0;height:6px}
   .al-card.beme::before{background:var(--grad-1)}
   .al-card.big::before{background:var(--purpura-osc)}
-  .al-card img{height:42px;margin-bottom:22px}
+  .al-card img{height:42px;margin-bottom:22px;align-self:center;justify-self:start}
   .al-card.beme img{height:80px}
   .al-card h3{font-size:clamp(18px,1.7vw,24px);font-weight:800;margin-bottom:8px}
   .al-card .rol{font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;color:var(--magenta);margin-bottom:16px}
@@ -117,7 +117,7 @@
   .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:52px}
   .stat .num{font-size:clamp(38px,4.6vw,68px);font-weight:800;letter-spacing:-.03em;background:var(--grad-1);background:linear-gradient(100deg,#ed568f,#d783ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
   .stat .lbl{margin-top:8px;font-size:14px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:#cfcfcf}
-  .stat{border-top:2px solid rgba(255,255,255,.16);padding-top:22px}
+  .stat{border-top:2px solid rgba(255,255,255,.16);padding-top:22px;text-align:center}
 
   /* ══════════ 04 · Marcas ══════════ */
   .s-marcas{background:#fff}
@@ -268,8 +268,8 @@
           <span class="x">×</span>
           <img class="big" src="assets/big/bigagency-logo.png" alt="Big Agency">
         </div>
-        <h1 class="cover-title">Marcas <span class="mg">globales</span>,<br><em>cultura local.</em></h1>
-        <p class="cover-sub">Alianza estratégica de agencias de influencer marketing para <strong>Latinoamérica, con foco en Argentina y México</strong>.</p>
+        <h1 class="cover-title">Marcas <span class="mg">globales</span>,<br><em>cultura local</em></h1>
+        <p class="cover-sub">Alianza estratégica de agencias de influencer marketing para <strong>Latinoamérica, con foco en Argentina y México</strong></p>
         <div class="cover-meta"><span>Presentación comercial</span><span>Argentina · 2026</span></div>
       </div>
       <div class="cover-art" aria-hidden="true">
@@ -287,8 +287,8 @@
   <section class="slide s-alianza" id="s2">
     <div class="wrap">
       <p class="eyebrow">La alianza</p>
-      <h2>Dos agencias, <span class="fino">una alianza,</span> <span class="mg">un solo equipo.</span></h2>
-      <p class="lead">Unimos la operación de Beme en México y Latinoamérica con el talento y las relaciones locales de Big Agency en Argentina.</p>
+      <h2>Dos agencias, <span class="fino">una alianza,</span> <span class="mg">UN SOLO EQUIPO</span></h2>
+      <p class="lead">Unimos la operación de Beme en México y Latinoamérica con el talento y las relaciones locales de Big Agency en Argentina</p>
       <div class="al-grid">
         <div class="al-card beme">
           <img src="assets/deck/beme-logo.png" alt="Beme">
@@ -312,8 +312,8 @@
         </div>
       </div>
       <div class="al-union">
-        <strong>Un solo interlocutor. Cobertura total regional.</strong>
-        <span>Estrategia, prospección, contratos, producción y reporting bajo un mismo equipo.</span>
+        <strong>Un solo interlocutor. Cobertura total regional</strong>
+        <span>Estrategia, prospección, contratos, producción y reporting bajo un mismo equipo</span>
       </div>
     </div>
     <span class="pagenum">02</span>
@@ -323,7 +323,7 @@
   <section class="slide s-stats dark" id="s3">
     <div class="wrap">
       <p class="eyebrow">Alcance combinado</p>
-      <h2>La escala de una red,<br><span class="fino">la precisión de un equipo.</span></h2>
+      <h2>La escala de una red,<br><span class="fino">la precisión de un equipo</span></h2>
       <div class="stats-grid">
         <div class="stat"><div class="num" data-to="1000">+1.000</div><div class="lbl">Alcance a creadores</div></div>
         <div class="stat"><div class="num" data-to="1200">1.200M</div><div class="lbl">Seguidores combinados</div></div>
@@ -338,7 +338,7 @@
   <section class="slide s-marcas" id="s4">
     <div class="wrap">
       <p class="eyebrow">Marcas que confiaron</p>
-      <h2>Marcas <span class="fino">con las que</span> <span class="mg">trabajamos.</span></h2>
+      <h2>Marcas <span class="fino">con las que</span> <span class="mg">trabajamos</span></h2>
       <div class="mk-group">
         <span class="mk-tag beme">Beme · México &amp; LATAM</span>
         <div class="mk-grid">
@@ -393,8 +393,8 @@
   <section class="slide s-camp" id="s5">
     <div class="wrap">
       <p class="eyebrow">Beme · Campañas</p>
-      <h2>Acciones <span class="fino">de</span> <span class="mg">México y LATAM.</span></h2>
-      <p class="lead">Una selección de marcas con las que ejecutamos campañas de creadores en México y LATAM.</p>
+      <h2>Acciones <span class="fino">de</span> <span class="mg">México y LATAM</span></h2>
+      <p class="lead">Una selección de marcas con las que ejecutamos campañas de creadores en México y LATAM</p>
       <div class="camp-grid" id="campGrid">
         <!-- data-marca coincide con el nombre de archivo en assets/deck/campanas/<marca>.jpg -->
         <div class="camp-card" data-marca="huawei"><div class="camp-img"><img class="logo" src="assets/marcas/huawei.png" alt=""><img class="foto" src="assets/deck/campanas/huawei.jpg" alt="Campaña Huawei" onerror="this.remove()"></div><div class="camp-body"><span>Tecnología</span><h4>Huawei</h4></div></div>
@@ -418,14 +418,14 @@
   <section class="slide s-casos" id="s6">
     <div class="wrap">
       <p class="eyebrow">Big Agency · Casos</p>
-      <h2>Acciones <span class="fino">de</span> <span class="mg">Argentina.</span></h2>
+      <h2>Acciones <span class="fino">de</span> <span class="mg">Argentina</span></h2>
       <div class="casos-grid">
         <div class="caso">
           <img class="foto" src="assets/big/benja-calero.jpg" alt="Benja Calero">
           <div class="caso-body">
             <img class="mlogo alto" src="assets/marcas/disneyplus.svg" alt="Disney+">
             <h4>Disney+ × Benja Calero</h4>
-            <p>Plan Premium, "Patitas" y la serie de Once: el mensaje de Disney+ integrado al formato propio de Benja.</p>
+            <p>Plan Premium, "Patitas" y la serie de Once: el mensaje de Disney+ integrado al formato propio de Benja</p>
             <a href="https://www.tiktok.com/@benjacaldero/video/7642802795707501845" target="_blank" rel="noopener">Ver contenido ↗</a>
           </div>
         </div>
@@ -434,7 +434,7 @@
           <div class="caso-body">
             <img class="mlogo" src="assets/marcas/axe.svg" alt="AXE">
             <h4>AXE × Pelado.Khe — vínculo anual</h4>
-            <p>Campaña anual de AXE con colaboración Panini × Álbum del Mundial y el lanzamiento "Oler de Lujo".</p>
+            <p>Campaña anual de AXE con colaboración Panini × Álbum del Mundial y el lanzamiento "Oler de Lujo"</p>
             <a href="https://www.tiktok.com/@pelao.khe/video/7646553774730906898" target="_blank" rel="noopener">Ver contenido ↗</a>
           </div>
         </div>
@@ -443,7 +443,7 @@
           <div class="caso-body">
             <img class="mlogo" src="assets/marcas/uber.svg" alt="Uber">
             <h4>Uber Línea U — 5 perfiles</h4>
-            <p>Lanzamiento de Línea U contado por cinco creadores, cada uno desde su propio formato y comunidad.</p>
+            <p>Lanzamiento de Línea U contado por cinco creadores, cada uno desde su propio formato y comunidad</p>
             <a href="https://www.tiktok.com/@_dulcepink_/video/7612302191143111957" target="_blank" rel="noopener">Ver contenido ↗</a>
           </div>
         </div>
@@ -452,7 +452,7 @@
           <div class="caso-body">
             <img class="mlogo alto" src="assets/marcas/primevideo.svg" alt="Prime Video">
             <h4>Prime Video × Pia Scarnato</h4>
-            <p>Cobertura en vivo de las premieres internacionales de "Culpa Tuya" (Londres) y "Maxton Hall" (Alemania).</p>
+            <p>Cobertura en vivo de las premieres internacionales de "Culpa Tuya" (Londres) y "Maxton Hall" (Alemania)</p>
             <a href="https://www.instagram.com/p/DZvfHWTHGuV/" target="_blank" rel="noopener">Ver contenido ↗</a>
           </div>
         </div>
@@ -465,7 +465,7 @@
   <section class="slide s-tal-ar" id="s7">
     <div class="wrap">
       <p class="eyebrow">Big Agency · Talento</p>
-      <h2>Talentos <span class="fino">exclusivos en</span> <span class="mg">Argentina.</span></h2>
+      <h2>Talentos <span class="fino">exclusivos en</span> <span class="mg">Argentina</span></h2>
       <div class="tal-grid">
         <div class="tal"><img src="assets/big/pelado-khe.jpg" alt="Pelado.Khe"><div class="tal-info"><h4>Pelado.Khe</h4><p>AXE · Warner · Shell · McDonald's</p></div></div>
         <div class="tal"><img src="assets/big/benja-calero.jpg" alt="Benja Calero"><div class="tal-info"><h4>Benja Calero</h4><p>Disney+ · Mercado Libre · Uber</p></div></div>
@@ -486,7 +486,7 @@
   <section class="slide s-tal-mx" id="s8">
     <div class="wrap">
       <p class="eyebrow">Beme · Talento</p>
-      <h2>El alcance <span class="fino">de</span> <span class="mg">Latinoamérica.</span></h2>
+      <h2>Talentos <span class="fino">exclusivos en</span> <span class="mg">México</span></h2>
       <div class="tal-grid">
         <div class="tal"><img src="assets/deck/yolo-aventura.jpg" alt="Yolo Aventura"><div class="tal-info"><h4>Yolo Aventura</h4><p>Familia · Entretenimiento</p><span class="cifra">68.3M seguidores</span></div></div>
         <div class="tal"><img src="assets/deck/rodrigo-contreras.jpg" alt="Rodrigo Contreras"><div class="tal-info"><h4>Rodrigo Contreras</h4><p>Entretenimiento · Lifestyle</p><span class="cifra">53.0M seguidores</span></div></div>
@@ -507,14 +507,14 @@
   <section class="slide s-serv dark" id="s9">
     <div class="wrap">
       <p class="eyebrow">Qué hacemos</p>
-      <h2>Del brief <span class="fino">al reporte,</span> todo adentro.</h2>
+      <h2>Del brief <span class="fino">al reporte,</span> todo adentro</h2>
       <div class="serv-grid">
-        <div class="serv"><span class="n">01</span><h4>Estrategia &amp; casting</h4><p>Selección de creadores por datos reales de audiencia, categoría y mercado — no por intuición.</p></div>
-        <div class="serv"><span class="n">02</span><h4>Campañas con creadores</h4><p>Negociación, contratos y ejecución completa con workflow de 9 pasos y aprobaciones de marca.</p></div>
-        <div class="serv"><span class="n">03</span><h4>Representación de talento</h4><p>Management exclusivo de los creadores más relevantes de México, LATAM y Argentina.</p></div>
-        <div class="serv"><span class="n">04</span><h4>Producción de contenido</h4><p>Guiones, producción y postproducción adaptados al lenguaje de cada creador y cada plataforma.</p></div>
-        <div class="serv"><span class="n">05</span><h4>Embajadores &amp; anuales</h4><p>Vínculos sostenidos marca–creador: AXE, Spotify, Garnier, Maybelline y SKY ya lo hacen con nosotros.</p></div>
-        <div class="serv"><span class="n">06</span><h4>Reporting verificable</h4><p>Seguidores, vistas e interacción medidos, no estimados. Datos de cada entregable, en un solo reporte.</p></div>
+        <div class="serv"><span class="n">01</span><h4>Estrategia &amp; casting</h4><p>Selección de talentos por datos reales de audiencia, categoría y mercado — no por intuición</p></div>
+        <div class="serv"><span class="n">02</span><h4>Campañas con creadores</h4><p>Negociación, contratos y ejecución fluida y transparente de campañas, con aprobaciones de marca</p></div>
+        <div class="serv"><span class="n">03</span><h4>Representación de talento</h4><p>Management exclusivo de los creadores más relevantes de México y Argentina</p></div>
+        <div class="serv"><span class="n">04</span><h4>Producción de contenido</h4><p>Guiones, producción y postproducción adaptados al lenguaje de cada creador y cada plataforma</p></div>
+        <div class="serv"><span class="n">05</span><h4>Embajadores &amp; anuales</h4><p>Vínculos sostenidos marca–creador: AXE, Spotify, Garnier, Maybelline y SKY ya lo hacen con nosotros</p></div>
+        <div class="serv"><span class="n">06</span><h4>Reporting verificable</h4><p>Seguidores, alcance e interacción medidos, no estimados. KPI en un solo reporte</p></div>
       </div>
     </div>
     <span class="pagenum">09</span>
@@ -524,11 +524,11 @@
   <section class="slide s-why" id="s10">
     <div class="wrap">
       <p class="eyebrow">Por qué esta alianza</p>
-      <h2>Tres razones <span class="fino">para decidir</span> <span class="mg">hoy.</span></h2>
+      <h2>Tres razones <span class="fino">para decidir</span> <span class="mg">hoy</span></h2>
       <div class="why-grid">
-        <div class="why"><div class="big-n">01</div><h4>Un interlocutor, toda la región</h4><p>Una sola mesa para Argentina, México y LATAM: mismo equipo, mismos estándares, un solo contrato marco.</p></div>
-        <div class="why"><div class="big-n">02</div><h4>Credibilidad local real</h4><p>Los creadores correctos en cada mercado: talento argentino que la audiencia argentina ya eligió, y la red LATAM más grande detrás.</p></div>
-        <div class="why"><div class="big-n">03</div><h4>Operación probada</h4><p>Las marcas más grandes del mundo ya trabajaron con nosotros. Contratos, workflow y resultados medidos en cada campaña.</p></div>
+        <div class="why"><div class="big-n">01</div><h4>Un interlocutor, toda la región</h4><p>Una sola mesa para LATAM: mismo equipo, mismos estándares, un solo contrato</p></div>
+        <div class="why"><div class="big-n">02</div><h4>Credibilidad local real</h4><p>Creadores con el mejor brandfit para cada ocasión en cada mercado</p></div>
+        <div class="why"><div class="big-n">03</div><h4>Operación probada</h4><p>Las marcas más grandes del mundo ya trabajan con nosotros</p></div>
       </div>
     </div>
     <span class="pagenum">10</span>
@@ -542,11 +542,11 @@
         <span class="x">×</span>
         <img class="big" src="assets/big/bigagency-logo-blanco.png" alt="Big Agency">
       </div>
-      <p class="cta-title">Tu próxima campaña<br><span class="fino">empieza acá.</span></p>
+      <p class="cta-title">Tu próxima campaña<br><span class="fino">empieza acá</span></p>
       <a class="cta-mail" href="mailto:contacto@bemeagency.com">contacto@bemeagency.com</a>
       <div class="cta-links">
         <span>@beme.agency</span>
-        <span>Argentina · México · LATAM</span>
+        <span>LATAM</span>
       </div>
     </div>
     <span class="pagenum">11</span>
