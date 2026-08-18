@@ -331,6 +331,8 @@ function setRosterSort(sort) {
 }
 function applySortToTalents(talents) {
   if (rosterSort === 'default') return talents;
+  // 'added-desc': talent_ids conserva el orden en que se agregaron al roster → invertir = últimos agregados primero
+  if (rosterSort === 'added-desc') return [...talents].reverse();
   return [...talents].sort(function(a, b) {
     var aS = a.seguidores || {};
     var bS = b.seguidores || {};
@@ -504,6 +506,7 @@ function render() {
         <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;">
           <select onchange="setRosterSort(this.value)" style="font-family:inherit;font-size:11px;padding:4px 8px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#555;cursor:pointer;">
             <option value="default" ${rosterSort==='default'?'selected':''}>Orden original</option>
+            <option value="added-desc" ${rosterSort==='added-desc'?'selected':''}>Agregados recientemente</option>
             <option value="ig-desc" ${rosterSort==='ig-desc'?'selected':''}>IG: Mayor → Menor</option>
             <option value="ig-asc" ${rosterSort==='ig-asc'?'selected':''}>IG: Menor → Mayor</option>
             <option value="tt-desc" ${rosterSort==='tt-desc'?'selected':''}>TT: Mayor → Menor</option>
