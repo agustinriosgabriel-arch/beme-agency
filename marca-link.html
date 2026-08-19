@@ -267,14 +267,10 @@ function renderAll() {
   const openIds = []; cont.querySelectorAll('.open').forEach(el=>{ if(el.id) openIds.push(el.id); });
   cont.innerHTML = cts.map(ct=>renderTalento(ct)).join('');
   openIds.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('open'); });
-  // Primera carga: todos los talentos abiertos + los contenidos pendientes abiertos,
-  // para que la marca encuentre de una lo que tiene que aprobar. En re-renders manda
-  // openIds (se respeta lo que el usuario cerró — regla de preservación de acordeones).
-  if (firstRender) {
-    firstRender = false;
-    cts.forEach(ct=>document.getElementById('tc-'+ct.id)?.classList.add('open'));
-    expandPendientes();
-  }
+  // Primera carga: se abren solo los talentos con algo pendiente de revisión (y esos
+  // contenidos). En re-renders manda openIds (se respeta lo que el usuario cerró —
+  // regla de preservación de acordeones).
+  if (firstRender) { firstRender = false; expandPendientes(); }
 }
 
 let firstRender = true;
