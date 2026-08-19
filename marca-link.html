@@ -41,6 +41,24 @@ body.dark .topbar{background:rgba(15,15,15,0.92)}
 .estado-etapa_finanzas{background:rgba(245,158,11,0.12);color:#fbbf24}
 .estado-finalizada{background:rgba(34,197,94,0.12);color:#4ade80}
 .estado-cancelada{background:rgba(239,68,68,0.12);color:#ef4444}
+.aviso-banner{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1.5px solid #f59e0b;border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:20px;box-shadow:0 4px 14px rgba(245,158,11,0.18)}
+body.dark .aviso-banner{background:linear-gradient(135deg,#3a2d10,#453612);border-color:rgba(245,158,11,0.55)}
+.aviso-icon{font-size:26px;flex-shrink:0}
+.aviso-title{font-size:15px;font-weight:800;color:#92400e}
+body.dark .aviso-title{color:#fbbf24}
+.aviso-sub{font-size:12px;color:#a16207;margin-top:3px;line-height:1.5}
+body.dark .aviso-sub{color:#d9a441}
+.btn-revisar{flex-shrink:0;border:none;cursor:pointer;background:#d97706;color:#fff;font-weight:800;font-size:14px;padding:12px 22px;border-radius:99px;font-family:inherit;min-height:44px;box-shadow:0 4px 12px rgba(217,119,6,0.35);transition:all .15s}
+.btn-revisar:hover{background:#b45309;transform:translateY(-1px)}
+.ver-btn{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;border:1px solid var(--border2);background:var(--surface2);color:var(--text-muted);font-size:12px;font-weight:700;padding:8px 14px;border-radius:99px;pointer-events:none;white-space:nowrap}
+.ver-btn svg{transition:transform .2s}
+.tal-card.open .ver-btn svg{transform:rotate(180deg)}
+.ver-btn .txt-open{display:none}
+.tal-card.open .ver-btn .txt-open{display:inline}
+.tal-card.open .ver-btn .txt-closed{display:none}
+.review-box.highlight{animation:pulseBox 1.1s ease 2}
+@keyframes pulseBox{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0)}50%{box-shadow:0 0 0 7px rgba(245,158,11,0.35)}}
+@media(prefers-reduced-motion:reduce){.review-box.highlight{animation:none;box-shadow:0 0 0 3px rgba(245,158,11,0.4)}}
 .brief-section{padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px}
 .brief-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:8px}
 .brief-file{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;text-decoration:none;border:1px solid var(--border2);color:var(--blue);background:var(--surface2);margin:0 6px 6px 0}
@@ -101,7 +119,7 @@ body.dark .topbar{background:rgba(15,15,15,0.92)}
 .gate-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:40px;max-width:420px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.12)}
 .gate-card h2{font-family:'Syne',sans-serif;font-size:20px;margin:14px 0 8px}.gate-card p{font-size:13px;color:var(--text-muted)}
 .empty{text-align:center;padding:50px 20px;color:var(--text-muted)}
-@media(max-width:768px){.topbar{padding:0 12px}.main{padding:20px 14px}.camp-hero{padding:18px}.tal-head{padding:14px 16px}.tal-body{padding:0 14px 14px}.action-btns{flex-direction:column}.action-btns .btn{width:100%;justify-content:center}.toast-container{right:12px;left:12px}.toast{max-width:100%}}
+@media(max-width:768px){.topbar{padding:0 12px}.main{padding:20px 14px}.camp-hero{padding:18px}.tal-head{padding:14px 16px;flex-wrap:wrap}.tal-body{padding:0 14px 14px}.action-btns{flex-direction:column}.action-btns .btn{width:100%;justify-content:center}.toast-container{right:12px;left:12px}.toast{max-width:100%}.aviso-banner{flex-direction:column;align-items:flex-start;gap:10px}.btn-revisar{width:100%}}
 </style>
 </head>
 <body>
@@ -134,6 +152,7 @@ body.dark .topbar{background:rgba(15,15,15,0.92)}
   </header>
   <main class="main">
     <div id="hero"></div>
+    <div id="aviso"></div>
     <div id="briefs"></div>
     <div class="section-label">Talentos & Contenidos</div>
     <div id="talentos-container"></div>
@@ -190,19 +209,30 @@ async function refresh() { await load(); renderAll(); }
 function renderAll() {
   const estadoLabels = {sin_iniciar:'Sin iniciar',en_curso:'En curso',etapa_finanzas:'Finanzas',finalizada:'Finalizada',cancelada:'Cancelada'};
   const cli = campana.marcas?.clientes?.nombre||'';
-  const pendientes = (campana.campana_talentos||[]).flatMap(ct=>ct.contenidos||[]).filter(c=>c.paso_actual===3||c.paso_actual===5).length;
-  const pendBadge = pendientes
-    ? `<button onclick="openPendientes()" style="border:none;cursor:pointer;background:#fef3c7;color:#92400e;font-weight:700;font-size:13px;padding:8px 14px;border-radius:99px;font-family:inherit">⏳ ${pendientes} contenido${pendientes!==1?'s':''} espera${pendientes!==1?'n':''} tu revisión</button>`
-    : '';
+  const pendConts = (campana.campana_talentos||[]).flatMap(ct=>ct.contenidos||[]).filter(c=>c.paso_actual===3||c.paso_actual===5);
+  const nScripts = pendConts.filter(c=>c.paso_actual===3).length;
+  const nVideos = pendConts.filter(c=>c.paso_actual===5).length;
   document.getElementById('hero').innerHTML = `<div class="camp-hero">
     <div class="logo-box">${(campana.marcas?.nombre||'?').substring(0,2).toUpperCase()}</div>
     <div style="flex:1;min-width:0">
       <h1>${esc(campana.nombre)}</h1>
       <div class="sub">${esc(cli)} ${campana.marcas?.nombre?'· '+esc(campana.marcas.nombre):''}</div>
     </div>
-    ${pendBadge}
     <span class="estado-badge estado-${campana.estado}">${estadoLabels[campana.estado]||campana.estado}</span>
   </div>`;
+
+  // Aviso grande de pendientes — es lo primero que la marca tiene que ver
+  const partes = [];
+  if (nScripts) partes.push(`${nScripts} script${nScripts!==1?'s':''}`);
+  if (nVideos) partes.push(`${nVideos} contenido${nVideos!==1?'s':''}`);
+  document.getElementById('aviso').innerHTML = pendConts.length ? `<div class="aviso-banner">
+    <div class="aviso-icon">⏳</div>
+    <div style="flex:1;min-width:0">
+      <div class="aviso-title">${partes.join(' y ')} espera${pendConts.length!==1?'n':''} tu aprobación</div>
+      <div class="aviso-sub">Están abajo, en <b>Talentos & Contenidos</b>, marcados en amarillo con el botón "✓ Aprobar".</div>
+    </div>
+    <button class="btn-revisar" onclick="openPendientes()">Revisar ahora ↓</button>
+  </div>` : '';
 
   const briefs = campana.campana_briefs||[];
   const briefsLinks = briefs.length
@@ -237,9 +267,14 @@ function renderAll() {
   const openIds = []; cont.querySelectorAll('.open').forEach(el=>{ if(el.id) openIds.push(el.id); });
   cont.innerHTML = cts.map(ct=>renderTalento(ct)).join('');
   openIds.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('open'); });
-  // Primera carga: auto-abrir lo que espera revisión. En re-renders manda openIds
-  // (se respeta lo que el usuario cerró — regla de preservación de acordeones).
-  if (firstRender) { firstRender = false; expandPendientes(); }
+  // Primera carga: todos los talentos abiertos + los contenidos pendientes abiertos,
+  // para que la marca encuentre de una lo que tiene que aprobar. En re-renders manda
+  // openIds (se respeta lo que el usuario cerró — regla de preservación de acordeones).
+  if (firstRender) {
+    firstRender = false;
+    cts.forEach(ct=>document.getElementById('tc-'+ct.id)?.classList.add('open'));
+    expandPendientes();
+  }
 }
 
 let firstRender = true;
@@ -255,7 +290,12 @@ function expandPendientes() {
 }
 function openPendientes() {
   expandPendientes();
-  setTimeout(()=>{ document.querySelector('.review-box')?.scrollIntoView({behavior:'smooth',block:'center'}); }, 100);
+  setTimeout(()=>{
+    document.querySelector('.review-box')?.scrollIntoView({behavior:'smooth',block:'center'});
+    document.querySelectorAll('.review-box').forEach(el=>{
+      el.classList.remove('highlight'); void el.offsetWidth; el.classList.add('highlight');
+    });
+  }, 100);
 }
 
 function renderTalento(ct) {
@@ -275,7 +315,9 @@ function renderTalento(ct) {
         </div>
       </div>
       <div class="fee-chip"><div class="lbl">A pagar</div><div class="val">${fmtMoney(ct.fee_marca||0,mon)}</div></div>
-      <svg class="cam-expand" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      <span class="ver-btn"><span class="txt-closed">Ver contenidos</span><span class="txt-open">Ocultar</span>
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </span>
     </div>
     <div class="tal-body">
       ${conts.length ? conts.map(c=>renderContenido(c)).join('') : '<div style="font-size:12px;color:var(--text-dim);padding:12px 0">Sin contenidos.</div>'}
