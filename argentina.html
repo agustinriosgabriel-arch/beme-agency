@@ -145,7 +145,10 @@
   .camp-card{background:#fff;overflow:hidden;display:flex;flex-direction:column}
   .camp-img{height:104px;position:relative;display:flex;align-items:center;justify-content:center;background:#ececec}
   .camp-img img.foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2}
-  .camp-img img.logo{max-height:30px;max-width:56%;filter:grayscale(1) brightness(.62) contrast(1.05);opacity:.8;position:relative;z-index:1}
+  .camp-img img.logo{max-height:32px;max-width:64%;filter:grayscale(1) brightness(.5) contrast(1.15);opacity:.92;position:relative;z-index:1}
+  .camp-img img.logo.lg{max-height:44px}
+  .camp-img img.logo.xl{max-height:66px;max-width:74%}
+  .camp-img img.logo.fuerte{filter:grayscale(1) brightness(.3) contrast(1.9)}
   .camp-body{padding:10px 14px}
   .camp-body h4{font-size:14px;font-weight:800}
   .camp-body span{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--magenta);font-weight:700}
@@ -398,17 +401,17 @@
       <div class="camp-grid" id="campGrid">
         <!-- data-marca coincide con el nombre de archivo en assets/deck/campanas/<marca>.jpg -->
         <div class="camp-card" data-marca="huawei"><div class="camp-img"><img class="logo" src="assets/marcas/huawei.png" alt=""><img class="foto" src="assets/deck/campanas/huawei.jpg" alt="Campaña Huawei" onerror="this.remove()"></div><div class="camp-body"><span>Tecnología</span><h4>Huawei</h4></div></div>
-        <div class="camp-card" data-marca="sharkbeauty"><div class="camp-img"><img class="logo" src="assets/marcas/sharkbeauty.webp" alt=""><img class="foto" src="assets/deck/campanas/sharkbeauty.jpg" alt="Campaña Shark Beauty" onerror="this.remove()"></div><div class="camp-body"><span>Beauty tech</span><h4>Shark Beauty</h4></div></div>
-        <div class="camp-card" data-marca="kotex"><div class="camp-img"><img class="logo" src="assets/marcas/kotex.svg" alt=""><img class="foto" src="assets/deck/campanas/kotex.jpg" alt="Campaña Kotex" onerror="this.remove()"></div><div class="camp-body"><span>Cuidado personal</span><h4>Kotex</h4></div></div>
+        <div class="camp-card" data-marca="sharkbeauty"><div class="camp-img"><img class="logo lg" src="assets/marcas/sharkbeauty.webp" alt=""><img class="foto" src="assets/deck/campanas/sharkbeauty.jpg" alt="Campaña Shark Beauty" onerror="this.remove()"></div><div class="camp-body"><span>Beauty tech</span><h4>Shark Beauty</h4></div></div>
+        <div class="camp-card" data-marca="kotex"><div class="camp-img"><img class="logo xl" src="assets/marcas/kotex.svg" alt=""><img class="foto" src="assets/deck/campanas/kotex.jpg" alt="Campaña Kotex" onerror="this.remove()"></div><div class="camp-body"><span>Cuidado personal</span><h4>Kotex</h4></div></div>
         <div class="camp-card" data-marca="uriage"><div class="camp-img"><img class="logo" src="assets/marcas/uriage.png" alt=""><img class="foto" src="assets/deck/campanas/uriage.jpg" alt="Campaña Uriage" onerror="this.remove()"></div><div class="camp-body"><span>Dermocosmética</span><h4>Uriage</h4></div></div>
-        <div class="camp-card" data-marca="avon"><div class="camp-img"><img class="logo" src="assets/marcas/avon.svg" alt="" style="max-height:44px"><img class="foto" src="assets/deck/campanas/avon.jpg" alt="Campaña Avon" onerror="this.remove()"></div><div class="camp-body"><span>Belleza</span><h4>Avon</h4></div></div>
+        <div class="camp-card" data-marca="avon"><div class="camp-img"><img class="logo xl" src="assets/marcas/avon.svg" alt=""><img class="foto" src="assets/deck/campanas/avon.jpg" alt="Campaña Avon" onerror="this.remove()"></div><div class="camp-body"><span>Belleza</span><h4>Avon</h4></div></div>
         <div class="camp-card" data-marca="kiehls"><div class="camp-img"><img class="logo" src="assets/marcas/kiehls.svg" alt=""><img class="foto" src="assets/deck/campanas/kiehls.jpg" alt="Campaña Kiehl's" onerror="this.remove()"></div><div class="camp-body"><span>Skincare</span><h4>Kiehl's</h4></div></div>
-        <div class="camp-card" data-marca="hm"><div class="camp-img"><img class="logo" src="assets/marcas/hm.svg" alt=""><img class="foto" src="assets/deck/campanas/hm.jpg" alt="Campaña H&M" onerror="this.remove()"></div><div class="camp-body"><span>Moda</span><h4>H&amp;M</h4></div></div>
-        <div class="camp-card" data-marca="avene"><div class="camp-img"><img class="logo" src="assets/marcas/avene.png" alt=""><img class="foto" src="assets/deck/campanas/avene.jpg" alt="Campaña Avène" onerror="this.remove()"></div><div class="camp-body"><span>Dermocosmética</span><h4>Avène</h4></div></div>
-        <div class="camp-card" data-marca="ecoflow"><div class="camp-img"><img class="logo" src="assets/marcas/ecoflow.png" alt=""><img class="foto" src="assets/deck/campanas/ecoflow.jpg" alt="Campaña EcoFlow" onerror="this.remove()"></div><div class="camp-body"><span>Energía portátil</span><h4>EcoFlow</h4></div></div>
+        <div class="camp-card" data-marca="hm"><div class="camp-img"><img class="logo lg" src="assets/marcas/hm.svg" alt=""><img class="foto" src="assets/deck/campanas/hm.jpg" alt="Campaña H&M" onerror="this.remove()"></div><div class="camp-body"><span>Moda</span><h4>H&amp;M</h4></div></div>
+        <div class="camp-card" data-marca="avene"><div class="camp-img"><img class="logo lg" src="assets/marcas/avene.png" alt=""><img class="foto" src="assets/deck/campanas/avene.jpg" alt="Campaña Avène" onerror="this.remove()"></div><div class="camp-body"><span>Dermocosmética</span><h4>Avène</h4></div></div>
+        <div class="camp-card" data-marca="ecoflow"><div class="camp-img"><img class="logo xl" src="assets/marcas/ecoflow.png" alt=""><img class="foto" src="assets/deck/campanas/ecoflow.jpg" alt="Campaña EcoFlow" onerror="this.remove()"></div><div class="camp-body"><span>Energía portátil</span><h4>EcoFlow</h4></div></div>
         <div class="camp-card" data-marca="anker"><div class="camp-img"><img class="logo" src="assets/marcas/anker.svg" alt=""><img class="foto" src="assets/deck/campanas/anker.jpg" alt="Campaña Anker" onerror="this.remove()"></div><div class="camp-body"><span>Tecnología</span><h4>Anker</h4></div></div>
         <div class="camp-card" data-marca="amazon"><div class="camp-img"><img class="logo" src="assets/marcas/amazon.svg" alt=""><img class="foto" src="assets/deck/campanas/amazon.jpg" alt="Campaña Amazon" onerror="this.remove()"></div><div class="camp-body"><span>E-commerce</span><h4>Amazon</h4></div></div>
-        <div class="camp-card" data-marca="honkai"><div class="camp-img"><img class="logo" src="assets/marcas/honkai.png" alt=""><img class="foto" src="assets/deck/campanas/honkai.jpg" alt="Campaña Honkai" onerror="this.remove()"></div><div class="camp-body"><span>Gaming</span><h4>Honkai: Star Rail</h4></div></div>
+        <div class="camp-card" data-marca="honkai"><div class="camp-img"><img class="logo lg fuerte" src="assets/marcas/honkai.png" alt=""><img class="foto" src="assets/deck/campanas/honkai.jpg" alt="Campaña Honkai" onerror="this.remove()"></div><div class="camp-body"><span>Gaming</span><h4>Honkai: Star Rail</h4></div></div>
       </div>
     </div>
     <span class="pagenum">05</span>
