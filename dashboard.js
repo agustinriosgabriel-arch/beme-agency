@@ -161,6 +161,10 @@ let selectedGenders = new Set();
 let genderDropdownOpen = false;
 let reviewFilterActive = false;
 let currentPhoto = '';
+// La foto se carga en segundo plano (loadTalentPhotos) porque los base64 pesan.
+// Si el usuario abre a editar un talento antes de que su foto llegue, currentPhoto
+// queda '' y guardar la borraría. Solo se escribe `foto` si se tocó acá.
+let photoDirty = false;
 let filterDebounce = null;
 let currentSort = ''; // '' | 'recientes' | 'az' | 'za' | 'tt-desc' | 'ig-desc' | 'yt-desc' | 'total-desc'
 let sortDropdownOpen = false;
@@ -343,6 +347,49 @@ setTimeout(function() {
 // wireLoginUI → replaced by doLogin/doSignup onclick
 
 
+// ── Columnas de talentos ───────────────────────────────────
+// UNA sola lista, compartida por la carga inicial, el realtime y el guardado.
+// Motivo: el guardado escribe la fila completa. Si una columna se escribe pero
+// no se lee, el modal de edición la abre vacía y al guardar la pisa con ''.
+// Así se perdieron manager/notas (fix a02e5f8) y después las direcciones.
+// Si agregás un campo al formulario, agregalo TAMBIÉN acá.
+const TALENT_COLS_ARR = [
+  'id','created_at','nombre','paises','ciudad','email','telefono',
+  'tiktok','instagram','youtube','categorias','seguidores','engagement',
+  'avg_views','social_meta','genero','keywords','valores','updated',
+  'direccion_entrega','needs_review','review_comment','review_marked_by',
+  'review_marked_at','es_exclusivo','idioma','tipo_contenido','calidad',
+  'marcas_previas','notas_internas','tiene_manager','manager_agencia',
+  'manager_telefono','manager_email'
+];
+// `foto` queda fuera a propósito: se trae aparte en loadTalentPhotos().
+const TALENT_COLS = TALENT_COLS_ARR.join(',');
+
+// ¿La dirección de entrega tiene algo cargado? (el objeto siempre existe con
+// las 8 claves, así que hay que mirar los valores, no las claves).
+function _hasDireccionEntrega(de) {
+  if (!de || typeof de !== 'object') return false;
+  return Object.keys(de).some(function(k){ return String(de[k]||'').trim() !== ''; });
+}
+
+// Fila completa lista para escribir en `talentos`. Se usa para restaurar
+// (deshacer borrado/edición): mandar solo un subconjunto dejaba el resto del
+// perfil como estaba y el "deshacer" no revertía nada.
+function talentRowForDb(t) {
+  var row = {};
+  TALENT_COLS_ARR.forEach(function(c) {
+    if (c === 'created_at') return;
+    if (t[c] !== undefined) row[c] = t[c];
+  });
+  row.id = t.id;
+  row.nombre = t.nombre || '';
+  row.paises = t.paises || [];
+  row.categorias = t.categorias || [];
+  row.seguidores = t.seguidores || {tiktok:0, instagram:0, youtube:0};
+  if (t.foto !== undefined) row.foto = t.foto || '';
+  return row;
+}
+
 // ── Load helpers ─────────────────────────────────────
 async function loadTalentosWithRetry(columns) {
   const PAGE_SIZE = 1000;
@@ -384,7 +431,6 @@ async function loadFromSupabase() {
 
     // Load all data in parallel for speed
     // Load WITHOUT foto first (base64 photos are huge, loaded in background after render)
-    const TALENT_COLS = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at,es_exclusivo,idioma,created_at,tipo_contenido,calidad,marcas_previas,notas_internas,tiene_manager,manager_agencia,manager_telefono,manager_email';
     const [configResult, talentResult, rosterResult, linksResult] = await Promise.all([
       sb.from('app_config').select('key,value'),
       loadTalentosWithRetry(TALENT_COLS),
@@ -607,8 +653,7 @@ function setupRealtimeSubscription() {
         if (!t || !t.id) {
           // payload.new is empty — reload only changed columns (skip foto to save IO)
           // payload.new is empty — merge updated columns into existing talents (preserve foto, etc.)
-          const TALENT_COLS_RT = 'id,nombre,paises,ciudad,email,tiktok,instagram,youtube,categorias,seguidores,engagement,avg_views,social_meta,genero,keywords,valores,updated,telefono,direccion_entrega,needs_review,review_comment,review_marked_by,review_marked_at,es_exclusivo,idioma,created_at,tipo_contenido,calidad,marcas_previas,notas_internas,tiene_manager,manager_agencia,manager_telefono,manager_email';
-          loadTalentosWithRetry(TALENT_COLS_RT).then(({ data }) => {
+          loadTalentosWithRetry(TALENT_COLS).then(({ data }) => {
             if (data) {
               // Merge into existing talents to preserve fields not in RT select (like foto)
               var byId = {};
@@ -2147,7 +2192,7 @@ async function openPriceHistory(talentId){
 }
 
 function openAddModal() {
-  editingId = null; currentPhoto = '';
+  editingId = null; currentPhoto = ''; photoDirty = true; // talento nuevo: la foto del form manda
   document.getElementById('modal-title-text').textContent = 'Agregar Talento';
   document.getElementById('delete-btn').style.display = 'none';
   clearForm();
@@ -2156,7 +2201,7 @@ function openAddModal() {
 function openEditModal(id) {
   const t = talents.find(x=>x.id===id);
   if(!t) return;
-  editingId = id; currentPhoto = t.foto || '';
+  editingId = id; currentPhoto = t.foto || ''; photoDirty = false;
   document.getElementById('modal-title-text').textContent = 'Editar Talento';
   document.getElementById('delete-btn').style.display = 'inline-flex';
   fillForm(t);
@@ -2254,7 +2299,7 @@ function handlePhotoUpload(input) {
   if(!file) return;
   if(file.size > 5*1024*1024) { showToast('Imagen demasiado grande (máx 5MB)', 'error'); return; }
   const reader = new FileReader();
-  reader.onload = e => { currentPhoto = e.target.result; updatePhotoPreview(currentPhoto); };
+  reader.onload = e => { currentPhoto = e.target.result; photoDirty = true; updatePhotoPreview(currentPhoto); };
   reader.readAsDataURL(file);
 }
 
@@ -2391,6 +2436,7 @@ async function fetchProfilePhoto() {
       const data = await resp.json();
       if(data.photoUrl) {
         currentPhoto = data.photoUrl;
+        photoDirty = true;
         updatePhotoPreview(currentPhoto);
         showToast('Foto extraída de ' + (data.platform === 'tiktok' ? 'TikTok' : 'Instagram'), 'success');
         found = true;
@@ -2505,7 +2551,6 @@ async function saveTalent() {
 
   const data = {
     nombre, paises,
-    foto: currentPhoto,
     ciudad: document.getElementById('f-ciudad').value.trim(),
     telefono: document.getElementById('f-telefono').value.trim(),
     email: document.getElementById('f-email').value.trim(),
@@ -2541,6 +2586,11 @@ async function saveTalent() {
     es_exclusivo: (document.getElementById('f-es-exclusivo') ? document.getElementById('f-es-exclusivo').checked : false),
     updated: new Date().toISOString().split('T')[0]
   };
+  // La foto solo entra al payload si se subió/extrajo una en este modal.
+  // Si no se tocó, ni se manda: se carga en segundo plano (loadTalentPhotos) y
+  // escribir currentPhoto cuando todavía no llegó a memoria la borraría.
+  if (photoDirty) data.foto = currentPhoto || '';
+
   const _needsReview = !!(document.getElementById('f-needs-review') && document.getElementById('f-needs-review').checked);
   const _reviewComment = (document.getElementById('f-review-comment') ? document.getElementById('f-review-comment').value.trim() : '');
   const _prevTalent = editingId ? talents.find(t => t.id === editingId) : null;
@@ -2579,30 +2629,41 @@ async function saveTalent() {
   closeModal('talent-modal');
   const savedTalent = _wasEditingId ? talents.find(t=>t.id===_wasEditingId) : talents[talents.length-1];
   if(sb && currentUser && savedTalent) {
-    const row = {
-      id: savedTalent.id, nombre: savedTalent.nombre||'', paises: savedTalent.paises||[],
-      ciudad: savedTalent.ciudad||'', telefono: savedTalent.telefono||'', email: savedTalent.email||'',
-      tiktok: savedTalent.tiktok||'', instagram: savedTalent.instagram||'', youtube: savedTalent.youtube||'',
-      valores: savedTalent.valores||'', categorias: savedTalent.categorias||[], foto: savedTalent.foto||'',
-      seguidores: savedTalent.seguidores||{tiktok:0,instagram:0,youtube:0}, updated: savedTalent.updated||null,
-      genero: savedTalent.genero||'', idioma: savedTalent.idioma||'es', keywords: savedTalent.keywords||'',
-      tipo_contenido: savedTalent.tipo_contenido||'', calidad: savedTalent.calidad||'',
-      marcas_previas: savedTalent.marcas_previas||'', notas_internas: savedTalent.notas_internas||'',
-      tiene_manager: savedTalent.tiene_manager||false,
-      manager_agencia: savedTalent.manager_agencia||'',
-      manager_telefono: savedTalent.manager_telefono||'',
-      manager_email: savedTalent.manager_email||'',
-      direccion_entrega: savedTalent.direccion_entrega||{},
-      needs_review: !!savedTalent.needs_review,
-      review_comment: savedTalent.review_comment||'',
-      review_marked_by: savedTalent.review_marked_by||'',
-      review_marked_at: savedTalent.review_marked_at||null,
-      es_exclusivo: !!savedTalent.es_exclusivo
-    };
-    sb.from('talentos').upsert([row], {onConflict:'id'})
-      .then(({error}) => {
+    // Solo las columnas que este formulario realmente edita. Nada más se toca:
+    // así un campo que la carga no trajo (foto, engagement, social_meta…) no se
+    // pisa con vacío. `data` ya viene armado desde los inputs de arriba.
+    const row = { ...data, seguidores: savedTalent.seguidores||{tiktok:0,instagram:0,youtube:0} };
+    // Red de seguridad: si el formulario trae la dirección entera vacía pero en
+    // la DB hay una cargada, no se manda. Guardar un talento por otro motivo
+    // (una pestaña vieja, la dirección todavía no llegó a memoria) nunca debe
+    // borrar la dirección. Para vaciar un campo suelto, alcanza con dejar los
+    // otros con datos.
+    if (_wasEditingId && !_hasDireccionEntrega(row.direccion_entrega) && _hasDireccionEntrega(_prevTalent && _prevTalent.direccion_entrega)) {
+      console.warn('[Beme] Dirección vacía en el form pero cargada en el perfil — no se pisa.');
+      delete row.direccion_entrega;
+    }
+    // Candado contra la recurrencia: si un campo se escribe pero NO está en
+    // TALENT_COLS_ARR, la carga nunca lo trae → el modal lo abre vacío → el
+    // guardado lo pisa. Antes que borrar datos, no se manda y se avisa fuerte.
+    Object.keys(row).forEach(function(k) {
+      if (k === 'foto' || TALENT_COLS_ARR.indexOf(k) > -1) return;
+      console.error('[Beme] "' + k + '" se guarda pero no se lee: agregalo a TALENT_COLS_ARR. No se manda para no borrar datos.');
+      delete row[k];
+    });
+    const _persist = _wasEditingId
+      ? sb.from('talentos').update(row).eq('id', savedTalent.id).select(TALENT_COLS).single()
+      : sb.from('talentos').upsert([{ id: savedTalent.id, ...row }], {onConflict:'id'}).select(TALENT_COLS).single();
+    _persist
+      .then(({data: _saved, error}) => {
         if(error) { console.error('Upsert talent error:', error); showToast('Error al guardar en la nube: ' + error.message, 'error'); }
         else {
+          // Reflejar exactamente lo que quedó en la DB: si algo no se guardó,
+          // se ve en pantalla al instante en vez de aparecer recién al recargar.
+          if (_saved) {
+            const _i = talents.findIndex(x => x.id === _saved.id);
+            if (_i > -1) talents[_i] = { ...talents[_i], ..._saved };
+            renderTalents();
+          }
           const ind = document.getElementById('sync-indicator');
           if(ind) { ind.style.opacity='1'; setTimeout(()=>{ind.style.opacity='0';},1800); }
           // Persist nextTalentId if this was a new talent
@@ -6740,13 +6801,7 @@ async function executeUndo() {
       // Re-insert in Supabase
       if (sb && currentUser) {
         var t = action.talent;
-        await sb.from('talentos').upsert([{
-          id:t.id, nombre:t.nombre||'', paises:t.paises||[], ciudad:t.ciudad||'',
-          telefono:t.telefono||'', email:t.email||'', tiktok:t.tiktok||'',
-          instagram:t.instagram||'', youtube:t.youtube||'', valores:t.valores||'',
-          categorias:t.categorias||[], foto:t.foto||'',
-          seguidores:t.seguidores||{tiktok:0,instagram:0,youtube:0}, updated:t.updated||null
-        }], {onConflict:'id'});
+        await sb.from('talentos').upsert([talentRowForDb(t)], {onConflict:'id'});
         // Restore roster links
         if (action.rosterLinks) {
           for (var rl of action.rosterLinks) {
@@ -6772,13 +6827,7 @@ async function executeUndo() {
         });
       }
       if (sb && currentUser) {
-        var rows = action.talents.map(function(t) {
-          return { id:t.id, nombre:t.nombre||'', paises:t.paises||[], ciudad:t.ciudad||'',
-            telefono:t.telefono||'', email:t.email||'', tiktok:t.tiktok||'',
-            instagram:t.instagram||'', youtube:t.youtube||'', valores:t.valores||'',
-            categorias:t.categorias||[], foto:t.foto||'',
-            seguidores:t.seguidores||{tiktok:0,instagram:0,youtube:0}, updated:t.updated||null };
-        });
+        var rows = action.talents.map(talentRowForDb);
         await sb.from('talentos').upsert(rows, {onConflict:'id'});
       }
       showToast(action.talents.length + ' talento(s) restaurados ✓', 'success');
@@ -6794,13 +6843,7 @@ async function executeUndo() {
       if (idx > -1) talents[idx] = action.talent;
       if (sb && currentUser) {
         var t = action.talent;
-        await sb.from('talentos').upsert([{
-          id:t.id, nombre:t.nombre||'', paises:t.paises||[], ciudad:t.ciudad||'',
-          telefono:t.telefono||'', email:t.email||'', tiktok:t.tiktok||'',
-          instagram:t.instagram||'', youtube:t.youtube||'', valores:t.valores||'',
-          categorias:t.categorias||[], foto:t.foto||'',
-          seguidores:t.seguidores||{tiktok:0,instagram:0,youtube:0}, updated:t.updated||null
-        }], {onConflict:'id'});
+        await sb.from('talentos').upsert([talentRowForDb(t)], {onConflict:'id'});
       }
       showToast('Cambios revertidos ✓', 'success');
     }

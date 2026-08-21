@@ -1106,6 +1106,10 @@ async function niGraduate(contactoId) {
       categorias: c.categorias || [], foto: c.foto || '',
       seguidores: c.seguidores || {tiktok:0,instagram:0,youtube:0},
       genero: c.genero || '', keywords: c.keywords || '', valores: c.valores || '',
+      // Se arrastra la dirección de entrega cargada en la prospección: si no,
+      // el talento nace sin dirección y hay que volver a pedírsela.
+      direccion_entrega: c.direccion_entrega||{},
+      notas_internas: c.notas||'',
       updated: new Date().toISOString().split('T')[0]
     };
     var { data: newTalent, error } = await sb.from('talentos').insert(talentRow).select().single();

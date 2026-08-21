@@ -3412,25 +3412,39 @@ function fillDireccionFromContacto() {
   toast('Dirección del perfil del talento cargada','ok');
 }
 async function saveProducto() {
+  const _ct = campana.campana_talentos?.find(x => x.id === editingPrCtId);
+  const _talentId = _ct ? _ct.talent_id : null;
+  const direccion = {
+    destinatario: document.getElementById('pr-de-destinatario').value.trim(),
+    calle: document.getElementById('pr-de-calle').value.trim(),
+    ciudad: document.getElementById('pr-de-ciudad').value.trim(),
+    provincia: document.getElementById('pr-de-provincia').value.trim(),
+    cp: document.getElementById('pr-de-cp').value.trim(),
+    pais: document.getElementById('pr-de-pais').value.trim(),
+    telefono: document.getElementById('pr-de-telefono').value.trim(),
+    notas: document.getElementById('pr-de-notas').value.trim(),
+  };
   await sb.from('campana_talentos').update({
     producto_estado: document.getElementById('pr-estado').value,
     producto_paqueteria: document.getElementById('pr-pak').value.trim(),
     producto_tracking: document.getElementById('pr-track').value.trim(),
     producto_notas: document.getElementById('pr-notas').value.trim(),
-    producto_direccion: {
-      destinatario: document.getElementById('pr-de-destinatario').value.trim(),
-      calle: document.getElementById('pr-de-calle').value.trim(),
-      ciudad: document.getElementById('pr-de-ciudad').value.trim(),
-      provincia: document.getElementById('pr-de-provincia').value.trim(),
-      cp: document.getElementById('pr-de-cp').value.trim(),
-      pais: document.getElementById('pr-de-pais').value.trim(),
-      telefono: document.getElementById('pr-de-telefono').value.trim(),
-      notas: document.getElementById('pr-de-notas').value.trim(),
-    }
+    producto_direccion: direccion
   }).eq('id',editingPrCtId);
+
+  // La dirección de esta campaña también queda en el perfil del talento, para
+  // que la próxima campaña la pre-llene sola. Solo si el perfil está vacío:
+  // una dirección puntual de campaña no debe pisar la del perfil.
+  let _guardadaEnPerfil = false;
+  if (_talentId && _hasDireccion(direccion) && !_hasDireccion(_contactoDireccion)) {
+    const {error: _eDir} = await sb.from('talentos').update({direccion_entrega: direccion}).eq('id', _talentId);
+    if (_eDir) console.warn('guardar direccion en perfil del talento:', _eDir);
+    else { _contactoDireccion = direccion; _guardadaEnPerfil = true; }
+  }
+
   closeModal('modal-producto');
   bumpCampana(); await loadCampana(); renderAll();
-  toast('Producto actualizado ✓','ok');
+  toast(_guardadaEnPerfil ? 'Producto actualizado ✓ — dirección guardada en el perfil del talento' : 'Producto actualizado ✓','ok');
 }
 
 // ════════════════════════════════════════════════
