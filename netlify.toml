@@ -226,6 +226,11 @@
   [headers.values]
     X-Robots-Tag = "noindex, nofollow, noarchive"
 
+[[headers]]
+  for = "/argentina"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
 # Cache strategy
 [[headers]]
   for = "/*"
