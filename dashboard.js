@@ -165,6 +165,9 @@ let currentPhoto = '';
 // Si el usuario abre a editar un talento antes de que su foto llegue, currentPhoto
 // queda '' y guardar la borraría. Solo se escribe `foto` si se tocó acá.
 let photoDirty = false;
+// false mientras loadTalentPhotos sigue trayendo fotos. Mientras tanto un
+// talento puede tener `foto === undefined`: eso NO significa "sin foto".
+let photosLoaded = false;
 let filterDebounce = null;
 let currentSort = ''; // '' | 'recientes' | 'az' | 'za' | 'tt-desc' | 'ig-desc' | 'yt-desc' | 'total-desc'
 let sortDropdownOpen = false;
@@ -612,23 +615,55 @@ async function loadFromSupabase() {
   }
 }
 
+// Trae las fotos en segundo plano. Reglas que salieron de "subo la foto y al
+// refrescar se borró" (la foto estaba en la DB, nunca llegaba al navegador):
+//  · el try envolvía TODO el for: un lote que fallaba cortaba el resto y de ahí
+//    en adelante ningún talento mostraba foto. Ahora falla lote por lote.
+//  · 200 filas de base64 son ~15 MB en una sola respuesta. Lotes de 50.
+//  · primero las fotos de lo que está en pantalla, después el resto.
+//  · `foto` pasa de undefined a '' aunque venga vacía, para poder distinguir
+//    "no tiene foto" de "todavía no cargó" (fetchPhotosSelected depende de eso).
 async function loadTalentPhotos() {
+  const PAGE = 50;
+  const RENDER_EVERY = 200;
   try {
-    const PAGE = 200;
-    for (let i = 0; i < talents.length; i += PAGE) {
-      const batch = talents.slice(i, i + PAGE);
-      const ids = batch.map(t => t.id);
-      const {data} = await sb.from('talentos').select('id,foto').in('id', ids);
-      if (data) {
-        data.forEach(p => {
-          if (!p.foto) return;
-          const t = talents.find(x => x.id === p.id);
-          if (t) t.foto = p.foto;
-        });
-        renderTalents();
+    // Orden de prioridad: lo que el usuario está viendo ahora, después el resto.
+    const order = [];
+    const seen = new Set();
+    try {
+      applySortToList(getFilteredTalents()).forEach(function(t) {
+        if (!seen.has(t.id)) { seen.add(t.id); order.push(t.id); }
+      });
+    } catch(e) { /* si el filtro falla, se cargan en el orden natural */ }
+    talents.forEach(function(t) {
+      if (!seen.has(t.id)) { seen.add(t.id); order.push(t.id); }
+    });
+
+    let sinceRender = 0;
+    for (let i = 0; i < order.length; i += PAGE) {
+      const ids = order.slice(i, i + PAGE);
+      let data = null;
+      for (let attempt = 1; attempt <= 3 && !data; attempt++) {
+        try {
+          const res = await sb.from('talentos').select('id,foto').in('id', ids);
+          if (res.error) throw res.error;
+          data = res.data || [];
+        } catch(e) {
+          console.warn('[Beme] Fotos: lote ' + (Math.floor(i/PAGE)+1) + ' falló (intento ' + attempt + '/3):', e.message || e);
+          if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1500));
+        }
       }
+      if (!data) continue; // este lote se pierde, los demás siguen
+      data.forEach(function(p) {
+        const t = talents.find(function(x) { return x.id === p.id; });
+        if (t) t.foto = p.foto || '';
+      });
+      sinceRender += data.length;
+      if (sinceRender >= RENDER_EVERY || i + PAGE >= order.length) { sinceRender = 0; renderTalents(); }
     }
   } catch(e) { console.warn('[Beme] Photo load error:', e); }
+  photosLoaded = true;
+  renderTalents();
 }
 
 let _realtimeChannel = null;
@@ -2206,6 +2241,16 @@ function openEditModal(id) {
   document.getElementById('delete-btn').style.display = 'inline-flex';
   fillForm(t);
   openModal('talent-modal');
+  // Si la carga en segundo plano todavía no llegó a este talento, la traemos
+  // ahora: el modal no puede mostrar el avatar vacío como si no tuviera foto.
+  if (t.foto === undefined && sb) {
+    sb.from('talentos').select('foto').eq('id', id).single()
+      .then(function(res) {
+        if (!res || res.error || !res.data) return;
+        t.foto = res.data.foto || '';
+        if (editingId === id && !photoDirty) { currentPhoto = t.foto; updatePhotoPreview(currentPhoto); }
+      });
+  }
 }
 function clearForm() {
   ['f-nombre','f-ciudad','f-telefono','f-email','f-tiktok','f-instagram','f-youtube','f-valores','f-seg-tiktok','f-seg-instagram','f-seg-youtube']
@@ -2294,13 +2339,53 @@ function updatePhotoPreview(src) {
   const p = document.getElementById('modal-photo-preview');
   p.innerHTML = src ? `<img src="${src}" alt="foto">` : `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
 }
-function handlePhotoUpload(input) {
+// El avatar más grande de la UI mide ~120 px. Guardar el JPEG original de 4 MB
+// en la fila hacía que cada refresh bajara decenas de MB de base64 y que el
+// payload de Realtime no entrara: por eso se redimensiona antes de guardar.
+const PHOTO_MAX_DIM = 512;
+const PHOTO_QUALITY = 0.85;
+// Regla de oro: ante cualquier error devuelve el original. Nunca perder la foto.
+function compressPhoto(file) {
+  return new Promise(function(resolve, reject) {
+    const reader = new FileReader();
+    reader.onerror = function() { reject(new Error('No se pudo leer el archivo')); };
+    reader.onload = function(e) {
+      const original = e.target.result;
+      const img = new Image();
+      img.onerror = function() { resolve(original); };
+      img.onload = function() {
+        try {
+          const scale = Math.min(1, PHOTO_MAX_DIM / Math.max(img.width, img.height));
+          if (scale === 1 && original.length < 120000) return resolve(original);
+          const c = document.createElement('canvas');
+          c.width  = Math.max(1, Math.round(img.width  * scale));
+          c.height = Math.max(1, Math.round(img.height * scale));
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height); // PNG con alpha → JPEG sin fondo negro
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          const out = c.toDataURL('image/jpeg', PHOTO_QUALITY);
+          resolve(out && out.length < original.length ? out : original);
+        } catch(err) { resolve(original); }
+      };
+      img.src = original;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function handlePhotoUpload(input) {
   const file = input.files[0];
   if(!file) return;
-  if(file.size > 5*1024*1024) { showToast('Imagen demasiado grande (máx 5MB)', 'error'); return; }
-  const reader = new FileReader();
-  reader.onload = e => { currentPhoto = e.target.result; photoDirty = true; updatePhotoPreview(currentPhoto); };
-  reader.readAsDataURL(file);
+  if(file.size > 15*1024*1024) { showToast('Imagen demasiado grande (máx 15MB)', 'error'); input.value = ''; return; }
+  try {
+    const dataUrl = await compressPhoto(file);
+    currentPhoto = dataUrl;
+    photoDirty = true;
+    updatePhotoPreview(currentPhoto);
+  } catch(e) {
+    showToast('No se pudo leer la imagen: ' + (e.message || e), 'error');
+  }
+  // Sin esto, volver a elegir el MISMO archivo no dispara el change.
+  input.value = '';
 }
 
 // ===================== FETCH PROFILE PHOTO FROM TIKTOK / INSTAGRAM =====================
@@ -2462,6 +2547,12 @@ async function fetchProfilePhoto() {
 async function fetchPhotosSelected() {
   const sel = talents.filter(t => selectedIds.has(t.id));
   if (!sel.length) { showToast('No hay talentos seleccionados', 'error'); return; }
+  // `foto === undefined` = todavía no cargó, NO es "sin foto". Sin este corte
+  // el bulk pisaba con una foto scrapeada la que el talento ya tenía cargada.
+  if (!photosLoaded && sel.some(function(t){ return t.foto === undefined; })) {
+    showToast('Las fotos todavía se están cargando — esperá unos segundos para no pisar las que ya existen', 'info');
+    return;
+  }
   // Only process talents without a photo
   const noPhoto = sel.filter(t => !t.foto);
   if (noPhoto.length === 0) { showToast('Todos los talentos seleccionados ya tienen foto', 'info'); return; }
@@ -2590,6 +2681,10 @@ async function saveTalent() {
   // Si no se tocó, ni se manda: se carga en segundo plano (loadTalentPhotos) y
   // escribir currentPhoto cuando todavía no llegó a memoria la borraría.
   if (photoDirty) data.foto = currentPhoto || '';
+  // Se lee de vuelta después de guardar para confirmar que la foto quedó en la
+  // DB. Antes el .select() del update no traía `foto`: si la escritura fallaba
+  // en silencio, el usuario se enteraba recién al refrescar y verla borrada.
+  const _photoSent = photoDirty ? (currentPhoto || '') : null;
 
   const _needsReview = !!(document.getElementById('f-needs-review') && document.getElementById('f-needs-review').checked);
   const _reviewComment = (document.getElementById('f-review-comment') ? document.getElementById('f-review-comment').value.trim() : '');
@@ -2650,9 +2745,10 @@ async function saveTalent() {
       console.error('[Beme] "' + k + '" se guarda pero no se lee: agregalo a TALENT_COLS_ARR. No se manda para no borrar datos.');
       delete row[k];
     });
+    const _readBack = _photoSent !== null ? TALENT_COLS + ',foto' : TALENT_COLS;
     const _persist = _wasEditingId
-      ? sb.from('talentos').update(row).eq('id', savedTalent.id).select(TALENT_COLS).single()
-      : sb.from('talentos').upsert([{ id: savedTalent.id, ...row }], {onConflict:'id'}).select(TALENT_COLS).single();
+      ? sb.from('talentos').update(row).eq('id', savedTalent.id).select(_readBack).single()
+      : sb.from('talentos').upsert([{ id: savedTalent.id, ...row }], {onConflict:'id'}).select(_readBack).single();
     _persist
       .then(({data: _saved, error}) => {
         if(error) { console.error('Upsert talent error:', error); showToast('Error al guardar en la nube: ' + error.message, 'error'); }
@@ -2663,6 +2759,10 @@ async function saveTalent() {
             const _i = talents.findIndex(x => x.id === _saved.id);
             if (_i > -1) talents[_i] = { ...talents[_i], ..._saved };
             renderTalents();
+            if (_photoSent && !_saved.foto) {
+              console.error('[Beme] La foto no quedó guardada en la DB para el talento', _saved.id);
+              showToast('La foto no se pudo guardar (la imagen puede ser demasiado pesada). Probá con otra.', 'error');
+            }
           }
           const ind = document.getElementById('sync-indicator');
           if(ind) { ind.style.opacity='1'; setTimeout(()=>{ind.style.opacity='0';},1800); }
