@@ -88,6 +88,13 @@
   status = 200
   force = true
 
+# Deck comercial de la alianza con Big Agency (Argentina)
+[[redirects]]
+  from = "https://bemeagency.com/argentina*"
+  to = "/argentina.html"
+  status = 200
+  force = true
+
 # ---- Estáticos que necesitan esas páginas ----
 [[redirects]]
   from = "https://bemeagency.com/assets/*"
@@ -211,6 +218,11 @@
 
 [[headers]]
   for = "/pedido-cliente.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/argentina.html"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow, noarchive"
 
