@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BEME — Solicitud de links de campaña</title>
+<link rel="icon" href="../favicon.ico">
+<style>
+  :root{
+    --magenta:#b2005d;
+    --magenta-claro:#ed568f;
+    --purpura:#9414e0;
+    --purpura-osc:#440b5d;
+    --negro:#1c1c1c;
+    --gris:#f4f4f4;
+    --gris-2:#e2e2e2;
+    --gris-txt:#3c3c3b;
+  }
+  @font-face{
+    font-family:'Plus Jakarta Sans';
+    src:url('../assets/brand/fonts/PlusJakartaSans-Variable.woff2') format('woff2');
+    font-weight:200 800; font-display:swap;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'Plus Jakarta Sans',-apple-system,'Segoe UI',sans-serif;
+    color:var(--negro); background:#e9e9e9;
+    -webkit-font-smoothing:antialiased;
+    font-size:10pt; line-height:1.5;
+  }
+
+  .hoja{
+    width:210mm; margin:0 auto; padding:16mm 15mm 14mm;
+    background:#fff; position:relative;
+  }
+
+  /* ═══ Encabezado ═══ */
+  .top{display:flex;justify-content:space-between;align-items:flex-start;
+       padding-bottom:10px;border-bottom:2px solid var(--negro);margin-bottom:22px}
+  .top img{height:30px}
+  .top .meta{text-align:right;font-size:8pt;color:var(--gris-txt);line-height:1.6}
+  .top .meta b{color:var(--negro)}
+
+  .eyebrow{
+    font-size:8pt;letter-spacing:.22em;text-transform:uppercase;
+    font-weight:700;color:var(--magenta);margin-bottom:10px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .eyebrow::before{content:'';width:26px;height:2px;background:var(--magenta)}
+
+  h1{font-size:26pt;line-height:1.08;font-weight:800;letter-spacing:-.02em;margin-bottom:10px}
+  h1 .fino{font-weight:300}
+  h1 .mg{color:var(--magenta)}
+
+  .lead{font-size:10.5pt;color:var(--gris-txt);max-width:150mm;margin-bottom:20px}
+
+  /* ═══ Qué se pide ═══ */
+  .pide{background:var(--gris);padding:14px 16px;margin-bottom:24px}
+  .pide h3{font-size:9pt;letter-spacing:.14em;text-transform:uppercase;
+           color:var(--magenta);margin-bottom:9px}
+  .pide ol{margin-left:15px;font-size:9.5pt;color:var(--gris-txt)}
+  .pide li{margin-bottom:5px}
+  .pide li b{color:var(--negro)}
+  .pide code{background:#fff;padding:1px 5px;font-size:8.5pt;
+             font-family:ui-monospace,Menlo,monospace;color:var(--purpura-osc)}
+
+  /* ═══ Bloques ═══ */
+  .bloque{margin-bottom:26px}
+  .bloque-tit,.bloque-sub,thead{break-after:avoid}
+  .bloque-tit{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+  .bloque-tit h2{font-size:14pt;font-weight:800;letter-spacing:-.01em}
+  .chip{font-size:7.5pt;letter-spacing:.12em;text-transform:uppercase;
+        font-weight:700;padding:3px 9px;white-space:nowrap}
+  .chip.p1{background:rgba(178,0,93,.1);color:var(--magenta)}
+  .chip.p2{background:rgba(68,11,93,.1);color:var(--purpura-osc)}
+  .chip.p3{background:var(--gris-2);color:var(--gris-txt)}
+  .bloque-sub{font-size:9pt;color:var(--gris-txt);margin-bottom:12px}
+
+  /* ═══ Tabla ═══ */
+  table{width:100%;border-collapse:collapse;font-size:9pt}
+  thead th{
+    text-align:left;font-size:7.5pt;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--gris-txt);font-weight:700;
+    padding:0 8px 6px;border-bottom:1.5px solid var(--negro);
+  }
+  tbody tr{break-inside:avoid}
+  tbody td{padding:9px 8px;border-bottom:1px solid var(--gris-2);vertical-align:top}
+  tbody tr:nth-child(even){background:#fafafa}
+  .marca{font-weight:800;font-size:10pt;white-space:nowrap}
+  .cat{font-size:7.5pt;letter-spacing:.1em;text-transform:uppercase;
+       color:var(--magenta);font-weight:700;display:block;margin-bottom:1px}
+  .dato{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--gris-txt)}
+  .dato b{color:var(--negro);font-weight:800}
+  .sin{color:#9a9a9a;font-style:italic;font-size:8.5pt}
+  .linea{border-bottom:1px dotted #b4b4b4;height:15px;margin-bottom:6px}
+  .linea:last-child{margin-bottom:0}
+  .box{display:inline-block;width:11px;height:11px;border:1.5px solid var(--gris-txt);
+       margin-right:5px;vertical-align:-1px}
+  .chk{font-size:8.5pt;color:var(--gris-txt);white-space:nowrap}
+
+  /* ═══ Cierre ═══ */
+  .cierre{background:var(--purpura-osc);color:#fff;padding:16px 18px;margin-top:8px}
+  .cierre h3{font-size:9pt;letter-spacing:.14em;text-transform:uppercase;
+             color:var(--magenta-claro);margin-bottom:8px}
+  .cierre p{font-size:9.5pt;opacity:.92;margin-bottom:6px}
+  .cierre p:last-child{margin-bottom:0}
+  .cierre code{background:rgba(255,255,255,.14);padding:1px 5px;
+               font-family:ui-monospace,Menlo,monospace;font-size:8.5pt}
+
+  .pie{display:flex;justify-content:space-between;
+       font-size:7.5pt;color:#9a9a9a;margin-top:16px;
+       border-top:1px solid var(--gris-2);padding-top:7px}
+
+  @page{size:A4;margin:14mm 15mm 12mm}
+  @media print{
+    body{background:#fff}
+    .hoja{width:auto;padding:0;margin:0}
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ HOJA 1 ═══════════ -->
+<div class="hoja">
+  <div class="top">
+    <img src="../assets/deck/beme-logo.png" alt="BEME">
+    <div class="meta">
+      <b>Solicitud interna</b><br>
+      25 de agosto de 2026<br>
+      Deck BEME × Big Agency
+    </div>
+  </div>
+
+  <p class="eyebrow">Beme · Material de campañas</p>
+  <h1>Links <span class="fino">de</span> <span class="mg">campañas realizadas</span></h1>
+  <p class="lead">
+    Necesitamos el contenido publicado de las campañas que ya ejecutamos para
+    respaldar el deck comercial de la alianza con Big Agency. Hoy el deck muestra
+    los logos de las marcas, pero sin una pieza real detrás.
+  </p>
+
+  <div class="pide">
+    <h3>Qué necesitamos por cada marca</h3>
+    <ol>
+      <li><b>Link del contenido publicado</b> — TikTok, Reel, Story o YouTube. Con uno alcanza; si hay dos que se lucen, mejor.</li>
+      <li><b>Una imagen de la campaña</b> — captura del contenido, foto del talento con el producto o el arte que se usó. Horizontal o cuadrada, la mejor resolución que tengan.</li>
+      <li><b>Nombre del talento</b> que la ejecutó, para poder acreditarlo.</li>
+    </ol>
+  </div>
+
+  <!-- BLOQUE 1 -->
+  <div class="bloque">
+    <div class="bloque-tit">
+      <h2>Las 12 del deck</h2>
+      <span class="chip p1">Prioridad alta</span>
+    </div>
+    <p class="bloque-sub">
+      Estas doce marcas ya tienen su lugar reservado en el slide 05. Cada una espera
+      una imagen: hasta que llegue, se ve el logo solo.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:31%">Marca</th>
+          <th style="width:20%">En el software</th>
+          <th style="width:33%">Link del contenido</th>
+          <th style="width:16%">Imagen</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="cat">Tecnología</span><span class="marca">Huawei</span></td>
+          <td class="dato"><b>5</b> campañas · <b>5</b> piezas</td>
+          <td><div class="linea"></div><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>adjunta</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Beauty tech</span><span class="marca">Shark Beauty</span></td>
+          <td class="dato"><b>4</b> campañas · <b>8</b> piezas</td>
+          <td><div class="linea"></div><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>adjunta</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Cuidado del cabello</span><span class="marca">Garnier</span></td>
+          <td class="dato"><b>4</b> campañas · <b>10</b> piezas</td>
+          <td><div class="linea"></div><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>adjunta</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Dermocosmética</span><span class="marca">Uriage</span></td>
+          <td class="dato"><b>4</b> campañas · <b>8</b> piezas</td>
+          <td><div class="linea"></div><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>adjunta</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Tecnología</span><span class="marca">Anker</span></td>
+          <td class="dato"><b>4</b> campañas · <b>8</b> piezas</td>
+          <td><div class="linea"></div><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>adjunta</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Gaming</span><span class="marca">Honkai: Star Rail</span></td>
+          <td class="dato"><b>6</b> campañas · <b>5</b> piezas</td>
+          <td><div class="linea"></div><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>adjunta</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Belleza</span><span class="marca">Avon</span></td>
+          <td class="dato"><b>1</b> campaña · <b>2</b> piezas</td>
+          <td><div class="linea"></div><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>adjunta</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Skincare</span><span class="marca">Kiehl's</span></td>
+          <td class="dato"><b>1</b> campaña · <b>2</b> piezas</td>
+          <td><div class="linea"></div><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>adjunta</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Moda</span><span class="marca">H&amp;M</span></td>
+          <td class="sin">Anterior al software</td>
+          <td><div class="linea"></div><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>adjunta</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Dermocosmética</span><span class="marca">Avène</span></td>
+          <td class="sin">Anterior al software</td>
+          <td><div class="linea"></div><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>adjunta</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Energía portátil</span><span class="marca">EcoFlow</span></td>
+          <td class="sin">Fuera del software</td>
+          <td><div class="linea"></div><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>adjunta</td>
+        </tr>
+        <tr>
+          <td><span class="cat">E-commerce</span><span class="marca">Amazon</span></td>
+          <td class="sin">Fuera del software</td>
+          <td><div class="linea"></div><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>adjunta</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- BLOQUE 2 -->
+  <div class="bloque">
+    <div class="bloque-tit">
+      <h2>Marcas anteriores al software</h2>
+      <span class="chip p2">Respaldo</span>
+    </div>
+    <p class="bloque-sub">
+      Están en el muro de marcas del slide 04 pero no tienen ninguna campaña
+      cargada en el sistema, porque se ejecutaron antes de que existiera.
+      Con un link por marca alcanza para poder sostenerlas si un cliente pregunta.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:31%">Marca</th>
+          <th style="width:20%">En el software</th>
+          <th style="width:33%">Link del contenido</th>
+          <th style="width:16%">Imagen</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="cat">Cuidado del cabello</span><span class="marca">Kérastase</span></td>
+          <td class="sin">Sin registro</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>opcional</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Tecnología</span><span class="marca">Realme</span></td>
+          <td class="sin">Sin registro</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>opcional</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Cuidado de la piel</span><span class="marca">Nivea</span></td>
+          <td class="sin">Sin registro</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>opcional</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Cuidado personal</span><span class="marca">Kleenex</span></td>
+          <td class="sin">Sin registro</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>opcional</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Cuidado personal</span><span class="marca">Kotex</span></td>
+          <td class="dato"><b>1</b> campaña · <b>1</b> pieza</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>opcional</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Belleza</span><span class="marca">Ésika</span></td>
+          <td class="sin">Marca creada, 0 campañas</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>opcional</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- BLOQUE 3 -->
+  <div class="bloque">
+    <div class="bloque-tit">
+      <h2>Campañas que el deck no está mostrando</h2>
+      <span class="chip p3">Oportunidad</span>
+    </div>
+    <p class="bloque-sub">
+      Tienen volumen real ejecutado y hoy no aparecen en ningún slide. Si llega
+      buen material, algunas pueden entrar al deck. Shark Ninja es la de mayor
+      volumen de contenido de todo el histórico.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:31%">Marca</th>
+          <th style="width:20%">En el software</th>
+          <th style="width:33%">Link del contenido</th>
+          <th style="width:16%">Imagen</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="cat">Electrodomésticos</span><span class="marca">Shark Ninja</span></td>
+          <td class="dato"><b>1</b> campaña · <b>13</b> piezas</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>si hay</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Belleza</span><span class="marca">Sheglam</span></td>
+          <td class="dato"><b>3</b> campañas · <b>3</b> piezas</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>si hay</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Cuidado personal</span><span class="marca">Grisi</span></td>
+          <td class="dato"><b>1</b> campaña · <b>6</b> piezas</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>si hay</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Dermocosmética</span><span class="marca">Eucerin</span></td>
+          <td class="dato"><b>2</b> campañas · <b>4</b> piezas</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>si hay</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Fragancias</span><span class="marca">Dossier</span></td>
+          <td class="dato"><b>1</b> campaña · <b>4</b> piezas</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>si hay</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Cuidado personal</span><span class="marca">Xtreme</span></td>
+          <td class="dato"><b>1</b> campaña · <b>4</b> piezas</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>si hay</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Belleza</span><span class="marca">L'Bel</span></td>
+          <td class="dato"><b>2</b> campañas · <b>3</b> piezas</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>si hay</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Fintech</span><span class="marca">Kueski</span></td>
+          <td class="dato"><b>1</b> campaña · <b>3</b> piezas</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>si hay</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Cosmética natural</span><span class="marca">Apivita</span></td>
+          <td class="dato"><b>2</b> campañas · <b>4</b> piezas</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>si hay</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Skincare</span><span class="marca">CeraVe</span></td>
+          <td class="dato"><b>1</b> campaña · <b>2</b> piezas</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>si hay</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Cuidado personal</span><span class="marca">SheaMoisture</span></td>
+          <td class="dato"><b>2</b> campañas · <b>2</b> piezas</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>si hay</td>
+        </tr>
+        <tr>
+          <td><span class="cat">Cuidado personal</span><span class="marca">Prorganics</span></td>
+          <td class="dato"><b>1</b> campaña · <b>3</b> piezas</td>
+          <td><div class="linea"></div></td>
+          <td class="chk"><span class="box"></span>si hay</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="cierre">
+    <h3>Cómo devolverlo</h3>
+    <p>Los links se pueden escribir sobre este mismo PDF o mandar en una lista suelta, como sea más cómodo.</p>
+    <p>Las imágenes van con el nombre de la marca en minúscula y sin espacios: <code>garnier.jpg</code>, <code>sharkbeauty.jpg</code>, <code>honkai.jpg</code>. Así entran solas al deck.</p>
+  </div>
+
+  <div class="pie">
+    <span>BEME Agency — Solicitud de links de campaña</span>
+    <span>25 · 08 · 2026</span>
+  </div>
+</div>
+
+</body>
+</html>
