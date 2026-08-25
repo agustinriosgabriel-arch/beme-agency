@@ -131,12 +131,10 @@
   status = 200
   force = true
 
-# Las páginas públicas hablan con las functions
-[[redirects]]
-  from = "https://bemeagency.com/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-  force = true
+# Nota: NO hace falta (ni se permite) una regla para /.netlify/*.
+# Netlify rechaza cualquier redirect sobre esa ruta porque está
+# reservada para el runtime de functions, así que el catch-all de
+# abajo tampoco la toca y las functions siguen respondiendo.
 
 # ---- Todo lo demás en el dominio público no existe ----
 # Cubre el panel interno y los ~120 posts de spam de casinos que
