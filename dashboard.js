@@ -1444,8 +1444,10 @@ async function confirmCSVImport() {
   closeModal('csv-preview-modal');
   showToast('Importando '+rows.length+' talentos...','info');
 
-  // Assign integer IDs before insert (table has no auto-increment)
-  rows.forEach(function(r) { r.id = nextTalentId++; });
+  // Sin id: lo asigna la secuencia de Postgres (la tabla SÍ es serial).
+  // Mandarlo a mano deja la secuencia atrasada y el siguiente insert que sí
+  // la usa (graduar una prospección) revienta con "talentos_pkey duplicado".
+  rows.forEach(function(r) { delete r.id; });
 
   var imported=0, dbErrors=0;
   const CHUNK=50;
@@ -1460,10 +1462,6 @@ async function confirmCSVImport() {
     }
   }
 
-  // Persist updated nextTalentId to app_config
-  if(sb && currentUser) {
-    sb.from('app_config').upsert({key:'next_talent_id', value: nextTalentId}).catch(function(e){ console.warn('Update next_talent_id:', e); });
-  }
   renderTalents(); updateStats(); updatePlatformCounts(); populateCatCheckboxes();
   if(sb&&currentUser&&imported>0){
     sb.from('app_config').upsert([{key:'categories',value:[...CATEGORIES]},{key:'countries',value:[...COUNTRIES]}])
@@ -2746,9 +2744,15 @@ async function saveTalent() {
       delete row[k];
     });
     const _readBack = _photoSent !== null ? TALENT_COLS + ',foto' : TALENT_COLS;
+    // Talento nuevo: se inserta SIN id y lo asigna la secuencia de Postgres.
+    // El id local (nextTalentId) es solo temporal para pintar la fila al toque;
+    // abajo se reemplaza por el real. Mandar el id a mano tenía dos problemas:
+    // dejaba la secuencia atrasada (graduar una prospección tiraba "talentos_pkey
+    // duplicado") y, si el contador venía viejo, el upsert pisaba otro talento.
+    const _tempId = _wasEditingId ? null : savedTalent.id;
     const _persist = _wasEditingId
       ? sb.from('talentos').update(row).eq('id', savedTalent.id).select(_readBack).single()
-      : sb.from('talentos').upsert([{ id: savedTalent.id, ...row }], {onConflict:'id'}).select(_readBack).single();
+      : sb.from('talentos').insert([row]).select(_readBack).single();
     _persist
       .then(({data: _saved, error}) => {
         if(error) { console.error('Upsert talent error:', error); showToast('Error al guardar en la nube: ' + error.message, 'error'); }
@@ -2756,8 +2760,23 @@ async function saveTalent() {
           // Reflejar exactamente lo que quedó en la DB: si algo no se guardó,
           // se ve en pantalla al instante en vez de aparecer recién al recargar.
           if (_saved) {
-            const _i = talents.findIndex(x => x.id === _saved.id);
-            if (_i > -1) talents[_i] = { ...talents[_i], ..._saved };
+            // Al crear, la fila local todavía tiene el id temporal: se busca por
+            // ese y el spread de _saved le deja el id real que puso la DB.
+            const _i = talents.findIndex(x => x.id === (_tempId !== null ? _tempId : _saved.id));
+            if (_i > -1) {
+              const _merged = { ...talents[_i], ..._saved };
+              talents[_i] = _merged;
+              // Si el evento realtime de nuestro propio INSERT llegó antes que
+              // esta respuesta, la fila real ya entró al array con el id
+              // definitivo: sacar el duplicado y quedarse con la fusionada.
+              if (_tempId !== null) {
+                for (let _j = talents.length - 1; _j >= 0; _j--) {
+                  if (talents[_j] !== _merged && talents[_j].id === _saved.id) talents.splice(_j, 1);
+                }
+              }
+            } else if (!talents.some(x => x.id === _saved.id)) {
+              talents.push({ ..._saved, paises: _saved.paises||[], categorias: _saved.categorias||[], seguidores: _saved.seguidores||{tiktok:0,instagram:0,youtube:0} });
+            }
             renderTalents();
             if (_photoSent && !_saved.foto) {
               console.error('[Beme] La foto no quedó guardada en la DB para el talento', _saved.id);
@@ -2766,12 +2785,11 @@ async function saveTalent() {
           }
           const ind = document.getElementById('sync-indicator');
           if(ind) { ind.style.opacity='1'; setTimeout(()=>{ind.style.opacity='0';},1800); }
-          // Persist nextTalentId if this was a new talent
-          if(!_wasEditingId) sb.from('app_config').upsert({key:'next_talent_id', value: nextTalentId}).catch(e => console.warn('next_talent_id:', e));
           // Auto-scrape once so a brand-new talent loads with followers/metadata.
-          // Runs AFTER the insert confirms, so saveFollowers' UPDATE lands on an existing row.
-          if(!_wasEditingId && (savedTalent.tiktok || savedTalent.instagram || savedTalent.youtube)) {
-            updateTalentAll(savedTalent.id);
+          // Runs AFTER the insert confirms, so saveFollowers' UPDATE lands on an
+          // existing row. Se usa _saved.id (el real), no el temporal.
+          if(!_wasEditingId && _saved && (savedTalent.tiktok || savedTalent.instagram || savedTalent.youtube)) {
+            updateTalentAll(_saved.id);
           }
         }
       });
