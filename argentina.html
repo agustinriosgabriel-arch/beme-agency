@@ -634,18 +634,52 @@
      Marca sin piezas cargadas -> la card no es clickeable (sin afordancia falsa).
      Los links salen de contenidos.url_publicacion en Supabase.        */
   const TRABAJOS = {
-    huawei:      [],
-    sharkbeauty: [],
-    garnier:     [],
-    uriage:      [],
-    anker:       [],
-    honkai:      [],
-    avon:        [],
-    kiehls:      [],
-    hm:          [],
-    avene:       [],
-    ecoflow:     [],
-    amazon:      [],
+    huawei: [
+      {url:'https://www.tiktok.com/@brenda_jair/video/7642103761787161863', titulo:'HUAWEI Watch Fit 5', talento:'Brenda'},
+      {url:'https://www.tiktok.com/t/ZS9FquPByTa4v-yaHEF/',                 titulo:'HUAWEI Watch Fit 5', talento:'Diego Morán Rivera'},
+      {url:'https://www.tiktok.com/@greeoutfits/video/7670981496500473096', titulo:'HUAWEI Guayaba Fizz', talento:'Greeoutfits'},
+      {url:'https://www.tiktok.com/@brenda_jair/video/7676981616345894162', titulo:'HUAWEI MatePad Air', talento:'Brenda'},
+    ],
+    sharkbeauty: [
+      {url:'https://vt.tiktok.com/ZSQcLQywR/', titulo:'Shark Beauty Face Pro Glow', talento:'Gabriel Cabrera'},
+      {url:'https://vt.tiktok.com/ZSxV1CJeJ/', titulo:'Shark FlexBreeze', talento:'Brenda'},
+    ],
+    garnier: [
+      {url:'https://www.instagram.com/reel/DbMIgikIQ-q/',  titulo:'Agua Micelar de Vitamina C', talento:'Brenda'},
+      {url:'https://www.instagram.com/reels/DZoVMrfuE29/', titulo:'Jars anti-imperfecciones', talento:'Brenda'},
+      {url:'https://www.tiktok.com/@brenda_jair/video/7635525014543961362', titulo:'Classic Micellar — Día de la Madre', talento:'Brenda'},
+    ],
+    uriage: [
+      {url:'https://vt.tiktok.com/ZS9HUbyhe/', titulo:'Serum Depiderm', talento:'Miranda Carricart'},
+      {url:'https://vt.tiktok.com/ZS9mr8vx1/', titulo:'Serum Depiderm', talento:'Marifer Bru'},
+      {url:'https://www.instagram.com/reel/DZ_Tlh6Pf30/', titulo:'Bariesun Stick Solar Invisible', talento:'Dany Reyes'},
+      {url:'https://www.instagram.com/reel/DZns_-kP6n2/', talento:'awesomeactioncat_'},
+      {url:'https://www.instagram.com/reel/DZ8HzYYJyMf/', talento:'Celeste Lara'},
+    ],
+    anker: [
+      {url:'https://youtu.be/p-txteF56yI',                     titulo:'Anker SOLIX E10', talento:'Southern Adventures'},
+      {url:'https://www.youtube.com/watch?v=X6WF1BJt-3A',      titulo:'Anker SOLIX C2000 Gen 2', talento:'Twobitdavinci'},
+      {url:'https://www.youtube.com/watch?v=HZWS8Za36cM',      titulo:'Anker SOLIX F3800 — Storm Ready', talento:'Twobitdavinci'},
+      {url:'https://www.youtube.com/watch?v=YoOBin4aYv8',      titulo:'Anker SOLIX', talento:'Tiny Cabin Life'},
+      {url:'https://www.youtube.com/watch?v=koiTPVR7kWY',      titulo:'Anker SOLIX', talento:'Enoylity Technology'},
+    ],
+    honkai: [
+      {url:'https://www.tiktok.com/@tani_pinta/video/7663613247060266261',      titulo:'Honkai: Star Rail v4.4', talento:'Tani Pinta'},
+      {url:'https://www.tiktok.com/@fernandatavassi/video/7662882094070205704', titulo:'Honkai: Star Rail v4.4', talento:'Fernanda Tavassi'},
+      {url:'https://www.instagram.com/reel/Da29X3mtHnL/',                       titulo:'Honkai: Star Rail v4.4', talento:'Mika'},
+      {url:'https://vm.tiktok.com/ZNRGGRgvQ/',                                  titulo:'3.º aniversario — Evanescia', talento:'mochichuucosplay'},
+    ],
+    avon: [
+      {url:'https://www.instagram.com/reel/DYX6p81IqYG/', titulo:'Avon 140 años', talento:'Brenda'},
+    ],
+    kiehls: [
+      {url:'https://www.instagram.com/reels/DZDNYMMonHa/', titulo:"Kiehl's", talento:'Brenda'},
+    ],
+    // anteriores al software / fuera del software: sin link cargado
+    hm:      [],
+    avene:   [],
+    ecoflow: [],
+    amazon:  [],
   };
 
   (function(){
@@ -655,6 +689,13 @@
     const sub=document.getElementById('tbSub');
     const logo=document.getElementById('tbLogo');
 
+    function plataforma(u){
+      if(/tiktok\.com/.test(u))    return 'TikTok';
+      if(/instagram\.com/.test(u)) return 'Instagram';
+      if(/youtu\.?be/.test(u))     return 'YouTube';
+      return 'Ver contenido';
+    }
+
     function abrir(nombre, logoSrc, piezas){
       tit.textContent=nombre;
       sub.textContent=piezas.length+' '+(piezas.length===1?'pieza publicada':'piezas publicadas');
@@ -662,7 +703,7 @@
       lista.innerHTML=piezas.map(t=>
         '<a class="tb-item" href="'+t.url+'" target="_blank" rel="noopener">'+
           '<div class="t">'+(t.titulo||'Ver contenido')+'</div>'+
-          '<div class="m">'+(t.talento?'<em>'+t.talento+'</em>':'')+'<span>'+t.url.replace(/^https?:\/\/(www\.)?/,'').slice(0,52)+'</span></div>'+
+          '<div class="m">'+(t.talento?'<em>'+t.talento+'</em>':'')+'<span>'+plataforma(t.url)+'</span></div>'+
         '</a>').join('');
       fondo.classList.add('on');
     }
