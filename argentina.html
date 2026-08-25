@@ -88,7 +88,6 @@
   .cover-art .iso{position:absolute;z-index:2;right:6%;top:20%;height:34%;width:auto}
   .cover-art .pantone{position:absolute;z-index:3;left:14%;bottom:26%;background:#fff;padding:12px 18px;font-size:12px;letter-spacing:.14em;font-weight:700;box-shadow:0 10px 30px rgba(28,28,28,.14)}
   .cover-art .pantone::before{content:'';display:inline-block;width:10px;height:10px;background:var(--magenta);margin-right:8px}
-  .cover-art .hex{position:absolute;z-index:3;right:2%;bottom:12%;font-size:12px;letter-spacing:.18em;font-weight:700;color:var(--gris-txt)}
 
   /* ══════════ 02 · Alianza ══════════ */
   .s-alianza{background:var(--gris)}
@@ -152,6 +151,33 @@
   .camp-body{padding:10px 14px}
   .camp-body h4{font-size:14px;font-weight:800}
   .camp-body span{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--magenta);font-weight:700}
+  /* card con trabajos cargados: clickeable */
+  a.camp-card{text-decoration:none;color:inherit;cursor:pointer;transition:transform .18s,box-shadow .18s}
+  a.camp-card:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(28,28,28,.13)}
+  a.camp-card:hover .camp-img img.logo{opacity:1;filter:grayscale(0) brightness(1) contrast(1)}
+  .camp-ver{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+            color:var(--magenta);letter-spacing:.04em;margin-top:5px}
+  a.camp-card:hover .camp-ver{text-decoration:underline}
+
+  /* modal de trabajos */
+  .tb-fondo{position:fixed;inset:0;z-index:60;background:rgba(28,28,28,.62);
+            backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:24px}
+  .tb-fondo.on{display:flex}
+  .tb{background:#fff;width:100%;max-width:560px;max-height:82vh;overflow-y:auto;
+      padding:32px 34px;position:relative}
+  .tb-x{position:absolute;top:14px;right:18px;background:none;border:0;font-size:26px;
+        line-height:1;color:var(--gris-txt);cursor:pointer;padding:4px 8px}
+  .tb-x:hover{color:var(--magenta)}
+  .tb-logo{height:30px;width:auto;margin-bottom:14px;filter:grayscale(1) brightness(.5) contrast(1.15)}
+  .tb h3{font-size:23px;font-weight:800;letter-spacing:-.01em;margin-bottom:3px}
+  .tb-sub{font-size:12.5px;color:var(--gris-txt);margin-bottom:20px}
+  .tb-item{display:block;text-decoration:none;color:inherit;
+           padding:13px 0;border-top:1px solid var(--gris-2)}
+  .tb-item:hover{background:var(--gris);margin:0 -14px;padding-left:14px;padding-right:14px}
+  .tb-item .t{font-size:14.5px;font-weight:800;margin-bottom:2px}
+  .tb-item .m{font-size:11.5px;color:var(--gris-txt);display:flex;gap:8px;align-items:center}
+  .tb-item .m em{font-style:normal;color:var(--magenta);font-weight:700;
+                 letter-spacing:.1em;text-transform:uppercase;font-size:9.5px}
 
   /* ══════════ 06 · Casos Argentina ══════════ */
   .s-casos{background:#fff}
@@ -237,6 +263,7 @@
   }
 
   /* ══════════ Print / PDF ══════════ */
+  @media print{.tb-fondo{display:none!important}}
   @page{size:1600px 900px;margin:0}
   @media print{
     body,.deck{height:auto;overflow:visible;scroll-snap-type:none}
@@ -280,7 +307,6 @@
         <div class="b1"></div>
         <div class="b2"></div>
         <img class="iso" src="assets/deck/beme-iso-blanco.png" alt="">
-        <span class="hex">#B2005D</span>
       </div>
     </div>
     <span class="pagenum">01</span>
@@ -557,6 +583,17 @@
 
 </main>
 
+<!-- modal de trabajos por marca (slide 05) -->
+<div class="tb-fondo" id="tbFondo">
+  <div class="tb" role="dialog" aria-modal="true" aria-labelledby="tbTit">
+    <button class="tb-x" id="tbX" aria-label="Cerrar">&times;</button>
+    <img class="tb-logo" id="tbLogo" src="" alt="">
+    <h3 id="tbTit"></h3>
+    <p class="tb-sub" id="tbSub"></p>
+    <div id="tbLista"></div>
+  </div>
+</div>
+
 <script>
   const deck   = document.getElementById('deck');
   const slides = [...document.querySelectorAll('.slide')];
@@ -589,6 +626,82 @@
     if(e.key==='ArrowDown'||e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();slides[Math.min(cur+1,slides.length-1)]?.scrollIntoView();}
     if(e.key==='ArrowUp'||e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();slides[Math.max(cur-1,0)]?.scrollIntoView();}
   });
+  /* ══════════ Trabajos por marca — slide 05 ══════════
+     Cada clave coincide con el data-marca de la card.
+     Formato:  marca: [{ url, titulo, talento }]
+     Una sola pieza  -> la card abre el link directo.
+     Dos o mas       -> la card abre el listado.
+     Marca sin piezas cargadas -> la card no es clickeable (sin afordancia falsa).
+     Los links salen de contenidos.url_publicacion en Supabase.        */
+  const TRABAJOS = {
+    huawei:      [],
+    sharkbeauty: [],
+    garnier:     [],
+    uriage:      [],
+    anker:       [],
+    honkai:      [],
+    avon:        [],
+    kiehls:      [],
+    hm:          [],
+    avene:       [],
+    ecoflow:     [],
+    amazon:      [],
+  };
+
+  (function(){
+    const fondo=document.getElementById('tbFondo');
+    const lista=document.getElementById('tbLista');
+    const tit=document.getElementById('tbTit');
+    const sub=document.getElementById('tbSub');
+    const logo=document.getElementById('tbLogo');
+
+    function abrir(nombre, logoSrc, piezas){
+      tit.textContent=nombre;
+      sub.textContent=piezas.length+' '+(piezas.length===1?'pieza publicada':'piezas publicadas');
+      logo.src=logoSrc; logo.alt=nombre;
+      lista.innerHTML=piezas.map(t=>
+        '<a class="tb-item" href="'+t.url+'" target="_blank" rel="noopener">'+
+          '<div class="t">'+(t.titulo||'Ver contenido')+'</div>'+
+          '<div class="m">'+(t.talento?'<em>'+t.talento+'</em>':'')+'<span>'+t.url.replace(/^https?:\/\/(www\.)?/,'').slice(0,52)+'</span></div>'+
+        '</a>').join('');
+      fondo.classList.add('on');
+    }
+    function cerrar(){ fondo.classList.remove('on'); }
+
+    document.getElementById('tbX').addEventListener('click',cerrar);
+    fondo.addEventListener('click',e=>{ if(e.target===fondo) cerrar(); });
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape') cerrar(); });
+
+    document.querySelectorAll('#campGrid .camp-card').forEach(card=>{
+      const marca=card.dataset.marca;
+      const piezas=(TRABAJOS[marca]||[]).filter(t=>t&&t.url);
+      if(!piezas.length) return;                       // sin links: queda como estaba
+
+      const nombre=card.querySelector('.camp-body h4').textContent;
+      const logoSrc=card.querySelector('.camp-img img.logo').getAttribute('src');
+
+      // el div pasa a ser <a> para que sea clickeable de verdad
+      const a=document.createElement('a');
+      a.className=card.className+' camp-card';
+      a.dataset.marca=marca;
+      a.innerHTML=card.innerHTML;
+      a.setAttribute('rel','noopener');
+
+      const ver=document.createElement('div');
+      ver.className='camp-ver';
+      ver.textContent=piezas.length===1 ? 'Ver contenido ↗' : 'Ver '+piezas.length+' trabajos ↗';
+      a.querySelector('.camp-body').appendChild(ver);
+
+      if(piezas.length===1){
+        a.href=piezas[0].url; a.target='_blank';
+      }else{
+        a.href='#';
+        a.addEventListener('click',e=>{ e.preventDefault(); abrir(nombre,logoSrc,piezas); });
+      }
+      card.replaceWith(a);
+    });
+  })();
 </script>
+
 </body>
 </html>
