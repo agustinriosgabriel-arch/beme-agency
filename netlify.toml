@@ -27,19 +27,194 @@
   timeout = 20
   schedule = "*/10 * * * *"  # every 10 minutes — avisos a marcas (script/contenido/spark/stats)
 
-# Sitio público — cuando bemeagency.com apunte a Netlify, la raíz sirve la web
-# de marketing (web.html). La app interna sigue en bemeagency.netlify.app.
+# ═══════════════════════════════════════════════════════════════
+# SITIO PÚBLICO — bemeagency.com
+# El dominio sirve ÚNICAMENTE la web de marketing y los links
+# públicos. El panel interno (index, campañas, contratos, etc.)
+# queda solo en bemeagency.netlify.app.
+# Las reglas se evalúan EN ORDEN: la primera que matchea gana.
+# Por eso el catch-all va último. Al agregar una página pública
+# nueva hay que sumarla al allowlist de abajo.
+# ═══════════════════════════════════════════════════════════════
+
+# www → apex
+[[redirects]]
+  from = "https://www.bemeagency.com/*"
+  to = "https://bemeagency.com/:splat"
+  status = 301
+  force = true
+
+# Home → web de marketing
 [[redirects]]
   from = "https://bemeagency.com/"
   to = "/web.html"
   status = 200
   force = true
 
+# ---- Allowlist de páginas públicas ----
 [[redirects]]
-  from = "https://www.bemeagency.com/"
-  to = "/web.html"
+  from = "https://bemeagency.com/roster-general*"
+  to = "/roster-general.html"
   status = 200
   force = true
+
+[[redirects]]
+  from = "https://bemeagency.com/roster*"
+  to = "/roster.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://bemeagency.com/talento-portal*"
+  to = "/talento-portal.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://bemeagency.com/talento-link*"
+  to = "/talento-link.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://bemeagency.com/marca-link*"
+  to = "/marca-link.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://bemeagency.com/pedido-cliente*"
+  to = "/pedido-cliente.html"
+  status = 200
+  force = true
+
+# ---- Estáticos que necesitan esas páginas ----
+[[redirects]]
+  from = "https://bemeagency.com/assets/*"
+  to = "/assets/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://bemeagency.com/favicon.ico"
+  to = "/favicon.ico"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://bemeagency.com/apple-touch-icon.png"
+  to = "/apple-touch-icon.png"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://bemeagency.com/icon-192.png"
+  to = "/icon-192.png"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://bemeagency.com/icon-512.png"
+  to = "/icon-512.png"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://bemeagency.com/robots.txt"
+  to = "/robots.txt"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://bemeagency.com/sitemap.xml"
+  to = "/sitemap.xml"
+  status = 200
+  force = true
+
+# Las páginas públicas hablan con las functions
+[[redirects]]
+  from = "https://bemeagency.com/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
+
+# ---- Todo lo demás en el dominio público no existe ----
+# Cubre el panel interno y los ~120 posts de spam de casinos que
+# el WordPress hackeado dejó indexados: devolver 404 hace que
+# Google los saque del índice.
+[[redirects]]
+  from = "https://bemeagency.com/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+# Páginas internas y links privados — no deben indexarse aunque la
+# URL circule. Aplica también en bemeagency.netlify.app, donde el
+# catch-all del dominio público no llega.
+[[headers]]
+  for = "/plan-contenido.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/campanas.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/campana-detalle.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/contratos.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/presupuestos.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/prospecciones.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/prospeccion-detalle.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/finanzas.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/talento-portal.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/talento-link.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/marca-link.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/pedido-cliente.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
 
 # Cache strategy
 [[headers]]

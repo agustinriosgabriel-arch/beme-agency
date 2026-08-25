@@ -1,0 +1,31 @@
+User-agent: *
+
+# Panel interno — no debe indexarse en ningún dominio
+Disallow: /index.html
+Disallow: /dashboard.js
+Disallow: /campanas.html
+Disallow: /campana-detalle.html
+Disallow: /contratos.html
+Disallow: /presupuestos.html
+Disallow: /prospecciones.html
+Disallow: /prospeccion-detalle.html
+Disallow: /finanzas.html
+Disallow: /templates-instagram.html
+Disallow: /artes-campana.html
+Disallow: /plan-contenido.html
+Disallow: /argentina.html
+Disallow: /carta-enoylity-anker.html
+Disallow: /firmas-hostinger.html
+Disallow: /manual-marca-beme.html
+Disallow: /docs/
+Disallow: /sql/
+Disallow: /agents/
+Disallow: /output/
+
+# Links privados por token
+Disallow: /talento-link*
+Disallow: /marca-link*
+Disallow: /pedido-cliente*
+Disallow: /talento-portal*
+
+Sitemap: https://bemeagency.com/sitemap.xml
