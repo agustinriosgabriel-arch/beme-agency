@@ -1082,7 +1082,8 @@ function renderNoInteresados() {
 
 async function niRestore(contactoId) {
   try {
-    await sb.from('prospeccion_contactos').update({ etapa: 'evaluacion', updated_at: new Date().toISOString() }).eq('id', contactoId);
+    var { error } = await sb.from('prospeccion_contactos').update({ etapa: 'evaluacion', updated_at: new Date().toISOString() }).eq('id', contactoId);
+    if (error) throw error;
     noInteresadosGlobal = noInteresadosGlobal.filter(function(c) { return c.id !== contactoId; });
     renderNoInteresados();
     showToast('Contacto restaurado a evaluación', 'success');
@@ -1093,12 +1094,23 @@ async function niGraduate(contactoId) {
   var c = noInteresadosGlobal.find(function(x) { return x.id === contactoId; });
   if (!c) return;
   if (c.talento_id) { showToast('Ya es talento', 'info'); return; }
-  if (!c.email && !c.telefono) { showToast('Necesita email o teléfono', 'error'); return; }
-  if (!c.tiktok && !c.instagram && !c.youtube) { showToast('Necesita al menos una red social', 'error'); return; }
 
   if (!confirm('Pasar a ' + c.nombre + ' a Talentos?')) return;
 
   try {
+    // La lista se carga con un select acotado (solo las columnas que pinta la
+    // tabla). Para graduar hace falta la fila entera: si se armaba el talento
+    // con ese objeto recortado, email/telefono/youtube llegaban undefined —
+    // las validaciones de abajo cortaban siempre — y valores, paises, ciudad,
+    // categorias, genero, keywords, dirección y notas se guardaban vacíos.
+    var { data: full, error: readErr } = await sb.from('prospeccion_contactos')
+      .select('*').eq('id', contactoId).single();
+    if (readErr) throw readErr;
+    Object.assign(c, full); // in place: la fila del array es la que se re-pinta
+
+    if (!c.email && !c.telefono) { showToast('Necesita email o teléfono', 'error'); return; }
+    if (!c.tiktok && !c.instagram && !c.youtube) { showToast('Necesita al menos una red social', 'error'); return; }
+
     var talentRow = {
       nombre: c.nombre, paises: c.paises || [], ciudad: c.ciudad || '',
       telefono: c.telefono || '', email: c.email || '',
@@ -1115,7 +1127,8 @@ async function niGraduate(contactoId) {
     var { data: newTalent, error } = await sb.from('talentos').insert(talentRow).select().single();
     if (error) throw error;
 
-    await sb.from('prospeccion_contactos').update({ talento_id: newTalent.id, updated_at: new Date().toISOString() }).eq('id', contactoId);
+    var { error: linkErr } = await sb.from('prospeccion_contactos').update({ talento_id: newTalent.id, updated_at: new Date().toISOString() }).eq('id', contactoId);
+    if (linkErr) throw linkErr;
     c.talento_id = newTalent.id;
     renderNoInteresados();
     showToast(c.nombre + ' agregado a Talentos (ID: ' + newTalent.id + ')', 'success');

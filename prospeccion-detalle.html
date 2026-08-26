@@ -1311,7 +1311,8 @@ async function confirmMedioAndAdvance() {
         const c = contactos.find(x=>x.id===id);
         if (!c || c.etapa === nextEtapa) continue;
         const anterior = c.etapa;
-        await sb.from('prospeccion_contactos').update({etapa: nextEtapa, medio_contacto: medio, updated_at: now}).eq('id', id);
+        const {error} = await sb.from('prospeccion_contactos').update({etapa: nextEtapa, medio_contacto: medio, updated_at: now}).eq('id', id);
+        if (error) throw error;
         await sb.from('prospeccion_historial').insert({contacto_id:id, etapa_anterior:anterior, etapa_nueva:nextEtapa, medio_contacto:medio});
         if (anterior === 'esperando_respuesta' && nextEtapa !== 'esperando_respuesta') {
           await cancelPendingColaForContacto(id, 'auto-cancelado: bulk movió fuera de Esperando');
@@ -1524,8 +1525,22 @@ function openDetalle(id) {
     ${c.etapa === 'interesado' ? `
     <div style="margin-top:16px;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm)">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:8px">Valores Extras</div>
+      ${(function(){
+        // Cotizaciones cargadas antes de julio 2026 viven en las columnas
+        // precio_cotizado_*, que ya ninguna pantalla lee. Se muestran acá para
+        // que no queden invisibles, con un botón para pasarlas al campo nuevo.
+        const legacy = [
+          c.precio_cotizado ? `${c.precio_cotizado} ${c.precio_cotizado_moneda||'USD'}` : '',
+          (c.precio_cotizado_notas||'').trim(),
+        ].filter(Boolean).join(' · ');
+        if (!legacy) return '';
+        return `<div style="margin-bottom:8px;padding:8px 10px;background:rgba(245,159,0,0.10);border:1px solid rgba(245,159,0,0.35);border-radius:6px;font-size:11px">
+          <b>Cotización vieja sin migrar:</b> ${esc(legacy)}
+          <button class="btn btn-outline btn-xs" style="margin-left:8px" onclick="pasarCotizacionVieja(${c.id})">Pasar al campo</button>
+        </div>`;
+      })()}
       <textarea id="pc-valores" class="form-input" placeholder="Tarifas y valores negociados (ej: Reel $500, Story $200, cesión 30 días +$300)..." style="min-height:70px;font-size:12px">${esc(c.valores||'')}</textarea>
-      <div style="font-size:10px;color:var(--text-dim);margin-top:6px">Se guarda en el contacto y se transfiere al roster al graduar.</div>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:6px">${c.talento_id ? 'Se guarda en el contacto y se copia al perfil del talento.' : 'Se guarda en el contacto y pasa al perfil del talento al usar "Pasar a Talentos".'}</div>
       <button class="btn btn-outline btn-sm" onclick="saveValoresExtras(${c.id})" style="margin-top:6px">Guardar valores</button>
     </div>` : ''}
     ${elog.length?`
@@ -1662,16 +1677,65 @@ async function logWhatsAppOpen(c, mensaje, templateId) {
   } catch(e) { console.error('logWhatsAppOpen:', e); }
 }
 
+// Vuelca la cotización vieja (precio_cotizado_*) al textarea nuevo. No guarda
+// solo: el usuario revisa el texto y aprieta "Guardar valores".
+function pasarCotizacionVieja(contactoId) {
+  const c = contactos.find(x => x.id === contactoId);
+  const ta = document.getElementById('pc-valores');
+  if (!c || !ta) return;
+  const legacy = [
+    c.precio_cotizado ? `${c.precio_cotizado} ${c.precio_cotizado_moneda||'USD'}` : '',
+    (c.precio_cotizado_notas||'').trim(),
+  ].filter(Boolean).join(' · ');
+  if (!legacy) return;
+  const actual = (ta.value||'').trim();
+  if (actual.indexOf(legacy) !== -1) { showToast('Ya está en el campo', 'info'); return; }
+  ta.value = actual ? (actual + '\n' + legacy) : legacy;
+  ta.focus();
+  showToast('Revisá el texto y apretá "Guardar valores"', 'info');
+}
+
 async function saveValoresExtras(contactoId) {
   const valores = (document.getElementById('pc-valores').value || '').trim();
   try {
-    await sb.from('prospeccion_contactos').update({
+    // supabase-js NO tira excepción cuando la escritura falla: resuelve con
+    // {data, error}. Sin este chequeo el catch nunca corría, el toast decía
+    // "Valores guardados" y la cotización se perdía en silencio.
+    // El .select('id') además delata el otro no-op silencioso: si RLS filtra
+    // la fila, el update afecta 0 filas y vuelve sin error.
+    const {data: escrito, error} = await sb.from('prospeccion_contactos').update({
       valores: valores,
       updated_at: new Date().toISOString(),
-    }).eq('id', contactoId);
+    }).eq('id', contactoId).select('id');
+    if (error) throw error;
+    if (!escrito || !escrito.length) throw new Error('la base no aceptó la escritura (0 filas afectadas) — revisá permisos');
     const c = contactos.find(x => x.id === contactoId);
+    const previo = String((c && c.valores) || '').trim();
     if (c) c.valores = valores;
-    showToast('Valores guardados', 'success');
+
+    // Si el contacto YA es talento (origen interno, o ya graduado) no queda
+    // ninguna graduación por delante que arrastre la cotización: se escribe
+    // también en el perfil, si no se queda encerrada en la prospección.
+    let alPerfil = false;
+    if (c && c.talento_id && valores) {
+      const {data: t, error: eRead} = await sb.from('talentos').select('valores').eq('id', c.talento_id).single();
+      if (eRead) throw eRead;
+      const tVal = String((t && t.valores) || '').trim();
+      let merged;
+      if (!tVal) merged = valores;
+      else if (previo && tVal.indexOf(previo) !== -1) merged = tVal.split(previo).join(valores).trim(); // reemplaza la versión anterior, no la duplica
+      else if (tVal.indexOf(valores) !== -1) merged = tVal;
+      else merged = (tVal + '\n' + valores).trim();
+      if (merged !== tVal) {
+        const {error: eUpd} = await sb.from('talentos')
+          .update({valores: merged, updated: new Date().toISOString().split('T')[0]})
+          .eq('id', c.talento_id);
+        if (eUpd) throw eUpd;
+        alPerfil = true;
+      }
+    }
+
+    showToast(alPerfil ? 'Valores guardados y copiados al perfil del talento' : 'Valores guardados', 'success');
     renderKanban();
   } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
@@ -2053,7 +2117,10 @@ async function bulkChangeEtapa(nuevaEtapa) {
       const c = contactos.find(x=>x.id===id);
       if (!c || c.etapa === nuevaEtapa) continue;
       const anterior = c.etapa;
-      await sb.from('prospeccion_contactos').update({etapa: nuevaEtapa, updated_at: now}).eq('id', id);
+      // Sin chequear `error` la tarjeta se movía en pantalla y volvía sola al
+      // refrescar: supabase-js no tira excepción, resuelve con {data, error}.
+      const {error} = await sb.from('prospeccion_contactos').update({etapa: nuevaEtapa, updated_at: now}).eq('id', id);
+      if (error) throw error;
       await sb.from('prospeccion_historial').insert({contacto_id:id, etapa_anterior:anterior, etapa_nueva:nuevaEtapa});
       if (anterior === 'esperando_respuesta' && nuevaEtapa !== 'esperando_respuesta') {
         await cancelPendingColaForContacto(id, 'auto-cancelado: bulk cambió etapa');
@@ -2084,6 +2151,45 @@ function bulkRequestMedio(nextEtapa) {
 // ══════════════════════════════════════════════════════════
 // FASE 4: GRADUACION A TALENTOS
 // ══════════════════════════════════════════════════════════
+// ¿La dirección de entrega tiene algo cargado? (el objeto existe siempre con
+// sus claves, así que hay que mirar los valores, no las claves).
+function _tieneDireccion(de) {
+  if (!de || typeof de !== 'object') return false;
+  return Object.keys(de).some(function(k){ return String(de[k]||'').trim() !== ''; });
+}
+
+// Vincular un contacto a un talento que YA existe no copiaba nada: la
+// cotización cargada en "Valores Extras", la dirección de entrega y las notas
+// se quedaban en la prospección y el perfil del talento seguía vacío. Acá se
+// completa el perfil con lo que trae el contacto, pero SOLO donde el talento
+// está vacío: nunca se pisa un dato ya cargado. `valores` es la excepción —
+// se agrega al final en vez de descartarse, porque perder una tarifa negociada
+// es justamente el problema que esto viene a arreglar.
+async function completarTalentoDesdeContacto(talentoId, c) {
+  const COLS = 'id,ciudad,telefono,email,tiktok,instagram,youtube,paises,categorias,genero,keywords,valores,direccion_entrega,notas_internas';
+  const {data: t, error} = await sb.from('talentos').select(COLS).eq('id', talentoId).single();
+  if (error || !t) { console.error('completarTalentoDesdeContacto (lectura):', error); return 0; }
+
+  const upd = {};
+  ['ciudad','telefono','email','tiktok','instagram','youtube','genero','keywords'].forEach(function(k){
+    if (!String(t[k]||'').trim() && String(c[k]||'').trim()) upd[k] = c[k];
+  });
+  if (!String(t.notas_internas||'').trim() && String(c.notas||'').trim()) upd.notas_internas = c.notas;
+  if (!(t.paises||[]).length && (c.paises||[]).length) upd.paises = c.paises;
+  if (!(t.categorias||[]).length && (c.categorias||[]).length) upd.categorias = c.categorias;
+  if (!_tieneDireccion(t.direccion_entrega) && _tieneDireccion(c.direccion_entrega)) upd.direccion_entrega = c.direccion_entrega;
+
+  const cVal = String(c.valores||'').trim(), tVal = String(t.valores||'').trim();
+  if (cVal && tVal.indexOf(cVal) === -1) upd.valores = tVal ? (tVal + '\n' + cVal) : cVal;
+
+  const campos = Object.keys(upd).length;
+  if (!campos) return 0;
+  upd.updated = new Date().toISOString().split('T')[0];
+  const {error: eUpd} = await sb.from('talentos').update(upd).eq('id', talentoId);
+  if (eUpd) { console.error('completarTalentoDesdeContacto (escritura):', eUpd); return 0; }
+  return campos;
+}
+
 async function graduarATalento(contactoId) {
   const c = contactos.find(x=>x.id===contactoId);
   if (!c) return;
@@ -2115,10 +2221,12 @@ async function graduarATalento(contactoId) {
 
     if (existingTalent) {
       if (confirm(`Este contacto ya existe como talento: "${existingTalent.nombre}" (ID: ${existingTalent.id}).\n\nVincular al talento existente?`)) {
-        await sb.from('prospeccion_contactos').update({talento_id: existingTalent.id, updated_at: new Date().toISOString()}).eq('id', contactoId);
+        const {error: eLink} = await sb.from('prospeccion_contactos').update({talento_id: existingTalent.id, updated_at: new Date().toISOString()}).eq('id', contactoId);
+        if (eLink) throw eLink;
+        const completados = await completarTalentoDesdeContacto(existingTalent.id, c);
         c.talento_id = existingTalent.id;
         renderKanban();
-        showToast(`Vinculado a talento existente: ${existingTalent.nombre}`, 'success');
+        showToast(`Vinculado a talento existente: ${existingTalent.nombre}` + (completados ? ` · ${completados} campo${completados!==1?'s':''} del perfil completado${completados!==1?'s':''}` : ''), 'success');
         // Ask about roster
         if (confirm('Agregar a un Roster?')) openRosterModal([existingTalent.id]);
         return;
@@ -2145,7 +2253,8 @@ async function graduarATalento(contactoId) {
     const newId = inserted.id;
 
     // Link contact to talent
-    await sb.from('prospeccion_contactos').update({talento_id: newId, updated_at: new Date().toISOString()}).eq('id', contactoId);
+    const {error: eLink2} = await sb.from('prospeccion_contactos').update({talento_id: newId, updated_at: new Date().toISOString()}).eq('id', contactoId);
+    if (eLink2) throw eLink2;
     c.talento_id = newId;
     renderKanban();
     showToast(`"${c.nombre}" graduado a Talento`, 'success');
@@ -2155,7 +2264,13 @@ async function graduarATalento(contactoId) {
 
   } catch(e) {
     console.error('graduarATalento:', e);
-    showToast('Error al graduar: '+e.message, 'error');
+    // El error más repetido acá es la secuencia de talentos.id atrasada: sin
+    // decir qué hacer, el mensaje crudo de Postgres no ayuda a nadie.
+    if (/talentos_pkey|duplicate key/i.test(e.message||'')) {
+      showToast('La secuencia de IDs de talentos quedó atrasada. Correr sql/talentos_id_seq_trigger.sql en Supabase → SQL Editor y reintentar.', 'error');
+    } else {
+      showToast('Error al graduar: '+e.message, 'error');
+    }
   }
 }
 
@@ -2185,7 +2300,9 @@ async function bulkGraduarATalento() {
       });
 
       if (existing) {
-        await sb.from('prospeccion_contactos').update({talento_id: existing.id}).eq('id', id);
+        const {error: eLink} = await sb.from('prospeccion_contactos').update({talento_id: existing.id, updated_at: new Date().toISOString()}).eq('id', id);
+        if (eLink) { console.error('Link talent error:', eLink); skipped++; continue; }
+        await completarTalentoDesdeContacto(existing.id, c);
         c.talento_id = existing.id;
         talentIds.push(existing.id);
         graduated++;
@@ -2208,7 +2325,8 @@ async function bulkGraduarATalento() {
       const {data:ins, error:insErr} = await sb.from('talentos').insert([talentRow]).select('id').single();
       if (insErr) { console.error('Insert talent error:', insErr); skipped++; continue; }
       const newId = ins.id;
-      await sb.from('prospeccion_contactos').update({talento_id: newId}).eq('id', id);
+      const {error: eLink2} = await sb.from('prospeccion_contactos').update({talento_id: newId, updated_at: new Date().toISOString()}).eq('id', id);
+      if (eLink2) { console.error('Link talent error:', eLink2); }
       c.talento_id = newId;
       talentIds.push(newId);
       graduated++;
@@ -3164,7 +3282,10 @@ async function openTalentPicker() {
   document.getElementById('btn-tp-add').textContent = 'Cargando...';
   document.getElementById('btn-tp-add').disabled = true;
   try {
-    allTalentos = await fetchAllTalentos('id,nombre,email,telefono,tiktok,instagram,youtube,seguidores,categorias,paises,foto,genero', 'nombre');
+    // `valores`, `keywords`, `ciudad` y `direccion_entrega` viajan también: el
+    // contacto interno se arma con esta fila y, si no vienen, el recuadro de
+    // "Valores Extras" abre vacío aunque el talento ya tenga tarifas cargadas.
+    allTalentos = await fetchAllTalentos('id,nombre,email,telefono,tiktok,instagram,youtube,seguidores,categorias,paises,foto,genero,valores,keywords,ciudad,direccion_entrega', 'nombre');
   } catch(e) { allTalentos = []; }
 
   // Prefill filters with prospeccion criteria
@@ -3269,6 +3390,10 @@ async function confirmAddTalentsToProsp() {
         categorias: t.categorias || [],
         paises: t.paises || [],
         genero: t.genero || '',
+        ciudad: t.ciudad || '',
+        keywords: t.keywords || '',
+        valores: t.valores || '',
+        direccion_entrega: t.direccion_entrega || {},
       });
     }
     if (rows.length) {

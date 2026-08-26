@@ -4066,6 +4066,13 @@ async function addSelectionToProspeccion(prospId) {
         categorias: t.categorias || [],
         paises: t.paises || [],
         genero: t.genero || '',
+        // Sin estos, el contacto interno nace vacío y el recuadro "Valores
+        // Extras" de la prospección abre en blanco aunque el talento ya tenga
+        // tarifas cargadas — la cotización que se escribe encima se duplica.
+        ciudad: t.ciudad || '',
+        keywords: t.keywords || '',
+        valores: t.valores || '',
+        direccion_entrega: t.direccion_entrega || {},
       };
     });
     // Insert in chunks
