@@ -371,6 +371,16 @@ const DICT = {
   aScriptTitle:{es:'📝 Subir Script',en:'📝 Upload Script',it:'📝 Carica Script',de:'📝 Skript hochladen',nl:'📝 Script uploaden'},
   aUploadScriptBtn:{es:'⬆ Subir archivo(s) de script',en:'⬆ Upload script file(s)',it:'⬆ Carica file dello script',de:'⬆ Skriptdatei(en) hochladen',nl:'⬆ Scriptbestand(en) uploaden'},
   aScriptReady:{es:'Script listo → Enviar a revisión',en:'Script ready → Send for review',it:'Script pronto → Invia per revisione',de:'Skript fertig → Zur Prüfung senden',nl:'Script klaar → Verstuur ter review'},
+  aPasteTextBtn:{es:'✍️ Pegar texto',en:'✍️ Paste text',it:'✍️ Incolla testo',de:'✍️ Text einfügen',nl:'✍️ Tekst plakken'},
+  aScriptTextPh:{es:'Pegá el script acá... (se guarda como PDF, los emojis se respetan)',en:'Paste your script here... (saved as PDF, emojis are kept)',it:'Incolla qui il tuo script... (salvato come PDF, le emoji si mantengono)',de:'Füge dein Skript hier ein... (wird als PDF gespeichert, Emojis bleiben erhalten)',nl:'Plak je script hier... (opgeslagen als PDF, emoji\'s blijven behouden)'},
+  aScriptTextSave:{es:'Guardar como script',en:'Save as script',it:'Salva come script',de:'Als Skript speichern',nl:'Opslaan als script'},
+  aScriptTextCancel:{es:'Cancelar',en:'Cancel',it:'Annulla',de:'Abbrechen',nl:'Annuleren'},
+  scriptTextEmpty:{es:'Pegá el script primero',en:'Paste the script first',it:'Prima incolla lo script',de:'Füge zuerst das Skript ein',nl:'Plak eerst het script'},
+  generatingPdf:{es:'Generando PDF...',en:'Generating PDF...',it:'Generazione PDF...',de:'PDF wird erstellt...',nl:'PDF genereren...'},
+  pdfCampaign:{es:'Campaña',en:'Campaign',it:'Campagna',de:'Kampagne',nl:'Campagne'},
+  pdfContentLbl:{es:'Contenido',en:'Content',it:'Contenuto',de:'Inhalt',nl:'Content'},
+  pdfTypeLbl:{es:'Tipo',en:'Type',it:'Tipo',de:'Typ',nl:'Type'},
+  pdfGenerated:{es:'Generado',en:'Generated',it:'Generato',de:'Erstellt',nl:'Gegenereerd'},
   needFile:{es:'Subí al menos un archivo antes de enviar',en:'Upload at least one file before sending',it:'Carica almeno un file prima di inviare',de:'Lade mindestens eine Datei hoch, bevor du sendest',nl:'Upload minstens één bestand voordat je verzendt'},
   aWaitScriptTitle:{es:'⏳ Esperando aprobación del script',en:'⏳ Waiting for script approval',it:'⏳ In attesa di approvazione dello script',de:'⏳ Warten auf Skript-Freigabe',nl:'⏳ Wachten op scriptgoedkeuring'},
   aWaitScriptMsg:{es:'La marca está revisando tu script.',en:'The brand is reviewing your script.',it:'Il brand sta esaminando il tuo script.',de:'Die Marke prüft dein Skript.',nl:'Het merk beoordeelt je script.'},
@@ -816,8 +826,10 @@ function renderContenido(c, ct) {
       <div class="action-title">${esc(t('aScriptTitle'))}</div>
       <div class="action-btns">
         <label class="btn btn-primary btn-sm" style="cursor:pointer"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" multiple onchange="uploadScript(this,${c.id})">${esc(t('aUploadScriptBtn'))}</label>
+        <button class="btn btn-outline btn-sm" onclick="toggleScriptText(${c.id})">${esc(t('aPasteTextBtn'))}</button>
         <button class="btn btn-outline btn-sm" onclick="advance(${c.id})" ${hasScripts?'':'disabled style="opacity:0.5;cursor:not-allowed"'} title="${hasScripts?'':esc(t('needFile'))}">${esc(t('aScriptReady'))}</button>
       </div>
+      ${scriptTextHTML(c.id)}
     </div>`;
   }
   if (paso === 3) {
@@ -829,7 +841,9 @@ function renderContenido(c, ct) {
       ${scriptFilesHTML}
       <div class="action-btns">
         <label class="btn btn-primary btn-sm" style="cursor:pointer"><input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt" multiple onchange="uploadScript(this,${c.id})">${esc(t('aUploadScriptBtn'))}</label>
+        <button class="btn btn-outline btn-sm" onclick="toggleScriptText(${c.id})">${esc(t('aPasteTextBtn'))}</button>
       </div>
+      ${scriptTextHTML(c.id)}
     </div>`;
   }
   if (paso === 4) {
@@ -1054,6 +1068,221 @@ async function uploadScript(input, contId) {
   } catch(e){ toast(t('errPrefix')+e.message,'err'); }
   finally { uploadBar.hide(); }
 }
+
+// ── Script pegado como texto → PDF (igual que en el panel interno) ──
+function scriptTextHTML(contId) {
+  return `<div id="script-text-wrap-${contId}" style="display:none;margin-top:10px">
+    <textarea class="link-input" id="script-text-area-${contId}" placeholder="${esc(t('aScriptTextPh'))}" rows="8" style="width:100%;min-height:140px;resize:vertical"></textarea>
+    <div class="action-btns" style="margin-top:6px">
+      <button class="btn btn-primary btn-sm" onclick="saveScriptFromText(${contId})">${esc(t('aScriptTextSave'))}</button>
+      <button class="btn btn-outline btn-sm" onclick="toggleScriptText(${contId})">${esc(t('aScriptTextCancel'))}</button>
+    </div>
+  </div>`;
+}
+function toggleScriptText(contId) {
+  const wrap = document.getElementById('script-text-wrap-'+contId);
+  if (!wrap) return;
+  const showing = wrap.style.display !== 'none';
+  wrap.style.display = showing ? 'none' : 'block';
+  if (!showing) document.getElementById('script-text-area-'+contId)?.focus();
+}
+
+// Las fuentes base de jsPDF (helvetica) solo soportan WinAnsi (Latin-1):
+// cualquier emoji o simbolo fuera de ese set sale como basura en el PDF.
+// Los detectamos y los dibujamos como imagen con la fuente de emojis del
+// sistema; el resto del texto sigue siendo vectorial (seleccionable, liviano).
+const GLYPH_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Apple Symbols","Segoe UI Symbol",system-ui,sans-serif';
+const WINANSI_EXTRA = new Set(Array.from('€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ'));
+const _glyphCache = new Map();
+
+function pdfSafeChar(g) {
+  if (g.length !== 1) return false;
+  const c = g.codePointAt(0);
+  if (c >= 0x20 && c <= 0x7E) return true;
+  if (c >= 0xA0 && c <= 0xFF) return true;
+  return WINANSI_EXTRA.has(g);
+}
+
+function graphemesOf(str) {
+  try {
+    if (window.Intl && Intl.Segmenter) {
+      return Array.from(new Intl.Segmenter('es', {granularity:'grapheme'}).segment(str), x => x.segment);
+    }
+  } catch(_) {}
+  return Array.from(str);
+}
+
+function glyphImage(g, sizePt, color) {
+  const key = g + '|' + sizePt + '|' + color.join(',');
+  if (_glyphCache.has(key)) return _glyphCache.get(key);
+  const S = 4, px = Math.round(sizePt * S);
+  const probe = document.createElement('canvas').getContext('2d');
+  probe.font = px + 'px ' + GLYPH_FONT;
+  const adv = Math.max(probe.measureText(g).width, px * 0.25);
+  const pad = Math.ceil(px * 0.08);
+  const cv = document.createElement('canvas');
+  cv.width  = Math.ceil(adv) + pad * 2;
+  cv.height = Math.ceil(px * 1.45);
+  const ctx = cv.getContext('2d');
+  ctx.font = px + 'px ' + GLYPH_FONT;
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = 'rgb(' + color[0] + ',' + color[1] + ',' + color[2] + ')';
+  ctx.fillText(g, pad, px * 1.15);
+  const out = { url: cv.toDataURL('image/png'), w: cv.width / S, h: cv.height / S,
+                base: px * 1.15 / S, adv: adv / S, pad: pad / S, key };
+  _glyphCache.set(key, out);
+  return out;
+}
+
+function drawRich(doc, text, x, y, o) {
+  const maxW = o.maxW;
+  const size = o.size || 12;
+  const lh = o.lh || size * 1.5;
+  const margin = o.margin || 56;
+  const top = o.top || margin;
+  const bottom = (o.pageH || doc.internal.pageSize.getHeight()) - margin;
+  const color = o.color || [25,25,30];
+
+  const applyStyle = () => { doc.setFontSize(size); doc.setTextColor(color[0], color[1], color[2]); };
+  applyStyle();
+
+  const widthOf = a => a.t === 'gly' ? glyphImage(a.v, size, color).adv : doc.getTextWidth(a.v);
+
+  const flushLine = (atoms) => {
+    if (y > bottom) { doc.addPage(); y = top; applyStyle(); }
+    let cx = x, buf = '';
+    const emit = () => { if (buf) { doc.text(buf, cx, y); cx += doc.getTextWidth(buf); buf = ''; } };
+    for (const a of atoms) {
+      if (a.t === 'gly') {
+        emit();
+        const im = glyphImage(a.v, size, color);
+        doc.addImage(im.url, 'PNG', cx - im.pad, y - im.base, im.w, im.h, im.key, 'FAST');
+        cx += im.adv;
+      } else buf += a.v;
+    }
+    emit();
+    y += lh;
+  };
+
+  const paras = String(text).replace(/\r\n?/g, '\n').replace(/\t/g, '    ').split('\n');
+  for (const par of paras) {
+    const atoms = [];
+    let buf = '';
+    const flushTxt = () => {
+      if (!buf) return;
+      buf.split(/(\s+)/).forEach(pz => { if (pz !== '') atoms.push({t: /^\s+$/.test(pz) ? 'sp' : 'txt', v: pz}); });
+      buf = '';
+    };
+    for (const g of graphemesOf(par)) {
+      if (pdfSafeChar(g)) buf += g;
+      else { flushTxt(); atoms.push({t:'gly', v:g}); }
+    }
+    flushTxt();
+    if (!atoms.length) { y += lh; continue; }
+
+    const items = [];
+    for (const a of atoms) {
+      if (a.t === 'txt' && doc.getTextWidth(a.v) > maxW) {
+        const parts = doc.splitTextToSize(a.v, maxW);
+        parts.forEach((pz, i) => { items.push({t:'txt', v:pz}); if (i < parts.length - 1) items.push({t:'br'}); });
+      } else items.push(a);
+    }
+
+    let line = [], lw = 0;
+    for (const a of items) {
+      if (a.t === 'br') { flushLine(line); line = []; lw = 0; continue; }
+      const aw = widthOf(a);
+      if (lw + aw > maxW && line.length) {
+        while (line.length && line[line.length - 1].t === 'sp') lw -= widthOf(line.pop());
+        flushLine(line); line = []; lw = 0;
+        if (a.t === 'sp') continue;
+      }
+      line.push(a); lw += aw;
+    }
+    if (line.length) flushLine(line);
+  }
+  return y;
+}
+
+// Busca el contenido y su campaña dentro de lo que cargó el link
+function findContCtx(contId) {
+  for (const ct of (campaigns||[])) {
+    const cont = (ct.contenidos||[]).find(x => x.id === contId);
+    if (cont) return { cont, camp: ct.campanas || {} };
+  }
+  return { cont: {}, camp: {} };
+}
+
+function buildScriptPdf(text, contId) {
+  const { jsPDF } = window.jspdf || {};
+  if (!jsPDF) throw new Error('jsPDF no disponible');
+
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 56;
+  const maxW = pageW - margin*2;
+
+  // Barra superior color BEME
+  doc.setFillColor(148, 20, 224);
+  doc.rect(0, 0, pageW, 6, 'F');
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(24);
+  doc.setTextColor(148, 20, 224);
+  doc.text('Script', margin, 60);
+
+  const { cont, camp } = findContCtx(contId);
+  const locale = {es:'es-AR',en:'en-US',it:'it-IT',de:'de-DE',nl:'nl-NL'}[LANG] || 'es-AR';
+  const meta = [];
+  if (camp.nombre)   meta.push([t('pdfCampaign'), camp.nombre]);
+  if (cont.titulo)   meta.push([t('pdfContentLbl'), cont.titulo]);
+  if (cont.tipo)     meta.push([t('pdfTypeLbl'), tTipo(cont.tipo)]);
+  meta.push([t('pdfGenerated'), new Date().toLocaleString(locale,{dateStyle:'long',timeStyle:'short'})]);
+
+  let y = 92;
+  doc.setFontSize(10);
+  meta.forEach(([k,v]) => {
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(60,60,70);
+    doc.text(k+':', margin, y);
+    doc.setFont('helvetica','normal');
+    y = drawRich(doc, String(v), margin+78, y, {
+      maxW: maxW-80, size:10, lh:14, pageH, margin, color:[90,90,100]
+    });
+  });
+
+  y += 12;
+  doc.setDrawColor(225,225,232);
+  doc.setLineWidth(0.6);
+  doc.line(margin, y, pageW-margin, y);
+  y += 28;
+
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(12);
+  doc.setTextColor(25,25,30);
+  drawRich(doc, String(text), margin, y, {
+    maxW, size:12, lh:18, pageH, margin, top:margin, color:[25,25,30]
+  });
+
+  return doc.output('blob');
+}
+
+async function saveScriptFromText(contId) {
+  const ta = document.getElementById('script-text-area-'+contId);
+  const text = (ta?.value||'').trim();
+  if (!text) { toast(t('scriptTextEmpty'),'err'); return; }
+  toast(t('generatingPdf'),'inf');
+  try {
+    const blob = buildScriptPdf(text, contId);
+    const file = new File([blob], 'script.pdf', {type:'application/pdf'});
+    const up = await uploadOne('content-scripts', contId, file);
+    await API('record-script',{contenido_id:contId,url_archivo:up.url});
+    await refresh(); toast(t('scriptUploaded'),'ok');
+  } catch(e){ toast(t('errPrefix')+e.message,'err'); }
+  finally { uploadBar.hide(); }
+}
+
 async function uploadDraft(input, contId) {
   const files = Array.from(input.files); input.value=''; if (!files.length) return;
   if (!checkSizes(files)) return;

@@ -569,7 +569,6 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
         <option value="sin_iniciar">Sin iniciar</option>
         <option value="en_curso">En curso</option>
         <option value="pausada">Pausada</option>
-        <option value="cancelada">Cancelada</option>
       </select>
       <select class="filter-select" id="filter-marca" onchange="renderCampanas()">
         <option value="">Todas las marcas</option>
@@ -601,10 +600,11 @@ select.form-input{cursor:pointer;appearance:none;background-image:url("data:imag
       </div>
     </div>
 
-    <!-- Sub-pestañas: Activas / Finalizadas -->
+    <!-- Sub-pestañas: Activas / Finalizadas / Archivadas -->
     <div class="camp-tabs">
       <button class="camp-tab active" id="ctab-activas" onclick="setCampTab('activas')">Activas <span class="camp-tab-count" id="ctab-activas-count">0</span></button>
       <button class="camp-tab" id="ctab-finalizadas" onclick="setCampTab('finalizadas')">Finalizadas <span class="camp-tab-count" id="ctab-finalizadas-count">0</span></button>
+      <button class="camp-tab" id="ctab-archivadas" onclick="setCampTab('archivadas')">Archivadas <span class="camp-tab-count" id="ctab-archivadas-count">0</span></button>
     </div>
 
     <!-- Campañas container -->
@@ -1429,9 +1429,10 @@ function getFilteredCampanas() {
   const myId = currentUser?.id;
 
   return campanas.filter(c => {
-    // Pestaña Activas (default) oculta las finalizadas; pestaña Finalizadas solo muestra esas
+    // Pestaña Activas (default) oculta finalizadas y canceladas; Finalizadas y Archivadas muestran solo las suyas
     if (campTab === 'finalizadas') { if (c.estado !== 'finalizada') return false; }
-    else if (c.estado === 'finalizada') return false;
+    else if (campTab === 'archivadas') { if (c.estado !== 'cancelada') return false; }
+    else if (c.estado === 'finalizada' || c.estado === 'cancelada') return false;
     if (filterMine) {
       const isMine = c.created_by === myId
         || (c.campana_managers||[]).some(m => m.user_id === myId)
@@ -1506,9 +1507,11 @@ async function permanentDeleteCampana(id, e) {
 function renderCampanas() {
   // Contadores de las pestañas (sobre todas las campañas cargadas)
   const finCount = campanas.filter(c => c.estado === 'finalizada').length;
-  const actCount = campanas.length - finCount;
+  const archCount = campanas.filter(c => c.estado === 'cancelada').length;
+  const actCount = campanas.length - finCount - archCount;
   const fEl = document.getElementById('ctab-finalizadas-count'); if (fEl) fEl.textContent = finCount;
   const aEl = document.getElementById('ctab-activas-count'); if (aEl) aEl.textContent = actCount;
+  const arEl = document.getElementById('ctab-archivadas-count'); if (arEl) arEl.textContent = archCount;
 
   const filtered = getFilteredCampanas();
   const container = document.getElementById('campanas-container');
@@ -1530,6 +1533,7 @@ function setCampTab(t) {
   campTab = t;
   document.getElementById('ctab-activas')?.classList.toggle('active', t === 'activas');
   document.getElementById('ctab-finalizadas')?.classList.toggle('active', t === 'finalizadas');
+  document.getElementById('ctab-archivadas')?.classList.toggle('active', t === 'archivadas');
   renderCampanas();
 }
 
@@ -1682,11 +1686,12 @@ function renderKanban(container, filtered) {
   container.className = '';
   const cols = (campTab === 'finalizadas'
     ? [{key:'finalizada', label:'Finalizada', color:'#16a34a'}]
+    : campTab === 'archivadas'
+    ? [{key:'cancelada', label:'Cancelada', color:'#ef4444'}]
     : [
         {key:'sin_iniciar', label:'Sin iniciar', color:'#888'},
         {key:'en_curso',    label:'En curso',    color:'#d97706'},
         {key:'pausada',     label:'Pausada',     color:'#7c3aed'},
-        {key:'cancelada',   label:'Cancelada',   color:'#ef4444'},
       ]);
   container.innerHTML = `<div class="kanban-wrap">
     ${cols.map(col => {
