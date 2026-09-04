@@ -95,6 +95,20 @@
   status = 200
   force = true
 
+# Perfil del puesto Ejecutivo/a Comercial & Brand Partnerships (búsqueda activa)
+[[redirects]]
+  from = "https://bemeagency.com/puesto-comercial*"
+  to = "/puesto-comercial.html"
+  status = 200
+  force = true
+
+# Organigrama interno de BEME (se comparte por link, no se indexa)
+[[redirects]]
+  from = "https://bemeagency.com/organigrama*"
+  to = "/organigrama.html"
+  status = 200
+  force = true
+
 # ---- Estáticos que necesitan esas páginas ----
 [[redirects]]
   from = "https://bemeagency.com/assets/*"
@@ -228,6 +242,26 @@
 
 [[headers]]
   for = "/argentina"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/puesto-comercial.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/puesto-comercial"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/organigrama.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/organigrama"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow, noarchive"
 

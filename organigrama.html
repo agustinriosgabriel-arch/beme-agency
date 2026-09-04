@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organigrama BEME</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap">
+<style>
+  :root{
+    --bg:#ffffff;
+    --surface:#faf3f7;
+    --surface-2:#f5e9f0;
+    --ink:#2b1626;
+    --muted:#7a6373;
+    --accent:#b2005d;
+    --accent-ink:#8e004a;
+    --accent-soft:#fbe4ef;
+    --purple:#5b2d86;
+    --border:#ecdce5;
+    --line:#dcc3d1;
+    --on-accent:#ffffff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#1c1119;
+      --surface:#271722;
+      --surface-2:#311d2a;
+      --ink:#f6ebf1;
+      --muted:#bfa3b3;
+      --accent:#f05fa4;
+      --accent-ink:#f78ebd;
+      --accent-soft:#3b1830;
+      --purple:#b98ae0;
+      --border:#3d2735;
+      --line:#553a49;
+      --on-accent:#2b0a1c;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1c1119;
+    --surface:#271722;
+    --surface-2:#311d2a;
+    --ink:#f6ebf1;
+    --muted:#bfa3b3;
+    --accent:#f05fa4;
+    --accent-ink:#f78ebd;
+    --accent-soft:#3b1830;
+    --purple:#b98ae0;
+    --border:#3d2735;
+    --line:#553a49;
+    --on-accent:#2b0a1c;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Plus Jakarta Sans',-apple-system,'Segoe UI',sans-serif;
+    font-size:16px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{max-width:880px;margin:0 auto;padding:56px 24px 80px;display:flex;flex-direction:column;gap:52px}
+
+  /* ---------- Header ---------- */
+  header{display:flex;flex-direction:column;gap:20px}
+  .brandline{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .wordmark{font-weight:800;letter-spacing:.32em;font-size:.8rem;color:var(--ink)}
+  .brandline time{font-size:.78rem;color:var(--muted);letter-spacing:.04em}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent-ink);
+  }
+  .eyebrow::before{content:"";width:22px;height:2px;background:linear-gradient(90deg,var(--accent),var(--purple));border-radius:2px}
+  h1{
+    margin:0;font-size:clamp(1.9rem,5vw,2.6rem);line-height:1.12;
+    font-weight:800;letter-spacing:-.02em;text-wrap:balance;
+  }
+  .lede{margin:0;font-size:1.05rem;color:var(--muted);max-width:58ch}
+  .lede strong{color:var(--ink);font-weight:600}
+
+  section{display:flex;flex-direction:column;gap:18px}
+  h2{
+    margin:0;font-size:.76rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--purple);
+  }
+  .section-note{margin:0;color:var(--muted);font-size:.92rem;max-width:62ch}
+  p{margin:0}
+
+  /* ---------- Org tree ---------- */
+  .tree-scroll{overflow-x:auto;padding-bottom:8px}
+  .tree{min-width:640px;padding:8px 0 0}
+  .tree ul{list-style:none;margin:0;padding:26px 0 0;display:flex;justify-content:center;position:relative}
+  .tree > ul{padding-top:0}
+  .tree li{list-style:none;position:relative;padding:26px 10px 0;display:flex;flex-direction:column;align-items:center}
+  .tree > ul > li{padding-top:0}
+  .tree li::before,.tree li::after{content:"";position:absolute;top:0;right:50%;width:50%;height:26px;border-top:2px solid var(--line)}
+  .tree li::after{right:auto;left:50%;border-left:2px solid var(--line)}
+  .tree li:only-child::before,.tree li:only-child::after{display:none}
+  .tree li:first-child::before,.tree li:last-child::after{border:none}
+  .tree li:last-child::before{border-right:2px solid var(--line);border-radius:0 10px 0 0}
+  .tree li:first-child::after{border-radius:10px 0 0 0}
+  .tree ul ul::before{content:"";position:absolute;top:0;left:50%;width:0;height:26px;border-left:2px solid var(--line)}
+  .tree > ul > li:only-child{padding-top:0}
+  .tree li:only-child{padding-top:26px}
+  .tree ul li:only-child::marker{content:""}
+
+  .node{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:12px 18px;text-align:center;min-width:150px;
+  }
+  .node .n-name{font-weight:700;font-size:.98rem;line-height:1.3}
+  .node .n-role{display:block;font-size:.74rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);margin-top:2px}
+  .node .n-scope{display:block;font-size:.8rem;color:var(--muted);margin-top:4px;line-height:1.45}
+  .node.root{
+    background:linear-gradient(105deg,var(--accent),var(--purple));
+    border:none;color:#fff;
+  }
+  .node.root .n-role,.node.root .n-scope{color:rgba(255,255,255,.85)}
+  .node.open{border-style:dashed;border-color:var(--accent);background:var(--bg)}
+  .node.ext .n-role{color:var(--purple)}
+  .tag{
+    display:inline-block;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    border-radius:999px;padding:2px 10px;margin-top:8px;
+  }
+  .tag.busqueda{background:var(--accent-soft);color:var(--accent-ink)}
+  .tag.externa{background:var(--surface-2);color:var(--purple)}
+
+  /* ---------- Person cards ---------- */
+  .people{display:flex;flex-direction:column;gap:22px}
+  .person{
+    border:1px solid var(--border);border-radius:16px;overflow:hidden;
+  }
+  .person-head{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    padding:16px 22px;background:var(--surface);border-bottom:1px solid var(--border);
+  }
+  .person-id{display:flex;align-items:center;gap:14px}
+  .avatar{
+    flex:none;width:42px;height:42px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:.9rem;letter-spacing:.02em;
+    background:linear-gradient(120deg,var(--accent),var(--purple));color:#fff;
+  }
+  .avatar.soft{background:var(--surface-2);color:var(--accent-ink)}
+  .person-id h3{margin:0;font-size:1.08rem;font-weight:700;line-height:1.2}
+  .person-id .role{display:block;font-size:.78rem;color:var(--muted);font-weight:500}
+  .salary{
+    font-size:.8rem;font-weight:700;color:var(--accent-ink);
+    background:var(--accent-soft);border-radius:999px;padding:6px 14px;white-space:nowrap;
+  }
+  .person-body{padding:6px 22px 16px}
+  ul.duties{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+  ul.duties li{
+    display:flex;gap:12px;align-items:flex-start;
+    padding:10px 0;border-bottom:1px solid var(--border);
+  }
+  ul.duties li:last-child{border-bottom:none}
+  ul.duties .ico{flex:none;width:18px;height:18px;margin-top:4px;color:var(--accent)}
+  ul.duties b{font-weight:600}
+  ul.duties small{display:block;color:var(--muted);font-size:.86rem;margin-top:1px}
+  .person-note{
+    margin:0 22px 18px;padding:12px 16px;border-radius:12px;
+    background:var(--surface);border:1px dashed var(--border);
+    color:var(--muted);font-size:.86rem;
+  }
+  .person-note b{color:var(--ink);font-weight:600}
+
+  /* ---------- Flow ---------- */
+  .flow{display:flex;flex-direction:column;gap:0;counter-reset:paso}
+  .step{display:flex;gap:18px;position:relative;padding-bottom:22px}
+  .step:last-child{padding-bottom:0}
+  .step::before{
+    counter-increment:paso;content:counter(paso,decimal-leading-zero);
+    flex:none;width:38px;height:38px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:.78rem;font-weight:800;
+    background:var(--surface-2);color:var(--accent-ink);
+    border:1px solid var(--border);z-index:1;
+  }
+  .step::after{
+    content:"";position:absolute;left:19px;top:38px;bottom:0;width:0;
+    border-left:2px solid var(--line);
+  }
+  .step:last-child::after{display:none}
+  .step-body{padding-top:6px}
+  .step-body b{font-weight:700}
+  .step-body .who{
+    display:inline-block;font-size:.74rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--accent-ink);margin-bottom:2px;
+  }
+  .step-body p{color:var(--muted);font-size:.92rem}
+  .step-body p b{color:var(--ink);font-weight:600}
+
+  /* ---------- Quién responde qué ---------- */
+  .table-scroll{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:560px;font-size:.92rem}
+  th{
+    text-align:left;font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--purple);padding:10px 14px;border-bottom:2px solid var(--border);
+  }
+  td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+  td:first-child{color:var(--ink)}
+  td .owner{font-weight:600;color:var(--accent-ink)}
+  td.esc{color:var(--muted)}
+
+  /* ---------- Rules ---------- */
+  .rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+  .rule{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:16px 18px;
+  }
+  .rule h4{margin:0 0 6px;font-size:.74rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-ink)}
+  .rule p{color:var(--muted);font-size:.88rem}
+  .rule p b{color:var(--ink);font-weight:600}
+
+  footer{
+    border-top:1px solid var(--border);padding-top:20px;
+    font-size:.8rem;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  }
+</style>
+
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="brandline">
+      <span class="wordmark">BEME AGENCY</span>
+      <time datetime="2026-08">Agosto 2026</time>
+    </div>
+    <span class="eyebrow">Documento interno · Confidencial</span>
+    <h1>Organigrama y responsabilidades</h1>
+    <p class="lede">
+      Quién hace qué en BEME, cómo fluye la comunicación entre el equipo, y a quién acudir
+      en cada situación. <strong>Incluye el nuevo puesto comercial en búsqueda activa.</strong>
+    </p>
+  </header>
+
+  <!-- ================= ORGANIGRAMA ================= -->
+  <section>
+    <h2>El equipo de un vistazo</h2>
+    <div class="tree-scroll">
+      <div class="tree">
+        <ul>
+          <li>
+            <div class="node root">
+              <span class="n-name">Dirección BEME</span>
+              <span class="n-role">Agustín · Florencia</span>
+            </div>
+            <ul>
+              <li>
+                <div class="node">
+                  <span class="n-name">Agustín Ríos</span>
+                  <span class="n-role">Director</span>
+                  <span class="n-scope">Grandes influencers · Software · Pagos y facturación</span>
+                </div>
+                <ul>
+                  <li>
+                    <div class="node ext">
+                      <span class="n-name">Contadora</span>
+                      <span class="n-role">Finanzas</span>
+                      <span class="n-scope">QuickBooks · Revisiones · Análisis</span>
+                      <span class="tag externa">Externa</span>
+                    </div>
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <div class="node">
+                  <span class="n-name">Florencia Cafure</span>
+                  <span class="n-role">Directora</span>
+                  <span class="n-scope">Marcas · Cierres · Negociación · Talentos</span>
+                </div>
+                <ul>
+                  <li>
+                    <div class="node open">
+                      <span class="n-name">Ejecutiva Comercial</span>
+                      <span class="n-role">Brand Partnerships</span>
+                      <span class="n-scope">Clientes nuevos · Eventos · Cierres</span>
+                      <span class="tag busqueda">En búsqueda</span>
+                    </div>
+                    <ul>
+                      <li>
+                        <div class="node">
+                          <span class="n-name">Angélica Pichardo</span>
+                          <span class="n-role">Operaciones</span>
+                          <span class="n-scope">Campañas · Facturación externa · Redes</span>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="node">
+                          <span class="n-name">Milagros</span>
+                          <span class="n-role">Operaciones</span>
+                          <span class="n-scope">Campañas · Prospección · Redes</span>
+                        </div>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <p class="section-note">
+      Línea de reporte: Angélica y Milagros responden a la Ejecutiva Comercial <b>o directamente a
+      Florencia, según de quién sea la marca</b> de cada campaña. La Ejecutiva Comercial reporta a
+      Florencia, que está un escalón por encima. La contadora trabaja con Agustín, que lleva pagos
+      y facturación. En lo que hace a facturación, Angélica también responde a la contadora.
+      Los dos directores deciden juntos lo estratégico.
+    </p>
+  </section>
+
+  <!-- ================= ROLES ================= -->
+  <section>
+    <h2>Roles y obligaciones</h2>
+    <div class="people">
+
+      <!-- Agustín -->
+      <article class="person">
+        <div class="person-head">
+          <div class="person-id">
+            <span class="avatar">AR</span>
+            <div>
+              <h3>Agustín Ríos</h3>
+              <span class="role">Director</span>
+            </div>
+          </div>
+          <span class="salary">Sueldo 1.000</span>
+        </div>
+        <div class="person-body">
+          <ul class="duties">
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Relación con grandes influencers.</b><small>Vínculo directo con los talentos top del roster.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Software.</b><small>Desarrollo y mantenimiento de la plataforma de la agencia: campañas, roster, contratos, finanzas.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Pagos y facturación.</b><small>Ejecuta pagos a creadores y proveedores; emite la facturación de BEME.</small></div></li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- Florencia -->
+      <article class="person">
+        <div class="person-head">
+          <div class="person-id">
+            <span class="avatar">FC</span>
+            <div>
+              <h3>Florencia Cafure</h3>
+              <span class="role">Directora</span>
+            </div>
+          </div>
+          <span class="salary">Sueldo 2.500</span>
+        </div>
+        <div class="person-body">
+          <ul class="duties">
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Vínculo con marcas.</b><small>Relación comercial continua con los clientes de la cartera.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Vínculo con influencers.</b><small>Relación con los creadores del roster en el día a día comercial.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Cierre de campañas.</b><small>Define y cierra cada campaña con la marca.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Negociaciones.</b><small>Precios, condiciones y alcances con marcas y talentos.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Resolución de problemas en campañas.</b><small>Punto de escalamiento cuando algo se traba en una campaña activa.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Búsqueda de clientes.</b><small>Prospección de marcas nuevas para la agencia.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Mails de talentos.</b><small>Gestiona la casilla de talentos y responde en nombre de la agencia.</small></div></li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- Angélica -->
+      <article class="person">
+        <div class="person-head">
+          <div class="person-id">
+            <span class="avatar soft">AP</span>
+            <div>
+              <h3>Angélica Pichardo</h3>
+              <span class="role">Operaciones · Campañas y finanzas</span>
+            </div>
+          </div>
+        </div>
+        <div class="person-body">
+          <ul class="duties">
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Seguimiento de campaña.</b><small>Lleva el workflow de cada campaña activa: briefs, scripts, aprobaciones, publicación y estadísticas.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Comunicación con creadores y marcas.</b><small>Contacto operativo del día a día durante la ejecución.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Facturación externa.</b><small>Emite y gestiona las facturas hacia clientes y de creadores externos; en esto responde a la contadora.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Carga del área de finanzas en el software.</b><small>Mantiene al día cobros, pagos y movimientos en la plataforma.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Redes sociales.</b><small>Contenido y gestión de las redes de BEME, junto a Milagros.</small></div></li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- Milagros -->
+      <article class="person">
+        <div class="person-head">
+          <div class="person-id">
+            <span class="avatar soft">MI</span>
+            <div>
+              <h3>Milagros</h3>
+              <span class="role">Operaciones · Campañas y prospección</span>
+            </div>
+          </div>
+        </div>
+        <div class="person-body">
+          <ul class="duties">
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Seguimiento de campaña.</b><small>Lleva el workflow de campañas activas junto a Angélica.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Comunicación con creadores y marcas.</b><small>Contacto operativo del día a día durante la ejecución.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Redes sociales.</b><small>Contenido y gestión de las redes de BEME, junto a Angélica.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Prospección de influencers.</b><small>Detecta y contacta creadores nuevos para sumar al roster.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Mails de prospecciones.</b><small>Gestiona la casilla de prospección y el primer contacto por correo.</small></div></li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- Contadora -->
+      <article class="person">
+        <div class="person-head">
+          <div class="person-id">
+            <span class="avatar soft">CO</span>
+            <div>
+              <h3>Contadora</h3>
+              <span class="role">Finanzas · Colaboradora externa</span>
+            </div>
+          </div>
+        </div>
+        <div class="person-body">
+          <ul class="duties">
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Conciliación en QuickBooks.</b><small>Mantiene la contabilidad conciliada con los movimientos reales.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Revisiones mensuales.</b><small>Cierre y revisión de los números de cada mes.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Análisis financiero de la empresa.</b><small>Lectura de rentabilidad y salud financiera para la dirección.</small></div></li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- Nuevo puesto -->
+      <article class="person" style="border-style:dashed;border-color:var(--accent)">
+        <div class="person-head">
+          <div class="person-id">
+            <span class="avatar">+</span>
+            <div>
+              <h3>Ejecutiva Comercial &amp; Brand Partnerships</h3>
+              <span class="role">Nuevo puesto · En búsqueda activa</span>
+            </div>
+          </div>
+          <span class="salary">Sueldo 1.500 + bonos %</span>
+        </div>
+        <div class="person-body">
+          <ul class="duties">
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Vínculo con marcas.</b><small>Relación comercial con clientes actuales y nuevos.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Vínculo con influencers.</b><small>Relación con los creadores del roster.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Cierre de campañas y negociaciones.</b><small>Cierra precios y condiciones de cada campaña que trae.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Resolución de problemas en campañas.</b><small>Frente comercial cuando un problema involucra al cliente.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Búsqueda activa y presencial de clientes.</b><small>Prospección en reuniones y visitas, no solo digital.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Mails de talentos.</b><small>Comparte la gestión de la casilla de talentos con Florencia.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Acompañamiento de talentos a eventos.</b><small>Presencia junto al talento en activaciones y eventos de marca.</small></div></li>
+            <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><b>Presencia en eventos clave de networking.</b><small>Representa a BEME para desarrollar la red comercial.</small></div></li>
+          </ul>
+        </div>
+        <p class="person-note"><b>Nota:</b> este puesto espeja el frente comercial de Florencia para escalar la venta,
+        sumando la calle: eventos, presencialidad y acompañamiento de talentos.</p>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ================= FLUJO ================= -->
+  <section>
+    <h2>Cómo fluye una campaña</h2>
+    <p class="section-note">El recorrido de una campaña desde el primer contacto hasta el cierre contable, con el responsable de cada tramo.</p>
+    <div class="flow">
+      <div class="step">
+        <div class="step-body">
+          <span class="who">Milagros · Florencia · Ejecutiva Comercial</span>
+          <p><b>Prospección.</b> Milagros suma creadores nuevos al roster; Florencia y la Ejecutiva Comercial buscan marcas y clientes nuevos.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <span class="who">Florencia · Ejecutiva Comercial</span>
+          <p><b>Negociación y cierre.</b> Se define la propuesta, se negocian precios y condiciones, y se cierra la campaña con la marca.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <span class="who">Angélica · Milagros</span>
+          <p><b>Ejecución y seguimiento.</b> La campaña cerrada pasa a operaciones: brief, scripts, aprobaciones, publicación y estadísticas, con comunicación directa con creadores y marca.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <span class="who">Ejecutiva Comercial / Florencia</span>
+          <p><b>Escalamiento.</b> Si algo se traba con la marca o el creador, Angélica o Milagros lo escalan a quien lleva esa marca: la Ejecutiva Comercial o Florencia. Florencia es la instancia final.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <span class="who">Angélica → Agustín</span>
+          <p><b>Facturación y pagos.</b> Angélica emite la facturación externa siguiendo los lineamientos de la contadora y carga finanzas en el software; Agustín factura y ejecuta los pagos.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <span class="who">Contadora → Dirección</span>
+          <p><b>Cierre contable.</b> La contadora concilia en QuickBooks, revisa el mes y entrega el análisis financiero a la dirección.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= REGLAS ================= -->
+  <section>
+    <h2>Reglas de comunicación</h2>
+    <div class="rules">
+      <div class="rule">
+        <h4>Marcas</h4>
+        <p>Primer contacto, propuesta y negociación: <b>Florencia / Ejecutiva Comercial</b>. Día a día de una campaña ya activa: <b>Angélica y Milagros</b>.</p>
+      </div>
+      <div class="rule">
+        <h4>Influencers</h4>
+        <p>Operativa de campaña: <b>Angélica y Milagros</b>. Vínculo comercial: <b>Florencia</b>. Grandes influencers: directo con <b>Agustín</b>.</p>
+      </div>
+      <div class="rule">
+        <h4>Dinero</h4>
+        <p>Facturación externa y carga en software: <b>Angélica</b>, que responde a la <b>Contadora</b> en lo contable. Pagos y facturación BEME: <b>Agustín</b>. Conciliación y análisis: <b>Contadora</b>.</p>
+      </div>
+      <div class="rule">
+        <h4>Casillas de mail</h4>
+        <p>Talentos: <b>Florencia</b> (+ Ejecutiva Comercial). Prospecciones: <b>Milagros</b>. Finanzas: <b>Agustín / Angélica</b>.</p>
+      </div>
+      <div class="rule">
+        <h4>Software</h4>
+        <p>Bugs, mejoras y accesos a la plataforma: <b>Agustín</b>.</p>
+      </div>
+      <div class="rule">
+        <h4>Redes sociales</h4>
+        <p>Contenido y gestión de las redes de BEME: <b>Angélica y Milagros</b>, con lineamiento de dirección.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TABLA ================= -->
+  <section>
+    <h2>¿A quién acudo?</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Situación</th><th>Primera línea</th><th>Escala a</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Una marca nueva quiere cotizar</td><td><span class="owner">Florencia / Ejecutiva Comercial</span></td><td class="esc">Dirección</td></tr>
+          <tr><td>Problema en una campaña activa</td><td><span class="owner">Angélica o Milagros</span></td><td class="esc">Ejecutiva Comercial o Florencia, según la marca</td></tr>
+          <tr><td>Un gran influencer necesita algo</td><td><span class="owner">Agustín</span></td><td class="esc">—</td></tr>
+          <tr><td>Mail en la casilla de talentos</td><td><span class="owner">Florencia</span></td><td class="esc">—</td></tr>
+          <tr><td>Sumar un creador nuevo al roster</td><td><span class="owner">Milagros</span></td><td class="esc">Florencia</td></tr>
+          <tr><td>Emitir factura a un cliente</td><td><span class="owner">Angélica</span></td><td class="esc">Contadora · Agustín</td></tr>
+          <tr><td>Pago a un creador o proveedor</td><td><span class="owner">Agustín</span></td><td class="esc">—</td></tr>
+          <tr><td>Números del mes / QuickBooks</td><td><span class="owner">Contadora</span></td><td class="esc">Agustín</td></tr>
+          <tr><td>Bug o mejora en el software</td><td><span class="owner">Agustín</span></td><td class="esc">—</td></tr>
+          <tr><td>Redes sociales de BEME</td><td><span class="owner">Angélica y Milagros</span></td><td class="esc">Florencia</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <span>BEME Agency — Organigrama interno · Confidencial</span>
+    <span>Actualizado: agosto 2026</span>
+  </footer>
+
+</div>
+
+</body>
+</html>

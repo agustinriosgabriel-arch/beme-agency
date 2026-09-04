@@ -102,7 +102,10 @@ En agosto de 2026 `send-email.js` no validaba nada y quedó como **open relay**:
 - Las functions con `schedule` en netlify.toml devuelven 403 desde el edge ante una invocación HTTP directa — pero eso es protección de la plataforma, no del código. Si alguna vez se les saca el `schedule`, quedan expuestas. Autenticarlas igual.
 - Ningún modo "de prueba" abierto: `brand-notify?test=` mandaba mail a cualquier dirección. Va detrás de sesión interna o `ADMIN_TASK_SECRET`.
 
-### 11. Compartir siempre bemeagency.com, nunca la URL .netlify.app
+### 11. Nada de Artifacts de Claude: todo documento se entrega como página en bemeagency.com
+Agustín no puede usar los links de artifacts (`claude.ai/code/artifact/...`), así que **nunca entregar documentos por esa vía**. Cualquier documento para compartir (organigrama, perfiles de puesto, manuales, decks) se publica como página HTML en este repo, se suma al allowlist de `netlify.toml` con su header `noindex`, y se comparte el link `bemeagency.com/...`. Ejemplos ya publicados: `/organigrama` y `/puesto-comercial`.
+
+### 12. Compartir siempre bemeagency.com, nunca la URL .netlify.app
 `bemeagency.com` y `bemeagency.netlify.app` son **el mismo sitio de Netlify** (id `7bc7d274-b308-4938-8631-30df1bc79d5c`), no dos hostings. Lo que los separa es el allowlist de `netlify.toml`: el dominio sirve solo las páginas listadas y **todo lo demás cae en el catch-all y devuelve 404**; la URL `.netlify.app` no filtra nada y ahí vive el panel interno.
 
 - **Todo link que se le pase a un cliente, marca, talento o socio va bajo `bemeagency.com`.** Nunca compartir `bemeagency.netlify.app` — es la puerta de servicio, expone el panel interno y no es una dirección presentable.

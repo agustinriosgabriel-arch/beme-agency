@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ejecutivo/a Comercial BEME</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap">
+<style>
+  :root{
+    --bg:#ffffff;
+    --surface:#faf3f7;
+    --surface-2:#f5e9f0;
+    --ink:#2b1626;
+    --muted:#7a6373;
+    --accent:#b2005d;
+    --accent-ink:#8e004a;
+    --purple:#5b2d86;
+    --border:#ecdce5;
+    --on-accent:#ffffff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#1c1119;
+      --surface:#271722;
+      --surface-2:#311d2a;
+      --ink:#f6ebf1;
+      --muted:#bfa3b3;
+      --accent:#f05fa4;
+      --accent-ink:#f78ebd;
+      --purple:#b98ae0;
+      --border:#3d2735;
+      --on-accent:#2b0a1c;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1c1119;
+    --surface:#271722;
+    --surface-2:#311d2a;
+    --ink:#f6ebf1;
+    --muted:#bfa3b3;
+    --accent:#f05fa4;
+    --accent-ink:#f78ebd;
+    --purple:#b98ae0;
+    --border:#3d2735;
+    --on-accent:#2b0a1c;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Plus Jakarta Sans',-apple-system,'Segoe UI',sans-serif;
+    font-size:16px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{max-width:680px;margin:0 auto;padding:56px 24px 80px;display:flex;flex-direction:column;gap:44px}
+
+  /* Header */
+  header{display:flex;flex-direction:column;gap:20px}
+  .brandline{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .wordmark{font-weight:800;letter-spacing:.32em;font-size:.8rem;color:var(--ink)}
+  .brandline time{font-size:.78rem;color:var(--muted);letter-spacing:.04em}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent-ink);
+  }
+  .eyebrow::before{content:"";width:22px;height:2px;background:linear-gradient(90deg,var(--accent),var(--purple));border-radius:2px}
+  h1{
+    margin:0;font-size:clamp(1.9rem,5vw,2.6rem);line-height:1.12;
+    font-weight:800;letter-spacing:-.02em;text-wrap:balance;
+  }
+  .lede{margin:0;font-size:1.05rem;color:var(--muted);max-width:56ch}
+  .lede strong{color:var(--ink);font-weight:600}
+
+  /* Sections */
+  section{display:flex;flex-direction:column;gap:14px}
+  h2{
+    margin:0;font-size:.76rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--purple);
+  }
+  p{margin:0}
+
+  ul.duties{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+  ul.duties li{
+    display:flex;gap:14px;align-items:flex-start;
+    padding:12px 0;border-bottom:1px solid var(--border);
+  }
+  ul.duties li:last-child{border-bottom:none}
+  ul.duties .ico{flex:none;width:20px;height:20px;margin-top:3px;color:var(--accent)}
+  ul.duties b{font-weight:600}
+  ul.duties small{display:block;color:var(--muted);font-size:.88rem;margin-top:2px}
+
+  /* Out of scope */
+  .scope-out{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:20px 22px;display:flex;flex-direction:column;gap:10px;
+  }
+  .scope-out p{display:flex;gap:12px;align-items:flex-start;color:var(--muted)}
+  .scope-out .ico{flex:none;width:18px;height:18px;margin-top:4px;color:var(--muted)}
+  .scope-out b{color:var(--ink);font-weight:600}
+
+  /* Compensation */
+  .comp{
+    border-radius:16px;overflow:hidden;border:1px solid var(--border);
+  }
+  .comp-head{
+    background:linear-gradient(105deg,var(--accent),var(--purple));
+    color:#fff;padding:18px 22px;
+    display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  }
+  .comp-head strong{font-size:1.5rem;font-weight:800;letter-spacing:-.01em}
+  .comp-head span{font-size:.85rem;opacity:.92}
+  .comp-body{background:var(--surface);padding:18px 22px;display:flex;flex-direction:column;gap:12px}
+  .comp-row{display:flex;gap:14px;align-items:flex-start}
+  .comp-row .ico{flex:none;width:18px;height:18px;margin-top:4px;color:var(--accent)}
+  .comp-row small{color:var(--muted);display:block;font-size:.88rem}
+
+  /* Profile chips */
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin:0;padding:0;list-style:none}
+  .chips li{
+    background:var(--surface);border:1px solid var(--border);border-radius:999px;
+    padding:8px 16px;font-size:.9rem;font-weight:600;
+  }
+
+  /* Pending block */
+  .pending{
+    border:1px dashed var(--border);border-radius:14px;padding:18px 22px;
+    color:var(--muted);font-size:.92rem;display:flex;flex-direction:column;gap:6px;
+  }
+  .pending b{color:var(--ink);font-weight:600}
+
+  footer{
+    border-top:1px solid var(--border);padding-top:20px;
+    font-size:.8rem;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="brandline">
+      <span class="wordmark">BEME AGENCY</span>
+      <time datetime="2026-08">Agosto 2026</time>
+    </div>
+    <span class="eyebrow">Búsqueda activa · México · 100% remoto</span>
+    <h1>Ejecutivo/a Comercial &amp; Brand Partnerships</h1>
+    <p class="lede">
+      Buscamos a la persona que liderará la relación comercial de BEME con marcas y agencias en México:
+      <strong>desarrollo de nuevos negocios, negociación y cierre de campañas, y representación de la agencia</strong>
+      en reuniones y eventos. Posición 100% remota, con disponibilidad para asistir a eventos presenciales
+      cuando la agenda comercial lo requiera.
+    </p>
+  </header>
+
+  <section>
+    <h2>Responsabilidades</h2>
+    <ul class="duties">
+      <li>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        <div><b>Desarrollo de nuevos negocios en México.</b>
+        <small>Prospección activa de marcas con inversión en influencer marketing y presentación de propuestas con el roster de BEME.</small></div>
+      </li>
+      <li>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        <div><b>Propuesta proactiva de campañas.</b>
+        <small>Diseño y presentación de propuestas comerciales a marcas y agencias, sin depender de briefs entrantes.</small></div>
+      </li>
+      <li>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        <div><b>Negociación y cierre de campañas.</b>
+        <small>Definición de condiciones comerciales y precio final de cada campaña con la marca.</small></div>
+      </li>
+      <li>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        <div><b>Gestión y desarrollo de la cartera de marcas.</b>
+        <small>Relación continua con clientes: seguimiento comercial, detección de nuevas oportunidades y fidelización.</small></div>
+      </li>
+      <li>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        <div><b>Representación institucional en eventos.</b>
+        <small>Asistencia a eventos clave de marcas y agencias en representación de BEME para fortalecer la red comercial.</small></div>
+      </li>
+      <li>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        <div><b>Acompañamiento de talentos en eventos.</b>
+        <small>Presencia junto al talento en activaciones y eventos de marca.</small></div>
+      </li>
+      <li>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        <div><b>Coordinación con el equipo BEME.</b>
+        <small>Comunicación fluida con dirección y operaciones para el traspaso ordenado de cada campaña cerrada.</small></div>
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Fuera del alcance</h2>
+    <div class="scope-out">
+      <p>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        <span><b>Seguimiento y ejecución de campañas.</b> Una vez cerrada la venta, la ejecución y el seguimiento quedan a cargo del equipo de operaciones de BEME.</span>
+      </p>
+      <p>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        <span><b>Desarrollo de software.</b> La plataforma y las herramientas internas de BEME quedan a cargo de la dirección.</span>
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Compensación</h2>
+    <div class="comp">
+      <div class="comp-head">
+        <strong>4% de comisión</strong>
+        <span>sobre la facturación de campañas nuevas que traiga</span>
+      </div>
+      <div class="comp-body">
+        <div class="comp-row">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          <div>La comisión aplica sobre la facturación de cada campaña de <b>marcas nuevas incorporadas por esta posición</b>.</div>
+        </div>
+        <div class="comp-row">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          <div>No genera comisión sobre <b>marcas ya existentes</b> en la cartera de BEME.
+          <small>La gestión de esas marcas forma parte de las responsabilidades del puesto, sin variable asociada.</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Perfil</h2>
+    <ul class="chips">
+      <li>Excelente presencia profesional</li>
+      <li>Responsabilidad y autonomía</li>
+      <li>Proactividad comercial</li>
+      <li>Comunicación fluida</li>
+      <li>Red de contactos en marcas y agencias MX</li>
+      <li>Habilidad de negociación y cierre</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Por definir</h2>
+    <div class="pending">
+      <span><b>Sueldo base</b> — monto y moneda.</span>
+      <span><b>Tipo de contratación</b> — nómina, honorarios o esquema mixto.</span>
+    </div>
+  </section>
+
+  <footer>
+    <span>BEME Agency — Perfil de puesto interno</span>
+    <span>Contacto: dirección BEME</span>
+  </footer>
+</div>
+</body>
+</html>
