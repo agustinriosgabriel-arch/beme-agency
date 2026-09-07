@@ -106,6 +106,10 @@
   .tree > ul > li:only-child{padding-top:0}
   .tree li:only-child{padding-top:26px}
   .tree ul li:only-child::marker{content:""}
+  .tree ul ul li:only-child::before{
+    display:block;border:none;border-left:2px solid var(--line);
+    left:50%;right:auto;width:0;height:26px;top:0;border-radius:0;
+  }
 
   .tree{position:relative}
   #finance-link{
@@ -288,7 +292,7 @@
                     <div class="node" id="node-angelica">
                       <span class="n-name">Angélica Pichardo</span>
                       <span class="n-role">Asistente Financiera / Coordinadora de Campaña</span>
-                      <span class="n-scope">Campañas · Facturación externa · Software · Redes</span>
+                      <span class="n-scope">Campañas · Facturación externa · Redes</span>
                     </div>
                   </li>
                   <li>
