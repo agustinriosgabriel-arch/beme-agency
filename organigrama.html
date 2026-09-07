@@ -107,9 +107,17 @@
   .tree li:only-child{padding-top:26px}
   .tree ul li:only-child::marker{content:""}
 
+  .tree{position:relative}
+  #finance-link{
+    position:absolute;inset:0;width:100%;height:100%;
+    pointer-events:none;overflow:visible;z-index:0;
+  }
+  #finance-link path{fill:none;stroke:var(--accent);stroke-width:2;stroke-dasharray:6 5;opacity:.8}
+  #finance-link text{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;fill:var(--accent-ink)}
   .node{
     background:var(--surface);border:1px solid var(--border);border-radius:14px;
     padding:12px 18px;text-align:center;min-width:150px;
+    position:relative;z-index:1;
   }
   .node .n-name{font-weight:700;font-size:.98rem;line-height:1.3}
   .node .n-role{display:block;font-size:.74rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);margin-top:2px}
@@ -243,7 +251,8 @@
   <section>
     <h2>El equipo de un vistazo</h2>
     <div class="tree-scroll">
-      <div class="tree">
+      <div class="tree" id="org-tree">
+        <svg id="finance-link" aria-hidden="true"></svg>
         <ul>
           <li>
             <div class="node root">
@@ -252,7 +261,7 @@
             </div>
             <ul>
               <li>
-                <div class="node">
+                <div class="node" id="node-agustin">
                   <span class="n-name">Agustín Ríos</span>
                   <span class="n-role">Director</span>
                   <span class="n-scope">Grandes influencers · Software · Pagos y facturación</span>
@@ -266,13 +275,6 @@
                       <span class="tag externa">Externa</span>
                     </div>
                   </li>
-                  <li>
-                    <div class="node">
-                      <span class="n-name">Angélica Pichardo</span>
-                      <span class="n-role">Finanzas</span>
-                      <span class="n-scope">Facturación externa · Carga en software</span>
-                    </div>
-                  </li>
                 </ul>
               </li>
               <li>
@@ -283,18 +285,18 @@
                 </div>
                 <ul>
                   <li>
+                    <div class="node" id="node-angelica">
+                      <span class="n-name">Angélica Pichardo</span>
+                      <span class="n-role">Operaciones · Finanzas</span>
+                      <span class="n-scope">Campañas · Facturación externa · Software · Redes</span>
+                    </div>
+                  </li>
+                  <li>
                     <div class="node open">
                       <span class="n-name">Ejecutiva Comercial</span>
                       <span class="n-role">Brand Partnerships</span>
                       <span class="n-scope">Clientes nuevos · Eventos · Cierres</span>
                       <span class="tag busqueda">En búsqueda</span>
-                    </div>
-                  </li>
-                  <li>
-                    <div class="node">
-                      <span class="n-name">Angélica Pichardo</span>
-                      <span class="n-role">Operaciones</span>
-                      <span class="n-scope">Campañas · Facturación externa · Redes</span>
                     </div>
                   </li>
                   <li>
@@ -314,10 +316,9 @@
     <p class="section-note">
       Línea de reporte: Angélica y Milagros responden a Florencia, y coordinan con la Ejecutiva
       Comercial <b>según de quién sea la marca</b> de cada campaña. La Ejecutiva Comercial reporta a
-      Florencia. Por eso Angélica aparece dos veces: en lo operativo responde a Florencia, y
-      <b>en finanzas responde a Agustín, al mismo nivel que Dariella</b>, que trabaja con él en
-      pagos y facturación. En lo contable, Angélica sigue los lineamientos de Dariella.
-      Los dos directores deciden juntos lo estratégico.
+      Florencia. Angélica tiene <b>doble línea de reporte</b>: la línea llena la conecta con Florencia
+      en lo operativo, y la <b>línea punteada la conecta con Agustín en finanzas</b>, donde sigue los
+      lineamientos contables de Dariella. Los dos directores deciden juntos lo estratégico.
     </p>
   </section>
 
@@ -336,7 +337,6 @@
               <span class="role">Director</span>
             </div>
           </div>
-          <span class="salary">Sueldo 1.000</span>
         </div>
         <div class="person-body">
           <ul class="duties">
@@ -603,6 +603,41 @@
   </footer>
 
 </div>
+
+<script>
+(function(){
+  var tree = document.getElementById('org-tree');
+  var svg  = document.getElementById('finance-link');
+  var a    = document.getElementById('node-agustin');
+  var b    = document.getElementById('node-angelica');
+  if(!tree || !svg || !a || !b) return;
+  var NS = 'http://www.w3.org/2000/svg';
+  function draw(){
+    var t = tree.getBoundingClientRect();
+    var ra = a.getBoundingClientRect();
+    var rb = b.getBoundingClientRect();
+    var x1 = ra.left - t.left + ra.width * 0.72;
+    var y1 = ra.bottom - t.top;
+    var x2 = rb.left - t.left + rb.width / 2;
+    var y2 = rb.top - t.top;
+    var midY = y1 + (y2 - y1) * 0.55;
+    svg.innerHTML = '';
+    var p = document.createElementNS(NS,'path');
+    p.setAttribute('d','M '+x1+' '+y1+' C '+x1+' '+midY+', '+x2+' '+midY+', '+x2+' '+y2);
+    svg.appendChild(p);
+    var tx = document.createElementNS(NS,'text');
+    tx.setAttribute('x',(x1+x2)/2);
+    tx.setAttribute('y',midY - 6);
+    tx.setAttribute('text-anchor','middle');
+    tx.textContent = 'Finanzas';
+    svg.appendChild(tx);
+  }
+  window.addEventListener('resize', draw);
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(draw); }
+  window.addEventListener('load', draw);
+  draw();
+})();
+</script>
 
 </body>
 </html>
