@@ -151,6 +151,13 @@ let currentTab = 'talents';
 let selectedIds = new Set();
 let networkFilter = '';
 let selectedCats = new Set();
+// Sentinel key for the "Sin categoría" filter option (talents with no category assigned)
+const NO_CAT_KEY = '__none__';
+const NO_CAT_LABEL = 'Sin categoría';
+function hasNoCategory(t) {
+  const cats = (t.categorias || []).filter(c => c && String(c).trim() && String(c).trim().toLowerCase() !== NO_CAT_LABEL.toLowerCase());
+  return cats.length === 0;
+}
 let selectedCountries = new Set();
 let selectedRosters = new Set();
 let minFollowers = 0;
@@ -686,20 +693,34 @@ function setupRealtimeSubscription() {
       } else if (payload.eventType === 'UPDATE') {
         const t = payload.new;
         if (!t || !t.id) {
-          // payload.new is empty — reload only changed columns (skip foto to save IO)
-          // payload.new is empty — merge updated columns into existing talents (preserve foto, etc.)
-          loadTalentosWithRetry(TALENT_COLS).then(({ data }) => {
-            if (data) {
-              // Merge into existing talents to preserve fields not in RT select (like foto)
-              var byId = {};
-              talents.forEach(function(x) { byId[x.id] = x; });
-              talents = data.filter(function(x) { return !_recentlyDeleted.has(x.id); }).map(function(x) {
-                var existing = byId[x.id] || {};
-                return { ...existing, ...x, paises:x.paises||existing.paises||[], categorias:x.categorias||existing.categorias||[], seguidores:x.seguidores||existing.seguidores||{tiktok:0,instagram:0,youtube:0}, engagement:x.engagement||existing.engagement||{}, avg_views:x.avg_views||existing.avg_views||{}, social_meta:x.social_meta||existing.social_meta||{} };
-              });
+          // payload.new vacío (fila demasiado grande para realtime, p.ej. foto base64).
+          // Antes se reemplazaba TODO el array con una recarga completa: si esa
+          // recarga fallaba o venía corta, desaparecían talentos de la lista
+          // mientras el usuario estaba filtrando/seleccionando. Ahora:
+          //  1) si el evento trae el id (payload.old), se recarga solo esa fila;
+          //  2) si no, se recarga todo pero se FUSIONA por id sin sacar filas
+          //     (los borrados llegan por su propio evento DELETE).
+          var oldId = payload.old && payload.old.id;
+          var mergeRow = function(x) {
+            if (!x || !x.id || _recentlyDeleted.has(x.id)) return;
+            var i = talents.findIndex(function(y) { return y.id === x.id; });
+            var existing = i >= 0 ? talents[i] : {};
+            var merged = { ...existing, ...x, paises:x.paises||existing.paises||[], categorias:x.categorias||existing.categorias||[], seguidores:x.seguidores||existing.seguidores||{tiktok:0,instagram:0,youtube:0}, engagement:x.engagement||existing.engagement||{}, avg_views:x.avg_views||existing.avg_views||{}, social_meta:x.social_meta||existing.social_meta||{} };
+            if (i >= 0) talents[i] = merged; else talents.push(merged);
+          };
+          if (oldId) {
+            sb.from('talentos').select(TALENT_COLS).eq('id', oldId).maybeSingle().then(({ data, error }) => {
+              if (error || !data) return;
+              mergeRow(data);
               renderTalents(); updateStats(); updatePlatformCounts();
-            }
-          });
+            });
+          } else {
+            loadTalentosWithRetry(TALENT_COLS).then(({ data, error }) => {
+              if (error || !data || !data.length) return;
+              data.forEach(mergeRow);
+              renderTalents(); updateStats(); updatePlatformCounts();
+            });
+          }
         } else {
           const idx = talents.findIndex(x => x.id === t.id);
           const mapped = { ...t, paises: t.paises||[], categorias: t.categorias||[], seguidores: t.seguidores||{tiktok:0,instagram:0,youtube:0}, engagement: t.engagement||{}, avg_views: t.avg_views||{}, social_meta: t.social_meta||{} };
@@ -1818,8 +1839,9 @@ function clearAllFilters() {
   renderTalents();
 }
 
-function getFilteredTalents() {
-  const search = searchNormalize(document.getElementById('search-input').value);
+function getFilteredTalents(opts) {
+  const ignoreSearch = !!(opts && opts.ignoreSearch);
+  const search = ignoreSearch ? '' : searchNormalize(document.getElementById('search-input').value);
   return talents.filter(t => {
     if(search && !searchNormalize(t.nombre).includes(search) &&
        !searchNormalize(t.ciudad||'').includes(search) &&
@@ -1834,7 +1856,7 @@ function getFilteredTalents() {
     if(networkFilter === 'tt' && !t.tiktok) return false;
     if(networkFilter === 'ig' && !t.instagram) return false;
     if(networkFilter === 'yt' && !t.youtube) return false;
-    if(selectedCats.size > 0 && !t.categorias.some(c => selectedCats.has(c))) return false;
+    if(selectedCats.size > 0 && !(selectedCats.has(NO_CAT_KEY) && hasNoCategory(t)) && !t.categorias.some(c => selectedCats.has(c))) return false;
     // Roster filter
     if(selectedRosters.size > 0) {
       var inAnyRoster = rosters.some(function(r) { return selectedRosters.has(String(r.id)) && r.talentIds.includes(t.id); });
@@ -1914,7 +1936,27 @@ function extractHandle(url) {
   }
 }
 
+// La selección siempre es un subconjunto de lo que se ve: si un filtro activo
+// (plataforma, país, categoría, etc.) deja afuera a un talento, también sale de
+// la selección. Así "Agregar a roster" / "Actualizar" con filtro TikTok nunca
+// arrastran talentos sin TikTok seleccionados antes de filtrar.
+// Solo se poda lo que existe en `talents` y no pasa el filtro: un talento que
+// falta momentáneamente del array (recarga en curso) conserva su selección.
+// El buscador por nombre NO poda: buscar "Ana", marcarla, buscar "Juan" y
+// marcarlo debe dejar a los dos seleccionados.
+function pruneSelectionToFilters() {
+  if (!selectedIds.size) return;
+  const visible = new Set(getFilteredTalents({ ignoreSearch: true }).map(t => t.id));
+  const known = new Set(talents.map(t => t.id));
+  let changed = false;
+  [...selectedIds].forEach(id => {
+    if (known.has(id) && !visible.has(id)) { selectedIds.delete(id); changed = true; }
+  });
+  if (changed) updateBottomBar();
+}
+
 function renderTalents() {
+  pruneSelectionToFilters();
   let filtered = getFilteredTalents();
   filtered = applySortToList(filtered);
   const container = document.getElementById('talent-container');
@@ -5999,6 +6041,14 @@ function toggleCatDropdown() {
 function renderCatPanelList() {
   const container = document.getElementById('cat-panel-list');
   container.innerHTML = '';
+  // Option: "Sin categoría" — talents with no category assigned
+  const noCatSel = selectedCats.has(NO_CAT_KEY);
+  const noCatCount = talents.filter(hasNoCategory).length;
+  const noEl = document.createElement('div');
+  noEl.className = 'multi-select-opt' + (noCatSel ? ' selected' : '');
+  noEl.innerHTML = '<div class="ms-checkbox">' + (noCatSel ? '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div><span style="font-style:italic">' + NO_CAT_LABEL + '</span><span style="margin-left:auto;font-size:11px;color:var(--text-dim)">' + noCatCount + '</span>';
+  noEl.addEventListener('click', function(e) { e.stopPropagation(); toggleCatFromDropdown(NO_CAT_KEY); });
+  container.appendChild(noEl);
   CATEGORIES.forEach(cat => {
     const count = talents.filter(t => t.categorias.includes(cat)).length;
     const selected = selectedCats.has(cat);
@@ -6030,7 +6080,7 @@ function updateCatPills() {
   selectedCats.forEach(c => {
     const el = document.createElement('span');
     el.className = 'country-pill';
-    el.innerHTML = c + ' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    el.innerHTML = (c === NO_CAT_KEY ? NO_CAT_LABEL : c) + ' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
     el.addEventListener('click', function() { toggleCatFromDropdown(c); });
     row.appendChild(el);
   });
