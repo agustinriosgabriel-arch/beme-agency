@@ -462,7 +462,9 @@ function renderContenido(c) {
   const isDone = paso>=8;
   const inReview = paso===3 || paso===5;
   const chipCls = isDone?'done':inReview?'review':'';
-  const scripts = (c.contenido_scripts||[]).sort((a,b)=>(b.version||1)-(a.version||1));
+  // V1, V2... por orden de subida (los scripts viejos del talento quedaron todos con version=1)
+  const scripts = (c.contenido_scripts||[]).slice().sort((a,b)=>(a.version||1)-(b.version||1)||a.id-b.id)
+    .map((s,i)=>({...s, version:i+1})).reverse();
   const drafts = (c.contenido_borradores||[]).sort((a,b)=>(b.version||1)-(a.version||1));
 
   // Archivos visibles para la marca

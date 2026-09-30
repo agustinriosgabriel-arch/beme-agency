@@ -355,7 +355,9 @@ exports.handler = async (event) => {
           const { error } = await sb.from('contenido_scripts').update({ url_archivo }).eq('id', replace_id).eq('contenido_id', contenido_id);
           if (error) throw error;
         } else {
-          const { error } = await sb.from('contenido_scripts').insert({ contenido_id, url_archivo });
+          const { data: prev } = await sb.from('contenido_scripts').select('version').eq('contenido_id', contenido_id);
+          const version = (prev || []).reduce((m, s) => Math.max(m, s.version || 1), 0) + 1;
+          const { error } = await sb.from('contenido_scripts').insert({ contenido_id, url_archivo, version });
           if (error) throw error;
         }
         await regCambio(scope.ct.campana_id, contenido_id, replace_id ? 'Reemplazó un script' : 'Subió un script');

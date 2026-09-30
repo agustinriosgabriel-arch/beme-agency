@@ -729,7 +729,9 @@ function renderContenido(c, ct) {
   const paso = c.paso_actual;
   const isDone = paso >= 8;
   const pasoChipCls = isDone ? 'done' : paso > 1 ? 'active' : '';
-  const scripts = (c.contenido_scripts||[]).sort((a,b)=>(b.version||1)-(a.version||1));
+  // V1, V2... por orden de subida (los scripts viejos del talento quedaron todos con version=1)
+  const scripts = (c.contenido_scripts||[]).slice().sort((a,b)=>(a.version||1)-(b.version||1)||a.id-b.id)
+    .map((s,i)=>({...s, version:i+1})).reverse();
   const stats = (c.contenido_estadisticas||[]);
   const drafts = (c.contenido_borradores||[]).sort((a,b)=>(b.version||1)-(a.version||1));
   const briefs = ct.campanas?.campana_briefs || [];
@@ -1054,7 +1056,10 @@ async function uploadScript(input, contId) {
     for (let i=0;i<files.length;i++) {
       const pfx = files.length>1 ? `Archivo ${i+1} de ${files.length} · ` : '';
       const up = await putFile('script', contId, files[i], pfx);
-      await sb.from('contenido_scripts').insert({contenido_id:contId, url_archivo:up.url, subido_por:currentUser.id});
+      const {data:prev} = await sb.from('contenido_scripts').select('version').eq('contenido_id', contId);
+      const version = (prev||[]).reduce((m,s)=>Math.max(m, s.version||1), 0) + 1;
+      const {error} = await sb.from('contenido_scripts').insert({contenido_id:contId, url_archivo:up.url, version, subido_por:currentUser.id});
+      if (error) throw error;
     }
     notifyCambio(contId, 'Subió un script');
     await loadCampaigns(); renderAll();
