@@ -3966,21 +3966,46 @@ async function applyManageTalents() {
 // ===================== ADD SELECTED TO ROSTER =====================
 function openAddToRosterModal() {
   if(selectedIds.size === 0) { showToast('Selecciona talentos primero', 'error'); return; }
+  const search = document.getElementById('add-to-roster-search');
+  if(search) {
+    search.value = '';
+    search.oninput = () => renderAddToRosterList(search.value);
+    // Enter con un único resultado lo agrega directo
+    search.onkeydown = (e) => {
+      if(e.key !== 'Enter') return;
+      const btns = document.querySelectorAll('#add-to-roster-list button');
+      if(btns.length === 1) btns[0].click();
+    };
+  }
+  renderAddToRosterList('');
+  openModal('add-to-roster-modal');
+  if(search) setTimeout(() => search.focus(), 50);
+}
+
+function renderAddToRosterList(query) {
   const list = document.getElementById('add-to-roster-list');
+  if(!list) return;
   list.innerHTML = '';
   if(rosters.length === 0) {
     list.innerHTML = '<p style="font-size:13px;color:var(--text-muted);text-align:center;padding:10px">No hay rosters. Crea uno primero.</p>';
+    return;
   }
-  rosters.forEach(r => {
+  const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const q = norm(query).trim();
+  const matches = q ? rosters.filter(r => norm(r.name).includes(q)) : rosters;
+  if(matches.length === 0) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--text-muted);text-align:center;padding:10px">Ningún roster coincide con la búsqueda.</p>';
+    return;
+  }
+  matches.forEach(r => {
     const btn = document.createElement('button');
     btn.className = 'btn btn-outline';
     btn.style.cssText = 'width:100%;justify-content:flex-start;gap:10px;text-align:left;';
     const realCount = r.talentIds.filter(id => talents.find(t => t.id === parseInt(id))).length;
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg><span style="flex:1">${r.name}</span><span style="font-size:11px;color:var(--text-dim)">${realCount} talentos</span>`;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg><span style="flex:1">${escH(r.name)}</span><span style="font-size:11px;color:var(--text-dim)">${realCount} talentos</span>`;
     btn.onclick = () => addSelectionToRoster(r.id);
     list.appendChild(btn);
   });
-  openModal('add-to-roster-modal');
 }
 
 async function addSelectionToRoster(rosterId) {

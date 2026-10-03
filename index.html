@@ -2333,7 +2333,8 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
     </div>
     <div class="modal-body">
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Selecciona el roster al que deseas agregar los talentos seleccionados.</p>
-      <div id="add-to-roster-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <input type="text" id="add-to-roster-search" class="form-input" placeholder="Buscar roster por nombre..." autocomplete="off" style="margin-bottom:10px;">
+      <div id="add-to-roster-list" style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;"></div>
       <div class="section-divider"></div>
       <button class="btn btn-outline" style="width:100%" data-fn="openCreateRosterAndAdd">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
@@ -2765,7 +2766,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
   </div>
 </div>
 
-<script src="dashboard.js?v=7"></script>
+<script src="dashboard.js?v=8"></script>
 <script>
 // Mobile menu & filter panel
 function toggleMobMenu() {
