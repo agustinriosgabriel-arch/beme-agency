@@ -60,10 +60,12 @@
     font-weight:800;letter-spacing:-.02em;margin-bottom:14px;
   }
   h2 .fino{font-weight:300}
+  .nw{white-space:nowrap}
   h2 .mg{color:var(--magenta)}
   .lead{font-size:clamp(15px,1.35vw,19px);color:var(--gris-txt);font-weight:400;max-width:720px;line-height:1.55}
   .dark{background:var(--negro);color:#fff}
   .dark .lead{color:#cfcfcf}
+  .lead.una{max-width:none}
 
   /* ── página nº ── */
   .pagenum{position:absolute;bottom:26px;right:38px;font-weight:800;font-size:22px;color:var(--magenta);z-index:3}
@@ -76,7 +78,7 @@
   .cover-logos img.beme{height:100px}
   .cover-logos img.big{height:48px}
   .cover-logos .x{font-size:34px;font-weight:200;color:var(--gris-2)}
-  .cover-title{font-size:clamp(40px,5.4vw,74px);line-height:1.02;font-weight:800;letter-spacing:-.025em}
+  .cover-title{font-size:clamp(32px,4.6vw,66px);line-height:1.02;font-weight:800;letter-spacing:-.025em}
   .cover-title em{font-style:normal;font-weight:300}
   .cover-title .mg{color:var(--magenta)}
   .cover-lead{margin-top:26px;font-size:clamp(17px,1.6vw,23px);font-weight:700;max-width:560px;line-height:1.4}
@@ -176,6 +178,13 @@
     .cover-grid{grid-template-columns:1fr}
     .cover-art{height:300px;margin-top:10px}
     .cover-art .b1{right:-22px}
+    .cover-txt{display:flex;flex-direction:column}
+    .cover-txt>*{order:2}
+    .cover-logos{order:0;margin-bottom:16px}
+    .cover-meta{order:1;margin:0 0 34px;gap:16px;font-size:clamp(9px,2.8vw,11px);letter-spacing:.1em;white-space:nowrap}
+    .cover-title{font-size:8.4vw}
+    .al-card{padding:24px 18px}
+    .al-card .rol{font-size:clamp(9px,2.55vw,12px);letter-spacing:.05em}
     .al-grid{grid-template-columns:1fr}
     .mk-grid{grid-template-columns:repeat(3,1fr)}
     .tal-grid{grid-template-columns:1fr 1fr}
@@ -226,15 +235,15 @@
   <!-- ═══ 01 · QUÉ HACEMOS ═══ -->
   <section class="slide s-cover" id="s1">
     <div class="wrap cover-grid">
-      <div>
+      <div class="cover-txt">
         <div class="cover-logos">
           <img class="beme" src="assets/deck/beme-logo.png" alt="Beme">
           <span class="x">×</span>
           <img class="big" src="assets/big/bigagency-logo.png" alt="Big Agency">
         </div>
-        <h1 class="cover-title">Influencer Marketing<br><em>a medida de cada</em> <span class="mg">Marca</span></h1>
+        <h1 class="cover-title"><span class="nw">Influencer Marketing</span><br><em class="mg">a medida</em></h1>
         <p class="cover-lead">Conectamos PYMEs, empresas, instituciones y gobiernos con talentos.</p>
-        <p class="cover-sub">Desarrollamos estrategias que potencian el posicionamiento, impulsan productos y generan ventas.</p>
+        <p class="cover-sub">Desarrollamos estrategias que potencian el posicionamiento, impulsan productos y <span class="nw">generan ventas.</span></p>
         <div class="cover-meta"><span>Presentación comercial</span><span>Argentina · 2026</span></div>
       </div>
       <div class="cover-art" aria-hidden="true">
@@ -251,11 +260,11 @@
   <section class="slide s-alianza" id="s2">
     <div class="wrap">
       <p class="eyebrow">Quiénes somos</p>
-      <h2>Alianza estratégica para <span class="mg">LATAM</span> <span class="fino">| Argentina + México</span></h2>
+      <h2>Alianza estratégica para <span class="mg">LATAM</span></h2>
       <div class="al-grid">
         <div class="al-card beme">
           <img src="assets/deck/beme-logo.png" alt="Beme">
-          <p class="rol">México · Latinoamérica · Europa + US</p>
+          <p class="rol nw">México · Latinoamérica · Europa + US</p>
           <h3>Agencia de talento e influencer marketing</h3>
           <ul>
             <li>Más de 1.000 talentos en toda la región</li>
@@ -283,7 +292,7 @@
     <div class="wrap">
       <p class="eyebrow">Cómo lo hacemos</p>
       <h2>Un solo interlocutor. <span class="fino">Cobertura total regional</span></h2>
-      <p class="lead">Estrategia, prospección, contratos, producción y reporting bajo un mismo equipo</p>
+      <p class="lead una">Estrategia, prospección, contratos, producción y reporting bajo un mismo&nbsp;equipo</p>
       <div class="serv-grid">
         <div class="serv"><span class="n">01</span><h4>Estrategia &amp; casting</h4><p>Selección de talentos por datos reales de audiencia, categoría y mercado — no por intuición</p></div>
         <div class="serv"><span class="n">02</span><h4>Campañas con creadores</h4><p>Negociación, contratos y ejecución fluida y transparente de campañas, con aprobaciones de marca</p></div>
@@ -342,6 +351,7 @@
     <div class="wrap">
       <p class="eyebrow">Talento</p>
       <h2>Algunos <span class="mg">talentos exclusivos</span></h2>
+      <p class="lead">Más de 50 talentos en Argentina</p>
       <div class="tal-grid">
         <div class="tal"><img src="assets/big/pelado-khe.jpg" alt="Pelado.Khe"><div class="tal-info"><h4>Pelado.Khe</h4><p>AXE · Warner · Shell · McDonald's</p></div></div>
         <div class="tal"><img src="assets/big/pia-scarnato.jpg" alt="Pia Scarnato"><div class="tal-info"><h4>Pia Scarnato</h4><p>Prime Video · Garnier · Maybelline</p></div></div>
