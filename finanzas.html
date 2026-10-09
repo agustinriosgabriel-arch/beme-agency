@@ -937,16 +937,17 @@ function renderStats(){
 // ═══════════════════════════════════════════
 // MES EN CURSO — foto del trabajo del mes y facturación proyectada
 // ═══════════════════════════════════════════
-// Una campaña cuenta en el mes en que arranca (fecha_inicio; si no tiene, la fecha de alta).
-// Su facturación proyectada es el fee_marca de sus talentos no cancelados, aunque todavía
-// no exista factura: QuickBooks solo la ve cuando se factura al cierre.
+// Cada talento suma al mes en que se agregó a la campaña (campana_talentos.created_at): su
+// fee_marca es facturación proyectada de ese mes aunque todavía no exista factura, porque
+// QuickBooks solo la ve cuando se factura al cierre. Una campaña aparece en cada mes en que
+// se le sumaron talentos, con solo esos talentos.
 const METAS_MES=[{k:'min',lbl:'Mínimo',v:45000},{k:'obj',lbl:'Objetivo',v:70000},{k:'opt',lbl:'Óptimo',v:100000}];
 // Unidades de cada moneda por 1 USD. Se pisan con el tipo de cambio del día (loadFx).
 const FX_DEFAULT={USD:1,MXN:18.5,EUR:0.92,ARS:1400,BRL:5.5};
 let fxRates={...FX_DEFAULT},fxFecha=null;
 // Fecha local (no UTC): de noche en México toISOString ya da el día siguiente
 function hoyLocal(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-let mesSel=hoyLocal().slice(0,7),mesCriterio='inicio';
+let mesSel=hoyLocal().slice(0,7);
 async function loadFx(){
   const hoy=hoyLocal();
   try{const c=JSON.parse(localStorage.getItem('beme_fx')||'null');if(c&&c.d===hoy&&c.rates){fxRates={...FX_DEFAULT,...c.rates};fxFecha=c.d;return;}}catch(e){}
@@ -960,15 +961,19 @@ async function loadFx(){
 }
 function toUSD(v,cur){const r=fxRates[cur||'USD'];return r?v/r:v;}
 function mapToUSD(map){return Object.entries(map).reduce((s,[c,v])=>s+toUSD(v,c),0);}
-function campMes(c){
-  const d=mesCriterio==='alta'?c.created_at:(c.fecha_inicio||c.created_at);
-  return d?String(d).slice(0,7):'';
+// Mes local (YYYY-MM) en que el talento se sumó a la campaña. created_at es timestamp sin zona
+// guardado en UTC: se le agrega la Z para que un alta de noche en México no caiga al mes siguiente.
+function ctMes(ct){
+  if(!ct.created_at)return'';
+  const raw=String(ct.created_at);
+  const d=new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(raw)?raw:raw.replace(' ','T')+'Z');
+  return isNaN(d)?raw.slice(0,7):`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 function mesLabel(k,opts){const[y,m]=k.split('-');return new Date(+y,+m-1,1).toLocaleDateString('es-ES',opts||{month:'long',year:'numeric'});}
 function mesShift(k,n){const[y,m]=k.split('-').map(Number);const d=new Date(y,m-1+n,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
 // Meses elegibles en el selector: desde la primera campaña (o 12 meses atrás) hasta 2 meses adelante
 function mesOpciones(hoyK){
-  const primero=campanas.map(campMes).filter(Boolean).sort()[0];
+  const primero=campanasTalentos.map(ctMes).filter(Boolean).sort()[0];
   let k=primero&&primero<mesShift(hoyK,-12)?primero:mesShift(hoyK,-12);
   if(mesSel<k)k=mesSel;
   const fin=mesSel>mesShift(hoyK,2)?mesSel:mesShift(hoyK,2),out=[];
@@ -983,20 +988,31 @@ function mesNivel(v){
   return{cls:'lvl-bajo',lbl:'Debajo del mínimo',color:'var(--red)'};
 }
 // Números de una campaña: venta (fee marca), costo talentos, facturado y cobrado, por moneda y en USD
-function mesCampData(c){
-  const cts=campanasTalentos.filter(ct=>ct.campana_id===c.id&&ct.estado!=='cancelada');
+// Cobrado de un talento: lo pagado de cada factura que lo cubre (si la factura agrupa varios
+// talentos, la parte proporcional a su fee), sin pasar su fee.
+function ctCobrado(ct){
+  const fee=Number(ct.fee_marca)||0;
+  const cob=ctFacturas(ct).reduce((s,f)=>{
+    const monto=Number(f.monto)||0;
+    return s+(facturaCubreVarios(f)&&monto>0?facPagado(f)*fee/monto:facPagado(f));
+  },0);
+  return Math.min(fee,cob);
+}
+// k = 'YYYY-MM' → solo los talentos sumados ese mes; sin k → todos los talentos de la campaña
+function mesCampData(c,k){
+  const cts=campanasTalentos.filter(ct=>ct.campana_id===c.id&&ct.estado!=='cancelada'&&(!k||ctMes(ct)===k));
   const venta={},costo={},fact={},cob={};
   cts.forEach(ct=>{
-    addCur(venta,ct.moneda_marca||ct.moneda,Number(ct.fee_marca)||0);
+    const mm=ct.moneda_marca||ct.moneda,fee=Number(ct.fee_marca)||0;
+    addCur(venta,mm,fee);
     addCur(costo,ct.moneda_talento||ct.moneda,Number(ct.fee_talento)||0);
-  });
-  facturas.filter(f=>f.campana_id===c.id&&f.estado!=='cancelada').forEach(f=>{
-    addCur(fact,f.moneda,Number(f.monto)||0);addCur(cob,f.moneda,facPagado(f));
+    addCur(fact,mm,Math.min(fee,ctInvoiced(ct)));
+    addCur(cob,mm,ctCobrado(ct));
   });
   return{c,nTal:cts.length,venta,costo,fact,cob,
     ventaUSD:mapToUSD(venta),costoUSD:mapToUSD(costo),factUSD:mapToUSD(fact),cobUSD:mapToUSD(cob)};
 }
-function mesCampanas(k){return campanas.filter(c=>c.estado!=='cancelada'&&campMes(c)===k).map(mesCampData);}
+function mesCampanas(k){return campanas.filter(c=>c.estado!=='cancelada').map(c=>mesCampData(c,k)).filter(r=>r.nTal>0);}
 const usd=v=>fmtMoney(v,'USD');
 
 function renderMes(){
@@ -1034,7 +1050,7 @@ function renderMes(){
 
   const kpi=(lbl,val,sub,color)=>`<div class="stat-card"><div class="label">${lbl}</div><div class="value"${color?` style="color:${color}"`:''}>${val}</div><div class="sub">${sub}</div></div>`;
   const kpis=`<div class="mes-kpis">
-    ${kpi('Campañas del mes',rows.length,`${rows.reduce((s,r)=>s+r.nTal,0)} talentos trabajando`)}
+    ${kpi('Campañas del mes',rows.length,`${rows.reduce((s,r)=>s+r.nTal,0)} talentos sumados en el mes`)}
     ${kpi('Margen bruto',usd(margen),`${margenPct.toFixed(0)}% · costo talentos ${usd(costo)}`,margen>=0?'var(--green)':'var(--red)')}
     ${kpi('Ya facturado',usd(fact),venta>0?`${Math.round(fact/venta*100)}% de lo proyectado · falta ${usd(Math.max(0,venta-fact))}`:'—')}
     ${kpi('Cobrado',usd(cob),venta>0?`${Math.round(cob/venta*100)}% de lo proyectado`:'—','var(--green)')}
@@ -1061,13 +1077,14 @@ function renderMes(){
     <div class="fin-total-row"><span class="lbl">Total del mes</span><b class="fin-row-amount">${usd(venta)}</b></div>
   </div>`:(()=>{
     // Pista para el mes vacío: cuál es el último mes que sí tiene campañas según el criterio elegido
-    const ult=campanas.filter(c=>c.estado!=='cancelada').map(campMes).filter(Boolean).sort().pop();
-    return `<div class="empty-state"><h3>Sin campañas que arranquen en ${esc(mesLabel(mesSel))}</h3><p>${ult?`La campaña más reciente ${mesCriterio==='alta'?'se cargó':'arranca'} en ${esc(mesLabel(ult))}.`:'No hay campañas cargadas.'} Probá cambiar "Mes por" arriba a la derecha.</p></div>`;
+    const ult=campanasTalentos.filter(ct=>ct.estado!=='cancelada').map(ctMes).filter(Boolean).sort().pop();
+    return `<div class="empty-state"><h3>Ningún talento sumado a campañas en ${esc(mesLabel(mesSel))}</h3><p>${ult?`El último talento se sumó en ${esc(mesLabel(ult))}.`:'No hay talentos cargados en campañas.'}</p></div>`;
   })();
 
   // Trabajo en curso que arrancó antes de este mes: se está trabajando pero ya sumó en su mes de inicio
-  const enCurso=mesSel===hoyK?campanas.filter(c=>['sin_iniciar','en_curso','etapa_finanzas','pausada'].includes(c.estado)&&campMes(c)&&campMes(c)<mesSel).map(mesCampData).sort((a,b)=>b.ventaUSD-a.ventaUSD):[];
-  const listaCurso=enCurso.length?`<div class="res-section"><h3>También en curso <span class="hint">${enCurso.length} · arrancaron antes, no suman al termómetro de este mes</span></h3>
+  const idsMes=new Set(rows.map(r=>r.c.id));
+  const enCurso=mesSel===hoyK?campanas.filter(c=>['sin_iniciar','en_curso','etapa_finanzas','pausada'].includes(c.estado)&&!idsMes.has(c.id)).map(c=>mesCampData(c)).filter(r=>r.nTal>0).sort((a,b)=>b.ventaUSD-a.ventaUSD):[];
+  const listaCurso=enCurso.length?`<div class="res-section"><h3>También en curso <span class="hint">${enCurso.length} · sus talentos se sumaron en meses anteriores, no suman al termómetro de este mes</span></h3>
     <div class="fin-group-items" style="border-top:1px solid var(--border);border-radius:var(--radius)">
     ${enCurso.map(r=>`<a class="fin-row mes-camp-row" href="campana-detalle.html?id=${r.c.id}" target="_blank" title="Ver detalle de la campaña">
       <div style="min-width:0"><div class="fin-row-name">${esc(r.c.nombre||'—')}</div><div class="fin-row-meta">${esc(r.c.marcas?.nombre||'')}${r.c.marcas?.clientes?.nombre?' · '+esc(r.c.marcas.clientes.nombre):''}</div></div>
@@ -1085,7 +1102,7 @@ function renderMes(){
   const hist=[];for(let i=5;i>=0;i--)hist.push(mesShift(mesSel,-i));
   const histVals=hist.map(k=>({k,v:mesCampanas(k).reduce((s,r)=>s+r.ventaUSD,0)}));
   const hEsc=Math.max(METAS_MES[2].v,...histVals.map(h=>h.v));
-  const historial=`<div class="res-section"><h3>Últimos 6 meses <span class="hint">facturación proyectada por mes de inicio · USD</span></h3>
+  const historial=`<div class="res-section"><h3>Últimos 6 meses <span class="hint">facturación proyectada por mes en que se sumó cada talento · USD</span></h3>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">
     ${histVals.map(h=>{const n=mesNivel(h.v);return `<div class="mes-hist-row${h.k===mesSel?' sel':''}" onclick="mesSel='${h.k}';renderMes()">
       <div style="text-transform:capitalize">${esc(mesLabel(h.k,{month:'short',year:'2-digit'}))}</div>
@@ -1104,16 +1121,12 @@ function renderMes(){
       <select class="filter-select" onchange="mesSel=this.value;renderMes()" title="Elegir mes">${mesOpciones(hoyK).map(k=>`<option value="${k}"${k===mesSel?' selected':''}>${esc(mesLabel(k).replace(/^./,x=>x.toUpperCase()))}</option>`).join('')}</select>
       ${mesSel!==hoyK?`<button class="btn btn-ghost btn-xs" onclick="mesSel='${hoyK}';renderMes()">Volver a este mes</button>`:''}
       <span class="mes-tag">${tag}</span>
-      <select class="filter-select" style="margin-left:auto" onchange="mesCriterio=this.value;renderMes()" title="Qué fecha define a qué mes pertenece una campaña">
-        <option value="inicio"${mesCriterio==='inicio'?' selected':''}>Mes por: fecha de inicio</option>
-        <option value="alta"${mesCriterio==='alta'?' selected':''}>Mes por: fecha de alta</option>
-      </select>
     </div>
     ${termo}${kpis}
     <div class="res-section"><h3>Campañas del mes <span class="hint">${rows.length} · ordenadas por venta</span></h3>${lista}</div>
     ${listaCurso}
     ${historial}
-    <p style="font-size:11px;color:var(--text-dim)">${fxNota} Se excluyen campañas y talentos cancelados.</p>`;
+    <p style="font-size:11px;color:var(--text-dim)">${fxNota} Cada talento cuenta en el mes en que se sumó a la campaña. Se excluyen campañas y talentos cancelados.</p>`;
 }
 
 // SUB-TABS
