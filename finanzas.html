@@ -940,7 +940,7 @@ function renderStats(){
 // Una campaña cuenta en el mes en que arranca (fecha_inicio; si no tiene, la fecha de alta).
 // Su facturación proyectada es el fee_marca de sus talentos no cancelados, aunque todavía
 // no exista factura: QuickBooks solo la ve cuando se factura al cierre.
-const METAS_MES=[{k:'min',lbl:'Mínimo',v:40000},{k:'obj',lbl:'Objetivo',v:70000},{k:'opt',lbl:'Óptimo',v:100000}];
+const METAS_MES=[{k:'min',lbl:'Mínimo',v:45000},{k:'obj',lbl:'Objetivo',v:70000},{k:'opt',lbl:'Óptimo',v:100000}];
 // Unidades de cada moneda por 1 USD. Se pisan con el tipo de cambio del día (loadFx).
 const FX_DEFAULT={USD:1,MXN:18.5,EUR:0.92,ARS:1400,BRL:5.5};
 let fxRates={...FX_DEFAULT},fxFecha=null;
@@ -966,6 +966,15 @@ function campMes(c){
 }
 function mesLabel(k,opts){const[y,m]=k.split('-');return new Date(+y,+m-1,1).toLocaleDateString('es-ES',opts||{month:'long',year:'numeric'});}
 function mesShift(k,n){const[y,m]=k.split('-').map(Number);const d=new Date(y,m-1+n,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
+// Meses elegibles en el selector: desde la primera campaña (o 12 meses atrás) hasta 2 meses adelante
+function mesOpciones(hoyK){
+  const primero=campanas.map(campMes).filter(Boolean).sort()[0];
+  let k=primero&&primero<mesShift(hoyK,-12)?primero:mesShift(hoyK,-12);
+  if(mesSel<k)k=mesSel;
+  const fin=mesSel>mesShift(hoyK,2)?mesSel:mesShift(hoyK,2),out=[];
+  while(k<=fin){out.push(k);k=mesShift(k,1);}
+  return out.reverse();
+}
 function mesIr(n){mesSel=mesShift(mesSel,n);renderMes();}
 function mesNivel(v){
   if(v>=METAS_MES[2].v)return{cls:'lvl-opt',lbl:'Óptimo alcanzado',color:'var(--primary)'};
@@ -1050,7 +1059,27 @@ function renderMes(){
       <div style="text-align:center">${estFac(r)}</div>
     </a>`).join('')}
     <div class="fin-total-row"><span class="lbl">Total del mes</span><b class="fin-row-amount">${usd(venta)}</b></div>
-  </div>`:'<div class="empty-state"><h3>Sin campañas en este mes</h3><p>Ninguna campaña arranca en '+esc(mesLabel(mesSel))+'</p></div>';
+  </div>`:(()=>{
+    // Pista para el mes vacío: cuál es el último mes que sí tiene campañas según el criterio elegido
+    const ult=campanas.filter(c=>c.estado!=='cancelada').map(campMes).filter(Boolean).sort().pop();
+    return `<div class="empty-state"><h3>Sin campañas que arranquen en ${esc(mesLabel(mesSel))}</h3><p>${ult?`La campaña más reciente ${mesCriterio==='alta'?'se cargó':'arranca'} en ${esc(mesLabel(ult))}.`:'No hay campañas cargadas.'} Probá cambiar "Mes por" arriba a la derecha.</p></div>`;
+  })();
+
+  // Trabajo en curso que arrancó antes de este mes: se está trabajando pero ya sumó en su mes de inicio
+  const enCurso=mesSel===hoyK?campanas.filter(c=>['sin_iniciar','en_curso','etapa_finanzas','pausada'].includes(c.estado)&&campMes(c)&&campMes(c)<mesSel).map(mesCampData).sort((a,b)=>b.ventaUSD-a.ventaUSD):[];
+  const listaCurso=enCurso.length?`<div class="res-section"><h3>También en curso <span class="hint">${enCurso.length} · arrancaron antes, no suman al termómetro de este mes</span></h3>
+    <div class="fin-group-items" style="border-top:1px solid var(--border);border-radius:var(--radius)">
+    ${enCurso.map(r=>`<a class="fin-row mes-camp-row" href="campana-detalle.html?id=${r.c.id}" target="_blank" title="Ver detalle de la campaña">
+      <div style="min-width:0"><div class="fin-row-name">${esc(r.c.nombre||'—')}</div><div class="fin-row-meta">${esc(r.c.marcas?.nombre||'')}${r.c.marcas?.clientes?.nombre?' · '+esc(r.c.marcas.clientes.nombre):''}</div></div>
+      <div class="fin-row-date">${r.c.fecha_inicio?formatDate(r.c.fecha_inicio):'—'}</div>
+      <div>${campEstadoBadge(r.c.estado)}</div>
+      <div style="text-align:center">${r.nTal}</div>
+      <div class="fin-row-amount" style="font-weight:500;color:var(--text-muted)">${fmtMulti(r.venta)}</div>
+      <div class="fin-row-amount">${usd(r.ventaUSD)}</div>
+      <div class="fin-row-amount" style="color:${r.ventaUSD-r.costoUSD>=0?'var(--green)':'var(--red)'}">${usd(r.ventaUSD-r.costoUSD)}</div>
+      <div style="text-align:center">${estFac(r)}</div>
+    </a>`).join('')}
+    </div></div>`:'';
 
   // Últimos 6 meses (hasta el seleccionado) contra las metas — click para ir a ese mes
   const hist=[];for(let i=5;i>=0;i--)hist.push(mesShift(mesSel,-i));
@@ -1072,7 +1101,8 @@ function renderMes(){
       <button class="mes-nav" onclick="mesIr(-1)" title="Mes anterior">‹</button>
       <div class="mes-title">${esc(mesLabel(mesSel).replace(/^./,x=>x.toUpperCase()))}</div>
       <button class="mes-nav" onclick="mesIr(1)" title="Mes siguiente">›</button>
-      ${mesSel!==hoyK?`<button class="btn btn-ghost btn-xs" onclick="mesSel='${hoyK}';renderMes()">Hoy</button>`:''}
+      <select class="filter-select" onchange="mesSel=this.value;renderMes()" title="Elegir mes">${mesOpciones(hoyK).map(k=>`<option value="${k}"${k===mesSel?' selected':''}>${esc(mesLabel(k).replace(/^./,x=>x.toUpperCase()))}</option>`).join('')}</select>
+      ${mesSel!==hoyK?`<button class="btn btn-ghost btn-xs" onclick="mesSel='${hoyK}';renderMes()">Volver a este mes</button>`:''}
       <span class="mes-tag">${tag}</span>
       <select class="filter-select" style="margin-left:auto" onchange="mesCriterio=this.value;renderMes()" title="Qué fecha define a qué mes pertenece una campaña">
         <option value="inicio"${mesCriterio==='inicio'?' selected':''}>Mes por: fecha de inicio</option>
@@ -1081,6 +1111,7 @@ function renderMes(){
     </div>
     ${termo}${kpis}
     <div class="res-section"><h3>Campañas del mes <span class="hint">${rows.length} · ordenadas por venta</span></h3>${lista}</div>
+    ${listaCurso}
     ${historial}
     <p style="font-size:11px;color:var(--text-dim)">${fxNota} Se excluyen campañas y talentos cancelados.</p>`;
 }
