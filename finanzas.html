@@ -211,8 +211,9 @@ body.dark .logo .logo-dark{display:block}
 .lvl-bajo{background:var(--red)}.lvl-min{background:var(--orange)}.lvl-obj{background:var(--green)}.lvl-opt{background:var(--gradient)}
 .mes-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:24px}
 .mes-camp-row{grid-template-columns:minmax(170px,1.4fr) 92px 96px 52px 150px 110px 110px 104px}
-.mes-hist-row{display:grid;grid-template-columns:70px 1fr 110px;gap:12px;align-items:center;padding:7px 14px;font-size:12.5px;border-bottom:1px solid var(--border);cursor:pointer}
+.mes-hist-row{display:grid;grid-template-columns:70px 1fr 190px;gap:12px;align-items:center;padding:7px 14px;font-size:12.5px;border-bottom:1px solid var(--border);cursor:pointer}
 .mes-hist-row:last-child{border-bottom:none}
+@media(max-width:600px){.mes-hist-row{grid-template-columns:52px 1fr 92px}.mes-hist-row .fin-row-amount span{display:block}}
 .mes-hist-row:hover{background:var(--surface2)}
 .mes-hist-row.sel{background:var(--surface2);font-weight:700}
 .mes-hist-bar{position:relative;height:8px;background:var(--surface3);border-radius:99px}
@@ -1013,6 +1014,15 @@ function mesCampData(c,k){
     ventaUSD:mapToUSD(venta),costoUSD:mapToUSD(costo),factUSD:mapToUSD(fact),cobUSD:mapToUSD(cob)};
 }
 function mesCampanas(k){return campanas.filter(c=>c.estado!=='cancelada').map(c=>mesCampData(c,k)).filter(r=>r.nTal>0);}
+// Facturación perdida del mes k: talentos sumados ese mes que se cancelaron, o cuya campaña se canceló.
+// Cuenta en el mes en que se sumó el talento, que es donde había entrado al termómetro.
+function mesPerdidas(k){
+  return campanas.map(c=>{
+    const cts=campanasTalentos.filter(ct=>ct.campana_id===c.id&&ctMes(ct)===k&&(c.estado==='cancelada'||ct.estado==='cancelada'));
+    const venta={};cts.forEach(ct=>addCur(venta,ct.moneda_marca||ct.moneda,Number(ct.fee_marca)||0));
+    return{c,nTal:cts.length,venta,ventaUSD:mapToUSD(venta),motivo:c.estado==='cancelada'?'Campaña cancelada':'Talento cancelado'};
+  }).filter(r=>r.nTal>0);
+}
 const usd=v=>fmtMoney(v,'USD');
 
 function renderMes(){
@@ -1023,6 +1033,8 @@ function renderMes(){
   const margen=venta-costo,margenPct=venta>0?margen/venta*100:0;
   const ventaMap={};rows.forEach(r=>Object.entries(r.venta).forEach(([c,v])=>addCur(ventaMap,c,v)));
   const nivel=mesNivel(venta);
+  const perdidas=mesPerdidas(mesSel).sort((a,b)=>b.ventaUSD-a.ventaUSD);
+  const perdida=perdidas.reduce((s,r)=>s+r.ventaUSD,0);
 
   // Días del mes: transcurridos y restantes (solo aplica al mes actual)
   const hoyK=hoyLocal().slice(0,7);
@@ -1037,7 +1049,7 @@ function renderMes(){
   const pct=v=>Math.min(100,v/escala*100);
   const termo=`<div class="termo-card">
     <div class="termo-top">
-      <div><div class="termo-lbl">Facturación proyectada del mes · USD</div>
+      <div><div class="termo-lbl">Facturación del mes · USD</div>
         <div class="termo-val" style="color:${nivel.color}">${usd(venta)}</div>
         <div style="font-size:12px;color:var(--text-muted);margin-top:6px">${nivel.lbl}${Object.keys(ventaMap).length>1||!ventaMap.USD?` · ${fmtMulti(ventaMap)}`:''}</div></div>
       <div class="termo-msg">${msg}</div>
@@ -1052,18 +1064,19 @@ function renderMes(){
   const kpis=`<div class="mes-kpis">
     ${kpi('Campañas del mes',rows.length,`${rows.reduce((s,r)=>s+r.nTal,0)} talentos sumados en el mes`)}
     ${kpi('Margen bruto',usd(margen),`${margenPct.toFixed(0)}% · costo talentos ${usd(costo)}`,margen>=0?'var(--green)':'var(--red)')}
-    ${kpi('Ya facturado',usd(fact),venta>0?`${Math.round(fact/venta*100)}% de lo proyectado · falta ${usd(Math.max(0,venta-fact))}`:'—')}
-    ${kpi('Cobrado',usd(cob),venta>0?`${Math.round(cob/venta*100)}% de lo proyectado`:'—','var(--green)')}
+    ${kpi('Con factura emitida',usd(fact),venta>0?`${Math.round(fact/venta*100)}% del mes · falta emitir ${usd(Math.max(0,venta-fact))}`:'—')}
+    ${kpi('Cobrado',usd(cob),venta>0?`${Math.round(cob/venta*100)}% del mes`:'—','var(--green)')}
+    ${kpi('Facturación perdida',usd(perdida),perdidas.length?`${perdidas.reduce((s,r)=>s+r.nTal,0)} talento(s) cancelado(s)`:'sin cancelaciones',perdida>0?'var(--red)':'')}
   </div>`;
 
   const estFac=r=>{
     if(r.ventaUSD<=0)return'<span class="status-pill st-pendiente">Sin fee</span>';
-    if(r.factUSD<=0)return'<span class="status-pill st-pendiente">Sin facturar</span>';
+    if(r.factUSD<=0)return'<span class="status-pill st-pendiente">Sin emitir</span>';
     if(r.factUSD<r.ventaUSD-1)return`<span class="status-pill st-parcial">Parcial ${Math.round(r.factUSD/r.ventaUSD*100)}%</span>`;
-    return'<span class="status-pill st-cobrada">Facturada</span>';
+    return'<span class="status-pill st-cobrada">Emitida</span>';
   };
   const lista=rows.length?`<div class="fin-group-items" style="border-top:1px solid var(--border);border-radius:var(--radius)">
-    <div class="fin-row fin-row-head mes-camp-row"><div>Campaña</div><div>Inicio</div><div>Estado</div><div class="th-c">Tal.</div><div class="th-r">Venta</div><div class="th-r">Venta USD</div><div class="th-r">Margen USD</div><div class="th-c">Factura</div></div>
+    <div class="fin-row fin-row-head mes-camp-row"><div>Campaña</div><div>Inicio</div><div>Estado</div><div class="th-c">Tal.</div><div class="th-r">Venta</div><div class="th-r">Venta USD</div><div class="th-r">Margen USD</div><div class="th-c">Factura emitida</div></div>
     ${rows.map(r=>`<a class="fin-row mes-camp-row" href="campana-detalle.html?id=${r.c.id}" target="_blank" title="Ver detalle de la campaña">
       <div style="min-width:0"><div class="fin-row-name">${esc(r.c.nombre||'—')}</div><div class="fin-row-meta">${esc(r.c.marcas?.nombre||'')}${r.c.marcas?.clientes?.nombre?' · '+esc(r.c.marcas.clientes.nombre):''}</div></div>
       <div class="fin-row-date">${r.c.fecha_inicio?formatDate(r.c.fecha_inicio):'—'}</div>
@@ -1098,17 +1111,30 @@ function renderMes(){
     </a>`).join('')}
     </div></div>`:'';
 
+  const listaPerdida=perdidas.length?`<div class="res-section"><h3 style="color:var(--red)">Facturación perdida <span class="hint">${usd(perdida)} · talentos sumados este mes que se cancelaron · no suman al termómetro</span></h3>
+    <div class="fin-group-items" style="border-top:1px solid var(--border);border-radius:var(--radius)">
+    ${perdidas.map(r=>`<a class="fin-row mes-camp-row" href="campana-detalle.html?id=${r.c.id}" target="_blank" title="Ver detalle de la campaña">
+      <div style="min-width:0"><div class="fin-row-name">${esc(r.c.nombre||'—')}</div><div class="fin-row-meta">${esc(r.c.marcas?.nombre||'')}${r.c.marcas?.clientes?.nombre?' · '+esc(r.c.marcas.clientes.nombre):''}</div></div>
+      <div class="fin-row-date">${r.c.fecha_inicio?formatDate(r.c.fecha_inicio):'—'}</div>
+      <div><span class="status-pill st-cancelada">${r.motivo}</span></div>
+      <div style="text-align:center">${r.nTal}</div>
+      <div class="fin-row-amount" style="font-weight:500;color:var(--text-muted)">${fmtMulti(r.venta)}</div>
+      <div class="fin-row-amount" style="color:var(--red)">−${usd(r.ventaUSD)}</div>
+      <div></div><div></div>
+    </a>`).join('')}
+    </div></div>`:'';
+
   // Últimos 6 meses (hasta el seleccionado) contra las metas — click para ir a ese mes
   const hist=[];for(let i=5;i>=0;i--)hist.push(mesShift(mesSel,-i));
-  const histVals=hist.map(k=>({k,v:mesCampanas(k).reduce((s,r)=>s+r.ventaUSD,0)}));
+  const histVals=hist.map(k=>({k,v:mesCampanas(k).reduce((s,r)=>s+r.ventaUSD,0),p:mesPerdidas(k).reduce((s,r)=>s+r.ventaUSD,0)}));
   const hEsc=Math.max(METAS_MES[2].v,...histVals.map(h=>h.v));
-  const historial=`<div class="res-section"><h3>Últimos 6 meses <span class="hint">facturación proyectada por mes en que se sumó cada talento · USD</span></h3>
+  const historial=`<div class="res-section"><h3>Últimos 6 meses <span class="hint">facturación por mes en que se sumó cada talento · en rojo, lo perdido por cancelaciones · USD</span></h3>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">
     ${histVals.map(h=>{const n=mesNivel(h.v);return `<div class="mes-hist-row${h.k===mesSel?' sel':''}" onclick="mesSel='${h.k}';renderMes()">
       <div style="text-transform:capitalize">${esc(mesLabel(h.k,{month:'short',year:'2-digit'}))}</div>
       <div class="mes-hist-bar"><div class="termo-fill ${n.cls}" style="width:${Math.min(100,h.v/hEsc*100)}%"></div>
         ${METAS_MES.map(x=>`<div class="termo-mark" style="left:${x.v/hEsc*100}%;top:-3px;bottom:-3px;width:1px"></div>`).join('')}</div>
-      <div class="fin-row-amount">${usd(h.v)}</div>
+      <div class="fin-row-amount">${usd(h.v)}${h.p>0?`<span style="color:var(--red);font-size:11px;font-weight:600" title="Facturación perdida"> −${usd(h.p)}</span>`:''}</div>
     </div>`;}).join('')}
     </div></div>`;
 
@@ -1124,9 +1150,10 @@ function renderMes(){
     </div>
     ${termo}${kpis}
     <div class="res-section"><h3>Campañas del mes <span class="hint">${rows.length} · ordenadas por venta</span></h3>${lista}</div>
+    ${listaPerdida}
     ${listaCurso}
     ${historial}
-    <p style="font-size:11px;color:var(--text-dim)">${fxNota} Cada talento cuenta en el mes en que se sumó a la campaña. Se excluyen campañas y talentos cancelados.</p>`;
+    <p style="font-size:11px;color:var(--text-dim)">${fxNota} Cada talento cuenta en el mes en que se sumó a la campaña, aunque la factura se emita al terminar. Si después se cancela, sale del termómetro y pasa a facturación perdida de ese mes.</p>`;
 }
 
 // SUB-TABS
