@@ -146,6 +146,21 @@ updated_at               timestamp DEFAULT now()
 
 **`origen='interno'`** indica que el contacto fue agregado desde la base de Talentos (no requiere graduación, los botones "Pasar a Talentos" se ocultan).
 
+### `talento_cotizaciones`
+Historial de cotizaciones de un talento cargadas en prospecciones (`sql/talento_cotizaciones_2026_10_09.sql`).
+```sql
+id              bigserial PRIMARY KEY
+talento_id      integer NOT NULL REFERENCES talentos(id) ON DELETE CASCADE
+prospeccion_id  integer REFERENCES prospecciones(id) ON DELETE SET NULL
+contacto_id     integer REFERENCES prospeccion_contactos(id) ON DELETE SET NULL
+marca           text DEFAULT ''      -- copia de prospecciones.marca
+valores         text NOT NULL
+autor_email     text DEFAULT ''
+created_by      uuid DEFAULT auth.uid()
+created_at      timestamptz DEFAULT now()
+```
+Se escribe al guardar "Valores Extras" de un contacto que ya es talento y al graduar/vincular uno con valores. **No pisa `talentos.valores`**: la tarifa del perfil se edita a mano (solo se completa si estaba vacía al graduar). Se lee en el botón "$" (Historial de precios) del dashboard junto con `roster_selecciones`. RLS: SELECT/INSERT `is_internal()`, DELETE `is_admin()`, sin UPDATE.
+
 ### `prospeccion_historial`
 ```sql
 id                serial PRIMARY KEY

@@ -1713,31 +1713,41 @@ async function saveValoresExtras(contactoId) {
     const previo = String((c && c.valores) || '').trim();
     if (c) c.valores = valores;
 
-    // Si el contacto YA es talento (origen interno, o ya graduado) no queda
-    // ninguna graduación por delante que arrastre la cotización: se escribe
-    // también en el perfil, si no se queda encerrada en la prospección.
-    let alPerfil = false;
-    if (c && c.talento_id && valores) {
-      const {data: t, error: eRead} = await sb.from('talentos').select('valores').eq('id', c.talento_id).single();
-      if (eRead) throw eRead;
-      const tVal = String((t && t.valores) || '').trim();
-      let merged;
-      if (!tVal) merged = valores;
-      else if (previo && tVal.indexOf(previo) !== -1) merged = tVal.split(previo).join(valores).trim(); // reemplaza la versión anterior, no la duplica
-      else if (tVal.indexOf(valores) !== -1) merged = tVal;
-      else merged = (tVal + '\n' + valores).trim();
-      if (merged !== tVal) {
-        const {error: eUpd} = await sb.from('talentos')
-          .update({valores: merged, updated: new Date().toISOString().split('T')[0]})
-          .eq('id', c.talento_id);
-        if (eUpd) throw eUpd;
-        alPerfil = true;
-      }
-    }
-
-    showToast(alPerfil ? 'Valores guardados y copiados al perfil del talento' : 'Valores guardados', 'success');
+    // Si el contacto YA es talento, la cotización queda en su historial de
+    // precios. NO se escribe en talentos.valores: un precio negociado para
+    // esta marca no es la tarifa general, el perfil se actualiza a mano.
+    // (Antes se fusionaba el texto en el perfil: si alguien lo había editado,
+    // el reemplazo no encontraba la versión previa y las tarifas se apilaban.)
     renderKanban();
+    if (c && c.talento_id && valores && valores !== previo) {
+      const eHist = await registrarCotizacion(c.talento_id, c, valores);
+      if (eHist) { showToast('Valores guardados, pero no quedaron en el historial del talento: ' + eHist, 'error'); return; }
+      showToast('Valores guardados · registrados en el historial de precios del talento', 'success');
+      return;
+    }
+    showToast('Valores guardados', 'success');
   } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+// Deja una fila en talento_cotizaciones (ver sql/talento_cotizaciones_2026_10_09.sql).
+// Devuelve null si quedó registrada, o el mensaje de error.
+async function registrarCotizacion(talentoId, c, valores) {
+  const {data, error} = await sb.from('talento_cotizaciones').insert([{
+    talento_id: talentoId,
+    prospeccion_id: prospeccion ? prospeccion.id : null,
+    contacto_id: c ? c.id : null,
+    marca: (prospeccion && prospeccion.marca) || '',
+    valores: valores,
+    autor_email: (currentUser && currentUser.email) || '',
+  }]).select('id');
+  if (error) {
+    console.error('registrarCotizacion:', error);
+    if (/talento_cotizaciones/.test(error.message || '') && /does not exist|schema cache/i.test(error.message || ''))
+      return 'falta correr sql/talento_cotizaciones_2026_10_09.sql en Supabase';
+    return error.message;
+  }
+  if (!data || !data.length) return 'la base no aceptó la escritura (revisá permisos)';
+  return null;
 }
 
 async function deleteContacto(id) {
@@ -2162,9 +2172,9 @@ function _tieneDireccion(de) {
 // cotización cargada en "Valores Extras", la dirección de entrega y las notas
 // se quedaban en la prospección y el perfil del talento seguía vacío. Acá se
 // completa el perfil con lo que trae el contacto, pero SOLO donde el talento
-// está vacío: nunca se pisa un dato ya cargado. `valores` es la excepción —
-// se agrega al final en vez de descartarse, porque perder una tarifa negociada
-// es justamente el problema que esto viene a arreglar.
+// está vacío: nunca se pisa un dato ya cargado. Con `valores` pasa lo mismo:
+// si el talento ya tiene tarifas no se tocan, y la cotización igual queda en
+// su historial de precios (talento_cotizaciones) para no perderla.
 async function completarTalentoDesdeContacto(talentoId, c) {
   const COLS = 'id,ciudad,telefono,email,tiktok,instagram,youtube,paises,categorias,genero,keywords,valores,direccion_entrega,notas_internas';
   const {data: t, error} = await sb.from('talentos').select(COLS).eq('id', talentoId).single();
@@ -2179,8 +2189,9 @@ async function completarTalentoDesdeContacto(talentoId, c) {
   if (!(t.categorias||[]).length && (c.categorias||[]).length) upd.categorias = c.categorias;
   if (!_tieneDireccion(t.direccion_entrega) && _tieneDireccion(c.direccion_entrega)) upd.direccion_entrega = c.direccion_entrega;
 
-  const cVal = String(c.valores||'').trim(), tVal = String(t.valores||'').trim();
-  if (cVal && tVal.indexOf(cVal) === -1) upd.valores = tVal ? (tVal + '\n' + cVal) : cVal;
+  const cVal = String(c.valores||'').trim();
+  if (cVal && !String(t.valores||'').trim()) upd.valores = cVal;
+  if (cVal) await registrarCotizacion(talentoId, c, cVal);
 
   const campos = Object.keys(upd).length;
   if (!campos) return 0;
@@ -2256,6 +2267,7 @@ async function graduarATalento(contactoId) {
     const {error: eLink2} = await sb.from('prospeccion_contactos').update({talento_id: newId, updated_at: new Date().toISOString()}).eq('id', contactoId);
     if (eLink2) throw eLink2;
     c.talento_id = newId;
+    if (String(c.valores||'').trim()) await registrarCotizacion(newId, c, String(c.valores).trim());
     renderKanban();
     showToast(`"${c.nombre}" graduado a Talento`, 'success');
 
@@ -2328,6 +2340,7 @@ async function bulkGraduarATalento() {
       const {error: eLink2} = await sb.from('prospeccion_contactos').update({talento_id: newId, updated_at: new Date().toISOString()}).eq('id', id);
       if (eLink2) { console.error('Link talent error:', eLink2); }
       c.talento_id = newId;
+      if (String(c.valores||'').trim()) await registrarCotizacion(newId, c, String(c.valores).trim());
       talentIds.push(newId);
       graduated++;
     }

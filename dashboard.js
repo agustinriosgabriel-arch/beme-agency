@@ -2221,17 +2221,22 @@ async function openPriceHistory(talentId){
   openModal('price-hist-modal');
   try {
     // RLS-safe: cargamos por separado y unimos en JS (los JOIN por FK fallan en silencio)
-    const { data: sels } = await sb.from('roster_selecciones')
-      .select('roster_id, link_id, lineas, accion, precio, updated_at')
-      .eq('talent_id', tid);
+    // Dos fuentes: precios cargados en rosters y cotizaciones guardadas en
+    // prospecciones (talento_cotizaciones, ver sql/talento_cotizaciones_2026_10_09.sql).
+    const [{ data: sels, error: eSels }, { data: cots, error: eCots }] = await Promise.all([
+      sb.from('roster_selecciones').select('roster_id, link_id, lineas, accion, precio, updated_at').eq('talent_id', tid),
+      sb.from('talento_cotizaciones').select('marca, valores, autor_email, created_at').eq('talento_id', tid),
+    ]);
+    if (eSels) throw eSels;
+    if (eCots) console.error('talento_cotizaciones:', eCots);
     const rows = (sels||[]).filter(s =>
       (Array.isArray(s.lineas) && s.lineas.some(l => l.precio!=null || l.accion)) || s.accion || s.precio!=null
     );
-    if (!rows.length) { if(body) body.innerHTML = '<div style="text-align:center;color:#999;padding:30px;">Sin historial de precios.</div>'; return; }
+    if (!rows.length && !(cots||[]).length) { if(body) body.innerHTML = '<div style="text-align:center;color:#999;padding:30px;">Sin historial de precios.</div>'; return; }
     const rosterIds = [...new Set(rows.map(s => s.roster_id))];
     const linkIds = [...new Set(rows.map(s => s.link_id).filter(id => id > 0))];
     const [rRes, lRes] = await Promise.all([
-      sb.from('rosters').select('id,name,moneda').in('id', rosterIds),
+      rosterIds.length ? sb.from('rosters').select('id,name,moneda').in('id', rosterIds) : Promise.resolve({data:[]}),
       linkIds.length ? sb.from('roster_links').select('id,client_name,roster_title').in('id', linkIds) : Promise.resolve({data:[]}),
     ]);
     const rById = Object.fromEntries((rRes.data||[]).map(r => [r.id, r]));
@@ -2246,14 +2251,19 @@ async function openPriceHistory(talentId){
       const lineas = (Array.isArray(s.lineas) && s.lineas.length) ? s.lineas
         : ((s.accion || s.precio!=null) ? [{accion: s.accion||'', precio: s.precio}] : []);
       return { date: s.updated_at, rosterName, cliente, moneda, lineas };
-    }).sort((a,b) => new Date(b.date) - new Date(a.date));
+    }).concat((cots||[]).map(k => ({
+      date: k.created_at, rosterName: 'Prospección', cliente: k.marca || '',
+      texto: k.valores || '', autor: k.autor_email || '',
+    }))).sort((a,b) => new Date(b.date) - new Date(a.date));
     if (body) body.innerHTML = entries.map(e => {
       const d = e.date ? new Date(e.date) : null;
       const ds = d ? d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
-      const lineasHtml = e.lineas.map(l => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:2px 0;">
+      const lineasHtml = e.texto != null
+        ? `<div style="font-size:12px;color:#444;white-space:pre-wrap;">${escapeHtml(e.texto)}</div>${e.autor ? `<div style="font-size:10.5px;color:#999;margin-top:4px;">${escapeHtml(e.autor)}</div>` : ''}`
+        : (e.lineas.map(l => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:2px 0;">
         <span style="color:#444;">${escapeHtml(l.accion)||'—'}</span>
         ${(l.precio!=null && l.precio!=='') ? `<span style="color:#b2005d;font-weight:700;white-space:nowrap;">${fmtP(l.precio, e.moneda)}</span>` : ''}
-      </div>`).join('') || '<span style="color:#bbb;font-size:12px;">—</span>';
+      </div>`).join('') || '<span style="color:#bbb;font-size:12px;">—</span>');
       return `<div style="border:1px solid #eee;border-radius:10px;padding:10px 12px;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px;">
           <span style="font-weight:700;font-size:13px;color:#111;">${escapeHtml(e.rosterName)}${e.cliente?` <span style="font-weight:500;color:#9414E0;font-size:11px;">· ${escapeHtml(e.cliente)}</span>`:''}</span>
