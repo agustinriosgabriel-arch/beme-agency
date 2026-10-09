@@ -94,24 +94,16 @@
 
   /* ══════════ 02 · Alianza ══════════ */
   .s-alianza{background:var(--gris)}
-  .al-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:38px}
-  .al-card{background:#fff;padding:clamp(24px,2.6vw,44px);position:relative;overflow:hidden;display:grid;grid-template-rows:subgrid;grid-row:span 4;align-content:start}
-  .al-card::before{content:'';position:absolute;top:0;left:0;right:0;height:6px}
-  .al-card.beme::before{background:var(--grad-1)}
-  .al-card.big::before{background:var(--purpura-osc)}
-  .al-card img{height:42px;margin-bottom:22px;align-self:center;justify-self:start}
-  .al-card.beme img{height:80px}
-  .al-card h3{font-size:clamp(18px,1.7vw,24px);font-weight:800;margin-bottom:8px}
-  .al-card .rol{font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;color:var(--magenta);margin-bottom:16px}
-  .al-card.big .rol{color:var(--purpura-osc)}
-  .al-card p{font-size:15px;color:var(--gris-txt);line-height:1.6}
-  .al-card ul{list-style:none;margin-top:18px;display:grid;gap:10px}
-  .al-card li{font-size:14.5px;color:var(--negro);font-weight:600;display:flex;gap:10px;align-items:baseline}
-  .al-card li::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--magenta);flex:none;transform:translateY(-1px)}
-  .al-card.big li::before{background:var(--purpura)}
-  .al-union{margin-top:26px;background:var(--negro);color:#fff;padding:22px 34px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
-  .al-union strong{font-size:clamp(16px,1.6vw,22px);font-weight:800}
-  .al-union span{font-size:14.5px;color:#cfcfcf}
+  .al-uni{background:#fff;margin-top:38px;padding:clamp(28px,3.4vw,56px);position:relative;overflow:hidden}
+  .al-uni::before{content:'';position:absolute;top:0;left:0;right:0;height:6px;background:var(--grad-3)}
+  .al-uni-logos{display:flex;align-items:center;gap:30px;flex-wrap:wrap}
+  .al-uni-logos img.beme{height:84px}
+  .al-uni-logos img.big{height:44px}
+  .al-uni-logos .x{font-size:32px;font-weight:200;color:var(--gris-2)}
+  .al-uni .rol{margin-top:22px;font-size:13px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;color:var(--magenta)}
+  .al-uni ul{list-style:none;margin-top:30px;padding-top:28px;border-top:1px solid var(--gris-2);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,auto);grid-auto-flow:column;gap:16px 40px}
+  .al-uni li{font-size:clamp(15px,1.3vw,18px);color:var(--negro);font-weight:600;display:flex;gap:12px;align-items:baseline}
+  .al-uni li::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--magenta);flex:none;transform:translateY(-1px)}
 
   /* ══════════ 04 · Marcas ══════════ */
   .s-marcas{background:#fff}
@@ -141,11 +133,10 @@
 
   /* ══════════ 03 · Servicios ══════════ */
   .s-serv{background:var(--negro);color:#fff}
-  .serv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px}
-  .serv{border:1px solid rgba(255,255,255,.14);padding:24px;position:relative}
-  .serv .n{font-size:13px;font-weight:800;color:var(--magenta-claro);letter-spacing:.14em}
-  .serv h4{font-size:17.5px;font-weight:800;margin:10px 0 8px}
-  .serv p{font-size:13.5px;color:#cfcfcf;line-height:1.55}
+  .serv-list{list-style:none;margin-top:38px;border-top:1px solid rgba(255,255,255,.14)}
+  .serv-list li{display:flex;align-items:baseline;gap:clamp(18px,3vw,48px);padding:clamp(16px,1.9vw,26px) 0;border-bottom:1px solid rgba(255,255,255,.14)}
+  .serv-list .n{flex:none;width:clamp(44px,5vw,80px);font-size:clamp(24px,2.6vw,40px);font-weight:800;line-height:1;color:var(--magenta-claro)}
+  .serv-list h4{font-size:clamp(18px,2vw,28px);font-weight:700;line-height:1.25;letter-spacing:-.01em}
 
   /* ══════════ 06 · Contacto ══════════ */
   .s-cta{background:var(--negro);color:#fff}
@@ -183,12 +174,15 @@
     .cover-logos{order:0;margin-bottom:16px}
     .cover-meta{order:1;margin:0 0 34px;gap:16px;font-size:clamp(9px,2.8vw,11px);letter-spacing:.1em;white-space:nowrap}
     .cover-title{font-size:8.4vw}
-    .al-card{padding:24px 18px}
-    .al-card .rol{font-size:clamp(9px,2.55vw,12px);letter-spacing:.05em}
-    .al-grid{grid-template-columns:1fr}
+    .al-uni{padding:26px 18px}
+    .al-uni-logos{gap:16px}
+    .al-uni-logos img.beme{height:58px}
+    .al-uni-logos img.big{height:30px}
+    .al-uni-logos .x{font-size:24px}
+    .al-uni .rol{font-size:clamp(9px,2.7vw,12px);letter-spacing:.1em}
+    .al-uni ul{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}
     .mk-grid{grid-template-columns:repeat(3,1fr)}
     .tal-grid{grid-template-columns:1fr 1fr}
-    .serv-grid{grid-template-columns:1fr}
     .dots{display:none}
     .pagenum{display:none}
   }
@@ -209,11 +203,9 @@
     .cover-lead{font-size:26px}
     .cover-sub{font-size:21px;max-width:600px}
     .lead{font-size:21px;max-width:900px}
-    .al-card .rol{font-size:14px}
-    .al-card h3{font-size:27px}
-    .al-card li{font-size:19px}
-    .serv h4{font-size:21px}
-    .serv p{font-size:16.5px}
+    .al-uni .rol{font-size:15px}
+    .al-uni li{font-size:21px}
+    .serv-list h4{font-size:30px}
     .mk-cell{height:84px}
     .tal-info h4{font-size:16.5px}
     .tal-info p{font-size:13px}
@@ -238,10 +230,8 @@
       <div class="cover-txt">
         <div class="cover-logos">
           <img class="beme" src="assets/deck/beme-logo.png" alt="Beme">
-          <span class="x">×</span>
-          <img class="big" src="assets/big/bigagency-logo.png" alt="Big Agency">
         </div>
-        <h1 class="cover-title"><span class="nw">Influencer Marketing</span><br><em class="mg">a medida</em></h1>
+        <h1 class="cover-title"><span class="nw">Influencer Marketing</span><br><span class="mg">a Medida</span></h1>
         <p class="cover-lead">Conectamos PYMEs, empresas, instituciones y gobiernos con talentos.</p>
         <p class="cover-sub">Desarrollamos estrategias que potencian el posicionamiento, impulsan productos y <span class="nw">generan ventas.</span></p>
         <div class="cover-meta"><span>Presentación comercial</span><span>Argentina · 2026</span></div>
@@ -260,28 +250,21 @@
   <section class="slide s-alianza" id="s2">
     <div class="wrap">
       <p class="eyebrow">Quiénes somos</p>
-      <h2>Alianza estratégica para <span class="mg">LATAM</span></h2>
-      <div class="al-grid">
-        <div class="al-card beme">
-          <img src="assets/deck/beme-logo.png" alt="Beme">
-          <p class="rol nw">México · Latinoamérica · Europa + US</p>
-          <h3>Agencia de talento e influencer marketing</h3>
-          <ul>
-            <li>Más de 1.000 talentos en toda la región</li>
-            <li>Campañas en 10+ países</li>
-            <li>Contratos, KPI y reporting verificables</li>
-          </ul>
+      <h2>Estratégica para <span class="mg">LATAM</span></h2>
+      <div class="al-uni">
+        <div class="al-uni-logos">
+          <img class="beme" src="assets/deck/beme-logo.png" alt="Beme">
+          <span class="x">×</span>
+          <img class="big" src="assets/big/bigagency-logo.png" alt="Big Agency">
         </div>
-        <div class="al-card big">
-          <img src="assets/big/bigagency-logo.png" alt="Big Agency">
-          <p class="rol">Argentina</p>
-          <h3>El talento que mueve la conversación argentina</h3>
-          <ul>
-            <li>Más de 50 creadores líderes en humor, entretenimiento y lifestyle</li>
-            <li>Vínculos anuales y embajadores con primeras marcas</li>
-            <li>Producción local y trayectoria en el mercado argentino</li>
-          </ul>
-        </div>
+        <p class="rol">Argentina · Latam · US · Europa</p>
+        <ul>
+          <li>Más de 1.000 talentos en toda la región</li>
+          <li>Campañas en +10 países</li>
+          <li>Vínculos anuales y embajadores de marca</li>
+          <li>Contratos, KPI y reporting verificables</li>
+          <li>Producción local y trayectoria en el mercado argentino</li>
+        </ul>
       </div>
     </div>
     <span class="pagenum">02</span>
@@ -293,14 +276,13 @@
       <p class="eyebrow">Cómo lo hacemos</p>
       <h2>Un solo interlocutor. <span class="fino">Cobertura total regional</span></h2>
       <p class="lead una">Estrategia, prospección, contratos, producción y reporting bajo un mismo&nbsp;equipo</p>
-      <div class="serv-grid">
-        <div class="serv"><span class="n">01</span><h4>Estrategia &amp; casting</h4><p>Selección de talentos por datos reales de audiencia, categoría y mercado — no por intuición</p></div>
-        <div class="serv"><span class="n">02</span><h4>Campañas con creadores</h4><p>Negociación, contratos y ejecución fluida y transparente de campañas, con aprobaciones de marca</p></div>
-        <div class="serv"><span class="n">03</span><h4>Representación de talento</h4><p>Management exclusivo de los creadores más relevantes de México y Argentina</p></div>
-        <div class="serv"><span class="n">04</span><h4>Producción de contenido</h4><p>Guiones, producción y postproducción adaptados al lenguaje de cada creador y cada plataforma</p></div>
-        <div class="serv"><span class="n">05</span><h4>Embajadores &amp; anuales</h4><p>Vínculos sostenidos marca–creador: AXE, Spotify, Garnier, Maybelline y SKY ya lo hacen con nosotros</p></div>
-        <div class="serv"><span class="n">06</span><h4>Reporting verificable</h4><p>Seguidores, alcance e interacción medidos, no estimados. KPI en un solo reporte</p></div>
-      </div>
+      <ol class="serv-list">
+        <li><span class="n">01</span><h4>Estrategia y casting inteligente de talentos</h4></li>
+        <li><span class="n">02</span><h4>Cierre, desarrollo y seguimiento de campañas</h4></li>
+        <li><span class="n">03</span><h4>Producción de contenido a medida del talento y plataforma</h4></li>
+        <li><span class="n">04</span><h4>Embajadores de marca</h4></li>
+        <li><span class="n">05</span><h4>Reporting verificable con KPI</h4></li>
+      </ol>
     </div>
     <span class="pagenum">03</span>
   </section>
@@ -351,7 +333,7 @@
     <div class="wrap">
       <p class="eyebrow">Talento</p>
       <h2>Algunos <span class="mg">talentos exclusivos</span></h2>
-      <p class="lead">Más de 50 talentos en Argentina</p>
+      <p class="lead">Amplia variedad de talentos argentinos en diversas categorías</p>
       <div class="tal-grid">
         <div class="tal"><img src="assets/big/pelado-khe.jpg" alt="Pelado.Khe"><div class="tal-info"><h4>Pelado.Khe</h4><p>AXE · Warner · Shell · McDonald's</p></div></div>
         <div class="tal"><img src="assets/big/pia-scarnato.jpg" alt="Pia Scarnato"><div class="tal-info"><h4>Pia Scarnato</h4><p>Prime Video · Garnier · Maybelline</p></div></div>
@@ -375,15 +357,12 @@
     <div class="wrap cta-inner">
       <div class="cta-logos">
         <img class="beme" src="assets/deck/beme-logo-blanco.png" alt="Beme">
-        <span class="x">×</span>
-        <img class="big" src="assets/big/bigagency-logo-blanco.png" alt="Big Agency">
       </div>
       <p class="cta-title">Tu próxima campaña<br><span class="fino">empieza acá</span></p>
       <a class="cta-mail" href="mailto:contacto@bemeagency.com">contacto@bemeagency.com</a>
       <div class="cta-links">
         <span>@beme.agency</span>
         <a href="https://wa.me/5493515602867" target="_blank" rel="noopener">Argentina · +54 9 351 560-2867</a>
-        <span>LATAM</span>
       </div>
     </div>
     <span class="pagenum">06</span>
