@@ -192,6 +192,31 @@ body.dark .logo .logo-dark{display:block}
 .res-section{margin-bottom:28px}
 .res-section h3{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .res-section h3 .hint{font-size:11px;font-weight:500;color:var(--text-dim)}
+/* Mes en curso (termómetro de facturación del mes) */
+.mes-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.mes-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;min-width:170px;text-align:center}
+.mes-nav{width:32px;height:32px;border-radius:50%;border:1px solid var(--border2);background:var(--surface2);color:var(--text-muted);cursor:pointer;font-size:15px;font-family:inherit}
+.mes-nav:hover{border-color:var(--primary);color:var(--primary)}
+.mes-tag{font-size:11px;font-weight:600;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);padding:3px 10px;border-radius:12px}
+.termo-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px 34px;margin-bottom:16px}
+.termo-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.termo-val{font-size:34px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.termo-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:6px}
+.termo-msg{font-size:13px;color:var(--text-muted);text-align:right}
+.termo-msg b{color:var(--text)}
+.termo{position:relative;height:22px;background:var(--surface3);border-radius:99px}
+.termo-fill{height:100%;border-radius:99px;transition:width 0.4s}
+.termo-mark{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--text-muted);border-radius:2px}
+.termo-mark span{position:absolute;top:30px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;white-space:nowrap;color:var(--text-muted);text-align:center;line-height:1.3}
+.lvl-bajo{background:var(--red)}.lvl-min{background:var(--orange)}.lvl-obj{background:var(--green)}.lvl-opt{background:var(--gradient)}
+.mes-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:24px}
+.mes-camp-row{grid-template-columns:minmax(170px,1.4fr) 92px 96px 52px 150px 110px 110px 104px}
+.mes-hist-row{display:grid;grid-template-columns:70px 1fr 110px;gap:12px;align-items:center;padding:7px 14px;font-size:12.5px;border-bottom:1px solid var(--border);cursor:pointer}
+.mes-hist-row:last-child{border-bottom:none}
+.mes-hist-row:hover{background:var(--surface2)}
+.mes-hist-row.sel{background:var(--surface2);font-weight:700}
+.mes-hist-bar{position:relative;height:8px;background:var(--surface3);border-radius:99px}
+.mes-hist-bar .termo-fill{position:absolute;left:0;top:0}
 .audit-row{font-size:11px;color:var(--text-muted);padding:3px 0;border-bottom:1px dashed var(--border)}
 .audit-row:last-child{border-bottom:none}
 .audit-row b{color:var(--text)}
@@ -344,11 +369,16 @@ body.light #login-overlay{background:rgba(244,244,244,0.97)}
   </div>
 
   <div class="sub-tabs">
+    <button class="sub-tab" data-section="mes" onclick="switchSection('mes')">Mes en curso</button>
     <button class="sub-tab active" data-section="cxc" onclick="switchSection('cxc')">CxC Cobros</button>
     <button class="sub-tab" data-section="cxp" onclick="switchSection('cxp')">CxP Pagos</button>
     <button class="sub-tab" data-section="resumen" onclick="switchSection('resumen')" style="display:none">Resumen</button>
     <button class="sub-tab" data-section="clientes" onclick="switchSection('clientes')">Clientes</button>
     <button class="sub-tab" data-section="terceros" onclick="switchSection('terceros')">Terceros</button>
+  </div>
+
+  <div id="section-mes" style="display:none">
+    <div id="mes-container"></div>
   </div>
 
   <div id="section-cxc">
@@ -664,6 +694,8 @@ async function initApp(){
     document.getElementById('app').style.display='block';
     document.getElementById('load-overlay').style.display='none';
     renderAll();
+    if(currentProfile.role==='admin')switchSection('mes'); // la foto del mes es lo primero que ve el admin
+    loadFx().then(renderMes);
     startAutoRefresh();
   }catch(e){console.error('initApp:',e);showToast('Error: '+e.message,'error');document.getElementById('load-overlay').style.display='none';}
 }
@@ -674,7 +706,7 @@ function shouldSkipRefresh(){
   if(document.hidden)return true;
   if(document.querySelector('.modal-overlay.open'))return true;
   const a=document.activeElement;
-  if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.isContentEditable))return true;
+  if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.tagName==='SELECT'||a.isContentEditable))return true;
   return false;
 }
 async function autoRefreshTick(){
@@ -712,7 +744,7 @@ async function loadData(){
   campanasTalentos=(ctR.data||[]).filter(ct=>campanasIds.has(ct.campana_id));
 }
 
-function renderAll(){renderStats();renderCxC();renderCxP();renderResumen();renderClientes();renderTerceros();
+function renderAll(){renderStats();renderMes();renderCxC();renderCxP();renderResumen();renderClientes();renderTerceros();
   if(document.getElementById('modal-movimientos')?.classList.contains('open'))renderMovimientos();
   document.getElementById('subtitle').textContent=`${campanas.length} campanas · ${clientes.length} clientes`;}
 
@@ -902,10 +934,162 @@ function renderStats(){
   set('stat-cxp-pend',cxpPend);set('stat-cxp-pagado',cxpPagado);
 }
 
+// ═══════════════════════════════════════════
+// MES EN CURSO — foto del trabajo del mes y facturación proyectada
+// ═══════════════════════════════════════════
+// Una campaña cuenta en el mes en que arranca (fecha_inicio; si no tiene, la fecha de alta).
+// Su facturación proyectada es el fee_marca de sus talentos no cancelados, aunque todavía
+// no exista factura: QuickBooks solo la ve cuando se factura al cierre.
+const METAS_MES=[{k:'min',lbl:'Mínimo',v:40000},{k:'obj',lbl:'Objetivo',v:70000},{k:'opt',lbl:'Óptimo',v:100000}];
+// Unidades de cada moneda por 1 USD. Se pisan con el tipo de cambio del día (loadFx).
+const FX_DEFAULT={USD:1,MXN:18.5,EUR:0.92,ARS:1400,BRL:5.5};
+let fxRates={...FX_DEFAULT},fxFecha=null;
+// Fecha local (no UTC): de noche en México toISOString ya da el día siguiente
+function hoyLocal(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+let mesSel=hoyLocal().slice(0,7),mesCriterio='inicio';
+async function loadFx(){
+  const hoy=hoyLocal();
+  try{const c=JSON.parse(localStorage.getItem('beme_fx')||'null');if(c&&c.d===hoy&&c.rates){fxRates={...FX_DEFAULT,...c.rates};fxFecha=c.d;return;}}catch(e){}
+  try{
+    const r=await fetch('https://open.er-api.com/v6/latest/USD');const j=await r.json();
+    if(j&&j.result==='success'&&j.rates){
+      fxRates={...FX_DEFAULT,...j.rates};fxFecha=hoy;
+      try{localStorage.setItem('beme_fx',JSON.stringify({d:hoy,rates:j.rates}));}catch(e){}
+    }
+  }catch(e){console.warn('loadFx:',e);}
+}
+function toUSD(v,cur){const r=fxRates[cur||'USD'];return r?v/r:v;}
+function mapToUSD(map){return Object.entries(map).reduce((s,[c,v])=>s+toUSD(v,c),0);}
+function campMes(c){
+  const d=mesCriterio==='alta'?c.created_at:(c.fecha_inicio||c.created_at);
+  return d?String(d).slice(0,7):'';
+}
+function mesLabel(k,opts){const[y,m]=k.split('-');return new Date(+y,+m-1,1).toLocaleDateString('es-ES',opts||{month:'long',year:'numeric'});}
+function mesShift(k,n){const[y,m]=k.split('-').map(Number);const d=new Date(y,m-1+n,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
+function mesIr(n){mesSel=mesShift(mesSel,n);renderMes();}
+function mesNivel(v){
+  if(v>=METAS_MES[2].v)return{cls:'lvl-opt',lbl:'Óptimo alcanzado',color:'var(--primary)'};
+  if(v>=METAS_MES[1].v)return{cls:'lvl-obj',lbl:'Objetivo alcanzado',color:'var(--green)'};
+  if(v>=METAS_MES[0].v)return{cls:'lvl-min',lbl:'Mínimo cubierto',color:'var(--orange)'};
+  return{cls:'lvl-bajo',lbl:'Debajo del mínimo',color:'var(--red)'};
+}
+// Números de una campaña: venta (fee marca), costo talentos, facturado y cobrado, por moneda y en USD
+function mesCampData(c){
+  const cts=campanasTalentos.filter(ct=>ct.campana_id===c.id&&ct.estado!=='cancelada');
+  const venta={},costo={},fact={},cob={};
+  cts.forEach(ct=>{
+    addCur(venta,ct.moneda_marca||ct.moneda,Number(ct.fee_marca)||0);
+    addCur(costo,ct.moneda_talento||ct.moneda,Number(ct.fee_talento)||0);
+  });
+  facturas.filter(f=>f.campana_id===c.id&&f.estado!=='cancelada').forEach(f=>{
+    addCur(fact,f.moneda,Number(f.monto)||0);addCur(cob,f.moneda,facPagado(f));
+  });
+  return{c,nTal:cts.length,venta,costo,fact,cob,
+    ventaUSD:mapToUSD(venta),costoUSD:mapToUSD(costo),factUSD:mapToUSD(fact),cobUSD:mapToUSD(cob)};
+}
+function mesCampanas(k){return campanas.filter(c=>c.estado!=='cancelada'&&campMes(c)===k).map(mesCampData);}
+const usd=v=>fmtMoney(v,'USD');
+
+function renderMes(){
+  const cont=document.getElementById('mes-container');if(!cont)return;
+  const rows=mesCampanas(mesSel).sort((a,b)=>b.ventaUSD-a.ventaUSD);
+  const tot=k=>rows.reduce((s,r)=>s+r[k],0);
+  const venta=tot('ventaUSD'),costo=tot('costoUSD'),fact=tot('factUSD'),cob=tot('cobUSD');
+  const margen=venta-costo,margenPct=venta>0?margen/venta*100:0;
+  const ventaMap={};rows.forEach(r=>Object.entries(r.venta).forEach(([c,v])=>addCur(ventaMap,c,v)));
+  const nivel=mesNivel(venta);
+
+  // Días del mes: transcurridos y restantes (solo aplica al mes actual)
+  const hoyK=hoyLocal().slice(0,7);
+  const[y,m]=mesSel.split('-').map(Number);const diasMes=new Date(y,m,0).getDate();
+  const dia=new Date().getDate();
+  const tag=mesSel===hoyK?`Día ${dia} de ${diasMes} · quedan ${diasMes-dia} días`:(mesSel<hoyK?'Mes cerrado':'Mes próximo');
+  const prox=METAS_MES.find(x=>venta<x.v);
+  const msg=prox?`Faltan <b>${usd(prox.v-venta)}</b> para el ${prox.lbl.toLowerCase()} (${usd(prox.v)})`:`<b>${usd(venta-METAS_MES[2].v)}</b> por encima del óptimo`;
+
+  // Escala del termómetro: llega un poco más allá del óptimo (o del total si lo supera)
+  const escala=Math.max(METAS_MES[2].v*1.15,venta*1.05);
+  const pct=v=>Math.min(100,v/escala*100);
+  const termo=`<div class="termo-card">
+    <div class="termo-top">
+      <div><div class="termo-lbl">Facturación proyectada del mes · USD</div>
+        <div class="termo-val" style="color:${nivel.color}">${usd(venta)}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px">${nivel.lbl}${Object.keys(ventaMap).length>1||!ventaMap.USD?` · ${fmtMulti(ventaMap)}`:''}</div></div>
+      <div class="termo-msg">${msg}</div>
+    </div>
+    <div class="termo">
+      <div class="termo-fill ${nivel.cls}" style="width:${pct(venta)}%"></div>
+      ${METAS_MES.map(x=>`<div class="termo-mark" style="left:${pct(x.v)}%"><span>${x.lbl}<br>${usd(x.v).replace(',000','k')}</span></div>`).join('')}
+    </div>
+  </div>`;
+
+  const kpi=(lbl,val,sub,color)=>`<div class="stat-card"><div class="label">${lbl}</div><div class="value"${color?` style="color:${color}"`:''}>${val}</div><div class="sub">${sub}</div></div>`;
+  const kpis=`<div class="mes-kpis">
+    ${kpi('Campañas del mes',rows.length,`${rows.reduce((s,r)=>s+r.nTal,0)} talentos trabajando`)}
+    ${kpi('Margen bruto',usd(margen),`${margenPct.toFixed(0)}% · costo talentos ${usd(costo)}`,margen>=0?'var(--green)':'var(--red)')}
+    ${kpi('Ya facturado',usd(fact),venta>0?`${Math.round(fact/venta*100)}% de lo proyectado · falta ${usd(Math.max(0,venta-fact))}`:'—')}
+    ${kpi('Cobrado',usd(cob),venta>0?`${Math.round(cob/venta*100)}% de lo proyectado`:'—','var(--green)')}
+  </div>`;
+
+  const estFac=r=>{
+    if(r.ventaUSD<=0)return'<span class="status-pill st-pendiente">Sin fee</span>';
+    if(r.factUSD<=0)return'<span class="status-pill st-pendiente">Sin facturar</span>';
+    if(r.factUSD<r.ventaUSD-1)return`<span class="status-pill st-parcial">Parcial ${Math.round(r.factUSD/r.ventaUSD*100)}%</span>`;
+    return'<span class="status-pill st-cobrada">Facturada</span>';
+  };
+  const lista=rows.length?`<div class="fin-group-items" style="border-top:1px solid var(--border);border-radius:var(--radius)">
+    <div class="fin-row fin-row-head mes-camp-row"><div>Campaña</div><div>Inicio</div><div>Estado</div><div class="th-c">Tal.</div><div class="th-r">Venta</div><div class="th-r">Venta USD</div><div class="th-r">Margen USD</div><div class="th-c">Factura</div></div>
+    ${rows.map(r=>`<a class="fin-row mes-camp-row" href="campana-detalle.html?id=${r.c.id}" target="_blank" title="Ver detalle de la campaña">
+      <div style="min-width:0"><div class="fin-row-name">${esc(r.c.nombre||'—')}</div><div class="fin-row-meta">${esc(r.c.marcas?.nombre||'')}${r.c.marcas?.clientes?.nombre?' · '+esc(r.c.marcas.clientes.nombre):''}</div></div>
+      <div class="fin-row-date">${r.c.fecha_inicio?formatDate(r.c.fecha_inicio):'—'}</div>
+      <div>${campEstadoBadge(r.c.estado)}</div>
+      <div style="text-align:center">${r.nTal}</div>
+      <div class="fin-row-amount" style="font-weight:500;color:var(--text-muted)">${fmtMulti(r.venta)}</div>
+      <div class="fin-row-amount">${usd(r.ventaUSD)}</div>
+      <div class="fin-row-amount" style="color:${r.ventaUSD-r.costoUSD>=0?'var(--green)':'var(--red)'}">${usd(r.ventaUSD-r.costoUSD)}</div>
+      <div style="text-align:center">${estFac(r)}</div>
+    </a>`).join('')}
+    <div class="fin-total-row"><span class="lbl">Total del mes</span><b class="fin-row-amount">${usd(venta)}</b></div>
+  </div>`:'<div class="empty-state"><h3>Sin campañas en este mes</h3><p>Ninguna campaña arranca en '+esc(mesLabel(mesSel))+'</p></div>';
+
+  // Últimos 6 meses (hasta el seleccionado) contra las metas — click para ir a ese mes
+  const hist=[];for(let i=5;i>=0;i--)hist.push(mesShift(mesSel,-i));
+  const histVals=hist.map(k=>({k,v:mesCampanas(k).reduce((s,r)=>s+r.ventaUSD,0)}));
+  const hEsc=Math.max(METAS_MES[2].v,...histVals.map(h=>h.v));
+  const historial=`<div class="res-section"><h3>Últimos 6 meses <span class="hint">facturación proyectada por mes de inicio · USD</span></h3>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">
+    ${histVals.map(h=>{const n=mesNivel(h.v);return `<div class="mes-hist-row${h.k===mesSel?' sel':''}" onclick="mesSel='${h.k}';renderMes()">
+      <div style="text-transform:capitalize">${esc(mesLabel(h.k,{month:'short',year:'2-digit'}))}</div>
+      <div class="mes-hist-bar"><div class="termo-fill ${n.cls}" style="width:${Math.min(100,h.v/hEsc*100)}%"></div>
+        ${METAS_MES.map(x=>`<div class="termo-mark" style="left:${x.v/hEsc*100}%;top:-3px;bottom:-3px;width:1px"></div>`).join('')}</div>
+      <div class="fin-row-amount">${usd(h.v)}</div>
+    </div>`;}).join('')}
+    </div></div>`;
+
+  const fxNota=`Montos en otras monedas convertidos a USD con el tipo de cambio ${fxFecha?'del '+formatDate(fxFecha):'aproximado'}${Object.keys(ventaMap).filter(c=>c!=='USD').map(c=>` · 1 USD = ${(fxRates[c]||0).toLocaleString('es-ES',{maximumFractionDigits:2})} ${c}`).join('')}.`;
+
+  cont.innerHTML=`<div class="mes-head">
+      <button class="mes-nav" onclick="mesIr(-1)" title="Mes anterior">‹</button>
+      <div class="mes-title">${esc(mesLabel(mesSel).replace(/^./,x=>x.toUpperCase()))}</div>
+      <button class="mes-nav" onclick="mesIr(1)" title="Mes siguiente">›</button>
+      ${mesSel!==hoyK?`<button class="btn btn-ghost btn-xs" onclick="mesSel='${hoyK}';renderMes()">Hoy</button>`:''}
+      <span class="mes-tag">${tag}</span>
+      <select class="filter-select" style="margin-left:auto" onchange="mesCriterio=this.value;renderMes()" title="Qué fecha define a qué mes pertenece una campaña">
+        <option value="inicio"${mesCriterio==='inicio'?' selected':''}>Mes por: fecha de inicio</option>
+        <option value="alta"${mesCriterio==='alta'?' selected':''}>Mes por: fecha de alta</option>
+      </select>
+    </div>
+    ${termo}${kpis}
+    <div class="res-section"><h3>Campañas del mes <span class="hint">${rows.length} · ordenadas por venta</span></h3>${lista}</div>
+    ${historial}
+    <p style="font-size:11px;color:var(--text-dim)">${fxNota} Se excluyen campañas y talentos cancelados.</p>`;
+}
+
 // SUB-TABS
 function switchSection(s){
   activeSection=s;
   document.querySelectorAll('.sub-tab').forEach(b=>b.classList.toggle('active',b.dataset.section===s));
+  document.getElementById('section-mes').style.display=s==='mes'?'block':'none';
   document.getElementById('section-cxc').style.display=s==='cxc'?'block':'none';
   document.getElementById('section-cxp').style.display=s==='cxp'?'block':'none';
   document.getElementById('section-resumen').style.display=s==='resumen'?'block':'none';
