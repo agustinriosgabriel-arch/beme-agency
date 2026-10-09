@@ -1001,6 +1001,7 @@ let FN_MAP = {
   saveRoster,
   openManageTalentsModal,
   downloadCurrentRoster,
+  exportCurrentRosterCSV,
   printRoster,
   closeRosterViewModal:  () => closeModal('roster-view-modal'),
   closeManageTalentsModal: () => closeModal('manage-talents-modal'),
@@ -3408,6 +3409,7 @@ function renderRosterCard(r, isArchived) {
         <button class="btn btn-outline btn-sm roster-btn" onclick="openManageLinksModal('+rid+')" title="Links por cliente" style="color:#0ea5e9;border-color:rgba(14,165,233,0.4);font-weight:600;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> '+(linkCount || '')+'</button>\
         <button class="btn btn-outline btn-sm roster-btn" onclick="copyRosterUrl('+rid+')" title="Copiar URL directa" style="color:#b2005d;border-color:rgba(178,0,93,0.4);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>\
         <button class="btn btn-outline btn-sm roster-btn" onclick="copyCompactRosterUrl('+rid+')" title="URL compacta (solo ver)" style="color:#4c6ef5;border-color:rgba(76,110,245,0.4);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3H5a2 2 0 0 0-2 2v11"/><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M10 12h9"/><path d="M10 16h5"/></svg></button>\
+        <button class="btn btn-outline btn-sm roster-btn" onclick="exportRosterCSV('+rid+')" title="Exportar CSV para el cliente" style="font-size:10px;font-weight:700;">CSV</button>\
         <button class="btn btn-outline btn-sm roster-btn" onclick="openManageTalentsForRoster('+rid+')" title="Editar talentos"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>\
         <button class="btn btn-danger btn-sm roster-btn" onclick="if(confirm(\'Eliminar roster?\'))deleteRoster('+rid+')" title="Eliminar"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>\
       </div>';
@@ -5088,6 +5090,50 @@ function printRoster() {
 function downloadCurrentRoster() {
   if(!editingRosterId) return;
   downloadRosterById(editingRosterId);
+}
+
+function exportCurrentRosterCSV() {
+  if(!editingRosterId) return;
+  exportRosterCSV(editingRosterId);
+}
+
+// CSV del roster para entregar al cliente: mismas plataformas que el link público, sin datos internos
+function exportRosterCSV(id) {
+  const roster = rosters.find(r=>r.id===id);
+  if(!roster) return;
+  const rosterTalents = roster.talentIds.map(tid=>talents.find(t=>t.id===tid)).filter(Boolean);
+  if(!rosterTalents.length) { showToast('Este roster no tiene talentos', 'error'); return; }
+  const showTT = roster.platforms?.tt !== false;
+  const showIG = roster.platforms?.ig !== false;
+  const showYT = roster.platforms?.yt !== false;
+  const showAI = roster.show_ai_descriptions && roster.ai_descriptions;
+
+  const headers = ['Talento','Países','Ciudad'];
+  if(showTT) headers.push('TikTok','Link TikTok','Seguidores TikTok');
+  if(showIG) headers.push('Instagram','Link Instagram','Seguidores Instagram');
+  if(showYT) headers.push('YouTube','Link YouTube','Seguidores YouTube');
+  headers.push('Categorías');
+  if(showAI) headers.push('Por qué este perfil');
+
+  const net = (url, n) => url ? [extractHandle(url), url, n||''] : ['','',''];
+  const rows = rosterTalents.map(t => {
+    const row = [t.nombre, (t.paises||[t.pais||'']).filter(Boolean).join('; '), t.ciudad];
+    if(showTT) row.push(...net(t.tiktok, t.seguidores.tiktok));
+    if(showIG) row.push(...net(t.instagram, t.seguidores.instagram));
+    if(showYT) row.push(...net(t.youtube, t.seguidores.youtube));
+    row.push((t.categorias||[]).join('; '));
+    if(showAI) row.push(roster.ai_descriptions[t.id]?.reason || '');
+    return row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',');
+  });
+
+  const csv = '﻿' + [headers.map(h=>`"${h}"`).join(','), ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const slug = (roster.name||'roster').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase();
+  const a = document.createElement('a');
+  a.href = url; a.download = 'roster-' + slug + '-' + new Date().toISOString().split('T')[0] + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+  showToast('CSV del roster exportado', 'success');
 }
 
 function downloadRosterById(id) {
