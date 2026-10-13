@@ -1443,6 +1443,18 @@ async function saveContacto() {
     if (editingContactoId) {
       const {error} = await sb.from('prospeccion_contactos').update(payload).eq('id', editingContactoId);
       if (error) throw error;
+      // Si el contacto es un talento (interno o ya graduado) y cambió la
+      // cotización desde "Editar contacto", el perfil tiene que reflejarla
+      // igual que con "Guardar valores": si no, quedaba un valor en
+      // prospección y otro distinto en el roster general.
+      const previoC = contactos.find(x => x.id === editingContactoId);
+      const previo = String((previoC && previoC.valores) || '').trim();
+      if (previoC && previoC.talento_id && payload.valores && payload.valores !== previo) {
+        const alPerfil = await copiarValoresAlPerfil(previoC.talento_id, payload.valores, previo);
+        const eHist = await registrarCotizacion(previoC.talento_id, previoC, payload.valores);
+        if (eHist) console.warn('historial de cotizaciones no registrado:', eHist);
+        if (alPerfil) showToast('Valores actualizados también en el perfil del talento', 'success');
+      }
     } else {
       payload.etapa = 'evaluacion';
       const {error} = await sb.from('prospeccion_contactos').insert(payload);
@@ -1722,22 +1734,7 @@ async function saveValoresExtras(contactoId) {
     // perfil no cambiaba: las chicas lo reportaron como "no se actualiza".)
     let alPerfil = false;
     if (c && c.talento_id && valores) {
-      const {data: t, error: eRead} = await sb.from('talentos').select('valores').eq('id', c.talento_id).single();
-      if (eRead) throw eRead;
-      const tVal = String((t && t.valores) || '').trim();
-      let merged;
-      if (!tVal) merged = valores;
-      else if (previo && tVal.indexOf(previo) !== -1) merged = tVal.split(previo).join(valores).trim();
-      else if (tVal.indexOf(valores) !== -1) merged = tVal;
-      else merged = (tVal + '\n' + valores).trim();
-      if (merged !== tVal) {
-        const {data: tEscrito, error: eUpd} = await sb.from('talentos')
-          .update({valores: merged, updated: new Date().toISOString().split('T')[0]})
-          .eq('id', c.talento_id).select('id');
-        if (eUpd) throw eUpd;
-        if (!tEscrito || !tEscrito.length) throw new Error('el perfil del talento no aceptó la escritura (0 filas) — revisá permisos');
-        alPerfil = true;
-      }
+      alPerfil = await copiarValoresAlPerfil(c.talento_id, valores, previo);
       // Registro histórico (fecha, marca, autor) para el botón "$" del
       // dashboard. Es un extra: si la tabla no existe o falla, no frena nada.
       if (valores !== previo) {
@@ -1748,6 +1745,29 @@ async function saveValoresExtras(contactoId) {
     renderKanban();
     showToast(alPerfil ? 'Valores guardados y actualizados en el perfil del talento' : 'Valores guardados', 'success');
   } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+// Lleva la cotización de un contacto a talentos.valores (la tarifa que se ve
+// en la Base y en el roster general). Regla compartida por "Guardar valores"
+// y "Editar contacto": si el perfil tiene la versión anterior del contacto se
+// reemplaza en el lugar; si está vacío se completa; si ya contiene el texto
+// nuevo no se duplica; si no, se agrega al final. Devuelve true si escribió.
+async function copiarValoresAlPerfil(talentoId, valores, previo) {
+  const {data: t, error: eRead} = await sb.from('talentos').select('valores').eq('id', talentoId).single();
+  if (eRead) throw eRead;
+  const tVal = String((t && t.valores) || '').trim();
+  let merged;
+  if (!tVal) merged = valores;
+  else if (previo && tVal.indexOf(previo) !== -1) merged = tVal.split(previo).join(valores).trim();
+  else if (tVal.indexOf(valores) !== -1) merged = tVal;
+  else merged = (tVal + '\n' + valores).trim();
+  if (merged === tVal) return false;
+  const {data: tEscrito, error: eUpd} = await sb.from('talentos')
+    .update({valores: merged, updated: new Date().toISOString().split('T')[0]})
+    .eq('id', talentoId).select('id');
+  if (eUpd) throw eUpd;
+  if (!tEscrito || !tEscrito.length) throw new Error('el perfil del talento no aceptó la escritura (0 filas) — revisá permisos');
+  return true;
 }
 
 // Deja una fila en talento_cotizaciones (ver sql/talento_cotizaciones_2026_10_09.sql).
