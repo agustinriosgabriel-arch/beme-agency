@@ -1713,19 +1713,40 @@ async function saveValoresExtras(contactoId) {
     const previo = String((c && c.valores) || '').trim();
     if (c) c.valores = valores;
 
-    // Si el contacto YA es talento, la cotización queda en su historial de
-    // precios. NO se escribe en talentos.valores: un precio negociado para
-    // esta marca no es la tarifa general, el perfil se actualiza a mano.
-    // (Antes se fusionaba el texto en el perfil: si alguien lo había editado,
-    // el reemplazo no encontraba la versión previa y las tarifas se apilaban.)
-    renderKanban();
-    if (c && c.talento_id && valores && valores !== previo) {
-      const eHist = await registrarCotizacion(c.talento_id, c, valores);
-      if (eHist) { showToast('Valores guardados, pero no quedaron en el historial del talento: ' + eHist, 'error'); return; }
-      showToast('Valores guardados · registrados en el historial de precios del talento', 'success');
-      return;
+    // Si el contacto YA es talento, la cotización se copia también a la
+    // tarifa del perfil (talentos.valores): el equipo comercial la usa como
+    // "última cotización" y la va actualizando desde acá. Si el perfil
+    // todavía tiene la versión anterior de este contacto, se reemplaza en el
+    // lugar; si no la tiene, se agrega al final; si ya está, no se duplica.
+    // (Entre el 9 y el 13 de octubre de 2026 esto solo iba al historial y el
+    // perfil no cambiaba: las chicas lo reportaron como "no se actualiza".)
+    let alPerfil = false;
+    if (c && c.talento_id && valores) {
+      const {data: t, error: eRead} = await sb.from('talentos').select('valores').eq('id', c.talento_id).single();
+      if (eRead) throw eRead;
+      const tVal = String((t && t.valores) || '').trim();
+      let merged;
+      if (!tVal) merged = valores;
+      else if (previo && tVal.indexOf(previo) !== -1) merged = tVal.split(previo).join(valores).trim();
+      else if (tVal.indexOf(valores) !== -1) merged = tVal;
+      else merged = (tVal + '\n' + valores).trim();
+      if (merged !== tVal) {
+        const {data: tEscrito, error: eUpd} = await sb.from('talentos')
+          .update({valores: merged, updated: new Date().toISOString().split('T')[0]})
+          .eq('id', c.talento_id).select('id');
+        if (eUpd) throw eUpd;
+        if (!tEscrito || !tEscrito.length) throw new Error('el perfil del talento no aceptó la escritura (0 filas) — revisá permisos');
+        alPerfil = true;
+      }
+      // Registro histórico (fecha, marca, autor) para el botón "$" del
+      // dashboard. Es un extra: si la tabla no existe o falla, no frena nada.
+      if (valores !== previo) {
+        const eHist = await registrarCotizacion(c.talento_id, c, valores);
+        if (eHist) console.warn('historial de cotizaciones no registrado:', eHist);
+      }
     }
-    showToast('Valores guardados', 'success');
+    renderKanban();
+    showToast(alPerfil ? 'Valores guardados y actualizados en el perfil del talento' : 'Valores guardados', 'success');
   } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
 
@@ -2172,9 +2193,10 @@ function _tieneDireccion(de) {
 // cotización cargada en "Valores Extras", la dirección de entrega y las notas
 // se quedaban en la prospección y el perfil del talento seguía vacío. Acá se
 // completa el perfil con lo que trae el contacto, pero SOLO donde el talento
-// está vacío: nunca se pisa un dato ya cargado. Con `valores` pasa lo mismo:
-// si el talento ya tiene tarifas no se tocan, y la cotización igual queda en
-// su historial de precios (talento_cotizaciones) para no perderla.
+// está vacío: nunca se pisa un dato ya cargado. `valores` es la excepción —
+// la cotización de la prospección es la "última cotización" para el equipo
+// comercial: si el perfil ya tiene tarifas y no incluye este texto, se agrega
+// al final. Además queda en el historial de precios (talento_cotizaciones).
 async function completarTalentoDesdeContacto(talentoId, c) {
   const COLS = 'id,ciudad,telefono,email,tiktok,instagram,youtube,paises,categorias,genero,keywords,valores,direccion_entrega,notas_internas';
   const {data: t, error} = await sb.from('talentos').select(COLS).eq('id', talentoId).single();
@@ -2189,9 +2211,9 @@ async function completarTalentoDesdeContacto(talentoId, c) {
   if (!(t.categorias||[]).length && (c.categorias||[]).length) upd.categorias = c.categorias;
   if (!_tieneDireccion(t.direccion_entrega) && _tieneDireccion(c.direccion_entrega)) upd.direccion_entrega = c.direccion_entrega;
 
-  const cVal = String(c.valores||'').trim();
-  if (cVal && !String(t.valores||'').trim()) upd.valores = cVal;
-  if (cVal) await registrarCotizacion(talentoId, c, cVal);
+  const cVal = String(c.valores||'').trim(), tVal = String(t.valores||'').trim();
+  if (cVal && tVal.indexOf(cVal) === -1) upd.valores = tVal ? (tVal + '\n' + cVal) : cVal;
+  if (cVal) { const eHist = await registrarCotizacion(talentoId, c, cVal); if (eHist) console.warn('historial de cotizaciones no registrado:', eHist); }
 
   const campos = Object.keys(upd).length;
   if (!campos) return 0;
