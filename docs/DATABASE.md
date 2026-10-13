@@ -159,7 +159,7 @@ autor_email     text DEFAULT ''
 created_by      uuid DEFAULT auth.uid()
 created_at      timestamptz DEFAULT now()
 ```
-Se escribe al guardar "Valores Extras" de un contacto que ya es talento y al graduar/vincular uno con valores. **No pisa `talentos.valores`**: la tarifa del perfil se edita a mano (solo se completa si estaba vacía al graduar). Se lee en el botón "$" (Historial de precios) del dashboard junto con `roster_selecciones`. RLS: SELECT/INSERT `is_internal()`, DELETE `is_admin()`, sin UPDATE.
+Se escribe al guardar "Valores Extras" de un contacto que ya es talento y al graduar/vincular uno con valores. Es un **registro opcional**: si la tabla no existe o el insert falla, la pantalla solo lo loguea en consola y sigue. La cotización **sí se copia a `talentos.valores`** (el equipo comercial la usa como "última cotización" y la actualiza desde prospección): si el perfil contiene la versión anterior del contacto se reemplaza en el lugar, si no la contiene se agrega al final, si ya está no se duplica. Entre el 9 y el 13 de octubre de 2026 no se copiaba al perfil y se reportó como "los valores no se actualizan en la base". Se lee en el botón "$" (Historial de precios) del dashboard junto con `roster_selecciones`. RLS: SELECT/INSERT `is_internal()`, DELETE `is_admin()`, sin UPDATE. **Pendiente (13-oct-2026): la migración `sql/talento_cotizaciones_2026_10_09.sql` todavía no se corrió en Supabase**; hasta que se corra, el "$" no muestra cotizaciones de prospección.
 
 ### `prospeccion_historial`
 ```sql
