@@ -517,8 +517,6 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
 .roster-sort-opt:hover{background:var(--surface2);}
 .roster-sort-opt.active{color:var(--primary);font-weight:700;}
 /* Archived toggle */
-.archived-toggle{display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);font-family:inherit;transition:all 0.15s;width:100%;}
-.archived-toggle:hover{border-color:var(--border2);color:var(--text);}
 .roster-card-new-icon{
   width:44px;height:44px;border-radius:50%;background:var(--surface2);
   display:flex;align-items:center;justify-content:center;font-size:22px;
@@ -1604,6 +1602,11 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
           Rosters Generales
           <span class="subtab-badge" id="subtab-generales-badge">0</span>
         </button>
+        <button class="roster-subtab" id="subtab-archivados" data-action="switch-roster-subtab" data-id="archivados">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+          Rosters archivados
+          <span class="subtab-badge" id="subtab-archivados-badge">0</span>
+        </button>
         <button class="roster-subtab" id="subtab-pedidos" data-action="switch-roster-subtab" data-id="pedidos">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
           Pedidos de clientes
@@ -1647,16 +1650,20 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
           <input type="text" id="roster-search" class="form-input" placeholder="Buscar roster por nombre..." oninput="filterRosters()" style="max-width:360px;">
         </div>
         <div class="roster-grid-mgr" id="roster-manager-grid"></div>
+      </div>
 
-        <!-- Archived rosters -->
-        <div id="archived-rosters-section" style="display:none;margin-top:24px;">
-          <button class="archived-toggle" data-fn="toggleArchivedRosters" id="archived-toggle-btn">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
-            <span id="archived-count-label">Archivados (0)</span>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="archived-chevron" style="transition:transform 0.2s"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="roster-grid-mgr" id="archived-roster-grid" style="display:none;margin-top:12px;"></div>
+      <!-- ====== ROSTERS ARCHIVADOS SECTION ====== -->
+      <div id="roster-subtab-archivados" style="display:none">
+        <div class="roster-manager-header">
+          <div>
+            <h1 class="main-title">Rosters archivados</h1>
+            <div class="main-sub">Rosters que ya no están en uso. Se pueden restaurar en cualquier momento.</div>
+          </div>
         </div>
+        <div style="margin-bottom:14px;">
+          <input type="text" id="roster-search-arch" class="form-input" placeholder="Buscar roster archivado por nombre..." oninput="filterRosters()" style="max-width:360px;">
+        </div>
+        <div class="roster-grid-mgr" id="archived-roster-grid"></div>
       </div>
 
       <!-- ====== ROSTERS GENERALES SECTION ====== -->
@@ -1929,7 +1936,10 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
         </div>
 
         <div class="form-group full">
-          <label class="form-label">Valores de Contenido</label>
+          <label class="form-label" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;">
+            <span>Valores de Contenido</span>
+            <span id="f-valores-fecha" style="font-size:11px;font-weight:500;color:var(--text-dim);text-transform:none;letter-spacing:0;"></span>
+          </label>
           <textarea id="f-valores" class="form-input" placeholder="Describe el estilo y tipo de contenido del talento..."></textarea>
         </div>
         <div class="form-group">

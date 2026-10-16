@@ -28,6 +28,7 @@ genero          text DEFAULT ''
 keywords        text DEFAULT ''
 direccion_entrega jsonb DEFAULT '{}'  -- { destinatario, calle, ciudad, provincia, cp, pais, telefono, notas } — envío de producto/PR boxes; pre-llena la dirección de entrega en campañas
 updated         date
+valores_updated_at timestamptz     -- última carga de `valores`; la setea el trigger trg_talentos_touch_valores cuando cambia el texto (NULL si queda vacío). Migración sql/talentos_valores_updated_at_2026_10_16.sql, corrida en producción el 16-oct-2026 con backfill desde talento_cotizaciones. Se muestra en el modal de edición del talento, bajo "Valores de Contenido".
 ```
 
 ### `app_config`

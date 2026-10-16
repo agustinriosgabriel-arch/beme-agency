@@ -367,6 +367,7 @@ const TALENT_COLS_ARR = [
   'id','created_at','nombre','paises','ciudad','email','telefono',
   'tiktok','instagram','youtube','categorias','seguidores','engagement',
   'avg_views','social_meta','genero','keywords','valores','updated',
+  'valores_updated_at',
   'direccion_entrega','needs_review','review_comment','review_marked_by',
   'review_marked_at','es_exclusivo','idioma','tipo_contenido','calidad',
   'marcas_previas','notas_internas','tiene_manager','manager_agencia',
@@ -1032,7 +1033,6 @@ let FN_MAP = {
   saveGeneralRoster,
   toggleRosterSortDropdown,
   setRosterSort,
-  toggleArchivedRosters,
   openPapelera,
   closePapeleraModal: function(){ closeModal('papelera-modal'); },
   deleteSelectedTalents,
@@ -2181,7 +2181,8 @@ function updateStats() {
   set('stat-rosters', rosters.length);
   set('tab-rosters-badge', rosters.length + generalRosters.length);
   set('tab-total-badge', talents.length);
-  set('subtab-personalizados-badge', rosters.length);
+  set('subtab-personalizados-badge', rosters.filter(r => !r.archived).length);
+  set('subtab-archivados-badge', rosters.filter(r => r.archived).length);
   set('subtab-generales-badge', generalRosters.length);
 }
 
@@ -2303,9 +2304,42 @@ function openEditModal(id) {
       });
   }
 }
+// Fecha de la última carga de valores (talentos.valores_updated_at, la pone
+// un trigger en la DB cada vez que cambia el texto, desde cualquier pantalla).
+// Mientras el usuario edita el textarea, avisa que al guardar queda la de hoy.
+let _valoresOriginal = '';
+function renderValoresFecha(iso, valoresActual) {
+  const el = document.getElementById('f-valores-fecha');
+  const ta = document.getElementById('f-valores');
+  if (!el) return;
+  _valoresOriginal = valoresActual || '';
+  if (ta && !ta._fechaBound) {
+    ta._fechaBound = true;
+    ta.addEventListener('input', function() {
+      if (ta.value.trim() !== _valoresOriginal.trim()) {
+        el.textContent = 'Al guardar se registra la fecha de hoy';
+        el.style.color = '#b45309';
+      } else {
+        renderValoresFecha(el.dataset.iso || null, _valoresOriginal);
+      }
+    });
+  }
+  el.dataset.iso = iso || '';
+  el.style.color = '';
+  if (!_valoresOriginal) { el.textContent = ''; return; }
+  if (!iso) { el.textContent = 'Última carga: sin fecha registrada'; return; }
+  const d = new Date(iso);
+  if (isNaN(d)) { el.textContent = ''; return; }
+  const fecha = d.toLocaleDateString('es-ES', {day:'2-digit', month:'short', year:'numeric'});
+  const dias = Math.floor((Date.now() - d.getTime()) / 86400000);
+  const hace = dias <= 0 ? 'hoy' : dias === 1 ? 'hace 1 día' : dias < 60 ? 'hace ' + dias + ' días' : 'hace ' + Math.floor(dias/30) + ' meses';
+  el.textContent = 'Última carga: ' + fecha + ' · ' + hace;
+  if (dias >= 180) el.style.color = '#b45309';
+}
 function clearForm() {
   ['f-nombre','f-ciudad','f-telefono','f-email','f-tiktok','f-instagram','f-youtube','f-valores','f-seg-tiktok','f-seg-instagram','f-seg-youtube']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  renderValoresFecha(null, '');
   var _fg = document.getElementById('f-genero'); if(_fg) _fg.value = '';
   var _fid = document.getElementById('f-idioma'); if(_fid) _fid.value = 'es';
   var _fk = document.getElementById('f-keywords'); if(_fk) _fk.value = '';
@@ -2345,6 +2379,7 @@ function fillForm(t) {
   document.getElementById('f-instagram').value = t.instagram||'';
   document.getElementById('f-youtube').value = t.youtube||'';
   document.getElementById('f-valores').value = t.valores||'';
+  renderValoresFecha(t.valores_updated_at, t.valores||'');
   var _fg = document.getElementById('f-genero'); if(_fg) _fg.value = t.genero||'';
   var _fid = document.getElementById('f-idioma'); if(_fid) _fid.value = t.idioma||'es';
   var _fk = document.getElementById('f-keywords'); if(_fk) _fk.value = t.keywords||'';
@@ -3362,7 +3397,6 @@ function exportSelectedCSV() {
 
 // ===================== ROSTER MANAGEMENT =====================
 let rosterSort = 'date-desc'; // 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc'
-let archivedExpanded = false;
 
 function sortRosterList(list) {
   return [...list].sort(function(a, b) {
@@ -3525,37 +3559,42 @@ function copyLinkUrl(token) {
 
 function filterRosters() { renderRosters(); }
 
+// Pinta las dos grillas: "Rosters" (activos) y la pestaña "Rosters archivados".
+// Cada una tiene su propio buscador; archivar/desarchivar mueve la tarjeta de
+// una pestaña a la otra.
 function renderRosters() {
   var grid = document.getElementById('roster-manager-grid');
   var archGrid = document.getElementById('archived-roster-grid');
-  var archSection = document.getElementById('archived-rosters-section');
   grid.innerHTML = '';
   if (archGrid) archGrid.innerHTML = '';
 
   var searchInput = document.getElementById('roster-search');
   var search = searchInput ? searchInput.value.toLowerCase().trim() : '';
+  var archInput = document.getElementById('roster-search-arch');
+  var archSearch = archInput ? archInput.value.toLowerCase().trim() : '';
+  var totalArchived = rosters.filter(function(r) { return r.archived; }).length;
   var active = sortRosterList(rosters.filter(function(r) { return !r.archived && (!search || r.name.toLowerCase().includes(search)); }));
-  var archived = sortRosterList(rosters.filter(function(r) { return r.archived && (!search || r.name.toLowerCase().includes(search)); }));
+  var archived = sortRosterList(rosters.filter(function(r) { return r.archived && (!archSearch || r.name.toLowerCase().includes(archSearch)); }));
 
-  if (active.length === 0 && archived.length === 0) {
-    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:60px 20px"><div class="empty-icon">📋</div><h3>Sin rosters todavía</h3><p>Crea tu primer roster para organizar talentos por cliente.</p></div>';
+  if (active.length === 0) {
+    grid.innerHTML = search
+      ? '<div class="empty-state" style="grid-column:1/-1;padding:40px 20px"><p>Ningún roster coincide con la búsqueda.</p></div>'
+      : '<div class="empty-state" style="grid-column:1/-1;padding:60px 20px"><div class="empty-icon">📋</div><h3>Sin rosters todavía</h3><p>Crea tu primer roster para organizar talentos por cliente.</p></div>';
   }
-
   active.forEach(function(r) { grid.appendChild(renderRosterCard(r, false)); });
 
-  // Archived section
-  if (archSection) {
-    if (archived.length > 0) {
-      archSection.style.display = 'block';
-      var label = document.getElementById('archived-count-label');
-      if (label) label.textContent = 'Archivados (' + archived.length + ')';
-      if (archGrid && archivedExpanded) {
-        archived.forEach(function(r) { archGrid.appendChild(renderRosterCard(r, true)); });
-      }
-    } else {
-      archSection.style.display = 'none';
+  if (archGrid) {
+    if (archived.length === 0) {
+      archGrid.innerHTML = archSearch
+        ? '<div class="empty-state" style="grid-column:1/-1;padding:40px 20px"><p>Ningún roster archivado coincide con la búsqueda.</p></div>'
+        : '<div class="empty-state" style="grid-column:1/-1;padding:60px 20px"><div class="empty-icon">🗄️</div><h3>Sin rosters archivados</h3><p>Los rosters que archives desde la pestaña Rosters aparecen acá.</p></div>';
     }
+    archived.forEach(function(r) { archGrid.appendChild(renderRosterCard(r, true)); });
   }
+  var badge = document.getElementById('subtab-archivados-badge');
+  if (badge) badge.textContent = totalArchived;
+  var badgeAct = document.getElementById('subtab-personalizados-badge');
+  if (badgeAct) badgeAct.textContent = rosters.length - totalArchived;
 
   // Mantener el botón/contador de la papelera en sync.
   renderPapelera();
@@ -3593,14 +3632,6 @@ function applyRosterSort(val) {
   renderRosters();
 }
 
-function toggleArchivedRosters() {
-  archivedExpanded = !archivedExpanded;
-  var grid = document.getElementById('archived-roster-grid');
-  var chevron = document.getElementById('archived-chevron');
-  if (grid) grid.style.display = archivedExpanded ? 'grid' : 'none';
-  if (chevron) chevron.style.transform = archivedExpanded ? 'rotate(180deg)' : '';
-  if (archivedExpanded) renderRosters();
-}
 
 async function archiveRoster(id) {
   var r = rosters.find(function(x) { return x.id === id; });
@@ -4210,12 +4241,16 @@ function switchRosterSubtab(tab) {
   document.getElementById('subtab-personalizados').classList.toggle('active', tab === 'personalizados');
   const sp = document.getElementById('subtab-pedidos');
   if (sp) sp.classList.toggle('active', tab === 'pedidos');
+  const sa = document.getElementById('subtab-archivados');
+  if (sa) sa.classList.toggle('active', tab === 'archivados');
   document.getElementById('roster-subtab-generales').style.display = tab === 'generales' ? 'block' : 'none';
   document.getElementById('roster-subtab-personalizados').style.display = tab === 'personalizados' ? 'block' : 'none';
   const rp = document.getElementById('roster-subtab-pedidos');
   if (rp) rp.style.display = tab === 'pedidos' ? 'block' : 'none';
+  const ra = document.getElementById('roster-subtab-archivados');
+  if (ra) ra.style.display = tab === 'archivados' ? 'block' : 'none';
   if (tab === 'generales') renderGeneralRosters();
-  if (tab === 'personalizados') renderRosters();
+  if (tab === 'personalizados' || tab === 'archivados') renderRosters();
   if (tab === 'pedidos') renderPedidosCliente();
 }
 
@@ -4429,7 +4464,9 @@ function updateGeneralRosterBadge() {
   const el = document.getElementById('subtab-generales-badge');
   if (el) el.textContent = generalRosters.length;
   const el2 = document.getElementById('subtab-personalizados-badge');
-  if (el2) el2.textContent = rosters.length;
+  if (el2) el2.textContent = rosters.filter(r => !r.archived).length;
+  const el3 = document.getElementById('subtab-archivados-badge');
+  if (el3) el3.textContent = rosters.filter(r => r.archived).length;
 }
 
 // ===================== PEDIDOS DE CLIENTES =====================
