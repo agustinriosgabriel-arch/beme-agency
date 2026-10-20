@@ -47,7 +47,7 @@ lineas_comunes  jsonb DEFAULT '[]'      -- acciones comunes del roster: [{accion
 mostrar_total   boolean DEFAULT false   -- si true, el summary suma los precios de todas las líneas
 moneda          text DEFAULT 'USD'      -- USD | MXN | ARS | EUR (formato de precios del roster)
 deleted_at      timestamptz             -- soft delete (papelera); NULL = activo. Migración sql/add_soft_delete_rosters_2026_07_03.sql
-archived        boolean NOT NULL DEFAULT false -- pestaña "Rosters archivados" del dashboard. Migración sql/add_rosters_archived_2026_10_20.sql (hasta esa fecha el frontend la escribía sin que existiera y el archivado se perdía al recargar)
+archived        boolean NOT NULL DEFAULT false -- pestaña "Rosters archivados" del dashboard. Migración sql/add_rosters_archived_2026_10_20.sql, corrida en producción el 20-oct-2026 (hasta esa fecha el frontend la escribía sin que existiera y el archivado se perdía al recargar)
 ```
 
 ### `rosters_generales`
