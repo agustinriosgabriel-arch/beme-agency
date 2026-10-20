@@ -3633,27 +3633,30 @@ function applyRosterSort(val) {
 }
 
 
-async function archiveRoster(id) {
+// Archivar/desarchivar persiste en rosters.archived (migración
+// sql/add_rosters_archived_2026_10_20.sql). supabase-js no lanza excepción:
+// hay que leer `error`, si no el cambio se ve en pantalla y se pierde al recargar.
+async function setRosterArchived(id, archived) {
   var r = rosters.find(function(x) { return x.id === id; });
   if (!r) return;
-  r.archived = true;
+  var prev = !!r.archived;
+  r.archived = archived;
   renderRosters(); updateStats();
   if (sb && currentUser) {
-    await sb.from('rosters').update({archived: true}).eq('id', id);
+    var res = await sb.from('rosters').update({archived: archived}).eq('id', id);
+    if (res.error) {
+      console.error('rosters.archived:', res.error);
+      r.archived = prev;
+      renderRosters(); updateStats();
+      showToast('No se pudo ' + (archived ? 'archivar' : 'restaurar') + ' el roster: ' + (res.error.message || 'error de Supabase'), 'error');
+      return;
+    }
   }
-  showToast('Roster "' + r.name + '" archivado', 'info');
+  showToast('Roster "' + r.name + '" ' + (archived ? 'archivado' : 'restaurado'), archived ? 'info' : 'success');
 }
 
-async function unarchiveRoster(id) {
-  var r = rosters.find(function(x) { return x.id === id; });
-  if (!r) return;
-  r.archived = false;
-  renderRosters(); updateStats();
-  if (sb && currentUser) {
-    await sb.from('rosters').update({archived: false}).eq('id', id);
-  }
-  showToast('Roster "' + r.name + '" restaurado', 'success');
-}
+function archiveRoster(id)   { return setRosterArchived(id, true); }
+function unarchiveRoster(id) { return setRosterArchived(id, false); }
 
 function openCreateRosterModal(rosterId) {
   // If opening directly (not from openCreateRosterAndAdd), clear pending
