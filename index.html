@@ -1370,6 +1370,16 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
       </div>
     </div>
 
+    <!-- "Ya trabajamos" filter -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Historial <span class="sidebar-clear" id="clear-worked" data-fn="clearWorkedFilter" style="display:none">Limpiar</span></div>
+      <div id="filter-worked" data-fn="toggleWorkedFilter" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1.5px solid rgba(178,0,93,0.3);background:rgba(178,0,93,0.05);cursor:pointer;font-size:12px;font-weight:600;color:#b2005d;transition:all 0.15s;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7.3L12 17.8 5.8 21.5l1.6-7.3L2 9.5l7.1-.6z"/></svg>
+        <span style="flex:1;">Ya trabajamos</span>
+        <span id="count-worked" style="background:rgba(178,0,93,0.14);padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700;">0</span>
+      </div>
+    </div>
+
     <!-- Platform filter: single select -->
     <div class="sidebar-section">
       <div class="sidebar-label">Plataforma <span class="sidebar-clear" id="clear-platform" data-fn="clearPlatformFilter" style="display:none">Limpiar</span></div>
@@ -1884,6 +1894,14 @@ select.form-input{cursor:pointer;-webkit-appearance:none;}
             ⭐ Talento Exclusivo
           </label>
           <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Habilita las áreas de Billetera e Ideas en el Portal del Talento.</div>
+        </div>
+        <div class="form-group full">
+          <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="f-trabajo-con-beme" style="accent-color:#b2005d;cursor:pointer;width:15px;height:15px;">
+            Ya trabajamos con este talento
+          </label>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Marcalo si hizo campañas con BEME antes de que existiera el sistema. Las campañas cargadas acá lo marcan solas.</div>
+          <div id="f-trabajo-con-beme-auto" style="display:none;font-size:11px;color:#b2005d;margin-top:4px;font-weight:600;">Ya figura con campañas en el sistema: el distintivo se muestra igual.</div>
         </div>
         <div class="form-group">
           <label class="form-label" style="display:flex;align-items:center;gap:5px;">

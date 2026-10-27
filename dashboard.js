@@ -138,6 +138,7 @@ let rosterLinks = [];
 let pedidosCliente = [];
 let talentCampaigns = []; // campaign history per talent
 let talentActiveProsps = {}; // talento_id -> [{prospeccion_id, marca, pendingCount}]
+let talentWorkedIds = new Set(); // talentos con al menos una campaña (no borrada) en el sistema
 let rosterBrandEdits = {}; // roster_id → count of brand edits
 let nextTalentId = 1000;
 let nextRosterId = 100;
@@ -167,6 +168,7 @@ let activeKeywords = []; // keywords filter
 let selectedGenders = new Set();
 let genderDropdownOpen = false;
 let reviewFilterActive = false;
+let workedFilterActive = false;
 let currentPhoto = '';
 // La foto se carga en segundo plano (loadTalentPhotos) porque los base64 pesan.
 // Si el usuario abre a editar un talento antes de que su foto llegue, currentPhoto
@@ -369,7 +371,7 @@ const TALENT_COLS_ARR = [
   'avg_views','social_meta','genero','keywords','valores','updated',
   'valores_updated_at',
   'direccion_entrega','needs_review','review_comment','review_marked_by',
-  'review_marked_at','es_exclusivo','idioma','tipo_contenido','calidad',
+  'review_marked_at','es_exclusivo','trabajo_con_beme','idioma','tipo_contenido','calidad',
   'marcas_previas','notas_internas','tiene_manager','manager_agencia',
   'manager_telefono','manager_email'
 ];
@@ -557,6 +559,21 @@ async function loadFromSupabase() {
           acciones: (ct.contenidos||[]).map(c => c.tipo).filter(Boolean),
         }));
     } catch(e) { console.warn('Campaign history load:', e); talentCampaigns = []; }
+
+    // Distintivo "Ya trabajamos": todos los talentos con campaña, sin el tope
+    // de 200 del historial. La marca manual (trabajo_con_beme) cubre lo previo
+    // al software.
+    try {
+      const ids = new Set();
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await sb.from('campana_talentos')
+          .select('talent_id,campanas(deleted_at)').range(from, from + 999);
+        if (error) throw error;
+        (data||[]).forEach(r => { if (r.talent_id != null && r.campanas && !r.campanas.deleted_at) ids.add(r.talent_id); });
+        if (!data || data.length < 1000) break;
+      }
+      talentWorkedIds = ids;
+    } catch(e) { console.warn('Worked talents load:', e); }
 
     // Load active prospección sequences for talents (badge "En prospección")
     try {
@@ -976,6 +993,8 @@ let FN_MAP = {
   clearAllFilters,
   toggleReviewFilter,
   clearReviewFilter,
+  toggleWorkedFilter,
+  clearWorkedFilter,
   openAuditValoresModal,
   closeAuditValoresModal: () => closeModal('audit-valores-modal'),
   markAllAmbiguousForReview,
@@ -1626,6 +1645,29 @@ function updateReviewFilterUI() {
   }
   if (clr) clr.style.display = reviewFilterActive ? 'inline' : 'none';
 }
+function toggleWorkedFilter() {
+  workedFilterActive = !workedFilterActive;
+  updateWorkedFilterUI();
+  renderTalents();
+}
+function clearWorkedFilter() {
+  workedFilterActive = false;
+  updateWorkedFilterUI();
+  renderTalents();
+}
+function updateWorkedFilterUI() {
+  const el = document.getElementById('filter-worked');
+  const clr = document.getElementById('clear-worked');
+  if (el) {
+    el.style.background = workedFilterActive ? 'rgba(178,0,93,0.16)' : 'rgba(178,0,93,0.05)';
+    el.style.borderColor = workedFilterActive ? '#b2005d' : 'rgba(178,0,93,0.3)';
+  }
+  if (clr) clr.style.display = workedFilterActive ? 'inline' : 'none';
+}
+function updateWorkedCount() {
+  const c = document.getElementById('count-worked');
+  if (c) c.textContent = talents.filter(t => workedWithBeme(t)).length;
+}
 function updateReviewCount() {
   const c = document.getElementById('count-review');
   if (c) c.textContent = talents.filter(t => t.needs_review).length;
@@ -1829,7 +1871,9 @@ function clearAllFilters() {
   populateGenderDropdown();
   reviewFilterActive = false;
   updateReviewFilterUI();
-  ['clear-platform','clear-cats','clear-countries','clear-followers','clear-roster','clear-keywords','clear-gender','clear-review'].forEach(id => { var el=document.getElementById(id); if(el) el.style.display='none'; });
+  workedFilterActive = false;
+  updateWorkedFilterUI();
+  ['clear-platform','clear-cats','clear-countries','clear-followers','clear-roster','clear-keywords','clear-gender','clear-review','clear-worked'].forEach(id => { var el=document.getElementById(id); if(el) el.style.display='none'; });
   populateCountryDropdown();
   updateCountryTrigger();
   updateCountryPills();
@@ -1853,6 +1897,7 @@ function getFilteredTalents(opts) {
        !searchNormalize(t.youtube||'').includes(search)) return false;
     if(selectedGenders.size > 0 && !selectedGenders.has(t.genero || 'SIN ASIGNAR')) return false;
     if(reviewFilterActive && !t.needs_review) return false;
+    if(workedFilterActive && !workedWithBeme(t)) return false;
     if(selectedCountries.size > 0 && !(t.paises||[]).some(p => selectedCountries.has(p))) return false;
     if(networkFilter === 'tt' && !t.tiktok) return false;
     if(networkFilter === 'ig' && !t.instagram) return false;
@@ -2018,7 +2063,7 @@ function renderCard(t) {
     <div class="card-location">${(t.paises||[]).map(p=>(COUNTRY_FLAGS[p]||'')+' '+escapeHtml(p)).join(' · ')}${safeCiudad?', '+safeCiudad:''}</div>
     <div class="card-networks">${networks}</div>
     ${engRow}
-    <div class="card-cats">${reviewBadge}${prospBadge}${genderBadge}${cats}${t.categorias.length>3?`<span class="cat-tag">+${t.categorias.length-3}</span>`:''}</div>
+    <div class="card-cats">${workedBadge(t)}${reviewBadge}${prospBadge}${genderBadge}${cats}${t.categorias.length>3?`<span class="cat-tag">+${t.categorias.length-3}</span>`:''}</div>
     ${t.needs_review && t.review_comment ? `<div style="margin-top:4px;padding:6px 8px;background:rgba(245,158,11,0.07);border-left:2px solid #f59e0b;border-radius:4px;font-size:11px;color:#92400e;line-height:1.35;"><strong style="font-weight:700;">Revisión:</strong> ${escapeHtml(t.review_comment)}</div>` : ''}
     ${t.updated ? `<div class="card-updated" title="Última actualización de seguidores">↻ ${formatUpdatedDate(t.updated)}</div>` : ''}
     <div class="card-footer">
@@ -2046,6 +2091,22 @@ function renderCard(t) {
   </div>`;
 }
 
+// 'campana' si tiene campañas en el sistema, 'manual' si se marcó a mano, '' si no.
+function workedWithBeme(t) {
+  if (talentWorkedIds.has(t.id)) return 'campana';
+  return t.trabajo_con_beme ? 'manual' : '';
+}
+function workedBadge(t, small) {
+  const how = workedWithBeme(t);
+  if (!how) return '';
+  const title = how === 'campana' ? 'Ya trabajamos: tiene campañas en el sistema' : 'Ya trabajamos: marcado a mano (campaña previa al sistema)';
+  const sz = small ? 8 : 9;
+  const style = small
+    ? 'display:inline-flex;align-items:center;gap:3px;margin-left:6px;padding:1px 6px;background:rgba(178,0,93,0.10);color:#b2005d;border:1px solid rgba(178,0,93,0.35);border-radius:4px;font-size:10px;font-weight:600;vertical-align:middle;'
+    : 'background:rgba(178,0,93,0.10);color:#b2005d;border-color:rgba(178,0,93,0.35);display:inline-flex;align-items:center;gap:3px;';
+  return `<span${small ? '' : ' class="cat-tag"'} title="${title}" style="${style}"><svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7.3L12 17.8 5.8 21.5l1.6-7.3L2 9.5l7.1-.6z"/></svg>YA TRABAJAMOS</span>`;
+}
+
 function renderCampaignHistory(talentId) {
   const history = talentCampaigns.filter(c => c.talent_id === talentId);
   if (!history.length) return '';
@@ -2057,7 +2118,7 @@ function renderCampaignHistory(talentId) {
       return `<div class="card-history-row">
         <div class="ch-marca">${escapeHtml(h.marca)}</div>
         <div class="ch-acciones">${escapeHtml(acciones||'—')}</div>
-        <div class="ch-fees">${formatMoney(h.fee_marca,h.moneda)} / ${formatMoney(h.fee_talento,h.moneda)}</div>
+        <div class="ch-fees" title="Pagó la marca / Cobró el talento">Marca ${formatMoney(h.fee_marca,h.moneda)} · Talento ${formatMoney(h.fee_talento,h.moneda)}</div>
       </div>`;
     }).join('')}
   </details>`;
@@ -2083,7 +2144,7 @@ function renderListRow(t) {
     <input type="checkbox" ${sel?'checked':''} data-action="select" data-id="${t.id}" style="cursor:pointer;accent-color:var(--primary)">
     ${avatar}
     <div style="min-width:0;flex:1">
-      <div class="list-name">${safeNombre}${reviewListBadge}</div>
+      <div class="list-name">${safeNombre}${workedBadge(t, true)}${reviewListBadge}</div>
       <div class="list-location">${(t.paises||[]).map(p=>(COUNTRY_FLAGS[p]||'')+' '+escapeHtml(p)).join(' · ')}${safeCiudad?', '+safeCiudad:''}</div>
     </div>
     <div class="list-networks">
@@ -2130,6 +2191,7 @@ function updatePlatformCounts() {
   document.getElementById('count-ig').textContent = talents.filter(t=>t.instagram).length;
   document.getElementById('count-yt').textContent = talents.filter(t=>t.youtube).length;
   updateReviewCount();
+  updateWorkedCount();
 }
 
 // ===================== CUSTOM CATEGORIES =====================
@@ -2211,6 +2273,20 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 // ===================== HISTORIAL DE PRECIOS (solo admin) =====================
+// Bloque de una campaña en el historial de precios: pagó la marca / cobró el talento / margen BEME.
+function priceHistCampanaHtml(c, fmtP) {
+  const tipoLabels = {tiktok_video:'TikTok',reel:'Reel',ig_story:'Story',youtube_video:'YouTube',youtube_short:'YT Short'};
+  const has = v => v != null && v !== '';
+  const row = (label, val, color) => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:2px 0;">
+      <span style="color:#444;">${label}</span>
+      <span style="color:${color};font-weight:700;white-space:nowrap;">${has(val) ? fmtP(val, c.moneda) : '—'}</span>
+    </div>`;
+  const acciones = c.acciones.map(a => tipoLabels[a] || a).join(', ');
+  return (acciones ? `<div style="font-size:11px;color:#888;margin-bottom:3px;">${escapeHtml(acciones)}</div>` : '')
+    + row('Pagó la marca', c.fm, '#111')
+    + row('Cobró el talento', c.ft, '#b2005d')
+    + (has(c.fm) && has(c.ft) ? row('Margen BEME', Number(c.fm) - Number(c.ft), '#16a34a') : '');
+}
 function closePriceHistory(){ const m=document.getElementById('price-hist-modal'); if(m) m.classList.remove('open'); }
 async function openPriceHistory(talentId){
   const tid = parseInt(talentId);
@@ -2224,16 +2300,20 @@ async function openPriceHistory(talentId){
     // RLS-safe: cargamos por separado y unimos en JS (los JOIN por FK fallan en silencio)
     // Dos fuentes: precios cargados en rosters y cotizaciones guardadas en
     // prospecciones (talento_cotizaciones, ver sql/talento_cotizaciones_2026_10_09.sql).
-    const [{ data: sels, error: eSels }, { data: cots, error: eCots }] = await Promise.all([
+    // Tercera: campañas realizadas, con lo que pagó la marca y lo que cobró el talento.
+    const [{ data: sels, error: eSels }, { data: cots, error: eCots }, { data: cts, error: eCts }] = await Promise.all([
       sb.from('roster_selecciones').select('roster_id, link_id, lineas, accion, precio, updated_at').eq('talent_id', tid),
       sb.from('talento_cotizaciones').select('marca, valores, autor_email, created_at').eq('talento_id', tid),
+      sb.from('campana_talentos').select('fee_marca, fee_talento, moneda, created_at, campanas(nombre, deleted_at, marcas(nombre)), contenidos(tipo)').eq('talent_id', tid),
     ]);
     if (eSels) throw eSels;
     if (eCots) console.error('talento_cotizaciones:', eCots);
+    if (eCts) console.error('campana_talentos:', eCts);
+    const camps = (cts||[]).filter(c => c.campanas && !c.campanas.deleted_at);
     const rows = (sels||[]).filter(s =>
       (Array.isArray(s.lineas) && s.lineas.some(l => l.precio!=null || l.accion)) || s.accion || s.precio!=null
     );
-    if (!rows.length && !(cots||[]).length) { if(body) body.innerHTML = '<div style="text-align:center;color:#999;padding:30px;">Sin historial de precios.</div>'; return; }
+    if (!rows.length && !(cots||[]).length && !camps.length) { if(body) body.innerHTML = '<div style="text-align:center;color:#999;padding:30px;">Sin historial de precios.</div>'; return; }
     const rosterIds = [...new Set(rows.map(s => s.roster_id))];
     const linkIds = [...new Set(rows.map(s => s.link_id).filter(id => id > 0))];
     const [rRes, lRes] = await Promise.all([
@@ -2255,11 +2335,16 @@ async function openPriceHistory(talentId){
     }).concat((cots||[]).map(k => ({
       date: k.created_at, rosterName: 'Prospección', cliente: k.marca || '',
       texto: k.valores || '', autor: k.autor_email || '',
+    }))).concat(camps.map(c => ({
+      date: c.created_at, rosterName: c.campanas.nombre || 'Campaña', cliente: (c.campanas.marcas && c.campanas.marcas.nombre) || '',
+      campana: { fm: c.fee_marca, ft: c.fee_talento, moneda: c.moneda || 'USD',
+        acciones: (c.contenidos||[]).map(x => x.tipo).filter(Boolean) },
     }))).sort((a,b) => new Date(b.date) - new Date(a.date));
     if (body) body.innerHTML = entries.map(e => {
       const d = e.date ? new Date(e.date) : null;
       const ds = d ? d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
-      const lineasHtml = e.texto != null
+      const lineasHtml = e.campana ? priceHistCampanaHtml(e.campana, fmtP)
+        : e.texto != null
         ? `<div style="font-size:12px;color:#444;white-space:pre-wrap;">${escapeHtml(e.texto)}</div>${e.autor ? `<div style="font-size:10.5px;color:#999;margin-top:4px;">${escapeHtml(e.autor)}</div>` : ''}`
         : (e.lineas.map(l => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:2px 0;">
         <span style="color:#444;">${escapeHtml(l.accion)||'—'}</span>
@@ -2267,7 +2352,7 @@ async function openPriceHistory(talentId){
       </div>`).join('') || '<span style="color:#bbb;font-size:12px;">—</span>');
       return `<div style="border:1px solid #eee;border-radius:10px;padding:10px 12px;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px;">
-          <span style="font-weight:700;font-size:13px;color:#111;">${escapeHtml(e.rosterName)}${e.cliente?` <span style="font-weight:500;color:#9414E0;font-size:11px;">· ${escapeHtml(e.cliente)}</span>`:''}</span>
+          <span style="font-weight:700;font-size:13px;color:#111;">${e.campana ? '<span style="font-size:10px;font-weight:700;color:#fff;background:#b2005d;border-radius:4px;padding:1px 5px;margin-right:5px;vertical-align:middle;">CAMPAÑA</span>' : ''}${escapeHtml(e.rosterName)}${e.cliente?` <span style="font-weight:500;color:#9414E0;font-size:11px;">· ${escapeHtml(e.cliente)}</span>`:''}</span>
           <span style="font-size:11px;color:#888;white-space:nowrap;">${ds}</span>
         </div>
         ${lineasHtml}
@@ -2340,6 +2425,8 @@ function clearForm() {
   ['f-nombre','f-ciudad','f-telefono','f-email','f-tiktok','f-instagram','f-youtube','f-valores','f-seg-tiktok','f-seg-instagram','f-seg-youtube']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   renderValoresFecha(null, '');
+  ['f-es-exclusivo','f-trabajo-con-beme'].forEach(id => { const el = document.getElementById(id); if(el) el.checked = false; });
+  var _ftbAuto = document.getElementById('f-trabajo-con-beme-auto'); if(_ftbAuto) _ftbAuto.style.display = 'none';
   var _fg = document.getElementById('f-genero'); if(_fg) _fg.value = '';
   var _fid = document.getElementById('f-idioma'); if(_fid) _fid.value = 'es';
   var _fk = document.getElementById('f-keywords'); if(_fk) _fk.value = '';
@@ -2384,6 +2471,8 @@ function fillForm(t) {
   var _fid = document.getElementById('f-idioma'); if(_fid) _fid.value = t.idioma||'es';
   var _fk = document.getElementById('f-keywords'); if(_fk) _fk.value = t.keywords||'';
   var _fex = document.getElementById('f-es-exclusivo'); if(_fex) _fex.checked = !!t.es_exclusivo;
+  var _ftb = document.getElementById('f-trabajo-con-beme'); if(_ftb) _ftb.checked = !!t.trabajo_con_beme;
+  var _ftbAuto = document.getElementById('f-trabajo-con-beme-auto'); if(_ftbAuto) _ftbAuto.style.display = (t.id != null && talentWorkedIds.has(t.id)) ? 'block' : 'none';
   var _ftc = document.getElementById('f-tipo-contenido'); if(_ftc) _ftc.value = t.tipo_contenido||'';
   var _fcal = document.getElementById('f-calidad'); if(_fcal) _fcal.value = t.calidad||'';
   var _fmp = document.getElementById('f-marcas-previas'); if(_fmp) _fmp.value = t.marcas_previas||'';
@@ -2761,6 +2850,7 @@ async function saveTalent() {
     })(),
     categorias: cats,
     es_exclusivo: (document.getElementById('f-es-exclusivo') ? document.getElementById('f-es-exclusivo').checked : false),
+    trabajo_con_beme: (document.getElementById('f-trabajo-con-beme') ? document.getElementById('f-trabajo-con-beme').checked : false),
     updated: new Date().toISOString().split('T')[0]
   };
   // La foto solo entra al payload si se subió/extrajo una en este modal.
@@ -3959,7 +4049,7 @@ function renderManageTalentsGrid() {
     const av = t.foto
       ? `<div class="talent-select-avatar"><img src="${t.foto}" alt="${escapeHtml(t.nombre)}"></div>`
       : `<div class="talent-select-avatar">${getInitials(t.nombre)}</div>`;
-    el.innerHTML = `${av}<span class="talent-select-name">${escapeHtml(t.nombre)}<br><span style="font-size:11px;font-weight:400;color:var(--text-muted)">${(t.paises||[]).map(p=>(COUNTRY_FLAGS[p]||'')+' '+escapeHtml(p)).join(' · ')}</span></span><div class="talent-select-check">${inRoster?'<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>`;
+    el.innerHTML = `${av}<span class="talent-select-name">${escapeHtml(t.nombre)}${workedBadge(t, true)}<br><span style="font-size:11px;font-weight:400;color:var(--text-muted)">${(t.paises||[]).map(p=>(COUNTRY_FLAGS[p]||'')+' '+escapeHtml(p)).join(' · ')}</span></span><div class="talent-select-check">${inRoster?'<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>`;
     el.onclick = () => { toggleManageTalent(t.id, el); };
     grid.appendChild(el);
   });
