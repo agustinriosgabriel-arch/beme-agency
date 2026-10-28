@@ -1346,7 +1346,10 @@ async function loadCampanas() {
       talentos(id,nombre,foto),
       contenidos(id,paso_actual,tipo)
     )
-  `).order('created_at', {ascending:false}).limit(50);
+  `).order('created_at', {ascending:false});
+  // Sin .limit(): con más de 50 campañas activas, las más viejas (p. ej. Garnier
+  // Skincare Always On 2026 H2, creada 10-jun-2026) desaparecían del panel
+  // sin estar borradas. Reportado el 28-oct-2026.
 
   if (showTrash) {
     query = query.not('deleted_at', 'is', null);
