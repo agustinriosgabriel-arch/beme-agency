@@ -109,6 +109,13 @@
   status = 200
   force = true
 
+# Lista de invitados / check-in de la Fiesta de Halloween (se comparte por link, no se indexa)
+[[redirects]]
+  from = "https://bemeagency.com/invitados-halloween*"
+  to = "/invitados-halloween.html"
+  status = 200
+  force = true
+
 # ---- Estáticos que necesitan esas páginas ----
 [[redirects]]
   from = "https://bemeagency.com/assets/*"
@@ -252,6 +259,16 @@
 
 [[headers]]
   for = "/puesto-comercial"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/invitados-halloween.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
+  for = "/invitados-halloween"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow, noarchive"
 
