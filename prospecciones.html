@@ -908,7 +908,9 @@ async function fetchContactosParaConteo() {
 }
 
 async function loadProspecciones() {
-  const {data, error} = await sb.from('prospecciones').select('*').order('created_at', {ascending:false}).limit(50);
+  // Sin .limit(): con el tope de 50, al superar las 50 prospecciones las más
+  // viejas desaparecían del listado sin estar borradas (mismo caso que campañas).
+  const {data, error} = await sb.from('prospecciones').select('*').order('created_at', {ascending:false});
   if (error) throw error;
   prospecciones = data || [];
 
