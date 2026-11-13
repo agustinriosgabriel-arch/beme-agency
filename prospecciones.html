@@ -888,23 +888,43 @@ async function loadSecuencias() {
   }
 }
 
+// Supabase corta cada respuesta en 1000 filas. Al pasar los 1000 contactos en
+// total, las prospecciones más nuevas quedaban fuera del corte y su card
+// mostraba "0 contactos" aunque tuviera talentos adentro. Se pagina con
+// .range() (orden por id para que las páginas no se pisen) y se cuenta todo.
+async function fetchContactosParaConteo() {
+  const PAGE = 1000;
+  let all = [];
+  for (let from = 0; ; from += PAGE) {
+    const {data, error} = await sb.from('prospeccion_contactos')
+      .select('prospeccion_id, etapa')
+      .order('id', {ascending:true})
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    all = all.concat(data || []);
+    if (!data || data.length < PAGE) break;
+  }
+  return all;
+}
+
 async function loadProspecciones() {
   const {data, error} = await sb.from('prospecciones').select('*').order('created_at', {ascending:false}).limit(50);
   if (error) throw error;
   prospecciones = data || [];
 
-  // Dos queries livianas en paralelo:
-  //  1) solo prospeccion_id+etapa para contar (payload mínimo)
+  // Dos lecturas livianas en paralelo:
+  //  1) solo prospeccion_id+etapa para contar (payload mínimo, paginado)
   //  2) solo no_interesados con las columnas que usa la tabla
-  const [countsRes, niRes] = await Promise.all([
-    sb.from('prospeccion_contactos').select('prospeccion_id, etapa'),
+  const [countRows, niRes] = await Promise.all([
+    fetchContactosParaConteo(),
     sb.from('prospeccion_contactos')
       .select('id, prospeccion_id, etapa, nombre, tiktok, instagram, seguidores, talento_id')
       .eq('etapa', 'no_interesado'),
   ]);
+  if (niRes.error) console.error('loadProspecciones (no interesados):', niRes.error);
 
   contactosCounts = {};
-  (countsRes.data||[]).forEach(c => {
+  countRows.forEach(c => {
     if (!contactosCounts[c.prospeccion_id]) contactosCounts[c.prospeccion_id] = {total:0, interesados:0};
     contactosCounts[c.prospeccion_id].total++;
     if (c.etapa === 'interesado') contactosCounts[c.prospeccion_id].interesados++;
