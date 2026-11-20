@@ -607,7 +607,7 @@ body.light .bulk-bar{background:rgba(244,244,244,0.97)}
 <div class="modal-overlay" id="modal-roster">
   <div class="modal" style="max-width:480px">
     <div class="modal-header">
-      <div class="modal-title">Agregar a Roster</div>
+      <div class="modal-title" id="roster-modal-title">Agregar a Roster</div>
       <button class="modal-close" onclick="closeModal('modal-roster')">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -802,6 +802,7 @@ let emailCola = [];            // prospeccion_email_cola (rows for this prospecc
 let editingSecuenciaId = null;
 let seqFormPasos = [];         // current draft pasos in form
 let allTalentos = [];          // loaded only when opening talent picker
+let talentoContacto = {};      // talento_id → {telefono, tiene_manager, manager_agencia, manager_telefono} (para WhatsApp)
 let tpSelected = new Set();    // talentos selected in picker
 let tpPaises = [], tpCats = [];
 let origenFilter = 'todos';    // 'todos' | 'externo' | 'interno'
@@ -912,6 +913,7 @@ async function loadData() {
 
   const {data:c} = await sb.from('prospeccion_contactos').select('*').eq('prospeccion_id', prospId).order('created_at', {ascending:false});
   contactos = c || [];
+  await loadTalentoContacto();
 
   const ids = contactos.map(x=>x.id);
   if (ids.length) {
@@ -1168,7 +1170,7 @@ function etapaButtons(c, etapa) {
       <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'descartado')">Descartar</button>`;
     case 'contactar': return `
       <button class="btn btn-primary btn-xs" onclick="event.stopPropagation();requestMedio(${c.id},'esperando_respuesta')">Contactado</button>
-      ${c.telefono?`<button class="btn btn-outline btn-xs" style="color:#25D366;border-color:rgba(37,211,102,0.45)" onclick="event.stopPropagation();openWhatsApp(${c.id})" title="Contactar por WhatsApp">
+      ${waNumeros(c).length?`<button class="btn btn-outline btn-xs" style="color:#25D366;border-color:rgba(37,211,102,0.45)" onclick="event.stopPropagation();openWhatsApp(${c.id})" title="Contactar por WhatsApp">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163A11.867 11.867 0 0 1 .157 11.892C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24z"/></svg>
         WhatsApp
       </button>`:''}
@@ -1176,7 +1178,7 @@ function etapaButtons(c, etapa) {
     case 'esperando_respuesta': return `
       <button class="btn btn-green btn-xs" onclick="event.stopPropagation();requestMedio(${c.id},'interesado')">Interesado</button>
       <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();changeEtapa(${c.id},'no_interesado')">No interesado</button>
-      ${c.telefono?`<button class="btn btn-outline btn-xs" style="color:#25D366;border-color:rgba(37,211,102,0.45)" onclick="event.stopPropagation();openWhatsApp(${c.id})" title="Seguimiento por WhatsApp">
+      ${waNumeros(c).length?`<button class="btn btn-outline btn-xs" style="color:#25D366;border-color:rgba(37,211,102,0.45)" onclick="event.stopPropagation();openWhatsApp(${c.id})" title="Seguimiento por WhatsApp">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163A11.867 11.867 0 0 1 .157 11.892C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24z"/></svg>
         WhatsApp
       </button>`:''}
@@ -1481,12 +1483,18 @@ function openDetalle(id) {
   const hist = historial.filter(h=>h.contacto_id===id);
   const elog = emailLog.filter(x=>x.contacto_id===id);
   const handle = c.tiktok||c.instagram||c.youtube;
+  // Teléfonos: el principal (contacto o, si falta, perfil) y el del manager
+  const tPerfil = c.talento_id ? talentoContacto[c.talento_id] : null;
+  const waNums = waNumeros(c);
+  const waManager = waNums.find(n => n.tipo === 'manager');
+  const telPrincipal = c.telefono || (tPerfil && tPerfil.telefono) || '';
 
   document.getElementById('modal-detalle-body').innerHTML = `
     ${c.paises?.length?`<div class="detail-row"><div class="detail-label">Paises</div><div class="detail-value">${(c.paises||[]).join(', ')}</div></div>`:''}
     ${c.ciudad?`<div class="detail-row"><div class="detail-label">Ciudad</div><div class="detail-value">${esc(c.ciudad)}</div></div>`:''}
     ${c.email?`<div class="detail-row"><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div></div>`:''}
-    ${c.telefono?`<div class="detail-row"><div class="detail-label">Telefono</div><div class="detail-value">${esc(c.telefono)}</div></div>`:''}
+    ${telPrincipal?`<div class="detail-row"><div class="detail-label">Telefono</div><div class="detail-value">${esc(telPrincipal)}</div></div>`:''}
+    ${waManager?`<div class="detail-row"><div class="detail-label">Tel. manager</div><div class="detail-value">${esc(waManager.raw)}${tPerfil && tPerfil.manager_agencia?` <span style="color:var(--text-dim)">· ${esc(tPerfil.manager_agencia)}</span>`:''}</div></div>`:''}
     ${c.tiktok?`<div class="detail-row"><div class="detail-label">TikTok</div><div class="detail-value"><a href="${safeUrl(c.tiktok)}" target="_blank">${esc(c.tiktok)}</a></div></div>`:''}
     ${c.instagram?`<div class="detail-row"><div class="detail-label">Instagram</div><div class="detail-value"><a href="${safeUrl(c.instagram)}" target="_blank">${esc(c.instagram)}</a></div></div>`:''}
     ${c.youtube?`<div class="detail-row"><div class="detail-label">YouTube</div><div class="detail-value"><a href="${safeUrl(c.youtube)}" target="_blank">${esc(c.youtube)}</a></div></div>`:''}
@@ -1588,7 +1596,7 @@ function openDetalle(id) {
     <button class="btn btn-ghost" onclick="closeModal('modal-detalle')">Cerrar</button>
     ${c.talento_id ? `<a class="btn btn-outline" href="index.html?id=${c.talento_id}" target="_blank" style="text-decoration:none">Ver perfil de Talento</a>` : ''}
     ${(emailTemplates.length || prospeccion.email_draft) ? `<button class="btn btn-outline" onclick="copyEmail(${c.id})">Copiar Email</button>` : ''}
-    ${c.telefono ? `<button class="btn btn-outline" style="border-color:rgba(37,211,102,0.45);color:#25D366" onclick="openWhatsApp(${c.id})">
+    ${waNums.length ? `<button class="btn btn-outline" style="border-color:rgba(37,211,102,0.45);color:#25D366" onclick="openWhatsApp(${c.id})">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/></svg>
       WhatsApp
     </button>` : ''}
@@ -1608,70 +1616,136 @@ function normalizePhoneForWA(raw) {
   return s;
 }
 
+// El teléfono del manager no vive en prospeccion_contactos sino en el perfil
+// (talentos.manager_telefono). Se trae para los contactos que ya son talento
+// (origen interno o graduados) y así WhatsApp puede ofrecer los dos números.
+// Va en tandas: un .in() con cientos de ids arma una URL demasiado larga.
+async function loadTalentoContacto() {
+  const ids = [...new Set(contactos.map(x => x.talento_id).filter(Boolean))];
+  const map = {};
+  for (let i = 0; i < ids.length; i += 200) {
+    const {data, error} = await sb.from('talentos')
+      .select('id,telefono,tiene_manager,manager_agencia,manager_telefono')
+      .in('id', ids.slice(i, i + 200));
+    if (error) { console.error('loadTalentoContacto:', error); continue; }
+    (data || []).forEach(t => { map[t.id] = t; });
+  }
+  talentoContacto = map;
+}
+
+// Números a los que se le puede escribir a un contacto: el principal (el del
+// contacto; si está vacío, el del perfil) y el del manager cuando el perfil
+// tiene "Tiene manager" en Sí. Si los dos son el mismo número, queda uno solo.
+function waNumeros(c) {
+  const t = (c && c.talento_id) ? talentoContacto[c.talento_id] : null;
+  const out = [];
+  const pRaw = String((c && c.telefono) || (t && t.telefono) || '').trim();
+  const pNum = normalizePhoneForWA(pRaw);
+  if (pNum) out.push({tipo: 'principal', label: 'Principal', raw: pRaw, phone: pNum});
+  const mRaw = (t && t.tiene_manager) ? String(t.manager_telefono || '').trim() : '';
+  const mNum = normalizePhoneForWA(mRaw);
+  if (mNum && mNum === pNum) out[0].label = 'Principal · Manager';
+  else if (mNum) out.push({tipo: 'manager', label: 'Manager' + (t.manager_agencia ? ' · ' + t.manager_agencia : ''), raw: mRaw, phone: mNum});
+  return out;
+}
+
 function openWhatsApp(contactoId) {
   const c = contactos.find(x => x.id === contactoId);
   if (!c) return;
-  if (!c.telefono) { showToast('Este contacto no tiene teléfono', 'error'); return; }
-
-  const phone = normalizePhoneForWA(c.telefono);
-  if (!phone) { showToast('Número de teléfono inválido', 'error'); return; }
+  const nums = waNumeros(c);
+  if (!nums.length) { showToast('Este contacto no tiene un teléfono válido', 'error'); return; }
 
   // Filter templates that have whatsapp_body defined
   const waTemplates = emailTemplates.filter(t => (t.whatsapp_body||'').trim().length > 0);
 
-  if (!waTemplates.length) {
-    // No templates with WA body → open without text, user types manually
-    const url = `https://wa.me/${phone}`;
-    window.open(url, '_blank');
+  if (nums.length === 1 && !waTemplates.length) {
+    // Un solo número y ninguna plantilla → no hay nada que elegir, se abre directo
+    window.open(`https://wa.me/${nums[0].phone}`, '_blank');
     showToast('Abriendo WhatsApp. Definí "Mensaje WhatsApp" en una plantilla para mandarlo prellenado.', 'info', 5000);
-    logWhatsAppOpen(c, '', null);
+    logWhatsAppOpen(c, '', null, nums[0]);
     return;
   }
 
-  // Show template picker
   window._waPendingContactId = contactoId;
-  const list = document.getElementById('roster-list');
-  document.getElementById('roster-modal-msg').innerHTML =
-    `Mandarle WhatsApp a <strong>${esc(c.nombre)}</strong> (${esc(c.telefono)}).<br><span style="font-size:12px;color:var(--text-muted)">Elegí la plantilla:</span>`;
-  list.innerHTML = waTemplates.map(t => {
-    const preview = replaceVars(t.whatsapp_body, c).substring(0, 120);
-    return `<button class="btn btn-outline" style="width:100%;justify-content:flex-start;gap:10px;text-align:left;flex-direction:column;align-items:flex-start;padding:12px" onclick="doOpenWhatsApp(${t.id})">
-      <div style="font-weight:700;font-size:13px">${esc(t.nombre)}</div>
-      <div style="font-size:11px;color:var(--text-dim);white-space:pre-wrap">${esc(preview)}${t.whatsapp_body.length>120?'…':''}</div>
-    </button>`;
-  }).join('');
-  // Also offer "Sin plantilla — abrir vacío"
-  list.innerHTML += `<button class="btn btn-ghost" style="width:100%;justify-content:flex-start;margin-top:8px;font-size:12px" onclick="doOpenWhatsApp(0)">
-    Abrir sin plantilla
-  </button>`;
+  window._waNumIdx = 0;
+  renderWaModal();
   openModal('modal-roster');
+}
+
+// Selector de número (solo si hay principal + manager) y lista de plantillas.
+function renderWaModal() {
+  const c = contactos.find(x => x.id === window._waPendingContactId);
+  if (!c) return;
+  const nums = waNumeros(c);
+  const idx = Math.min(window._waNumIdx || 0, nums.length - 1);
+  const waTemplates = emailTemplates.filter(t => (t.whatsapp_body||'').trim().length > 0);
+
+  document.getElementById('roster-modal-title').textContent = 'WhatsApp';
+  document.getElementById('roster-modal-msg').innerHTML =
+    `Mandarle WhatsApp a <strong>${esc(c.nombre)}</strong>${nums.length === 1 ? ` (${nums[0].tipo === 'manager' ? esc(nums[0].label) + ': ' : ''}${esc(nums[0].raw)})` : ''}.`;
+
+  let html = '';
+  if (nums.length > 1) {
+    html += `<div style="font-size:12px;color:var(--text-muted)">¿A qué número?</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${nums.map((n, i) => `
+      <button class="btn btn-outline" aria-pressed="${i === idx}" style="flex:1 1 170px;min-width:0;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 14px;border-radius:14px;text-align:left;${i === idx ? 'border-color:#25D366;background:rgba(37,211,102,0.10);color:var(--text)' : ''}" onclick="selectWaNumero(${i})">
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;color:${i === idx ? '#25D366' : 'var(--text-dim)'}">${esc(n.label)}</span>
+        <span style="font-size:13px">${esc(n.raw)}</span>
+      </button>`).join('')}
+    </div>`;
+  }
+  if (waTemplates.length) {
+    html += `<div style="font-size:12px;color:var(--text-muted)">Elegí la plantilla:</div>`;
+    html += waTemplates.map(t => {
+      const preview = replaceVars(t.whatsapp_body, c).substring(0, 120);
+      return `<button class="btn btn-outline" style="width:100%;justify-content:flex-start;gap:10px;text-align:left;flex-direction:column;align-items:flex-start;padding:12px" onclick="doOpenWhatsApp(${t.id})">
+        <div style="font-weight:700;font-size:13px">${esc(t.nombre)}</div>
+        <div style="font-size:11px;color:var(--text-dim);white-space:pre-wrap">${esc(preview)}${t.whatsapp_body.length>120?'…':''}</div>
+      </button>`;
+    }).join('');
+    // Also offer "Sin plantilla — abrir vacío"
+    html += `<button class="btn btn-ghost" style="width:100%;justify-content:flex-start;margin-top:8px;font-size:12px" onclick="doOpenWhatsApp(0)">
+      Abrir sin plantilla
+    </button>`;
+  } else {
+    html += `<button class="btn btn-outline" style="width:100%;justify-content:center;border-color:rgba(37,211,102,0.45);color:#25D366" onclick="doOpenWhatsApp(0)">Abrir WhatsApp</button>
+    <div style="font-size:11px;color:var(--text-dim);margin-top:4px">Definí "Mensaje WhatsApp" en una plantilla para mandarlo prellenado.</div>`;
+  }
+  document.getElementById('roster-list').innerHTML = html;
+}
+
+function selectWaNumero(i) {
+  window._waNumIdx = i;
+  renderWaModal();
 }
 
 function doOpenWhatsApp(templateId) {
   const c = contactos.find(x => x.id === window._waPendingContactId);
   if (!c) { closeModal('modal-roster'); return; }
-  const phone = normalizePhoneForWA(c.telefono);
+  const nums = waNumeros(c);
+  const num = nums[Math.min(window._waNumIdx || 0, nums.length - 1)];
+  if (!num) { closeModal('modal-roster'); showToast('Este contacto no tiene un teléfono válido', 'error'); return; }
   let text = '';
   if (templateId) {
     const t = emailTemplates.find(x => x.id === templateId);
     if (t && t.whatsapp_body) text = replaceVars(t.whatsapp_body, c);
   }
   closeModal('modal-roster');
-  const url = `https://wa.me/${phone}${text?`?text=${encodeURIComponent(text)}`:''}`;
+  const url = `https://wa.me/${num.phone}${text?`?text=${encodeURIComponent(text)}`:''}`;
   window.open(url, '_blank');
-  logWhatsAppOpen(c, text, templateId || null);
+  logWhatsAppOpen(c, text, templateId || null, num);
   window._waPendingContactId = null;
 }
 
-async function logWhatsAppOpen(c, mensaje, templateId) {
+async function logWhatsAppOpen(c, mensaje, templateId, num) {
   // Re-use prospeccion_email_log table to track WA opens.
   // status = 'sent' (we don't know if user actually sent it, but we logged the open)
-  // email_to = phone for clarity
+  // email_to = phone for clarity (con "(manager)" cuando se le escribió al manager)
   try {
     await sb.from('prospeccion_email_log').insert({
       contacto_id: c.id,
       prospeccion_id: prospId,
-      email_to: 'whatsapp:' + (c.telefono||''),
+      email_to: 'whatsapp:' + ((num && num.raw) || c.telefono || '') + (num && num.tipo === 'manager' ? ' (manager)' : ''),
       asunto: '[WhatsApp]',
       cuerpo: mensaje || '',
       status: 'sent',
@@ -2278,6 +2352,7 @@ async function graduarATalento(contactoId) {
         if (eLink) throw eLink;
         const completados = await completarTalentoDesdeContacto(existingTalent.id, c);
         c.talento_id = existingTalent.id;
+        await loadTalentoContacto(); // el talento vinculado puede tener manager
         renderKanban();
         showToast(`Vinculado a talento existente: ${existingTalent.nombre}` + (completados ? ` · ${completados} campo${completados!==1?'s':''} del perfil completado${completados!==1?'s':''}` : ''), 'success');
         // Ask about roster
@@ -2386,6 +2461,7 @@ async function bulkGraduarATalento() {
       talentIds.push(newId);
       graduated++;
     }
+    await loadTalentoContacto(); // los vinculados a talentos existentes pueden tener manager
     bulkSelected.clear();
     renderEtapaStrip();
     renderKanban();
@@ -2419,6 +2495,7 @@ function openRosterModal(talentIdsToAdd) {
       </button>`;
     }).join('');
   }
+  document.getElementById('roster-modal-title').textContent = 'Agregar a Roster'; // el modal se comparte con WhatsApp
   document.getElementById('roster-modal-msg').textContent =
     `Agregar ${talentIdsToAdd.length} talento${talentIdsToAdd.length!==1?'s':''} a un roster:`;
   openModal('modal-roster');
