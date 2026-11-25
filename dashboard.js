@@ -1176,11 +1176,10 @@ function wireFormListeners() {
   const photoFile = document.getElementById('photo-file');
   if(photoFile) photoFile.addEventListener('change', (e) => handlePhotoUpload(e.target));
 
-  const segMin = document.getElementById('filter-seg-min');
-  if(segMin) segMin.addEventListener('change', applyFollowerSelectFilter);
-
-  const segMax = document.getElementById('filter-seg-max');
-  if(segMax) segMax.addEventListener('change', applyFollowerSelectFilter);
+  // filter-seg-min/max se filtran solo por su oninput (applyFollowerInputFilter,
+  // que entiende "100K"/"5M"). No sumar un 'change' acá: se dispara al perder el
+  // foco —al clickear un talento— y con parseInt "5M" quedaba en 5 seguidores,
+  // vaciando la lista y podando la selección recién hecha.
   // CSV file input
   const csvInput = document.getElementById('csv-file-input');
   if(csvInput) csvInput.addEventListener('change', (e) => handleCSVImport(e.target));
@@ -1570,16 +1569,6 @@ function applyFollowerInputFilter() {
   const active = minFollowers > 0 || maxFollowers < Infinity;
   const clearBtn = document.getElementById('clear-followers');
   if(clearBtn) clearBtn.style.display = active ? 'inline' : 'none';
-  renderTalents();
-}
-
-function applyFollowerSelectFilter() {
-  const minVal = parseInt(document.getElementById('filter-seg-min').value) || 0;
-  const maxVal = parseInt(document.getElementById('filter-seg-max').value) || 0;
-  minFollowers = minVal;
-  maxFollowers = maxVal > 0 ? maxVal : Infinity;
-  const active = minVal > 0 || maxVal > 0;
-  document.getElementById('clear-followers').style.display = active ? 'inline' : 'none';
   renderTalents();
 }
 
